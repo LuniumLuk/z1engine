@@ -4,7 +4,7 @@
 #include "core/layer_stack.h"
 #include "core/timer.h"
 #include "core/log.h"
-#include "debug/instrumentor.h"
+#include "utils/instrumentor.h"
 #include "3rdparty/imgui_layer.h"
 #include "core/io.h"
 #include "render/graphics_context.h"

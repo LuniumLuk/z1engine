@@ -449,3 +449,5 @@ build-int
 
 # Ignore all .vcxproj files
 *.vcxproj*
+*.sln
+*.ini
