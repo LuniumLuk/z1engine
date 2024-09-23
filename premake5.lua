@@ -1,6 +1,7 @@
 workspace "z1engine"
     architecture "x64"
     startproject "editor"
+    configurations { "Debug", "Release", "Profile" }
 
     configurations
     {
@@ -63,21 +64,32 @@ workspace "z1engine"
 
             defines
             {
-                "ENABLE_PROFILE",
                 "PLATFORM_WINDOWS",
                 "BUILD_DLL",
-                "ENABLE_ASSERTS",
                 "ENGINE_DIR=\"" .. enginedir .. "/\"",
                 "glfw_INCLUDE_NONE",
             }
 
         filter "configurations:Debug"
-            defines "DEBUG"
+            defines
+            {
+                "DEBUG",
+                "ENABLE_ASSERTS",
+            }
             runtime "Debug"
             symbols "on"
 
         filter "configurations:Release"
             defines "RELEASE"
+            runtime "Release"
+            optimize "on"
+
+        filter "configurations:Profile"
+            defines
+            {
+                "ENABLE_PROFILE",
+                "RELEASE",
+            }
             runtime "Release"
             optimize "on"
 
@@ -117,15 +129,25 @@ workspace "z1engine"
             systemversion "latest"
             defines
             {
-                "ENABLE_PROFILE",
                 "PLATFORM_WINDOWS",
-                "ENABLE_ASSERTS"
             }
 
         filter "configurations:Debug"
-            defines "DEBUG"
+            defines
+            {
+                "DEBUG",
+                "ENABLE_ASSERTS",
+            }
             symbols "on"
 
         filter "configurations:Release"
             defines "RELEASE"
+            optimize "on"
+
+        filter "configurations:Profile"
+            defines
+            {
+                "ENABLE_PROFILE",
+                "RELEASE"
+            }
             optimize "on"
