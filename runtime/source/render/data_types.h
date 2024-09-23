@@ -62,4 +62,6 @@ namespace z1 {
         return 0;
     }
 
+#undef DATA_TYPE_LIST
+
 }

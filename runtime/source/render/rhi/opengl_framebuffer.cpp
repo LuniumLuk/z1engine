@@ -48,6 +48,7 @@ namespace z1 {
             desc.m_format = attachment.m_format;
             desc.m_sampler_mode = attachment.m_sampler_mode;
             desc.m_wrap_mode = attachment.m_wrap_mode;
+            desc.m_mipmap = false;
 
             auto image = new OpenGLImage2D(nullptr, 0, desc);
 

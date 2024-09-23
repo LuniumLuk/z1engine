@@ -6,32 +6,92 @@
 
 namespace z1 {
 
+#define DATA_TYPE_LIST  \
+    X(Image2D)          \
+    X(ImageCube)        \
+    X(Image2DArray)     \
+    X(ImageCubeArray)   \
+
+#define X(a) a,
     enum struct API ImageType {
-        Image2D = 0,
-        ImageCube,
-        Image2DArray,
-        ImageCubeArray,
+        DATA_TYPE_LIST
     };
+#undef X
 
+#define X(a) case ImageType::a: return #a;
+    inline std::string get_image_type_name(ImageType type) {
+        switch (type) {
+            DATA_TYPE_LIST
+        default: return "unknown type";
+        }
+    }
+#undef X
+#undef DATA_TYPE_LIST
+
+#define DATA_TYPE_LIST  \
+    X(None)             \
+    X(RGBA8)            \
+    X(RGBA32F)          \
+    X(Depth)            \
+    X(DepthStencil)     \
+
+#define X(a) a,
     enum struct API ImageFormat {
-        None = 0,
-        RGBA8,
-        RGBA32F,
-        Depth,
-        DepthStencil,
+        DATA_TYPE_LIST
     };
+#undef X
 
+#define X(a) case ImageFormat::a: return #a;
+    inline std::string get_image_format_name(ImageFormat type) {
+        switch (type) {
+            DATA_TYPE_LIST
+        default: return "unknown format type";
+        }
+    }
+#undef X
+#undef DATA_TYPE_LIST
+
+#define DATA_TYPE_LIST  \
+    X(Linear)           \
+    X(Nearest)          \
+
+#define X(a) a,
     enum struct API SamplerMode {
-        Linear = 0,
-        Nearest,
+        DATA_TYPE_LIST
     };
+#undef X
 
+#define X(a) case SamplerMode::a: return #a;
+    inline std::string get_sampler_mode_name(SamplerMode type) {
+        switch (type) {
+            DATA_TYPE_LIST
+        default: return "unknown sampler mode";
+        }
+    }
+#undef X
+#undef DATA_TYPE_LIST
+
+#define DATA_TYPE_LIST  \
+    X(Repeat)           \
+    X(MirroredRepeat)   \
+    X(ClampToEdge)      \
+    X(ClampToBorder)    \
+
+#define X(a) a,
     enum struct API WrapMode {
-        Repeat = 0,
-        MirroredRepeat,
-        ClampToEdge,
-        ClampToBorder,
+        DATA_TYPE_LIST
     };
+#undef X
+
+#define X(a) case WrapMode::a: return #a;
+    inline std::string get_wrap_mode_name(WrapMode type) {
+        switch (type) {
+            DATA_TYPE_LIST
+        default: return "unknown wrap mode";
+        }
+    }
+#undef X
+#undef DATA_TYPE_LIST
 
     struct API Image : Resource {
         struct Description {
