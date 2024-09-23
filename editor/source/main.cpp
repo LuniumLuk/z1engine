@@ -17,6 +17,7 @@ struct MyLayer : Layer {
         g_runtime_context.m_main_camera = m_camera;
         g_runtime_context.m_main_framebuffer = m_framebuffer;
         m_texture = Image2D::create(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
+        m_checker = Image2D::create(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
     }
 
     void on_update(double delta_time) override {
@@ -35,9 +36,14 @@ struct MyLayer : Layer {
         }
         m_input_state.reset();
 
-        g_runtime_context.m_renderer_2d->draw_quad({ 0.2f, 0.4f, 0.1f }, { 0.2f, 0.4f }, { 1.0f, 0.0f, 1.0f, 1.0f });
-        g_runtime_context.m_renderer_2d->draw_quad({ 0.4f, 0.2f, 0.2f }, { 0.4f, 0.1f }, { 0.0f, 1.0f, 1.0f, 1.0f });
-        g_runtime_context.m_renderer_2d->draw_quad({ 0.0f, 0.0f, 0.0f }, { 0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f, 1.0f }, m_texture);
+        g_runtime_context.m_renderer_2d->draw_quad({ 0.0f, 0.0f, -0.5f }, { 10.0f, 10.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_checker, { 1.0f, 1.0f });
+        g_runtime_context.m_renderer_2d->draw_quad({ 0.2f, 0.4f, -0.1f }, { 0.2f, 0.4f }, 0.0f, { 1.0f, 0.0f, 1.0f, 1.0f });
+        g_runtime_context.m_renderer_2d->draw_quad({ 0.4f, 0.2f, -0.2f }, { 0.4f, 0.1f }, 0.0f, { 0.0f, 1.0f, 1.0f, 1.0f });
+
+        g_runtime_context.m_renderer_2d->draw_quad({ 1.0f, 0.0f, -0.3f }, { 0.1f, 0.1f }, 0.0f, { 1.0f, 0.0f, 0.0f, 1.0f });
+        g_runtime_context.m_renderer_2d->draw_quad({ 0.0f, 1.0f, -0.3f }, { 0.1f, 0.1f }, 0.0f, { 0.0f, 1.0f, 0.0f, 1.0f });
+
+        g_runtime_context.m_renderer_2d->draw_quad({ 0.0f, 0.0f, -0.0f }, { 0.5f, 0.5f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_texture);
 
         g_runtime_context.m_renderer_2d->prepare_draw();
         g_runtime_context.m_renderer_2d->draw();
@@ -84,6 +90,7 @@ private:
     std::shared_ptr<Generic2DCameraController> m_camera_controller;
     InputState m_input_state;
     std::shared_ptr<Image2D> m_texture;
+    std::shared_ptr<Image2D> m_checker;
 
     int m_fps_counter = 0;
     double m_fps_timer = 0.0;

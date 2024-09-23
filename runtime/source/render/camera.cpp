@@ -8,7 +8,7 @@ namespace z1 {
 
     Camera::Camera()
         : m_eye({ 0.0f, 0.0f, 0.0f })
-        , m_at({ 0.0f, 0.0f, 1.0f })
+        , m_at({ 0.0f, 0.0f, -1.0f })
         , m_up({ 0.0f, 1.0f, 0.0f }) {}
 
     Camera::Camera(glm::vec3 const& eye, glm::vec3 const& at, glm::vec3 const& up)

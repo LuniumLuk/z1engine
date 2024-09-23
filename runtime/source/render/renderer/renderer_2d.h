@@ -12,7 +12,14 @@ namespace z1 {
         void prepare_draw();
         void draw();
 
-        void draw_quad(glm::vec3 const& position, glm::vec2 const& size, glm::vec4 const& color, std::shared_ptr<Image2D> const& texture = nullptr);
+        void draw_quad(
+            glm::vec3 const& position,
+            glm::vec2 const& size,
+            float rotation,
+            glm::vec4 const& color,
+            std::shared_ptr<Image2D> const& texture = nullptr,
+            glm::vec2 const& tiling_scale = glm::vec2(1.0f),
+            glm::vec2 const& tiling_offset = glm::vec2(0.0f));
 
     private:
 
@@ -20,6 +27,7 @@ namespace z1 {
             glm::mat4 m_model;
             glm::vec4 m_color;
             std::shared_ptr<Image2D> m_texture;
+            glm::vec4 m_tiling_factor;
         };
 
         std::vector<QuadData> m_quads;

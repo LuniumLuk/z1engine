@@ -49,8 +49,12 @@ namespace z1 {
 
     void Renderer2D::prepare_draw() {
         std::sort(m_quads.begin(), m_quads.end(), [](QuadData const& a, QuadData const& b) {
-            return a.m_model[3][2] > b.m_model[3][2];
-            //return a.m_texture < b.m_texture;
+            if (a.m_model[3][2] == b.m_model[3][2]) {
+                return a.m_texture < b.m_texture;
+            }
+            else {
+                return a.m_model[3][2] < b.m_model[3][2];
+            }
         });
     }
 
@@ -77,6 +81,7 @@ namespace z1 {
 
             m_render_pass->m_shader->set_uniform("u_model", &quad.m_model);
             m_render_pass->m_shader->set_uniform("u_color", &quad.m_color);
+            m_render_pass->m_shader->set_uniform("u_tiling_factor", &quad.m_tiling_factor);
 
             m_vertex_array->bind();
             m_vertex_array->draw(PrimitiveType::Triangles);
@@ -90,12 +95,19 @@ namespace z1 {
         m_quads.clear();
     }
 
-    void Renderer2D::draw_quad(glm::vec3 const& position, glm::vec2 const& size, glm::vec4 const& color, std::shared_ptr<Image2D> const& texture) {
-        glm::mat4 model(1.0f);
-        model = glm::translate(model, position);
-        model = glm::scale(model, glm::vec3(size, 1.0f));
+    void Renderer2D::draw_quad(
+        glm::vec3 const& position,
+        glm::vec2 const& size,
+        float rotation,
+        glm::vec4 const& color,
+        std::shared_ptr<Image2D> const& texture,
+        glm::vec2 const& tiling_scale,
+        glm::vec2 const& tiling_offset) {
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), position)
+            * glm::rotate(glm::mat4(1.0f), glm::radians(rotation), { 0.0f, 0.0f, 1.0f })
+            * glm::scale(glm::mat4(1.0f), { size.x, size.y, 1.0f });
 
-        m_quads.push_back({ model, color, texture ? texture : m_default_texture });
+        m_quads.push_back({ model, color, texture ? texture : m_default_texture, { tiling_scale.x, tiling_scale.y, tiling_offset.x, tiling_offset.y } });
     }
 
 }

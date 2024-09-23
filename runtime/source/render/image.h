@@ -41,7 +41,7 @@ namespace z1 {
             ImageFormat m_format = ImageFormat::None;
             SamplerMode m_sampler_mode = SamplerMode::Linear;
             WrapMode m_wrap_mode = WrapMode::Repeat;
-            bool m_mipmap = false;
+            bool m_mipmap = true;
         };
 
         Image() : Resource(ResourceType::Image) {}

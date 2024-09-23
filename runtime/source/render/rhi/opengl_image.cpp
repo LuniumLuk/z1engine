@@ -49,6 +49,15 @@ namespace z1 {
         return 0;
     }
 
+    static GLenum sampler_mode_to_opengl_mipmap_type(SamplerMode mode) {
+        switch (mode) {
+        case SamplerMode::Linear: return GL_LINEAR_MIPMAP_LINEAR;
+        case SamplerMode::Nearest: return GL_NEAREST_MIPMAP_NEAREST;
+        }
+        CORE_ASSERT(false, "unknown sampler mode!");
+        return 0;
+    }
+
     static GLenum wrap_mode_to_opengl_type(WrapMode mode) {
         switch (mode) {
         case WrapMode::Repeat: return GL_REPEAT;
@@ -92,10 +101,19 @@ namespace z1 {
             image_format_to_opengl_data_type(desc.m_format),
             data);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler_mode_to_opengl_type(desc.m_sampler_mode));
+        if (desc.m_mipmap) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler_mode_to_opengl_mipmap_type(desc.m_sampler_mode));
+        }
+        else {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler_mode_to_opengl_type(desc.m_sampler_mode));
+        }
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler_mode_to_opengl_type(desc.m_sampler_mode));
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_mode_to_opengl_type(desc.m_wrap_mode));
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_mode_to_opengl_type(desc.m_wrap_mode));
+
+        if (desc.m_mipmap) {
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
 
         glBindTexture(GL_TEXTURE_2D, 0);
     }
@@ -160,11 +178,20 @@ namespace z1 {
                 GetDataFromFaces(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, data));
         }
 
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, sampler_mode_to_opengl_type(desc.m_sampler_mode));
+        if (desc.m_mipmap) {
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, sampler_mode_to_opengl_mipmap_type(desc.m_sampler_mode));
+        }
+        else {
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, sampler_mode_to_opengl_type(desc.m_sampler_mode));
+        }
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, sampler_mode_to_opengl_type(desc.m_sampler_mode));
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, wrap_mode_to_opengl_type(desc.m_wrap_mode));
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, wrap_mode_to_opengl_type(desc.m_wrap_mode));
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, wrap_mode_to_opengl_type(desc.m_wrap_mode));
+
+        if (desc.m_mipmap) {
+            glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+        }
 
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     }
