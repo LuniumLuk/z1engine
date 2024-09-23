@@ -36,14 +36,59 @@ struct MyLayer : Layer {
         }
         m_input_state.reset();
 
-        g_runtime_context.m_renderer_2d->draw_quad({ 0.0f, 0.0f, -0.5f }, { 10.0f, 10.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_checker, { 1.0f, 1.0f });
-        g_runtime_context.m_renderer_2d->draw_quad({ 0.2f, 0.4f, -0.1f }, { 0.2f, 0.4f }, 0.0f, { 1.0f, 0.0f, 1.0f, 1.0f });
-        g_runtime_context.m_renderer_2d->draw_quad({ 0.4f, 0.2f, -0.2f }, { 0.4f, 0.1f }, 0.0f, { 0.0f, 1.0f, 1.0f, 1.0f });
+        auto const& renderer_2d = g_runtime_context.m_renderer_2d;
 
-        g_runtime_context.m_renderer_2d->draw_quad({ 1.0f, 0.0f, -0.3f }, { 0.1f, 0.1f }, 0.0f, { 1.0f, 0.0f, 0.0f, 1.0f });
-        g_runtime_context.m_renderer_2d->draw_quad({ 0.0f, 1.0f, -0.3f }, { 0.1f, 0.1f }, 0.0f, { 0.0f, 1.0f, 0.0f, 1.0f });
+        {
+            PROFILE_SCOPE("draw_quad");
+            renderer_2d->draw_quad({ 0.0f, 0.0f, -0.5f }, { 10.0f, 10.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_checker, { 1.0f, 1.0f });
+            renderer_2d->draw_quad({ 0.2f, 0.4f, -0.1f }, { 0.2f, 0.4f }, 0.0f, { 1.0f, 0.0f, 1.0f, 1.0f });
+            renderer_2d->draw_quad({ 0.4f, 0.2f, -0.2f }, { 0.4f, 0.1f }, 0.0f, { 0.0f, 1.0f, 1.0f, 1.0f });
 
-        g_runtime_context.m_renderer_2d->draw_quad({ 0.0f, 0.0f, -0.0f }, { 0.5f, 0.5f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_texture);
+            renderer_2d->draw_quad({ 1.0f, 0.0f, -0.3f }, { 0.1f, 0.1f }, 0.0f, { 1.0f, 0.0f, 0.0f, 1.0f });
+            renderer_2d->draw_quad({ 0.0f, 1.0f, -0.3f }, { 0.1f, 0.1f }, 0.0f, { 0.0f, 1.0f, 0.0f, 1.0f });
+
+            renderer_2d->draw_quad({ 0.0f, 0.0f,  0.5f }, { 0.5f, 0.5f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_texture);
+
+            auto color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+            auto size = glm::vec2(m_quad_size, m_quad_size);
+
+#if CALL_DRAW_QUAD_ONCE_AT_A_TIME
+            for (int i = 0; i < m_quad_rows; ++i) {
+                for (int j = 0; j < m_quad_cols; ++j) {
+                    g_runtime_context.m_renderer_2d->draw_quad(
+                        { i * m_quad_stride, j * m_quad_stride, 0.1f },
+                        size,
+                        (float)(i + j),
+                        { (float)(i % m_quad_rows) / m_quad_rows, (float)(j % m_quad_cols) / m_quad_cols, 1.0f, 1.0f },
+                        m_texture);
+                }
+            }
+#endif
+
+            std::vector<Renderer2D::Quad> quads;
+            {
+                PROFILE_SCOPE("generate quads");
+                for (int i = 0; i < m_quad_rows; ++i) {
+                    for (int j = 0; j < m_quad_cols; ++j) {
+                        Renderer2D::Quad quad = {};
+                        glm::mat4 trans = glm::mat4(
+                            m_quad_size, 0.0f, 0.0f, 0.0f,
+                            0.0f, m_quad_size, 0.0f, 0.0f,
+                            0.0f, 0.0f, 1.0f, 0.0f,
+                            i * m_quad_stride, j * m_quad_stride, 0.1f, 1.0f
+                        );
+                        quad.m_transform = trans;
+                        quad.m_color = { (float)(i % m_quad_rows) / m_quad_rows, (float)(j % m_quad_cols) / m_quad_cols, 1.0f, 1.0f };
+                        quad.m_texture = m_texture;
+                        quads.push_back(quad);
+                    }
+                }
+            }
+            {
+                PROFILE_SCOPE("draw quads");
+                renderer_2d->draw_quads(quads);
+            }
+        }
 
         g_runtime_context.m_renderer_2d->prepare_draw();
         g_runtime_context.m_renderer_2d->draw();
@@ -86,6 +131,10 @@ struct MyLayer : Layer {
         if (ImGui::RadioButton("v sync", g_runtime_context.m_window->is_v_sync_enabled())) {
             g_runtime_context.m_window->set_v_sync(!g_runtime_context.m_window->is_v_sync_enabled());
         }
+        ImGui::InputInt("quad rows", &m_quad_rows);
+        ImGui::InputInt("quad cols", &m_quad_cols);
+        ImGui::InputFloat("quad stride", &m_quad_stride);
+        ImGui::InputFloat("quad size", &m_quad_size);
         ImGui::Text(std::string("viewport_pixel_scale_x: " + std::to_string(m_imgui_ui_layer->m_viewport_pixel_scale_x)).c_str());
         ImGui::End();
     }
@@ -98,6 +147,11 @@ private:
     InputState m_input_state;
     std::shared_ptr<Image2D> m_texture;
     std::shared_ptr<Image2D> m_checker;
+
+    int m_quad_rows = 32;
+    int m_quad_cols = 32;
+    float m_quad_stride = 0.1f;
+    float m_quad_size = 0.1f;
 
     int m_fps_counter = 0;
     double m_fps_timer = 0.0;

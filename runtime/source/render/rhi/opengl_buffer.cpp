@@ -41,7 +41,7 @@ namespace z1 {
         glGenBuffers(1, &handle);
         CORE_ASSERT(handle, "failed to create opengl buffer!");
         glBindBuffer(target, handle);
-        if (data) {
+        if (size) {
             glBufferData(target, size, data, buffer_usage_to_opengl_type(usage));
         }
         glBindBuffer(target, 0);

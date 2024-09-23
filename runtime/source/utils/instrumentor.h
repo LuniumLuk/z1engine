@@ -36,6 +36,7 @@ namespace z1 {
             m_ostream.open(filepath);
             write_header();
             m_current_session = new InstrumentationSession{ name };
+            m_profile_count = 0;
         }
 
         void end_session() {

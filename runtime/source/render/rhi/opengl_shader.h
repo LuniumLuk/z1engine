@@ -59,6 +59,8 @@ namespace z1 {
         void set_vec4(uint32_t location, glm::vec4 const& value);
         void set_mat3(uint32_t location, glm::mat3 const& value);
         void set_mat4(uint32_t location, glm::mat4 const& value);
+        void set_int_array(uint32_t location, int* value, int count);
+        void set_float_array(uint32_t location, float* value, int count);
     };
 
 }

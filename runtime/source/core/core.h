@@ -17,6 +17,7 @@
 #define BIND_EVENT_FN(x) std::bind(&x, this, std::placeholders::_1)
 
 constexpr auto WHOLE_SIZE = ~0ULL;
+constexpr auto NUM_MAX = ~0U;
 constexpr auto INVALID_INDEX = ~0U;
 constexpr auto INVALID_LOCATION = ~0U;
 constexpr auto INVALID_BINDING = ~0U;
@@ -37,6 +38,7 @@ namespace z1 {
     struct InputSystem;
     struct ResourceManager;
     struct Renderer2D;
+    struct Renderer2DBatched;
     struct Camera;
     struct Framebuffer;
 
@@ -91,6 +93,8 @@ namespace z1 {
 #endif
 
 #define UNIMPLEMENTED_FUNCTION() CORE_WARN("{0} not implemented yet!", __FUNCSIG__)
+
+#include "utils/instrumentor.h"
 
 #ifdef ENABLE_PROFILE
 #   define CONCAT(x, y) x ## y

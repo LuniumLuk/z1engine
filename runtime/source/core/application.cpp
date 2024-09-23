@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "core/core.h"
 #include "core/application.h"
 #include "core/window.h"
 #include "core/timer.h"
@@ -21,6 +22,7 @@ namespace z1 {
     }
 
     void Application::run() {
+        PROFILE_BEGIN_SESSION("application run", "profile-run.json");
         push_overlay(std::static_pointer_cast<Layer>(g_runtime_context.m_imgui_layer));
 
         g_runtime_context.m_timer->update();
@@ -54,6 +56,7 @@ namespace z1 {
             g_runtime_context.m_timer->update();
         }
         g_runtime_context.m_graphics_context->finish();
+        PROFILE_END_SESSION();
     }
 
     void Application::terminate() {

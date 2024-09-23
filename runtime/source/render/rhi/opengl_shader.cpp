@@ -171,6 +171,15 @@ namespace z1 {
             case DataType::Float4: set_vec4(m_uniforms[index].m_location, *(glm::vec4*)data); return;
             case DataType::Mat3: set_mat3(m_uniforms[index].m_location, *(glm::mat3*)data); return;
             case DataType::Mat4: set_mat4(m_uniforms[index].m_location, *(glm::mat4*)data); return;
+            case DataType::Sampler2D:
+            case DataType::SamplerCube:
+                if (m_uniforms[index].m_count == 1) {
+                    set_int(m_uniforms[index].m_location, *(int*)data);
+                }
+                else {
+                    set_int_array(m_uniforms[index].m_location, (int*)data, m_uniforms[index].m_count);
+                }
+                return;
             }
             CORE_WARN("uniform {0} with unknown or unsupported DataType!", name);
         }
@@ -399,6 +408,14 @@ namespace z1 {
 
     void OpenGLShader::set_mat4(uint32_t location, glm::mat4 const& value) {
         glUniformMatrix4fv(location, 1, GL_FALSE, &value[0][0]);
+    }
+
+    void OpenGLShader::set_int_array(uint32_t location, int* value, int count) {
+        glUniform1iv(location, count, value);
+    }
+
+    void OpenGLShader::set_float_array(uint32_t location, float* value, int count) {
+        glUniform1fv(location, count, value);
     }
 
 }

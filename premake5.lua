@@ -63,6 +63,7 @@ workspace "z1engine"
 
             defines
             {
+                "ENABLE_PROFILE",
                 "PLATFORM_WINDOWS",
                 "BUILD_DLL",
                 "ENABLE_ASSERTS",
@@ -116,6 +117,7 @@ workspace "z1engine"
             systemversion "latest"
             defines
             {
+                "ENABLE_PROFILE",
                 "PLATFORM_WINDOWS",
                 "ENABLE_ASSERTS"
             }

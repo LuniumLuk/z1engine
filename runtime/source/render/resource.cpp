@@ -55,7 +55,7 @@ namespace z1 {
         switch (m_resources[id]->get_resource_type()) {
         case ResourceType::Image:
             if (m_valid_image_bindings.empty()) {
-                CORE_ERROR("no more image binding point available");
+                CORE_WARN("no more image binding point available");
                 return INVALID_BINDING;
             }
             binding = m_valid_image_bindings.top();
@@ -63,7 +63,7 @@ namespace z1 {
             break;
         case ResourceType::UniformBuffer:
             if (m_valid_uniform_buffer_bindings.empty()) {
-                CORE_ERROR("no more uniform buffer binding point available");
+                CORE_WARN("no more uniform buffer binding point available");
                 return INVALID_BINDING;
             }
             binding = m_valid_uniform_buffer_bindings.top();

@@ -69,13 +69,13 @@ namespace z1 {
         glBindVertexArray(0);
     }
 
-    void OpenGLVertexArray::draw(PrimitiveType type) {
+    void OpenGLVertexArray::draw(PrimitiveType type, uint32_t num) {
         PROFILE_FUNCTION();
         if (m_has_indices) {
-            glDrawElements(primitive_type_to_opengl_type(type), (uint32_t)m_element_count, GL_UNSIGNED_INT, 0);
+            glDrawElements(primitive_type_to_opengl_type(type), num == NUM_MAX ? m_element_count : num, GL_UNSIGNED_INT, 0);
         }
         else {
-            glDrawArrays(primitive_type_to_opengl_type(type), 0, (uint32_t)m_element_count);
+            glDrawArrays(primitive_type_to_opengl_type(type), 0, num == NUM_MAX ? m_element_count : num);
         }
     }
 
