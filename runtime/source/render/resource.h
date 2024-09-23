@@ -76,7 +76,7 @@ namespace z1 {
 
         uint32_t register_resource(Resource* resource) {
             m_resources.push_back(resource);
-            return m_resources.size() - 1;
+            return static_cast<uint32_t>(m_resources.size()) - 1;
         }
 
         void unregister_resource(uint32_t id) {

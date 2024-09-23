@@ -30,7 +30,7 @@ namespace z1 {
 
         virtual void update(InputState const& state) = 0;
 
-        std::shared_ptr<Camera> const& GetCamera() const { return m_camera; }
+        std::shared_ptr<Camera> const& get_camera() const { return m_camera; }
 
     protected:
         std::shared_ptr<Camera> m_camera;
@@ -61,7 +61,7 @@ namespace z1 {
 
         float m_drag_speed = 1.0f;
         float m_move_speed = 1.0f;
-        float m_zoom_speed = 1.0f;
+        float m_zoom_speed = 0.1f;
     };
 
 }

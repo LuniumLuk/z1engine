@@ -165,4 +165,8 @@ namespace z1 {
         return m_data.v_sync;
     }
 
+    void Window::set_window_title(std::string const& title) {
+        glfwSetWindowTitle(m_window, title.c_str());
+    }
+
 }

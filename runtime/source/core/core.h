@@ -36,6 +36,9 @@ namespace z1 {
     struct GraphicsContext;
     struct InputSystem;
     struct ResourceManager;
+    struct Renderer2D;
+    struct Camera;
+    struct Framebuffer;
 
     struct API RuntimeContext {
 
@@ -52,9 +55,13 @@ namespace z1 {
         std::shared_ptr<GraphicsContext> m_graphics_context;
         std::shared_ptr<InputSystem> m_input_system;
         std::shared_ptr<ResourceManager> m_resource_manager;
+        std::shared_ptr<Renderer2D> m_renderer_2d;
+
+        std::shared_ptr<Camera> m_main_camera;
+        std::shared_ptr<Framebuffer> m_main_framebuffer;
 
     };
-    
+
     extern RuntimeContext g_runtime_context;
 
 }
@@ -76,8 +83,8 @@ namespace z1 {
 #define CLIENT_FATAL(...)  g_runtime_context.m_logger->get_client_logger()->critical(__VA_ARGS__)
 
 #ifdef ENABLE_ASSERTS
-#    define CORE_ASSERT(x, ...) { if(!(x)) { CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
-#    define CLIENT_ASSERT(x, ...) { if(!(x)) { CLIENT_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
+#    define CORE_ASSERT(x, ...) { if(!(x)) { CORE_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }
+#    define CLIENT_ASSERT(x, ...) { if(!(x)) { CLIENT_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }
 #else
 #    define CORE_ASSERT(x, ...)
 #    define ASSERT(x, ...)

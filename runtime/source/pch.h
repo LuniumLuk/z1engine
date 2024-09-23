@@ -1,5 +1,8 @@
 #pragma once
 
+// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-3-c4996?view=msvc-170
+#pragma warning(disable : 4996)
+
 #define NOMINMAX
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>

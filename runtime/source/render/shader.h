@@ -101,9 +101,9 @@ namespace z1 {
         */
         virtual uint32_t get_uniform_block_binding(std::string const& name) = 0;
 
-        std::vector<Variable> const& GetAttributes() const { return m_attributes; }
-        std::vector<Variable> const& GetUniforms() const { return m_uniforms; }
-        std::vector<UniformBlock> const& GetUniformBlocks() const { return m_uniform_blocks; }
+        std::vector<Variable> const& get_attributes() const { return m_attributes; }
+        std::vector<Variable> const& get_uniforms() const { return m_uniforms; }
+        std::vector<UniformBlock> const& get_uniform_blocks() const { return m_uniform_blocks; }
 
         virtual void* get_native_handle() const = 0;
         static std::shared_ptr<Shader> create(Filepath const& path);

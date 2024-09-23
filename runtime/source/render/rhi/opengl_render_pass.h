@@ -5,10 +5,10 @@
 
 namespace z1 {
 
-    struct OpenGLRenderPipeline : RenderPipeline {
+    struct OpenGLRenderPass : RenderPass {
 
-        OpenGLRenderPipeline(Description const& description);
-        ~OpenGLRenderPipeline();
+        OpenGLRenderPass(Description const& description);
+        ~OpenGLRenderPass();
 
         void bind() override;
         void unbind() override;
@@ -16,6 +16,10 @@ namespace z1 {
     private:
         std::function<void()> m_bind_func;
         std::function<void()> m_unbind_func;
+
+        bool m_dynamic_viewport;
+        bool m_scissor;
+        bool m_dynamic_scissor;
     };
 
 }

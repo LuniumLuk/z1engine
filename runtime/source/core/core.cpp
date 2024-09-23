@@ -10,6 +10,7 @@
 #include "render/graphics_context.h"
 #include "core/input.h"
 #include "render/resource.h"
+#include "render/renderer/renderer_2d.h"
 
 namespace z1 {
 
@@ -33,19 +34,29 @@ namespace z1 {
 
         m_imgui_layer = std::make_shared<ImGuiLayer>();
         m_layer_stack = std::make_shared<LayerStack>();
+
+        m_renderer_2d = std::make_shared<Renderer2D>();
     }
 
     void RuntimeContext::shutdown() {
-        m_window.reset();
-        m_timer.reset();
-        m_logger.reset();
-        m_imgui_layer.reset();
+
+        m_main_camera.reset();
+        m_main_framebuffer.reset();
+
+        m_renderer_2d.reset();
+
         m_layer_stack.reset();
-        m_instrumentor.reset();
-        m_file_system.reset();
-        m_graphics_context.reset();
-        m_input_system.reset();
+        m_imgui_layer.reset();
         m_resource_manager.reset();
+        m_graphics_context.reset();
+
+        m_input_system.reset();
+        m_window.reset();
+
+        m_file_system.reset();
+        m_instrumentor.reset();
+        m_logger.reset();
+        m_timer.reset();
     }
 
 }

@@ -99,6 +99,7 @@ workspace "z1engine"
         includedirs
         {
             "runtime/source",
+            "editor/source",
             "3rdparty",
             "3rdparty/glfw/include",
             "3rdparty/glad/include",

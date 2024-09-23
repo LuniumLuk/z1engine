@@ -40,6 +40,8 @@ namespace z1 {
         void set_v_sync(bool enabled);
         bool is_v_sync_enabled() const;
 
+        void set_window_title(std::string const& title);
+
         void* get_native_window() const { return m_window; }
 
     private:

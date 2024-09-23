@@ -5,6 +5,7 @@
 // ---------------------------------------
 
 #include "core/core.h"
+#include "core/io.h"
 #include "core/maths.h"
 #include "core/application.h"
 #include "core/layer.h"
@@ -23,7 +24,6 @@
 #include "render/mesh.h"
 #include "render/material.h"
 #include "render/render_pass.h"
-#include "render/renderer_2d.h"
 #include "render/buffer.h"
 #include "render/camera.h"
 #include "render/camera_controller.h"
@@ -31,3 +31,4 @@
 #include "render/image.h"
 #include "render/vertex_array.h"
 #include "render/framebuffer.h"
+#include "render/renderer/renderer_2d.h"

@@ -82,6 +82,11 @@ namespace z1 {
     void OpenGLFramebuffer::destroy() {
         if (m_handle == 0) return;
         glDeleteFramebuffers(1, &m_handle);
+        for (auto image : m_attachment_images) {
+            delete image;
+        }
+        m_attachment_images.clear();
+        m_depth_stencil_attachment_index = INVALID_INDEX;
     }
 
     void OpenGLFramebuffer::bind() const {

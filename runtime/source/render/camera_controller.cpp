@@ -106,13 +106,15 @@ namespace z1 {
             move.y += m_move_speed * (float)state.m_delta_time;
         }
 
+        auto proj = m_camera->get_proj();
+        auto k = 2.0f / proj[0][0];
         if (state.m_left_button_pressed) {
-            move.x -= m_drag_speed * state.m_mouse_delta_x * (float)state.m_delta_time;
-            move.y += m_drag_speed * state.m_mouse_delta_y * (float)state.m_delta_time;
+            move.x -= m_drag_speed * state.m_mouse_delta_x * k;
+            move.y += m_drag_speed * state.m_mouse_delta_y * k;
         }
 
         m_camera->move(move);
-        m_camera->zoom(std::exp(m_zoom_speed * state.m_scroll_delta * (float)state.m_delta_time));
+        m_camera->zoom(std::exp(m_zoom_speed * state.m_scroll_delta));
     }
 
 }

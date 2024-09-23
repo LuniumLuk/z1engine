@@ -18,6 +18,9 @@ namespace z1 {
             DataType m_type = DataType::None;
             size_t m_offset = 0;
             bool m_normalized = false;
+
+            Element(DataType type, bool normalized = false)
+                : m_type(type), m_offset(0), m_normalized(normalized) {}
         };
 
         struct Layout {
