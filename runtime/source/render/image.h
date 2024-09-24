@@ -2,6 +2,7 @@
 
 #include "core/io.h"
 #include "render/resource.h"
+#include "glm/glm.hpp"
 #include <vector>
 
 namespace z1 {
@@ -151,6 +152,39 @@ namespace z1 {
             ImageFormat format = ImageFormat::RGBA8,
             SamplerMode sampler_mode = SamplerMode::Linear,
             WrapMode wrap_mode = WrapMode::Repeat);
+    };
+
+    struct API SubImage2D {
+
+        SubImage2D(std::shared_ptr<Image2D> image, glm::vec2 const& min, glm::vec2 const& max)
+            : m_image(image) {
+            m_texcoords[0] = min;
+            m_texcoords[1] = glm::vec2(max.x, min.y);
+            m_texcoords[2] = max;
+            m_texcoords[3] = glm::vec2(min.x, max.y);
+        }
+
+        std::array<glm::vec2, 4> get_texcoords() const { return m_texcoords; }
+
+        static std::shared_ptr<SubImage2D> create(
+            std::shared_ptr<Image2D> image,
+            uint32_t x, uint32_t y, uint32_t width, uint32_t height, bool top_left_origion = false) {
+            if (top_left_origion) {
+                y = image->get_description().m_height - y - height;
+            }
+            return std::make_shared<SubImage2D>(image,
+                glm::vec2(
+                    (float)x / image->get_description().m_width,
+                    (float)y / image->get_description().m_height
+                ),
+                glm::vec2(
+                    (float)(x + width) / image->get_description().m_width,
+                    (float)(y + height) / image->get_description().m_height
+                ));
+        }
+
+        std::array<glm::vec2, 4> m_texcoords;
+        std::shared_ptr<Image2D> m_image;
     };
 
 }

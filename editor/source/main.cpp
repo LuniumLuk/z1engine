@@ -18,6 +18,7 @@ struct MyLayer : Layer {
         g_runtime_context.m_main_framebuffer = m_framebuffer;
         m_texture = Image2D::create(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
         m_checker = Image2D::create(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
+        m_atlas = Image2D::create("asset/texture/roguelikeSheet_transparent.png", SamplerMode::Nearest);
     }
 
     void on_update(double delta_time) override {
@@ -40,6 +41,7 @@ struct MyLayer : Layer {
 
         {
             PROFILE_SCOPE("draw_quad");
+            std::vector<Renderer2D::Quad> quads;
             renderer_2d->draw_quad({ 0.0f, 0.0f, -0.5f }, { 10.0f, 10.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_checker, { 1.0f, 1.0f });
             renderer_2d->draw_quad({ 0.2f, 0.4f, -0.1f }, { 0.2f, 0.4f }, 0.0f, { 1.0f, 0.0f, 1.0f, 1.0f });
             renderer_2d->draw_quad({ 0.4f, 0.2f, -0.2f }, { 0.4f, 0.1f }, 0.0f, { 0.0f, 1.0f, 1.0f, 1.0f });
@@ -49,15 +51,32 @@ struct MyLayer : Layer {
 
             renderer_2d->draw_quad({ 0.0f, 0.0f,  0.5f }, { 0.5f, 0.5f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_texture);
 
-            auto color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-            auto size = glm::vec2(m_quad_size, m_quad_size);
+            uint32_t tile_size = 16;
+            uint32_t stride = 1;
+            for (uint32_t i = 0; i < 50; ++i) {
+                for (uint32_t j = 0; j < 30; ++j) {
+                    auto tile = SubImage2D::create(m_atlas, i * (tile_size + stride), j * (tile_size + stride), tile_size, tile_size, true);
+                    Renderer2D::Quad quad = {};
+                    glm::mat4 trans = glm::mat4(
+                        m_quad_size, 0.0f, 0.0f, 0.0f,
+                        0.0f, m_quad_size, 0.0f, 0.0f,
+                        0.0f, 0.0f, 1.0f, 0.0f,
+                        -(float)i * m_quad_stride - 0.2f, -(float)j * m_quad_stride - 0.2f, 0.1f, 1.0f
+                    );
+                    quad.m_transform = trans;
+                    quad.m_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                    quad.m_texture = tile->m_image;
+                    quad.m_texcoords = tile->m_texcoords;
+                    quads.push_back(quad);
+                }
+            }
 
 #if CALL_DRAW_QUAD_ONCE_AT_A_TIME
             for (int i = 0; i < m_quad_rows; ++i) {
                 for (int j = 0; j < m_quad_cols; ++j) {
                     g_runtime_context.m_renderer_2d->draw_quad(
                         { i * m_quad_stride, j * m_quad_stride, 0.1f },
-                        size,
+                        { m_quad_size, m_quad_size },
                         (float)(i + j),
                         { (float)(i % m_quad_rows) / m_quad_rows, (float)(j % m_quad_cols) / m_quad_cols, 1.0f, 1.0f },
                         m_texture);
@@ -65,7 +84,6 @@ struct MyLayer : Layer {
             }
 #endif
 
-            std::vector<Renderer2D::Quad> quads;
             {
                 PROFILE_SCOPE("generate quads");
                 for (int i = 0; i < m_quad_rows; ++i) {
@@ -147,6 +165,7 @@ private:
     InputState m_input_state;
     std::shared_ptr<Image2D> m_texture;
     std::shared_ptr<Image2D> m_checker;
+    std::shared_ptr<Image2D> m_atlas;
 
     int m_quad_rows = 32;
     int m_quad_cols = 32;

@@ -20,6 +20,12 @@ namespace z1 {
             std::shared_ptr<Image2D> m_texture = nullptr;
             glm::vec2 m_tiling_scale = glm::vec2(1.0f);
             glm::vec2 m_tiling_offset = glm::vec2(0.0f);
+            std::array<glm::vec2, 4> m_texcoords = { {
+                { 0.0f, 0.0f },
+                { 1.0f, 0.0f },
+                { 1.0f, 1.0f },
+                { 0.0f, 1.0f },
+            } };
         };
 
         Renderer2D();
@@ -32,10 +38,23 @@ namespace z1 {
             glm::vec3 const& position,
             glm::vec2 const& size,
             float rotation,
+            glm::vec4 const& color);
+
+        void draw_quad(
+            glm::vec3 const& position,
+            glm::vec2 const& size,
+            float rotation,
             glm::vec4 const& color,
-            std::shared_ptr<Image2D> const& texture = nullptr,
+            std::shared_ptr<Image2D> const& texture,
             glm::vec2 const& tiling_scale = glm::vec2(1.0f),
             glm::vec2 const& tiling_offset = glm::vec2(0.0f));
+
+        void draw_quad(
+            glm::vec3 const& position,
+            glm::vec2 const& size,
+            float rotation,
+            glm::vec4 const& color,
+            std::shared_ptr<SubImage2D> const& texture);
 
         void draw_quads(std::vector<Quad> const& quads);
 
@@ -45,7 +64,13 @@ namespace z1 {
             glm::mat4 m_model;
             glm::vec4 m_color;
             std::shared_ptr<Image2D> m_texture;
-            glm::vec4 m_tiling_factor;
+            glm::vec4 m_tiling_factor = { 1.0f, 1.0f, 0.0f, 0.0f };
+            std::array<glm::vec2, 4> m_texcoords = { {
+                { 0.0f, 0.0f },
+                { 1.0f, 0.0f },
+                { 1.0f, 1.0f },
+                { 0.0f, 1.0f },
+            } };
         };
         std::vector<QuadData> m_quads;
 
@@ -61,10 +86,10 @@ namespace z1 {
 
         struct BatchData {
             std::unordered_map<std::shared_ptr<Image2D>, uint32_t> m_textures;
-            uint32_t index_offset;
-            uint32_t index_num;
-            uint32_t vertex_offset;
-            uint32_t vertex_num;
+            uint32_t m_index_offset;
+            uint32_t m_index_num;
+            uint32_t m_vertex_offset;
+            uint32_t m_vertex_num;
         };
         std::vector<BatchData> m_batches;
 #endif
