@@ -47,6 +47,7 @@ workspace "z1engine"
             "3rdparty/glad/include",
             "3rdparty/imgui",
             "3rdparty/glm",
+            "3rdparty/entt",
         }
 
         links
@@ -118,6 +119,7 @@ workspace "z1engine"
             "3rdparty/glad/include",
             "3rdparty/imgui",
             "3rdparty/glm",
+            "3rdparty/entt",
         }
 
         links
