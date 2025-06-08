@@ -4,13 +4,14 @@
 #include "core/layer_stack.h"
 #include "core/timer.h"
 #include "core/log.h"
-#include "utils/instrumentor.h"
-#include "3rdparty/imgui_layer.h"
 #include "core/io.h"
-#include "render/graphics_context.h"
 #include "core/input.h"
+#include "utils/instrumentor.h"
+#include "scene/scene.h"
 #include "render/resource.h"
+#include "render/graphics_context.h"
 #include "render/renderer/renderer_2d.h"
+#include "3rdparty/imgui_layer.h"
 
 namespace z1 {
 
@@ -31,6 +32,7 @@ namespace z1 {
         m_graphics_context->init();
 
         m_resource_manager = std::make_shared<ResourceManager>();
+        m_scene = std::make_shared<Scene>();
 
         m_imgui_layer = std::make_shared<ImGuiLayer>();
         m_layer_stack = std::make_shared<LayerStack>();

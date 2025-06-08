@@ -41,6 +41,7 @@ namespace z1 {
     struct Renderer2DBatched;
     struct Camera;
     struct Framebuffer;
+    struct Scene;
 
     struct API RuntimeContext {
 
@@ -58,6 +59,7 @@ namespace z1 {
         std::shared_ptr<InputSystem> m_input_system;
         std::shared_ptr<ResourceManager> m_resource_manager;
         std::shared_ptr<Renderer2D> m_renderer_2d;
+        std::shared_ptr<Scene> m_scene;
 
         std::shared_ptr<Camera> m_main_camera;
         std::shared_ptr<Framebuffer> m_main_framebuffer;
