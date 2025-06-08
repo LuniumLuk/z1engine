@@ -13,7 +13,7 @@ namespace z1 {
         dispatcher.dispatch<MouseButtonReleasedEvent>(BIND_EVENT_FN(InputState::on_mouse_released));
     }
 
-    void InputState::update(double delta_time) {
+    void InputState::update(float delta_time) {
         m_delta_time = delta_time;
 
         auto [mouse_x, mouse_y] = g_runtime_context.m_input_system->get_mouse_pos();

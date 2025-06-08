@@ -13,10 +13,10 @@ namespace z1 {
         float m_scroll_delta = 0.0f;
         float m_mouse_delta_x = 0.0f, m_mouse_delta_y = 0.0f;
         float m_mouse_last_x = 0.0f, m_mouse_last_y = 0.0f;
-        double m_delta_time;
+        float m_delta_time;
 
         void on_event(Event& event);
-        void update(double delta_time);
+        void update(float delta_time);
         void reset();
 
     private:

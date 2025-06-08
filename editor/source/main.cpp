@@ -6,9 +6,13 @@
 
 using namespace z1;
 
-struct MyLayer : Layer {
-    MyLayer(std::shared_ptr<ImGuiUILayer> imgui_ui_layer): m_imgui_ui_layer(imgui_ui_layer), m_framebuffer(m_imgui_ui_layer->get_viewport_framebuffer()) {
+struct EditorLayer : Layer {
+    EditorLayer(std::shared_ptr<ImGuiUILayer> imgui_ui_layer): m_imgui_ui_layer(imgui_ui_layer), m_framebuffer(m_imgui_ui_layer->get_viewport_framebuffer()) {
+        m_active_scene = std::make_shared<Scene>();
 
+        auto square = m_active_scene->create_entity();
+        m_active_scene->get_registry().emplace<TransformComponent>(square);
+        m_active_scene->get_registry().emplace<SpriteComponent>(square, glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
     }
 
     void on_attach() override {
@@ -21,7 +25,7 @@ struct MyLayer : Layer {
         m_atlas = Image2D::create("asset/texture/roguelikeSheet_transparent.png", SamplerMode::Nearest);
     }
 
-    void on_update(double delta_time) override {
+    void on_update(float delta_time) override {
         m_fps_timer += delta_time;
         m_fps_counter += 1;
         if (m_fps_timer >= 1.0) {
@@ -37,7 +41,9 @@ struct MyLayer : Layer {
         }
         m_input_state.reset();
 
-        auto const& renderer_2d = g_runtime_context.m_renderer_2d;
+        m_active_scene->on_update(delta_time);
+
+        /*auto const& renderer_2d = g_runtime_context.m_renderer_2d;
 
         {
             PROFILE_SCOPE("draw_quad");
@@ -63,10 +69,10 @@ struct MyLayer : Layer {
                         0.0f, 0.0f, 1.0f, 0.0f,
                         -(float)i * m_quad_stride - 0.2f, -(float)j * m_quad_stride - 0.2f, 0.1f, 1.0f
                     );
-                    quad.m_transform = trans;
-                    quad.m_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-                    quad.m_texture = tile->m_image;
-                    quad.m_texcoords = tile->m_texcoords;
+                        quad.m_transform = trans;
+                        quad.m_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                        quad.m_texture = tile->m_image;
+                        quad.m_texcoords = tile->m_texcoords;
                     quads.push_back(quad);
                 }
             }
@@ -109,7 +115,7 @@ struct MyLayer : Layer {
         }
 
         g_runtime_context.m_renderer_2d->prepare_draw();
-        g_runtime_context.m_renderer_2d->draw();
+        g_runtime_context.m_renderer_2d->draw();*/
     }
 
     void on_event(Event& event) override {
@@ -160,6 +166,7 @@ struct MyLayer : Layer {
 private:
     std::shared_ptr<ImGuiUILayer> m_imgui_ui_layer;
     std::shared_ptr<Framebuffer> m_framebuffer;
+    std::shared_ptr<Scene> m_active_scene;
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Generic2DCameraController> m_camera_controller;
     InputState m_input_state;
@@ -173,7 +180,7 @@ private:
     float m_quad_size = 0.1f;
 
     int m_fps_counter = 0;
-    double m_fps_timer = 0.0;
+    float m_fps_timer = 0.0;
 
     void show_shader_info(std::shared_ptr<Shader> const& shader) {
         ImGui::Begin("shader info");
@@ -269,7 +276,7 @@ struct MyApp : Application {
     void init() override {
         m_imgui_ui_layer = std::make_shared<ImGuiUILayer>();
 
-        push_layer(std::make_shared<MyLayer>(m_imgui_ui_layer));
+        push_layer(std::make_shared<EditorLayer>(m_imgui_ui_layer));
         push_overlay(m_imgui_ui_layer);
     };
 

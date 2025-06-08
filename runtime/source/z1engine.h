@@ -20,6 +20,9 @@
 #include "event/mouse_event.h"
 #include "event/application_event.h"
 
+#include "scene/scene.h"
+#include "scene/component.h"
+
 #include "render/graphics_context.h"
 #include "render/mesh.h"
 #include "render/material.h"

@@ -13,7 +13,7 @@ namespace z1 {
 
         virtual void on_attach() {}
         virtual void on_detach() {}
-        virtual void on_update(double deltaTime) {}
+        virtual void on_update(float deltaTime) {}
         virtual void on_fixed_update() {}
         virtual void on_imgui_render() {}
         virtual void on_event(Event& event) {}

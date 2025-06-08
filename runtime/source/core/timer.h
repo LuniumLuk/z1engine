@@ -9,17 +9,17 @@ namespace z1 {
         Timer();
 
         void update();
-        double get_delta_time() const;
-        double get_total_time() const;
+        float get_delta_time() const;
+        float get_total_time() const;
         bool should_fixed_update() const;
 
-        static double fixed_update_delta;
+        static float fixed_update_delta;
 
     private:
         std::chrono::steady_clock::time_point m_start_timepoint;
         std::chrono::steady_clock::time_point m_prev_timepoint;
-        double m_delta_time = 0.0;
-        double m_fixed_delta_time = 0.0;
+        float m_delta_time = 0.0;
+        float m_fixed_delta_time = 0.0;
         bool m_should_fixed_update = false;
     };
 
