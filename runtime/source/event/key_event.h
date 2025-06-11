@@ -4,61 +4,61 @@
 
 namespace z1 {
 
-    struct API KeyEvent : Event {
-        int get_keycode() const { return m_keycode; }
+	struct API KeyEvent : Event {
+		int get_keycode() const { return m_keycode; }
 
-        EVENT_STRUCT_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
+		EVENT_STRUCT_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
 
-    protected:
-        KeyEvent(int keycode)
-            : m_keycode(keycode) {}
+	protected:
+		KeyEvent(int keycode)
+			: m_keycode(keycode) {}
 
-    private:
-        int m_keycode;
-    };
+	private:
+		int m_keycode;
+	};
 
-    struct API KeyPressedEvent : KeyEvent {
-        KeyPressedEvent(int keycode, int repeat)
-            : KeyEvent(keycode), m_repeat_count(repeat) {}
+	struct API KeyPressedEvent : KeyEvent {
+		KeyPressedEvent(int keycode, int repeat)
+			: KeyEvent(keycode), m_repeat_count(repeat) {}
 
-        int GetRepeatCount() const { return m_repeat_count; }
+		int GetRepeatCount() const { return m_repeat_count; }
 
-        std::string to_string() const override {
-            std::stringstream ss;
-            ss << "KeyPressedEvent: " << get_keycode() << " (" << m_repeat_count << " repeats)";
-            return ss.str();
-        }
+		std::string to_string() const override {
+			std::stringstream ss;
+			ss << "KeyPressedEvent: " << get_keycode() << " (" << m_repeat_count << " repeats)";
+			return ss.str();
+		}
 
-        EVENT_STRUCT_TYPE(KeyPressed)
+		EVENT_STRUCT_TYPE(KeyPressed)
 
-    private:
-        int m_repeat_count;
-    };
+	private:
+		int m_repeat_count;
+	};
 
-    struct API KeyReleasedEvent : KeyEvent {
-        KeyReleasedEvent(int keycode, int repeat)
-            : KeyEvent(keycode) {}
+	struct API KeyReleasedEvent : KeyEvent {
+		KeyReleasedEvent(int keycode, int repeat)
+			: KeyEvent(keycode) {}
 
-        std::string to_string() const override {
-            std::stringstream ss;
-            ss << "KeyReleasedEvent: " << get_keycode();
-            return ss.str();
-        }
+		std::string to_string() const override {
+			std::stringstream ss;
+			ss << "KeyReleasedEvent: " << get_keycode();
+			return ss.str();
+		}
 
-        EVENT_STRUCT_TYPE(KeyReleased)
-    };
+		EVENT_STRUCT_TYPE(KeyReleased)
+	};
 
-    struct API KeyTypedEvent : KeyEvent {
-        KeyTypedEvent(int keycode)
-            : KeyEvent(keycode) {}
+	struct API KeyTypedEvent : KeyEvent {
+		KeyTypedEvent(int keycode)
+			: KeyEvent(keycode) {}
 
-        std::string to_string() const override {
-            std::stringstream ss;
-            ss << "KeyTypedEvent: " << get_keycode();
-            return ss.str();
-        }
+		std::string to_string() const override {
+			std::stringstream ss;
+			ss << "KeyTypedEvent: " << get_keycode();
+			return ss.str();
+		}
 
-        EVENT_STRUCT_TYPE(KeyTyped)
-    };
+		EVENT_STRUCT_TYPE(KeyTyped)
+	};
 
 }

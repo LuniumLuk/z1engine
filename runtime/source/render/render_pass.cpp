@@ -4,9 +4,9 @@
 
 namespace z1 {
 
-    std::shared_ptr<RenderPass> RenderPass::build(Description const& description) {
-        PROFILE_FUNCTION();
-        return std::shared_ptr<RenderPass>(new OpenGLRenderPass(description));
-    }
+	std::shared_ptr<RenderPass> RenderPass::build(Description const& description) {
+		PROFILE_FUNCTION();
+		return std::shared_ptr<RenderPass>(new OpenGLRenderPass(description));
+	}
 
 }

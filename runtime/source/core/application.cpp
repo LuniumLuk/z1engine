@@ -10,89 +10,89 @@
 
 namespace z1 {
 
-    Application::Application() {
-        PROFILE_FUNCTION();
+	Application::Application() {
+		PROFILE_FUNCTION();
 
-        g_runtime_context.init();
-        g_runtime_context.m_window->add_event_callback(BIND_EVENT_FN(Application::on_event));
-    }
+		g_runtime_context.init();
+		g_runtime_context.m_window->add_event_callback(BIND_EVENT_FN(Application::on_event));
+	}
 
-    Application::~Application() {
-        g_runtime_context.shutdown();
-    }
+	Application::~Application() {
+		g_runtime_context.shutdown();
+	}
 
-    void Application::run() {
-        PROFILE_BEGIN_SESSION("application run", "profile-run.json");
-        push_overlay(std::static_pointer_cast<Layer>(g_runtime_context.m_imgui_layer));
+	void Application::run() {
+		PROFILE_BEGIN_SESSION("application run", "profile-run.json");
+		push_overlay(std::static_pointer_cast<Layer>(g_runtime_context.m_imgui_layer));
 
-        g_runtime_context.m_timer->update();
-        while (!m_should_exit) {
-            PROFILE_SCOPE("runtime loop");
+		g_runtime_context.m_timer->update();
+		while (!m_should_exit) {
+			PROFILE_SCOPE("runtime loop");
 
-            g_runtime_context.m_graphics_context->begin_frame();
-            if (!m_minimized) {
-                {
-                    PROFILE_SCOPE("update layer stacks");
-                    for (auto it = g_runtime_context.m_layer_stack->end(); it != g_runtime_context.m_layer_stack->begin();) {
-                        --it;
-                        (*it)->on_update(g_runtime_context.m_timer->get_delta_time());
-                        if (g_runtime_context.m_timer->should_fixed_update())
-                            (*it)->on_fixed_update();
-                    }
-                }
+			g_runtime_context.m_graphics_context->begin_frame();
+			if (!m_minimized) {
+				{
+					PROFILE_SCOPE("update layer stacks");
+					for (auto it = g_runtime_context.m_layer_stack->end(); it != g_runtime_context.m_layer_stack->begin();) {
+						--it;
+						(*it)->on_update(g_runtime_context.m_timer->get_delta_time());
+						if (g_runtime_context.m_timer->should_fixed_update())
+							(*it)->on_fixed_update();
+					}
+				}
 
-                {
-                    PROFILE_SCOPE("ImGuiRender");
-                    g_runtime_context.m_imgui_layer->begin();
-                    for (auto it = g_runtime_context.m_layer_stack->end(); it != g_runtime_context.m_layer_stack->begin();)
-                        (*--it)->on_imgui_render();
-                    g_runtime_context.m_imgui_layer->end();
-                }
-            }
+				{
+					PROFILE_SCOPE("ImGuiRender");
+					g_runtime_context.m_imgui_layer->begin();
+					for (auto it = g_runtime_context.m_layer_stack->end(); it != g_runtime_context.m_layer_stack->begin();)
+						(*--it)->on_imgui_render();
+					g_runtime_context.m_imgui_layer->end();
+				}
+			}
 
-            g_runtime_context.m_window->on_update();
-            g_runtime_context.m_graphics_context->end_frame();
-            g_runtime_context.m_graphics_context->swap_buffers();
-            g_runtime_context.m_timer->update();
-        }
-        g_runtime_context.m_graphics_context->finish();
-        PROFILE_END_SESSION();
-    }
+			g_runtime_context.m_window->on_update();
+			g_runtime_context.m_graphics_context->end_frame();
+			g_runtime_context.m_graphics_context->swap_buffers();
+			g_runtime_context.m_timer->update();
+		}
+		g_runtime_context.m_graphics_context->finish();
+		PROFILE_END_SESSION();
+	}
 
-    void Application::terminate() {
-        m_should_exit = true;
-    }
+	void Application::terminate() {
+		m_should_exit = true;
+	}
 
-    void Application::on_event(Event& event) {
-        EventDispatcher dispatcher(event);
-        dispatcher.dispatch<WindowCloseEvent>(BIND_EVENT_FN(Application::on_window_close));
-        dispatcher.dispatch<WindowResizeEvent>(BIND_EVENT_FN(Application::on_window_resize));
+	void Application::on_event(Event& event) {
+		EventDispatcher dispatcher(event);
+		dispatcher.dispatch<WindowCloseEvent>(BIND_EVENT_FN(Application::on_window_close));
+		dispatcher.dispatch<WindowResizeEvent>(BIND_EVENT_FN(Application::on_window_resize));
 
-        for (auto it = g_runtime_context.m_layer_stack->end(); it != g_runtime_context.m_layer_stack->begin();) {
-            (*--it)->on_event(event);
-            if (event.is_handled())
-                break;
-        }
-    }
+		for (auto it = g_runtime_context.m_layer_stack->end(); it != g_runtime_context.m_layer_stack->begin();) {
+			(*--it)->on_event(event);
+			if (event.is_handled())
+				break;
+		}
+	}
 
-    bool Application::on_window_close(WindowCloseEvent& event) {
-        terminate();
-        return true;
-    }
+	bool Application::on_window_close(WindowCloseEvent& event) {
+		terminate();
+		return true;
+	}
 
-    bool Application::on_window_resize(WindowResizeEvent& event) {
-        CORE_DEBUG("resize {0} {1}", event.get_width(), event.get_height());
-        m_minimized = (event.get_width() == 0 || event.get_height() == 0);
+	bool Application::on_window_resize(WindowResizeEvent& event) {
+		CORE_DEBUG("resize {0} {1}", event.get_width(), event.get_height());
+		m_minimized = (event.get_width() == 0 || event.get_height() == 0);
 
-        return false;
-    }
+		return false;
+	}
 
-    void Application::push_layer(std::shared_ptr<Layer> const& layer) {
-        g_runtime_context.m_layer_stack->push_layer(layer);
-    }
+	void Application::push_layer(std::shared_ptr<Layer> const& layer) {
+		g_runtime_context.m_layer_stack->push_layer(layer);
+	}
 
-    void Application::push_overlay(std::shared_ptr<Layer> const& overlay) {
-        g_runtime_context.m_layer_stack->push_overlay(overlay);
-    }
+	void Application::push_overlay(std::shared_ptr<Layer> const& overlay) {
+		g_runtime_context.m_layer_stack->push_overlay(overlay);
+	}
 
 }

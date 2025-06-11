@@ -4,8 +4,8 @@
 
 namespace z1 {
 
-    std::shared_ptr<GraphicsContext> GraphicsContext::create() {
-        return std::shared_ptr<GraphicsContext>(new OpenGLContext());
-    }
+	std::shared_ptr<GraphicsContext> GraphicsContext::create() {
+		return std::shared_ptr<GraphicsContext>(new OpenGLContext());
+	}
 
 }

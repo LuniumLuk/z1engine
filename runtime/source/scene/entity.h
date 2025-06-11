@@ -7,56 +7,56 @@
 
 namespace z1 {
 
-    struct API Entity {
-        Entity(entt::entity handle, std::weak_ptr<Scene> const& scene)
-            : m_handle(handle), m_scene(scene) {
-        }
+	struct API Entity {
+		Entity(entt::entity handle, std::weak_ptr<Scene> const& scene)
+			: m_handle(handle), m_scene(scene) {
+		}
 
-        Entity(Entity const&) = default;
-        Entity& operator=(Entity const&) = default;
-        Entity(Entity&&) = default;
-        Entity& operator=(Entity&&) = default;
+		Entity(Entity const&) = default;
+		Entity& operator=(Entity const&) = default;
+		Entity(Entity&&) = default;
+		Entity& operator=(Entity&&) = default;
 
-        ~Entity() {
-            CORE_ASSERT(is_valid(), "Entity is invalid!");
-            CORE_INFO("Destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
-            m_scene.lock()->m_registry.destroy(m_handle);
-        }
+		~Entity() {
+			CORE_ASSERT(is_valid(), "Entity is invalid!");
+			CORE_INFO("Destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
+			m_scene.lock()->m_registry.destroy(m_handle);
+		}
 
-        template<typename T>
-        bool has_component() const {
-            CORE_ASSERT(is_valid(), "Entity is invalid!");
-            return m_scene.lock()->m_registry.all_of<T>(m_handle);
-        }
+		template<typename T>
+		bool has_component() const {
+			CORE_ASSERT(is_valid(), "Entity is invalid!");
+			return m_scene.lock()->m_registry.all_of<T>(m_handle);
+		}
 
-        template<typename T>
-        T& get_component() const {
-            CORE_ASSERT(is_valid(), "Entity is invalid!");
-            CORE_ASSERT(has_component<T>(), "Entity does not have component of type " + std::string(typeid(T).name()) + "!");
-            return m_scene.lock()->m_registry.get<T>(m_handle);
-        }
+		template<typename T>
+		T& get_component() const {
+			CORE_ASSERT(is_valid(), "Entity is invalid!");
+			CORE_ASSERT(has_component<T>(), "Entity does not have component of type " + std::string(typeid(T).name()) + "!");
+			return m_scene.lock()->m_registry.get<T>(m_handle);
+		}
 
-        template<typename T, typename... Args>
-        T& add_component(Args&&... args) {
-            CORE_ASSERT(is_valid(), "Entity is invalid!");
-            CORE_ASSERT(!has_component<T>(), "Entity already has component of type " + std::string(typeid(T).name()) + "!");
-            return m_scene.lock()->m_registry.emplace<T>(m_handle, std::forward<Args>(args)...);
-        }
+		template<typename T, typename... Args>
+		T& add_component(Args&&... args) {
+			CORE_ASSERT(is_valid(), "Entity is invalid!");
+			CORE_ASSERT(!has_component<T>(), "Entity already has component of type " + std::string(typeid(T).name()) + "!");
+			return m_scene.lock()->m_registry.emplace<T>(m_handle, std::forward<Args>(args)...);
+		}
 
-        template<typename T>
-        void remove_component() {
-            CORE_ASSERT(is_valid(), "Entity is invalid!");
-            CORE_ASSERT(has_component<T>(), "Entity does not have component of type " + std::string(typeid(T).name()) + "!");
-            m_scene.lock()->m_registry.remove<T>(m_handle);
-        }
+		template<typename T>
+		void remove_component() {
+			CORE_ASSERT(is_valid(), "Entity is invalid!");
+			CORE_ASSERT(has_component<T>(), "Entity does not have component of type " + std::string(typeid(T).name()) + "!");
+			m_scene.lock()->m_registry.remove<T>(m_handle);
+		}
 
-        bool is_valid() const {
-            return !m_scene.expired() && m_scene.lock()->m_registry.valid(m_handle);
-        }
+		bool is_valid() const {
+			return !m_scene.expired() && m_scene.lock()->m_registry.valid(m_handle);
+		}
 
-    private:
-        entt::entity m_handle;
-        std::weak_ptr<Scene> m_scene;
-    };
+	private:
+		entt::entity m_handle;
+		std::weak_ptr<Scene> m_scene;
+	};
 
 }

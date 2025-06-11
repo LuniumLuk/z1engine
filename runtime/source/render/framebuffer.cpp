@@ -4,12 +4,12 @@
 
 namespace z1 {
 
-    std::shared_ptr<Framebuffer> Framebuffer::create(
-        uint32_t width, uint32_t height,
-        std::initializer_list<Attachment> attachments) {
-        PROFILE_FUNCTION();
+	std::shared_ptr<Framebuffer> Framebuffer::create(
+		uint32_t width, uint32_t height,
+		std::initializer_list<Attachment> attachments) {
+		PROFILE_FUNCTION();
 
-        return std::shared_ptr<Framebuffer>(new OpenGLFramebuffer(width, height, attachments));
-    }
+		return std::shared_ptr<Framebuffer>(new OpenGLFramebuffer(width, height, attachments));
+	}
 
 }

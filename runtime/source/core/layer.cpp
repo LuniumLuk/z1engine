@@ -3,9 +3,9 @@
 
 namespace z1 {
 
-    Layer::Layer(std::string const& name)
-        : m_name(name) {}
+	Layer::Layer(std::string const& name)
+		: m_name(name) {}
 
-    Layer::~Layer() {}
+	Layer::~Layer() {}
 
 }

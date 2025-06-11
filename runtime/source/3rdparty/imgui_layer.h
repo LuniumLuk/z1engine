@@ -4,15 +4,15 @@
 
 namespace z1 {
 
-    struct API ImGuiLayer : Layer {
-        ImGuiLayer();
-        ~ImGuiLayer();
+	struct API ImGuiLayer : Layer {
+		ImGuiLayer();
+		~ImGuiLayer();
 
-        void on_attach() override;
-        void on_detach() override;
+		void on_attach() override;
+		void on_detach() override;
 
-        void begin();
-        void end();
-    };
+		void begin();
+		void end();
+	};
 
 }

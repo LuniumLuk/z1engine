@@ -6,19 +6,19 @@
 
 namespace z1 {
 
-    struct Entity;
+	struct Entity;
 
-    struct API Scene : std::enable_shared_from_this<Scene> {
-        Scene();
-        ~Scene();
+	struct API Scene : std::enable_shared_from_this<Scene> {
+		Scene();
+		~Scene();
 
-        void on_update(float delta_time);
+		void on_update(float delta_time);
 
-        std::shared_ptr<Entity> create_entity(std::string const& name);
+		std::shared_ptr<Entity> create_entity(std::string const& name);
 
-    private:
-        friend struct Entity;
-        entt::registry m_registry;
-    };
+	private:
+		friend struct Entity;
+		entt::registry m_registry;
+	};
 
 }

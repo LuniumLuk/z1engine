@@ -8,165 +8,165 @@
 
 namespace z1 {
 
-    static bool s_is_glfw_initialized = false;
+	static bool s_is_glfw_initialized = false;
 
-    static void GLFWErrorCallback(int error, const char* description) {
-        CORE_ERROR("glfw error ({0}): {1}", error, description);
-    }
+	static void GLFWErrorCallback(int error, const char* description) {
+		CORE_ERROR("glfw error ({0}): {1}", error, description);
+	}
 
-    Window::~Window() {
-        shutdown();
-    }
+	Window::~Window() {
+		shutdown();
+	}
 
-    void Window::init(Window::Config const& config) {
-        PROFILE_FUNCTION();
-        m_data.title = config.title;
-        m_data.width = config.width;
-        m_data.height = config.height;
+	void Window::init(Window::Config const& config) {
+		PROFILE_FUNCTION();
+		m_data.title = config.title;
+		m_data.width = config.width;
+		m_data.height = config.height;
 
-        CORE_INFO("creating window {0} ({1}, {2})", config.title, config.width, config.height);
+		CORE_INFO("creating window {0} ({1}, {2})", config.title, config.width, config.height);
 
-        if (!s_is_glfw_initialized) {
-            {
-                PROFILE_SCOPE("glfwInit");
-                int success = glfwInit();
-                CORE_ASSERT(success, "could not initialize GLFW!");
-                glfwSetErrorCallback(GLFWErrorCallback);
+		if (!s_is_glfw_initialized) {
+			{
+				PROFILE_SCOPE("glfwInit");
+				int success = glfwInit();
+				CORE_ASSERT(success, "could not initialize GLFW!");
+				glfwSetErrorCallback(GLFWErrorCallback);
 
-                s_is_glfw_initialized = true;
-            }
-        }
+				s_is_glfw_initialized = true;
+			}
+		}
 
-        {
-            PROFILE_SCOPE("glfwCreateWindow");
-            glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-            m_window = glfwCreateWindow((int)config.width, (int)config.height, config.title.c_str(), nullptr, nullptr);
-            glfwSetWindowUserPointer(m_window, &m_data);
-        }
+		{
+			PROFILE_SCOPE("glfwCreateWindow");
+			glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+			m_window = glfwCreateWindow((int)config.width, (int)config.height, config.title.c_str(), nullptr, nullptr);
+			glfwSetWindowUserPointer(m_window, &m_data);
+		}
 
-        glfwSetWindowSizeCallback(m_window,
-            [](GLFWwindow* handle, int width, int height) {
-                WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
-                data->width = width;
-                data->height = height;
+		glfwSetWindowSizeCallback(m_window,
+			[](GLFWwindow* handle, int width, int height) {
+				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
+				data->width = width;
+				data->height = height;
 
-                WindowResizeEvent event(width, height);
-                for (auto const& cb : data->event_callbacks) cb(event);
-            });
+				WindowResizeEvent event(width, height);
+				for (auto const& cb : data->event_callbacks) cb(event);
+			});
 
-        glfwSetWindowCloseCallback(m_window,
-            [](GLFWwindow* handle) {
-                WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
+		glfwSetWindowCloseCallback(m_window,
+			[](GLFWwindow* handle) {
+				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
 
-                WindowCloseEvent event;
-                for (auto const& cb : data->event_callbacks) cb(event);
-            });
+				WindowCloseEvent event;
+				for (auto const& cb : data->event_callbacks) cb(event);
+			});
 
-        glfwSetKeyCallback(m_window,
-            [](GLFWwindow* handle, int key, int scancode, int action, int mods) {
-                WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
+		glfwSetKeyCallback(m_window,
+			[](GLFWwindow* handle, int key, int scancode, int action, int mods) {
+				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
 
-                switch (action) {
-                case GLFW_PRESS: {
-                    KeyPressedEvent event(key, 0);
-                    for (auto const& cb : data->event_callbacks) cb(event);
-                    break;
-                }
-                case GLFW_RELEASE: {
-                    KeyReleasedEvent event(key, 0);
-                    for (auto const& cb : data->event_callbacks) cb(event);
-                    break;
-                }
-                case GLFW_REPEAT: {
-                    KeyPressedEvent event(key, 1);
-                    for (auto const& cb : data->event_callbacks) cb(event);
-                    break;
-                }
-                }
-            });
+				switch (action) {
+				case GLFW_PRESS: {
+					KeyPressedEvent event(key, 0);
+					for (auto const& cb : data->event_callbacks) cb(event);
+					break;
+				}
+				case GLFW_RELEASE: {
+					KeyReleasedEvent event(key, 0);
+					for (auto const& cb : data->event_callbacks) cb(event);
+					break;
+				}
+				case GLFW_REPEAT: {
+					KeyPressedEvent event(key, 1);
+					for (auto const& cb : data->event_callbacks) cb(event);
+					break;
+				}
+				}
+			});
 
-        glfwSetCharCallback(m_window,
-            [](GLFWwindow* handle, uint32_t key) {
-                WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
+		glfwSetCharCallback(m_window,
+			[](GLFWwindow* handle, uint32_t key) {
+				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
 
-                KeyTypedEvent event(key);
-                for (auto const& cb : data->event_callbacks) cb(event);
-            });
+				KeyTypedEvent event(key);
+				for (auto const& cb : data->event_callbacks) cb(event);
+			});
 
-        glfwSetMouseButtonCallback(m_window,
-            [](GLFWwindow* handle, int button, int action, int mods) {
-                WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
+		glfwSetMouseButtonCallback(m_window,
+			[](GLFWwindow* handle, int button, int action, int mods) {
+				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
 
-                switch (action) {
-                case GLFW_PRESS: {
-                    MouseButtonPressedEvent event(button);
-                    for (auto const& cb : data->event_callbacks) cb(event);
-                    break;
-                }
-                case GLFW_RELEASE: {
-                    MouseButtonReleasedEvent event(button);
-                    for (auto const& cb : data->event_callbacks) cb(event);
-                    break;
-                }
-                }
-            });
+				switch (action) {
+				case GLFW_PRESS: {
+					MouseButtonPressedEvent event(button);
+					for (auto const& cb : data->event_callbacks) cb(event);
+					break;
+				}
+				case GLFW_RELEASE: {
+					MouseButtonReleasedEvent event(button);
+					for (auto const& cb : data->event_callbacks) cb(event);
+					break;
+				}
+				}
+			});
 
-        glfwSetScrollCallback(m_window,
-            [](GLFWwindow* handle, double xoffset, double yoffset) {
-                WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
+		glfwSetScrollCallback(m_window,
+			[](GLFWwindow* handle, double xoffset, double yoffset) {
+				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
 
-                MouseScrollEvent event((float)xoffset, (float)yoffset);
-                for (auto const& cb : data->event_callbacks) cb(event);
-            });
+				MouseScrollEvent event((float)xoffset, (float)yoffset);
+				for (auto const& cb : data->event_callbacks) cb(event);
+			});
 
-        glfwSetCursorPosCallback(m_window,
-            [](GLFWwindow* handle, double xpos, double ypos) {
-                WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
+		glfwSetCursorPosCallback(m_window,
+			[](GLFWwindow* handle, double xpos, double ypos) {
+				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
 
-                MouseMovedEvent event((float)xpos, (float)ypos);
-                for (auto const& cb : data->event_callbacks) cb(event);
-            });
+				MouseMovedEvent event((float)xpos, (float)ypos);
+				for (auto const& cb : data->event_callbacks) cb(event);
+			});
 
-        glfwSetWindowFocusCallback(m_window,
-            [](GLFWwindow* handle, int focused) {
-                WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
+		glfwSetWindowFocusCallback(m_window,
+			[](GLFWwindow* handle, int focused) {
+				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
 
-                if (focused) {
-                    WindowFocusEvent event;
-                    for (auto const& cb : data->event_callbacks) cb(event);
-                }
-                else {
-                    WindowLostFocusEvent event;
-                    for (auto const& cb : data->event_callbacks) cb(event);
-                }
-            });
-    }
+				if (focused) {
+					WindowFocusEvent event;
+					for (auto const& cb : data->event_callbacks) cb(event);
+				}
+				else {
+					WindowLostFocusEvent event;
+					for (auto const& cb : data->event_callbacks) cb(event);
+				}
+			});
+	}
 
-    void Window::shutdown() {
-        PROFILE_FUNCTION();
-        glfwDestroyWindow(m_window);
-    }
+	void Window::shutdown() {
+		PROFILE_FUNCTION();
+		glfwDestroyWindow(m_window);
+	}
 
-    void Window::on_update() {
-        glfwPollEvents();
-    }
+	void Window::on_update() {
+		glfwPollEvents();
+	}
 
-    void Window::set_v_sync(bool enabled) {
-        if (enabled) {
-            glfwSwapInterval(1);
-        }
-        else {
-            glfwSwapInterval(0);
-        }
-        m_data.v_sync = enabled;
-    }
+	void Window::set_v_sync(bool enabled) {
+		if (enabled) {
+			glfwSwapInterval(1);
+		}
+		else {
+			glfwSwapInterval(0);
+		}
+		m_data.v_sync = enabled;
+	}
 
-    bool Window::is_v_sync_enabled() const {
-        return m_data.v_sync;
-    }
+	bool Window::is_v_sync_enabled() const {
+		return m_data.v_sync;
+	}
 
-    void Window::set_window_title(std::string const& title) {
-        glfwSetWindowTitle(m_window, title.c_str());
-    }
+	void Window::set_window_title(std::string const& title) {
+		glfwSetWindowTitle(m_window, title.c_str());
+	}
 
 }
