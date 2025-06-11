@@ -10,9 +10,8 @@ struct EditorLayer : Layer {
     EditorLayer(std::shared_ptr<ImGuiUILayer> imgui_ui_layer): m_imgui_ui_layer(imgui_ui_layer), m_framebuffer(m_imgui_ui_layer->get_viewport_framebuffer()) {
         m_active_scene = std::make_shared<Scene>();
 
-        auto square = m_active_scene->create_entity();
-        m_active_scene->get_registry().emplace<TransformComponent>(square);
-        m_active_scene->get_registry().emplace<SpriteComponent>(square, glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
+        m_square = m_active_scene->create_entity("Square_0");
+        m_square->add_component<SpriteComponent>(glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
     }
 
     void on_attach() override {
@@ -167,6 +166,7 @@ private:
     std::shared_ptr<ImGuiUILayer> m_imgui_ui_layer;
     std::shared_ptr<Framebuffer> m_framebuffer;
     std::shared_ptr<Scene> m_active_scene;
+    std::shared_ptr<Entity> m_square;
     std::shared_ptr<Camera> m_camera;
     std::shared_ptr<Generic2DCameraController> m_camera_controller;
     InputState m_input_state;

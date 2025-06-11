@@ -3,6 +3,10 @@
 
 namespace z1 {
 
+    TagComponent::TagComponent(std::string const& tag)
+        : m_tag(tag) {
+    }
+
     TransformComponent::TransformComponent(glm::vec3 const& location, glm::vec3 const& rotation, glm::vec3 const& scale)
         : m_location(location), m_rotation(rotation), m_scale(scale) {
     }

@@ -81,6 +81,8 @@ namespace z1 {
     void Renderer2D::prepare_draw() {
         PROFILE_FUNCTION();
 
+        if (m_quads.empty()) return;
+
         std::sort(m_quads.begin(), m_quads.end(), [](QuadData const& a, QuadData const& b) {
             if (a.m_model[3][2] == b.m_model[3][2]) {
                 return a.m_texture < b.m_texture;

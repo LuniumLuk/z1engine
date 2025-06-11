@@ -21,6 +21,7 @@
 #include "event/application_event.h"
 
 #include "scene/scene.h"
+#include "scene/entity.h"
 #include "scene/component.h"
 
 #include "render/graphics_context.h"

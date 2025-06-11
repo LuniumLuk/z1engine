@@ -6,6 +6,20 @@
 
 namespace z1 {
 
+    struct API TagComponent {
+        std::string m_tag;
+
+        TagComponent() = default;
+        TagComponent(std::string const& tag);
+
+        TagComponent(TagComponent const&) = default;
+        TagComponent& operator=(TagComponent const&) = default;
+        TagComponent(TagComponent&&) = delete;
+        TagComponent& operator=(TagComponent&&) = delete;
+
+        ~TagComponent() = default;
+    };
+
     struct API TransformComponent {
         glm::vec3 m_location{ 0.0f, 0.0f, 0.0f };
         glm::vec3 m_rotation{ 0.0f, 0.0f, 0.0f }; // in degrees

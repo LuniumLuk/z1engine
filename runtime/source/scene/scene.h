@@ -6,21 +6,18 @@
 
 namespace z1 {
 
-    struct API Scene {
+    struct Entity;
+
+    struct API Scene : std::enable_shared_from_this<Scene> {
         Scene();
         ~Scene();
 
         void on_update(float delta_time);
 
-        entt::entity create_entity() {
-            return m_registry.create();
-        }
-
-        entt::registry& get_registry() {
-            return m_registry;
-        }
+        std::shared_ptr<Entity> create_entity(std::string const& name);
 
     private:
+        friend struct Entity;
         entt::registry m_registry;
     };
 
