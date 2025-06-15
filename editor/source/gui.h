@@ -27,11 +27,11 @@ constexpr uint32_t g_viewport_resolutions[][2] = {
 	{ 3840, 2160 },
 };
 
-struct ImGuiUILayer : Layer {
-	ImGuiUILayer();
-	~ImGuiUILayer();
+struct EditorGUI {
+	EditorGUI();
+	~EditorGUI();
 
-	void on_imgui_render() override;
+	void draw();
 
 	std::shared_ptr<Framebuffer> const& get_viewport_framebuffer() const { return m_viewport_framebuffer; }
 	bool is_viewport_focused() const { return m_is_viewport_focused; }

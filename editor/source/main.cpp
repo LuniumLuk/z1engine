@@ -2,12 +2,13 @@
 #include <z1engine.h>
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
-#include <imgui_ui.h>
+#include <gui.h>
 
 using namespace z1;
 
 struct EditorLayer : Layer {
-	EditorLayer(std::shared_ptr<ImGuiUILayer> imgui_ui_layer): m_imgui_ui_layer(imgui_ui_layer), m_framebuffer(m_imgui_ui_layer->get_viewport_framebuffer()) {
+	EditorLayer() {
+		m_gui = std::make_shared<EditorGUI>();
 		m_active_scene = std::make_shared<Scene>();
 
 		m_square = m_active_scene->create_entity("Square_0");
@@ -18,7 +19,7 @@ struct EditorLayer : Layer {
 		m_camera = Camera::create_ortho(0.0f, 0.0f, 1.0f, 1.0f);
 		m_camera_controller = std::make_shared<Generic2DCameraController>(m_camera);
 		g_runtime_context.m_main_camera = m_camera;
-		g_runtime_context.m_main_framebuffer = m_framebuffer;
+		g_runtime_context.m_main_framebuffer = m_gui->get_viewport_framebuffer();
 		m_texture = Image2D::create(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
 		m_checker = Image2D::create(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
 		m_atlas = Image2D::create("asset/texture/roguelikeSheet_transparent.png", SamplerMode::Nearest);
@@ -32,10 +33,10 @@ struct EditorLayer : Layer {
 			m_fps_timer = 0.0;
 			m_fps_counter = 0;
 		}
-		m_camera_controller->m_drag_speed = m_imgui_ui_layer->m_viewport_pixel_scale_x;
+		m_camera_controller->m_drag_speed = m_gui->m_viewport_pixel_scale_x;
 
 		m_input_state.update(delta_time);
-		if (m_imgui_ui_layer->is_viewport_focused()) {
+		if (m_gui->is_viewport_focused()) {
 			m_camera_controller->update(m_input_state);
 		}
 		m_input_state.reset();
@@ -122,6 +123,8 @@ struct EditorLayer : Layer {
 	}
 
 	void on_imgui_render() override {
+		m_gui->draw();
+
 		ImGui::Begin("resource info");
 		ImGui::Text("resources");
 		if (ImGui::BeginTable("resources", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
@@ -158,13 +161,12 @@ struct EditorLayer : Layer {
 		ImGui::InputInt("quad cols", &m_quad_cols);
 		ImGui::InputFloat("quad stride", &m_quad_stride);
 		ImGui::InputFloat("quad size", &m_quad_size);
-		ImGui::Text(std::string("viewport_pixel_scale_x: " + std::to_string(m_imgui_ui_layer->m_viewport_pixel_scale_x)).c_str());
+		ImGui::Text(std::string("viewport_pixel_scale_x: " + std::to_string(m_gui->m_viewport_pixel_scale_x)).c_str());
 		ImGui::End();
 	}
 
 private:
-	std::shared_ptr<ImGuiUILayer> m_imgui_ui_layer;
-	std::shared_ptr<Framebuffer> m_framebuffer;
+	std::shared_ptr<EditorGUI> m_gui;
 	std::shared_ptr<Scene> m_active_scene;
 	std::shared_ptr<Entity> m_square;
 	std::shared_ptr<Camera> m_camera;
@@ -272,22 +274,30 @@ private:
 	}
 };
 
-struct MyApp : Application {
+struct EditorApp : Application {
 	void init() override {
-		m_imgui_ui_layer = std::make_shared<ImGuiUILayer>();
-
-		push_layer(std::make_shared<EditorLayer>(m_imgui_ui_layer));
-		push_overlay(m_imgui_ui_layer);
+		push_layer(std::make_shared<EditorLayer>());
 	};
-
-private:
-	std::shared_ptr<ImGuiUILayer> m_imgui_ui_layer;
 };
+
+#include <chrono>
 
 int main() {
 	std::cout << "hello world!\n";
 
-	MyApp app;
+	//ThreadPool thread_pool(4);
+	//std::mutex mtx;
+
+	//for (int i = 0; i < 10; ++i) {
+	//	thread_pool.enqueue(
+	//		[&, i]() {
+	//			std::lock_guard<std::mutex> lock(mtx);
+	//			std::cout << "task" << i << " is running on thread " << std::this_thread::get_id() << "\n";
+	//			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	//		});
+	//}
+
+	EditorApp app;
 
 	app.init();
 

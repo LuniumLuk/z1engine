@@ -1,6 +1,6 @@
-#include "imgui_ui.h"
+#include "gui.h"
 
-ImGuiUILayer::ImGuiUILayer() : Layer("imgui ui layer") {
+EditorGUI::EditorGUI() {
 	m_viewport_framebuffer = Framebuffer::create(g_viewport_resolutions[m_current_resolution][0], g_viewport_resolutions[m_current_resolution][1],
 		{
 			{ ImageFormat::RGBA8 },
@@ -8,11 +8,11 @@ ImGuiUILayer::ImGuiUILayer() : Layer("imgui ui layer") {
 		});
 }
 
-ImGuiUILayer::~ImGuiUILayer() {
+EditorGUI::~EditorGUI() {
 
 }
 
-void ImGuiUILayer::on_imgui_render() {
+void EditorGUI::draw() {
 	PROFILE_FUNCTION();
 	if (m_dockspace) {
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBackground;

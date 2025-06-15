@@ -103,11 +103,38 @@ namespace z1 {
 #   define C(x, y) CONCAT(x, y)
 #   define PROFILE_BEGIN_SESSION(name, filepath)  g_runtime_context.m_instrumentor->begin_session(name, filepath)
 #   define PROFILE_END_SESSION()                  g_runtime_context.m_instrumentor->end_session()
+#   define PROFILE_SET_THREAD_NAME(name)          g_runtime_context.m_instrumentor->set_thread_name(std::hash<std::thread::id>{}(std::this_thread::get_id()), name)
 #   define PROFILE_SCOPE(name)                    z1::InstrumentationTimer C(__PROFILE_TIMER_, __LINE__)(name)
+#   define PROFILE_COUNTER(name, value)           report_counter(name, static_cast<int64_t>(value))
+#   define PROFILE_INSTANT(name)                  report_instant(name)
+// Flow event can be used to represent the asynchronous dependencies between scope events
+// The valid flow events should satisfy the following conditions:
+//  1. The flow begin event should be called before a scope event's end on the same thread
+//  2. The flow end event should be called before another scope event's begin on the same thread
+// For example:
+// // on thread 1:
+// {
+//     PROFILE_SCOPE("scope1");
+//     // do something ...
+//     PROFILE_FLOW_BEGIN(1); // !!must be called before the source scope event ends!!
+// }
+// // on thread 2:
+// PROFILE_FLOW_END(1); // !!must be called before the target scope event starts!!
+// {
+//     PROFILE_SCOPE("scope2");
+//     // do something ...
+// }
+#   define PROFILE_FLOW_BEGIN(id)                 report_flow(id, "s")
+#   define PROFILE_FLOW_END(id)                   report_flow(id, "f")
 #   define PROFILE_FUNCTION()                     PROFILE_SCOPE(__FUNCSIG__)
 #else
 #   define PROFILE_BEGIN_SESSION(name, filepath)
 #   define PROFILE_END_SESSION()
+#   define PROFILE_SET_THREAD_NAME(name)
 #   define PROFILE_SCOPE(name)
+#   define PROFILE_COUNTER(name, value)
+#   define PROFILE_INSTANT(name)
+#   define PROFILE_FLOW_BEGIN(id)
+#   define PROFILE_FLOW_END(id)
 #   define PROFILE_FUNCTION()
 #endif

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <fstream>
 #include <thread>
+#include <unordered_map>
 
 // to enable profiling, define ENABLE_PROFILE before including this file.
 // - to start a session, use PROFILE_BEGIN_SESSION("name", "filepath")
@@ -25,6 +26,26 @@ namespace z1 {
 		size_t thread_id;
 	};
 
+	struct CounterResult {
+		std::string name;
+		int64_t time;
+		size_t thread_id;
+		int64_t value;
+	};
+
+	struct InstantResult {
+		std::string name;
+		int64_t time;
+		size_t thread_id;
+	};
+
+	struct FlowResult {
+		int64_t time;
+		size_t thread_id;
+		size_t id;
+		std::string phase;
+	};
+
 	struct InstrumentationSession {
 		std::string name;
 	};
@@ -33,13 +54,19 @@ namespace z1 {
 		Instrumentor() : m_current_session(nullptr), m_profile_count(0) {}
 
 		void begin_session(std::string const& name, std::string const& filepath = "profile.json") {
+			std::lock_guard<std::mutex> lock(m_mutex);
+
 			m_ostream.open(filepath);
+			m_filepath = filepath;
+
 			write_header();
 			m_current_session = new InstrumentationSession{ name };
 			m_profile_count = 0;
 		}
 
 		void end_session() {
+			std::lock_guard<std::mutex> lock(m_mutex);
+
 			write_footer();
 			m_ostream.close();
 			delete m_current_session;
@@ -48,6 +75,8 @@ namespace z1 {
 		}
 
 		void write_profile(ProfileResult const& result) {
+			std::lock_guard<std::mutex> lock(m_mutex);
+
 			if (m_profile_count++ > 0)
 				m_ostream << ",";
 
@@ -60,8 +89,83 @@ namespace z1 {
 			m_ostream << "\"name\":\"" << name << "\",";
 			m_ostream << "\"ph\":\"X\",";
 			m_ostream << "\"pid\":0,";
-			m_ostream << "\"tid\":" << result.thread_id << ",";
+			if (m_thread_names.find(result.thread_id) != m_thread_names.end())
+				m_ostream << "\"tid\":\"" << m_thread_names[result.thread_id] << "\",";
+			else
+				m_ostream << "\"tid\":" << result.thread_id << ",";
 			m_ostream << "\"ts\":" << result.start;
+			m_ostream << "}";
+
+			m_ostream.flush();
+		}
+
+		void write_counter(CounterResult const& result) {
+			std::lock_guard<std::mutex> lock(m_mutex);
+
+			if (m_profile_count++ > 0)
+				m_ostream << ",";
+
+			std::string name = result.name;
+			std::replace(name.begin(), name.end(), '"', '\'');
+
+			m_ostream << "{";
+			m_ostream << "\"cat\":\"counter\",";
+			m_ostream << "\"name\":\"" << name << "\",";
+			m_ostream << "\"ph\":\"C\",";
+			m_ostream << "\"pid\":0,";
+			if (m_thread_names.find(result.thread_id) != m_thread_names.end())
+				m_ostream << "\"tid\":\"" << m_thread_names[result.thread_id] << "\",";
+			else
+				m_ostream << "\"tid\":" << result.thread_id << ",";
+			m_ostream << "\"ts\":" << result.time << ",";
+			m_ostream << "\"args\":{\"" << result.name << "\":" << result.value << "}";
+			m_ostream << "}";
+
+			m_ostream.flush();
+		}
+
+		void write_instant(InstantResult const& result) {
+			std::lock_guard<std::mutex> lock(m_mutex);
+
+			if (m_profile_count++ > 0)
+				m_ostream << ",";
+
+			std::string name = result.name;
+			std::replace(name.begin(), name.end(), '"', '\'');
+
+			m_ostream << "{";
+			m_ostream << "\"cat\":\"event\",";
+			m_ostream << "\"name\":\"" << name << "\",";
+			m_ostream << "\"ph\":\"i\",";
+			m_ostream << "\"pid\":0,";
+			if (m_thread_names.find(result.thread_id) != m_thread_names.end())
+				m_ostream << "\"tid\":\"" << m_thread_names[result.thread_id] << "\",";
+			else
+				m_ostream << "\"tid\":" << result.thread_id << ",";
+			m_ostream << "\"ts\":" << result.time << ",";
+			m_ostream << "\"s\":\"g\"";
+			m_ostream << "}";
+
+			m_ostream.flush();
+		}
+
+		void write_flow(FlowResult const& result) {
+			std::lock_guard<std::mutex> lock(m_mutex);
+
+			if (m_profile_count++ > 0)
+				m_ostream << ",";
+
+			m_ostream << "{";
+			m_ostream << "\"cat\":\"function\",";
+			m_ostream << "\"name\":\"flow\",";
+			m_ostream << "\"ph\":\"" << result.phase << "\",";
+			m_ostream << "\"id\":\"" << result.id << "\",";
+			m_ostream << "\"pid\":0,";
+			if (m_thread_names.find(result.thread_id) != m_thread_names.end())
+				m_ostream << "\"tid\":\"" << m_thread_names[result.thread_id] << "\",";
+			else
+				m_ostream << "\"tid\":" << result.thread_id << ",";
+			m_ostream << "\"ts\":" << result.time;
 			m_ostream << "}";
 
 			m_ostream.flush();
@@ -77,10 +181,19 @@ namespace z1 {
 			m_ostream.flush();
 		}
 
+		void set_thread_name(size_t thread_id, std::string const& name) {
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_thread_names[thread_id] = name;
+		}
+
 	private:
 		InstrumentationSession* m_current_session;
 		std::ofstream m_ostream;
 		int m_profile_count;
+		std::string m_filepath;
+		std::mutex m_mutex;
+		std::unordered_map<size_t, std::string> m_thread_names;
+
 	};
 
 	struct InstrumentationTimer {
@@ -112,5 +225,23 @@ namespace z1 {
 		std::chrono::time_point<std::chrono::high_resolution_clock> m_start_timepoint;
 		bool m_stopped;
 	};
+
+	inline void ReportCounter(std::string const& name, int64_t value) {
+		size_t thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
+		int64_t time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
+		g_runtime_context.m_instrumentor->write_counter({ name, time, thread_id, value });
+	}
+
+	inline void ReportInstant(std::string const& name) {
+		size_t thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
+		int64_t time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
+		g_runtime_context.m_instrumentor->write_instant({ name, time, thread_id });
+	}
+
+	inline void ReportFlow(size_t id, std::string const& phase) {
+		size_t thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
+		int64_t time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
+		g_runtime_context.m_instrumentor->write_flow({ time, thread_id, id, phase });
+	}
 
 }
