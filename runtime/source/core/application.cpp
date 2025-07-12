@@ -11,6 +11,7 @@
 namespace z1 {
 
 	Application::Application() {
+		PROFILE_BEGIN_SESSION("application init", "profile-init.json");
 		PROFILE_FUNCTION();
 
 		g_runtime_context.init();
@@ -19,16 +20,16 @@ namespace z1 {
 
 	Application::~Application() {
 		g_runtime_context.shutdown();
+		PROFILE_END_SESSION();
 	}
 
 	void Application::run() {
+		PROFILE_END_SESSION();
 		PROFILE_BEGIN_SESSION("application run", "profile-run.json");
 		push_overlay(std::static_pointer_cast<Layer>(g_runtime_context.m_imgui_layer));
 
 		g_runtime_context.m_timer->update();
 		while (!m_should_exit) {
-			PROFILE_SCOPE("runtime loop");
-
 			g_runtime_context.m_graphics_context->begin_frame();
 			if (!m_minimized) {
 				{
@@ -57,6 +58,7 @@ namespace z1 {
 		}
 		g_runtime_context.m_graphics_context->finish();
 		PROFILE_END_SESSION();
+		PROFILE_BEGIN_SESSION("application shutdown", "profile-shutdown.json");
 	}
 
 	void Application::terminate() {

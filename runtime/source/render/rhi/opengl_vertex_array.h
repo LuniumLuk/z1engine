@@ -13,6 +13,8 @@ namespace z1 {
 		void draw(PrimitiveType type, uint32_t num = NUM_MAX) override;
 		void draw_instanced(PrimitiveType type, uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) override;
 
+		size_t get_element_count() const override { return m_element_count; }
+
 		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
 
 	private:

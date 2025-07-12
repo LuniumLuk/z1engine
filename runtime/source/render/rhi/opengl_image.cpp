@@ -83,7 +83,7 @@ namespace z1 {
 	// OpenGLImage2D definitions
 	// --------------------------------------------------
 
-	OpenGLImage2D::OpenGLImage2D(void* data, size_t size, Description const& desc) {
+	OpenGLImage2D::OpenGLImage2D(void const* data, size_t size, Description const& desc) {
 		m_description = desc;
 		CORE_ASSERT(desc.m_depth == 1, "Image2D must have only 1 layer!");
 
@@ -133,7 +133,7 @@ namespace z1 {
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	void OpenGLImage2D::write(void* data, size_t size) const {
+	void OpenGLImage2D::write(void const* data, size_t size) const {
 		PROFILE_FUNCTION();
 		size_t bytePerPixel = image_format_to_opengl_data_size(m_description.m_format);
 		CORE_ASSERT(size == m_description.m_width * m_description.m_height * bytePerPixel, "data size must match the whole image!");
@@ -211,7 +211,7 @@ namespace z1 {
 		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	}
 
-	void OpenGLImageCube::write(void* data, size_t size) const {
+	void OpenGLImageCube::write(void const* data, size_t size) const {
 		PROFILE_FUNCTION();
 		size_t bytePerPixel = image_format_to_opengl_data_size(m_description.m_format);
 		CORE_ASSERT(size == m_description.m_width * m_description.m_height * 6 * bytePerPixel, "data size must match the whole image!");

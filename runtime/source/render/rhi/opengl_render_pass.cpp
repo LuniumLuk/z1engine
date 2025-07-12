@@ -8,7 +8,6 @@
 namespace z1 {
 
 	static GLenum blend_factor_to_opengl_type(BlendFactor factor) {
-		PROFILE_FUNCTION();
 		switch (factor) {
 		case BlendFactor::Zero: return GL_ZERO;
 		case BlendFactor::One: return GL_ONE;
@@ -22,6 +21,15 @@ namespace z1 {
 		case BlendFactor::OneMinusDstAlpha: return GL_ONE_MINUS_DST_ALPHA;
 		}
 		return GL_ZERO;
+	}
+
+	static GLenum cull_mode_to_opengl_type(CullMode mode) {
+		switch (mode) {
+		case CullMode::Front: return GL_FRONT;
+		case CullMode::Back: return GL_BACK;
+		case CullMode::FrontAndBack: return GL_FRONT_AND_BACK;
+		}
+		return GL_NONE;
 	}
 
 	OpenGLRenderPass::OpenGLRenderPass(Description const& description) {
@@ -97,6 +105,14 @@ namespace z1 {
 			}
 			else {
 				glDisable(GL_DEPTH_TEST);
+			}
+
+			if (description.m_cull_mode == CullMode::None) {
+				glDisable(GL_CULL_FACE);
+			}
+			else {
+				glEnable(GL_CULL_FACE);
+				glCullFace(cull_mode_to_opengl_type(description.m_cull_mode));
 			}
 
 			if (description.m_blend) {

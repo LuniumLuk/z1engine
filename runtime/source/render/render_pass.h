@@ -21,6 +21,13 @@ namespace z1 {
 		OneMinusDstAlpha,
 	};
 
+	enum struct API CullMode {
+		None = 0,
+		Front,
+		Back,
+		FrontAndBack,
+	};
+
 	struct API RenderPass {
 
 		struct Description {
@@ -38,20 +45,23 @@ namespace z1 {
 			BlendFactor m_src_blend_factor = BlendFactor::SrcAlpha;
 			BlendFactor m_dst_blend_factor = BlendFactor::OneMinusSrcAlpha;
 
+			// culling
+			CullMode m_cull_mode = CullMode::Back;
+
 			// viewport
 			bool m_dynamic_viewport = false;
 			uint32_t m_viewport_x = 0;
 			uint32_t m_viewport_y = 0;
-			uint32_t m_viewport_width = -1;
-			uint32_t m_viewport_height = -1;
+			uint32_t m_viewport_width = UINT32_MAX;
+			uint32_t m_viewport_height = UINT32_MAX;
 
 			// scissor
 			bool m_scissor = false;
 			bool m_dynamic_scissor = false;
 			uint32_t m_scissor_x = 0;
 			uint32_t m_scissor_y = 0;
-			uint32_t m_scissor_width = -1;
-			uint32_t m_scissor_height = -1;
+			uint32_t m_scissor_width = UINT32_MAX;
+			uint32_t m_scissor_height = UINT32_MAX;
 
 			// framebuffer
 			std::shared_ptr<Framebuffer> m_framebuffer;

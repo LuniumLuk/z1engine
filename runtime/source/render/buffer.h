@@ -34,12 +34,12 @@ namespace z1 {
 
 		virtual void bind() const = 0;
 		virtual void unbind() const = 0;
-		virtual void write(void* data, size_t size = WHOLE_SIZE, size_t offset = 0) = 0;
+		virtual void write(void const* data, size_t size = WHOLE_SIZE, size_t offset = 0) = 0;
 
 		virtual void* get_native_handle() const = 0;
 		size_t get_size() const { return m_size; }
 
-		static std::shared_ptr<VertexBuffer> create(void* data, size_t size, Layout const& layout, BufferUsage usage = BufferUsage::Static);
+		static std::shared_ptr<VertexBuffer> create(void const* data, size_t size, Layout const& layout, BufferUsage usage = BufferUsage::Static);
 
 	protected:
 		size_t m_size = 0;
@@ -50,12 +50,12 @@ namespace z1 {
 
 		virtual void bind() const = 0;
 		virtual void unbind() const = 0;
-		virtual void write(void* data, size_t size = WHOLE_SIZE, size_t offset = 0) = 0;
+		virtual void write(uint32_t const* data, size_t size = WHOLE_SIZE, size_t offset = 0) = 0;
 
 		virtual void* get_native_handle() const = 0;
 		size_t get_size() const { return m_size; }
 
-		static std::shared_ptr<IndexBuffer> create(void* data, size_t size, BufferUsage usage = BufferUsage::Static);
+		static std::shared_ptr<IndexBuffer> create(uint32_t const* data, size_t size, BufferUsage usage = BufferUsage::Static);
 
 	protected:
 		size_t m_size = 0;
@@ -68,12 +68,12 @@ namespace z1 {
 
 		virtual void bind() const = 0;
 		virtual void unbind() const = 0;
-		virtual void write(void* data, size_t size = WHOLE_SIZE, size_t offset = 0) = 0;
+		virtual void write(void const* data, size_t size = WHOLE_SIZE, size_t offset = 0) = 0;
 
 		virtual void* get_native_handle() const = 0;
 		size_t get_size() const { return m_size; }
 
-		static std::shared_ptr<UniformBuffer> create(void* data, size_t size, BufferUsage usage = BufferUsage::Static);
+		static std::shared_ptr<UniformBuffer> create(void const* data, size_t size, BufferUsage usage = BufferUsage::Static);
 
 	protected:
 		size_t m_size = 0;

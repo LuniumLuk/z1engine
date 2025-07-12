@@ -106,7 +106,7 @@ namespace z1 {
 		create();
 	}
 
-	void OpenGLFramebuffer::read_pixels(uint32_t x, uint32_t y, uint32_t width, uint32_t height, void* data) const {
+	void OpenGLFramebuffer::read_pixels(uint32_t x, uint32_t y, uint32_t width, uint32_t height, void const* data) const {
 		PROFILE_FUNCTION();
 		UNIMPLEMENTED_FUNCTION();
 	}

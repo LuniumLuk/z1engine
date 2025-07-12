@@ -16,7 +16,7 @@ namespace z1 {
 		void unbind() const override;
 
 		void resize(uint32_t width, uint32_t height) override;
-		void read_pixels(uint32_t x, uint32_t y, uint32_t width, uint32_t height, void* data) const override;
+		void read_pixels(uint32_t x, uint32_t y, uint32_t width, uint32_t height, void const* data) const override;
 
 		void bind_attachment(uint32_t index, uint32_t binding) const override;
 

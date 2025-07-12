@@ -55,7 +55,7 @@ namespace z1 {
 		}
 
 	private:
-		entt::entity m_handle;
+		entt::entity m_handle{ entt::null };
 		std::weak_ptr<Scene> m_scene;
 	};
 

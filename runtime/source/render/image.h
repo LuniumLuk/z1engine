@@ -109,7 +109,7 @@ namespace z1 {
 
 		virtual ~Image() = default;
 
-		virtual void write(void* data, size_t size) const = 0;
+		virtual void write(void const* data, size_t size) const = 0;
 
 		virtual void* get_native_handle() const = 0;
 		Description const& get_description() const { return m_description; }
@@ -120,12 +120,7 @@ namespace z1 {
 
 	struct API Image2D : Image {
 		static std::shared_ptr<Image2D> create(
-			Filepath const& path,
-			SamplerMode sampler_mode = SamplerMode::Linear,
-			WrapMode wrap_mode = WrapMode::Repeat);
-
-		static std::shared_ptr<Image2D> create(
-			void* data,
+			void const* data,
 			size_t size,
 			uint32_t width,
 			uint32_t height,
@@ -155,7 +150,6 @@ namespace z1 {
 	};
 
 	struct API SubImage2D {
-
 		SubImage2D(std::shared_ptr<Image2D> image, glm::vec2 const& min, glm::vec2 const& max)
 			: m_image(image) {
 			m_texcoords[0] = min;

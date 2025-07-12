@@ -35,8 +35,7 @@ namespace z1 {
 		return 0;
 	}
 
-	static uint32_t create_opengl_buffer(GLenum target, void* data, size_t size, BufferUsage usage) {
-		PROFILE_FUNCTION();
+	static uint32_t create_opengl_buffer(GLenum target, void const* data, size_t size, BufferUsage usage) {
 		uint32_t handle = 0;
 		glGenBuffers(1, &handle);
 		CORE_ASSERT(handle, "failed to create opengl buffer!");
@@ -48,8 +47,7 @@ namespace z1 {
 		return handle;
 	}
 
-	static void write_opengl_buffer(GLenum target, uint32_t handle, void* data, size_t size, size_t offset, size_t totalSize) {
-		PROFILE_FUNCTION();
+	static void write_opengl_buffer(GLenum target, uint32_t handle, void const* data, size_t size, size_t offset, size_t totalSize) {
 		if (size == WHOLE_SIZE) size = totalSize;
 		CORE_ASSERT(offset + size <= totalSize, "buffer overflow!");
 		glBindBuffer(target, handle);
@@ -62,7 +60,7 @@ namespace z1 {
 	// OpenGLVertexBuffer definitions
 	// --------------------------------------------------
 
-	OpenGLVertexBuffer::OpenGLVertexBuffer(void* data, size_t size, Layout const& layout, BufferUsage usage)
+	OpenGLVertexBuffer::OpenGLVertexBuffer(void const* data, size_t size, Layout const& layout, BufferUsage usage)
 		: m_layout(layout)
 		, m_vertex_count((uint32_t)(size / layout.m_stride)) {
 		m_size = size;
@@ -82,7 +80,7 @@ namespace z1 {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	void OpenGLVertexBuffer::write(void* data, size_t size, size_t offset) {
+	void OpenGLVertexBuffer::write(void const* data, size_t size, size_t offset) {
 		PROFILE_FUNCTION();
 		write_opengl_buffer(GL_ARRAY_BUFFER, m_handle, data, size, offset, m_size);
 	}
@@ -169,7 +167,7 @@ namespace z1 {
 	// OpenGLIndexBuffer definitions
 	// --------------------------------------------------
 
-	OpenGLIndexBuffer::OpenGLIndexBuffer(void* data, size_t size, BufferUsage usage)
+	OpenGLIndexBuffer::OpenGLIndexBuffer(uint32_t const* data, size_t size, BufferUsage usage)
 		: m_index_count((uint32_t)(size / sizeof(uint32_t))) {
 		m_size = size;
 		m_handle = create_opengl_buffer(GL_ELEMENT_ARRAY_BUFFER, data, size, usage);
@@ -188,7 +186,7 @@ namespace z1 {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
 
-	void OpenGLIndexBuffer::write(void* data, size_t size, size_t offset) {
+	void OpenGLIndexBuffer::write(uint32_t const* data, size_t size, size_t offset) {
 		PROFILE_FUNCTION();
 		write_opengl_buffer(GL_ELEMENT_ARRAY_BUFFER, m_handle, data, size, offset, m_size);
 	}
@@ -196,7 +194,7 @@ namespace z1 {
 	// OpenGLUniformBuffer definitions
 	// --------------------------------------------------
 
-	OpenGLUniformBuffer::OpenGLUniformBuffer(void* data, size_t size, BufferUsage usage) {
+	OpenGLUniformBuffer::OpenGLUniformBuffer(void const* data, size_t size, BufferUsage usage) {
 		m_size = size;
 		m_handle = create_opengl_buffer(GL_UNIFORM_BUFFER, data, size, usage);
 	}
@@ -222,7 +220,7 @@ namespace z1 {
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	}
 
-	void OpenGLUniformBuffer::write(void* data, size_t size, size_t offset) {
+	void OpenGLUniformBuffer::write(void const* data, size_t size, size_t offset) {
 		PROFILE_FUNCTION();
 		write_opengl_buffer(GL_UNIFORM_BUFFER, m_handle, data, size, offset, m_size);
 	}

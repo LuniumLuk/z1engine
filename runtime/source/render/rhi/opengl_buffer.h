@@ -5,12 +5,12 @@
 namespace z1 {
 
 	struct OpenGLVertexBuffer : VertexBuffer {
-		OpenGLVertexBuffer(void* data, size_t size, Layout const& layout, BufferUsage usage);
+		OpenGLVertexBuffer(void const* data, size_t size, Layout const& layout, BufferUsage usage);
 		~OpenGLVertexBuffer() override;
 
 		void bind() const override;
 		void unbind() const override;
-		void write(void* data, size_t size, size_t offset) override;
+		void write(void const* data, size_t size, size_t offset) override;
 
 		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
 		uint32_t get_vertex_count() const { return m_vertex_count; }
@@ -24,12 +24,12 @@ namespace z1 {
 	};
 
 	struct OpenGLIndexBuffer : IndexBuffer {
-		OpenGLIndexBuffer(void* data, size_t size, BufferUsage usage);
+		OpenGLIndexBuffer(uint32_t const* data, size_t size, BufferUsage usage);
 		~OpenGLIndexBuffer() override;
 
 		void bind() const override;
 		void unbind() const override;
-		void write(void* data, size_t size, size_t offset) override;
+		void write(uint32_t const* data, size_t size, size_t offset) override;
 
 		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
 		uint32_t get_index_count() const { return m_index_count; }
@@ -40,7 +40,7 @@ namespace z1 {
 	};
 
 	struct OpenGLUniformBuffer : UniformBuffer {
-		OpenGLUniformBuffer(void* data, size_t size, BufferUsage usage);
+		OpenGLUniformBuffer(void const* data, size_t size, BufferUsage usage);
 		~OpenGLUniformBuffer() override;
 
 		void bind(uint32_t binding) const override;
@@ -48,7 +48,7 @@ namespace z1 {
 
 		void bind() const override;
 		void unbind() const override;
-		void write(void* data, size_t size, size_t offset) override;
+		void write(void const* data, size_t size, size_t offset) override;
 
 		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
 

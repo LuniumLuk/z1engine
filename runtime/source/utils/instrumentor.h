@@ -51,6 +51,11 @@ namespace z1 {
 	};
 
 	struct Instrumentor {
+		static Instrumentor& get() {
+			static Instrumentor instance;
+			return instance;
+		}
+
 		Instrumentor() : m_current_session(nullptr), m_profile_count(0) {}
 
 		void begin_session(std::string const& name, std::string const& filepath = "profile.json") {
@@ -215,7 +220,7 @@ namespace z1 {
 			int64_t end = std::chrono::time_point_cast<std::chrono::microseconds>(end_timepoint).time_since_epoch().count();
 
 			size_t thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
-			g_runtime_context.m_instrumentor->write_profile({ m_name, start, end, thread_id });
+			Instrumentor::get().write_profile({ m_name, start, end, thread_id });
 
 			m_stopped = true;
 		}
@@ -226,22 +231,22 @@ namespace z1 {
 		bool m_stopped;
 	};
 
-	inline void ReportCounter(std::string const& name, int64_t value) {
+	inline void report_counter(std::string const& name, int64_t value) {
 		size_t thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
 		int64_t time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
-		g_runtime_context.m_instrumentor->write_counter({ name, time, thread_id, value });
+		Instrumentor::get().write_counter({ name, time, thread_id, value });
 	}
 
-	inline void ReportInstant(std::string const& name) {
+	inline void report_instant(std::string const& name) {
 		size_t thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
 		int64_t time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
-		g_runtime_context.m_instrumentor->write_instant({ name, time, thread_id });
+		Instrumentor::get().write_instant({ name, time, thread_id });
 	}
 
-	inline void ReportFlow(size_t id, std::string const& phase) {
+	inline void report_flow(size_t id, std::string const& phase) {
 		size_t thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
 		int64_t time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
-		g_runtime_context.m_instrumentor->write_flow({ time, thread_id, id, phase });
+		Instrumentor::get().write_flow({ time, thread_id, id, phase });
 	}
 
 }
