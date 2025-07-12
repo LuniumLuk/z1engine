@@ -52,11 +52,9 @@ namespace z1 {
 		m_vertex_array = VertexArray::create({ m_vertex_buffer });
 #endif
 
-		RenderPass::Description desc;
-		desc.m_clear_color = true;
-		desc.m_clear_color_value = { 0.1f, 0.1f, 0.1f, 1.0f };
-		desc.m_clear_depth = true;
-		desc.m_clear_depth_value = 1.0f;
+		RenderPass::Description desc{};
+		desc.m_clear_color = false;
+		desc.m_clear_depth = false;
 
 		desc.m_depth_test = true;
 		desc.m_blend = true;

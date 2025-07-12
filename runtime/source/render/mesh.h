@@ -5,30 +5,38 @@
 
 namespace z1 {
 
-	struct API Mesh {
+	struct API StaticMesh {
+		struct VertexData {
+			glm::vec3 position;
+			glm::vec3 normal;
+			glm::vec2 tex_coord;
+			glm::vec4 color;
+			VertexData() = default;
+			VertexData(glm::vec3 const& pos, glm::vec3 const& norm, glm::vec2 const& tex, glm::vec4 const& col)
+				: position(pos), normal(norm), tex_coord(tex), color(col) {
+			}
+		};
 
-		/*
-		* TODO: animation
-		*/
+		struct Primitive {
+			PrimitiveType m_primitive_type;
+			std::shared_ptr<VertexArray> m_vertex_array;
 
-		Mesh(glm::mat4 const& transform, std::shared_ptr<VertexArray> const& vertexArray, PrimitiveType type)
-			: m_transform(transform), m_vertex_array(vertexArray), m_primitive_type(type) {}
+			Primitive() = default;
+			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array)
+				: m_primitive_type(type), m_vertex_array(vertex_array) {
+			}
 
-		void draw() const {
-			m_vertex_array->bind();
-			m_vertex_array->draw(m_primitive_type);
-			m_vertex_array->unbind();
-		}
+			size_t get_triangle_count() const;
+		};
 
-		void draw_instanced(uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) const {
-			m_vertex_array->bind();
-			m_vertex_array->draw_instanced(m_primitive_type, num, instance_buffer, start, divisor);
-			m_vertex_array->unbind();
-		}
+		StaticMesh(std::vector<Primitive> const& primitives);
+		StaticMesh(std::vector<VertexData> const& vertices, PrimitiveType type);
+		StaticMesh(std::vector<VertexData> const& vertices, std::vector<uint32_t> const& indices, PrimitiveType type);
 
-		glm::mat4 m_transform;
-		std::shared_ptr<VertexArray> m_vertex_array;
-		PrimitiveType m_primitive_type;
+		void draw() const;
+		void draw_instanced(uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) const;
+
+		std::vector<Primitive> m_primitives;
 	};
 
 }

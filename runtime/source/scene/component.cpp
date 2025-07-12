@@ -24,4 +24,19 @@ namespace z1 {
 		: m_color(color) {
 	}
 
+	SpriteComponent::SpriteComponent(glm::vec4 const& color, std::shared_ptr<Image2D> const& texture)
+		: m_color(color)
+		, m_texture(texture) {
+	}
+
+	SpriteComponent::SpriteComponent(glm::vec4 const& color, std::shared_ptr<SubImage2D> const& texture)
+		: m_color(color)
+		, m_texture(texture->m_image)
+		, m_texcoords(texture->m_texcoords) {
+	}
+
+	StaticMeshComponent::StaticMeshComponent(std::shared_ptr<StaticMesh> const& mesh)
+		: m_mesh(mesh) {
+	}
+
 }

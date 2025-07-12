@@ -6,11 +6,11 @@
 #include "core/log.h"
 #include "core/io.h"
 #include "core/input.h"
-#include "utils/instrumentor.h"
 #include "scene/scene.h"
 #include "render/resource.h"
 #include "render/graphics_context.h"
 #include "render/renderer/renderer_2d.h"
+#include "render/renderer/renderer_mesh_viewer.h"
 #include "3rdparty/imgui_layer.h"
 
 namespace z1 {
@@ -20,7 +20,6 @@ namespace z1 {
 	void RuntimeContext::init() {
 		m_timer = std::make_shared<Timer>();
 		m_logger = std::make_shared<Logger>();
-		m_instrumentor = std::make_shared<Instrumentor>();
 		m_file_system = std::make_shared<FileSystem>();
 
 		m_window = std::make_shared<Window>();
@@ -38,6 +37,7 @@ namespace z1 {
 		m_layer_stack = std::make_shared<LayerStack>();
 
 		m_renderer_2d = std::make_shared<Renderer2D>();
+		m_renderer_mesh_viewer = std::make_shared<RendererMeshViewer>();
 	}
 
 	void RuntimeContext::shutdown() {
@@ -46,6 +46,7 @@ namespace z1 {
 		m_main_framebuffer.reset();
 
 		m_renderer_2d.reset();
+		m_renderer_mesh_viewer.reset();
 
 		m_layer_stack.reset();
 		m_imgui_layer.reset();
@@ -56,7 +57,6 @@ namespace z1 {
 		m_window.reset();
 
 		m_file_system.reset();
-		m_instrumentor.reset();
 		m_logger.reset();
 		m_timer.reset();
 	}

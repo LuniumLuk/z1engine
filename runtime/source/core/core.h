@@ -31,14 +31,13 @@ namespace z1 {
 	struct Logger;
 	struct ImGuiLayer;
 	struct LayerStack;
-	struct Instrumentor;
 	struct InstrumentationTimer;
 	struct FileSystem;
 	struct GraphicsContext;
 	struct InputSystem;
 	struct ResourceManager;
 	struct Renderer2D;
-	struct Renderer2DBatched;
+	struct RendererMeshViewer;
 	struct Camera;
 	struct Framebuffer;
 	struct Scene;
@@ -53,12 +52,12 @@ namespace z1 {
 		std::shared_ptr<Logger> m_logger;
 		std::shared_ptr<ImGuiLayer> m_imgui_layer;
 		std::shared_ptr<LayerStack> m_layer_stack;
-		std::shared_ptr<Instrumentor> m_instrumentor;
 		std::shared_ptr<FileSystem> m_file_system;
 		std::shared_ptr<GraphicsContext> m_graphics_context;
 		std::shared_ptr<InputSystem> m_input_system;
 		std::shared_ptr<ResourceManager> m_resource_manager;
 		std::shared_ptr<Renderer2D> m_renderer_2d;
+		std::shared_ptr<RendererMeshViewer> m_renderer_mesh_viewer;
 		std::shared_ptr<Scene> m_scene;
 
 		std::shared_ptr<Camera> m_main_camera;
@@ -101,12 +100,12 @@ namespace z1 {
 #ifdef ENABLE_PROFILE
 #   define CONCAT(x, y) x ## y
 #   define C(x, y) CONCAT(x, y)
-#   define PROFILE_BEGIN_SESSION(name, filepath)  g_runtime_context.m_instrumentor->begin_session(name, filepath)
-#   define PROFILE_END_SESSION()                  g_runtime_context.m_instrumentor->end_session()
-#   define PROFILE_SET_THREAD_NAME(name)          g_runtime_context.m_instrumentor->set_thread_name(std::hash<std::thread::id>{}(std::this_thread::get_id()), name)
+#   define PROFILE_BEGIN_SESSION(name, filepath)  z1::Instrumentor::get().begin_session(name, filepath)
+#   define PROFILE_END_SESSION()                  z1::Instrumentor::get().end_session()
+#   define PROFILE_SET_THREAD_NAME(name)          z1::Instrumentor::get().set_thread_name(std::hash<std::thread::id>{}(std::this_thread::get_id()), name)
 #   define PROFILE_SCOPE(name)                    z1::InstrumentationTimer C(__PROFILE_TIMER_, __LINE__)(name)
-#   define PROFILE_COUNTER(name, value)           report_counter(name, static_cast<int64_t>(value))
-#   define PROFILE_INSTANT(name)                  report_instant(name)
+#   define PROFILE_COUNTER(name, value)           z1::report_counter(name, static_cast<int64_t>(value))
+#   define PROFILE_INSTANT(name)                  z1::report_instant(name)
 // Flow event can be used to represent the asynchronous dependencies between scope events
 // The valid flow events should satisfy the following conditions:
 //  1. The flow begin event should be called before a scope event's end on the same thread
@@ -124,8 +123,8 @@ namespace z1 {
 //     PROFILE_SCOPE("scope2");
 //     // do something ...
 // }
-#   define PROFILE_FLOW_BEGIN(id)                 report_flow(id, "s")
-#   define PROFILE_FLOW_END(id)                   report_flow(id, "f")
+#   define PROFILE_FLOW_BEGIN(id)                 z1::report_flow(id, "s")
+#   define PROFILE_FLOW_END(id)                   z1::report_flow(id, "f")
 #   define PROFILE_FUNCTION()                     PROFILE_SCOPE(__FUNCSIG__)
 #else
 #   define PROFILE_BEGIN_SESSION(name, filepath)

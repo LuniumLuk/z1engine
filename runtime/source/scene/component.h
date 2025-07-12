@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/core.h"
+#include "render/mesh.h"
+#include "render/image.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -40,9 +42,20 @@ namespace z1 {
 
 	struct API SpriteComponent {
 		glm::vec4 m_color{ 1.0f, 1.0f, 1.0f, 1.0f };
+		std::shared_ptr<Image2D> m_texture = nullptr;
+		glm::vec2 m_tiling_scale = glm::vec2(1.0f);
+		glm::vec2 m_tiling_offset = glm::vec2(0.0f);
+		std::array<glm::vec2, 4> m_texcoords = { {
+			{ 0.0f, 0.0f },
+			{ 1.0f, 0.0f },
+			{ 1.0f, 1.0f },
+			{ 0.0f, 1.0f },
+		} };
 
 		SpriteComponent() = default;
 		SpriteComponent(glm::vec4 const& color);
+		SpriteComponent(glm::vec4 const& color, std::shared_ptr<Image2D> const& texture);
+		SpriteComponent(glm::vec4 const& color, std::shared_ptr<SubImage2D> const& texture);
 
 		SpriteComponent(SpriteComponent const&) = default;
 		SpriteComponent& operator=(SpriteComponent const&) = default;
@@ -50,6 +63,20 @@ namespace z1 {
 		SpriteComponent& operator=(SpriteComponent&&) = delete;
 
 		~SpriteComponent() = default;
+	};
+
+	struct API StaticMeshComponent {
+		std::shared_ptr<StaticMesh> m_mesh;
+
+		StaticMeshComponent() = default;
+		StaticMeshComponent(std::shared_ptr<StaticMesh> const& mesh);
+
+		StaticMeshComponent(StaticMeshComponent const&) = default;
+		StaticMeshComponent& operator=(StaticMeshComponent const&) = default;
+		StaticMeshComponent(StaticMeshComponent&&) = delete;
+		StaticMeshComponent& operator=(StaticMeshComponent&&) = delete;
+
+		~StaticMeshComponent() = default;
 	};
 
 }

@@ -39,3 +39,6 @@
 
 #include "utils/instrumentor.h"
 #include "utils/thread_pool.h"
+
+#include "io/image_loader.h"
+#include "io/mesh_loader.h"

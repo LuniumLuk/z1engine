@@ -11,18 +11,63 @@ struct EditorLayer : Layer {
 		m_gui = std::make_shared<EditorGUI>();
 		m_active_scene = std::make_shared<Scene>();
 
-		m_square = m_active_scene->create_entity("Square_0");
-		m_square->add_component<SpriteComponent>(glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
-	}
+		m_texture = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
+		m_checker = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
+		m_atlas = io::load_image2d("asset/texture/roguelikeSheet_transparent.png", SamplerMode::Nearest);
 
-	void on_attach() override {
-		m_camera = Camera::create_ortho(0.0f, 0.0f, 1.0f, 1.0f);
+		{
+			auto ent = m_active_scene->create_entity("Square_0");
+			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), m_texture);
+			m_entities.push_back(ent);
+		}
+
+		{
+			auto ent = m_active_scene->create_entity("Square_1");
+			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), m_checker);
+			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -9.5f);
+			ent->get_component<TransformComponent>().m_scale = glm::vec3(10.0f, 10.0f, 1.0f);
+			m_entities.push_back(ent);
+		}
+
+		m_camera = Camera::create_ortho(0.0f, 0.0f, 1.0f, 1.0f, -10.0f, 10.0f);
 		m_camera_controller = std::make_shared<Generic2DCameraController>(m_camera);
 		g_runtime_context.m_main_camera = m_camera;
 		g_runtime_context.m_main_framebuffer = m_gui->get_viewport_framebuffer();
-		m_texture = Image2D::create(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
-		m_checker = Image2D::create(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
-		m_atlas = Image2D::create("asset/texture/roguelikeSheet_transparent.png", SamplerMode::Nearest);
+
+		{
+			auto ent = m_active_scene->create_entity("Mesh_0");
+			auto mesh = io::load_static_mesh("asset/mesh/bunny.obj");
+			ent->add_component<StaticMeshComponent>(mesh);
+			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -5.0f);
+			m_entities.push_back(ent);
+		}
+
+		uint32_t tile_size = 16;
+		uint32_t stride = 1;
+		for (uint32_t i = 0; i < 4; ++i) { // 50
+			for (uint32_t j = 0; j < 3; ++j) { // 30
+				auto tile = SubImage2D::create(m_atlas, i * (tile_size + stride), j * (tile_size + stride), tile_size, tile_size, true);
+				auto ent = m_active_scene->create_entity("SubImage2D_" + std::to_string(i * 50 + j));
+				ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), tile);
+				ent->get_component<TransformComponent>().m_location = glm::vec3(-(float)i * m_quad_stride - 0.2f, -(float)j * m_quad_stride - 0.2f, 1.0f);
+				ent->get_component<TransformComponent>().m_scale = glm::vec3(m_quad_size, m_quad_size, 1.0f);
+				m_entities.push_back(ent);
+			}
+		}
+
+		for (int i = 0; i < m_quad_rows; ++i) {
+			for (int j = 0; j < m_quad_cols; ++j) {
+				auto ent = m_active_scene->create_entity("Quad_" + std::to_string(i * 50 + j));
+				ent->add_component<SpriteComponent>(glm::vec4((float)(i % m_quad_rows) / m_quad_rows, (float)(j % m_quad_cols) / m_quad_cols, 1.0f, 1.0f));
+				ent->get_component<TransformComponent>().m_location = glm::vec3(i * m_quad_stride, j * m_quad_stride, 0.1f);
+				ent->get_component<TransformComponent>().m_scale = glm::vec3(m_quad_size, m_quad_size, 1.0f);
+				m_entities.push_back(ent);
+			}
+		}
+	}
+
+	void on_attach() override {
+
 	}
 
 	void on_update(float delta_time) override {
@@ -42,80 +87,6 @@ struct EditorLayer : Layer {
 		m_input_state.reset();
 
 		m_active_scene->on_update(delta_time);
-
-		/*auto const& renderer_2d = g_runtime_context.m_renderer_2d;
-
-		{
-			PROFILE_SCOPE("draw_quad");
-			std::vector<Renderer2D::Quad> quads;
-			renderer_2d->draw_quad({ 0.0f, 0.0f, -0.5f }, { 10.0f, 10.0f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_checker, { 1.0f, 1.0f });
-			renderer_2d->draw_quad({ 0.2f, 0.4f, -0.1f }, { 0.2f, 0.4f }, 0.0f, { 1.0f, 0.0f, 1.0f, 1.0f });
-			renderer_2d->draw_quad({ 0.4f, 0.2f, -0.2f }, { 0.4f, 0.1f }, 0.0f, { 0.0f, 1.0f, 1.0f, 1.0f });
-
-			renderer_2d->draw_quad({ 1.0f, 0.0f, -0.3f }, { 0.1f, 0.1f }, 0.0f, { 1.0f, 0.0f, 0.0f, 1.0f });
-			renderer_2d->draw_quad({ 0.0f, 1.0f, -0.3f }, { 0.1f, 0.1f }, 0.0f, { 0.0f, 1.0f, 0.0f, 1.0f });
-
-			renderer_2d->draw_quad({ 0.0f, 0.0f,  0.5f }, { 0.5f, 0.5f }, 0.0f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_texture);
-
-			uint32_t tile_size = 16;
-			uint32_t stride = 1;
-			for (uint32_t i = 0; i < 50; ++i) {
-				for (uint32_t j = 0; j < 30; ++j) {
-					auto tile = SubImage2D::create(m_atlas, i * (tile_size + stride), j * (tile_size + stride), tile_size, tile_size, true);
-					Renderer2D::Quad quad = {};
-					glm::mat4 trans = glm::mat4(
-						m_quad_size, 0.0f, 0.0f, 0.0f,
-						0.0f, m_quad_size, 0.0f, 0.0f,
-						0.0f, 0.0f, 1.0f, 0.0f,
-						-(float)i * m_quad_stride - 0.2f, -(float)j * m_quad_stride - 0.2f, 0.1f, 1.0f
-					);
-						quad.m_transform = trans;
-						quad.m_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-						quad.m_texture = tile->m_image;
-						quad.m_texcoords = tile->m_texcoords;
-					quads.push_back(quad);
-				}
-			}
-
-#if CALL_DRAW_QUAD_ONCE_AT_A_TIME
-			for (int i = 0; i < m_quad_rows; ++i) {
-				for (int j = 0; j < m_quad_cols; ++j) {
-					g_runtime_context.m_renderer_2d->draw_quad(
-						{ i * m_quad_stride, j * m_quad_stride, 0.1f },
-						{ m_quad_size, m_quad_size },
-						(float)(i + j),
-						{ (float)(i % m_quad_rows) / m_quad_rows, (float)(j % m_quad_cols) / m_quad_cols, 1.0f, 1.0f },
-						m_texture);
-				}
-			}
-#endif
-
-			{
-				PROFILE_SCOPE("generate quads");
-				for (int i = 0; i < m_quad_rows; ++i) {
-					for (int j = 0; j < m_quad_cols; ++j) {
-						Renderer2D::Quad quad = {};
-						glm::mat4 trans = glm::mat4(
-							m_quad_size, 0.0f, 0.0f, 0.0f,
-							0.0f, m_quad_size, 0.0f, 0.0f,
-							0.0f, 0.0f, 1.0f, 0.0f,
-							i * m_quad_stride, j * m_quad_stride, 0.1f, 1.0f
-						);
-						quad.m_transform = trans;
-						quad.m_color = { (float)(i % m_quad_rows) / m_quad_rows, (float)(j % m_quad_cols) / m_quad_cols, 1.0f, 1.0f };
-						quad.m_texture = m_texture;
-						quads.push_back(quad);
-					}
-				}
-			}
-			{
-				PROFILE_SCOPE("draw quads");
-				renderer_2d->draw_quads(quads);
-			}
-		}
-
-		g_runtime_context.m_renderer_2d->prepare_draw();
-		g_runtime_context.m_renderer_2d->draw();*/
 	}
 
 	void on_event(Event& event) override {
@@ -168,7 +139,7 @@ struct EditorLayer : Layer {
 private:
 	std::shared_ptr<EditorGUI> m_gui;
 	std::shared_ptr<Scene> m_active_scene;
-	std::shared_ptr<Entity> m_square;
+	std::vector<std::shared_ptr<Entity>> m_entities;
 	std::shared_ptr<Camera> m_camera;
 	std::shared_ptr<Generic2DCameraController> m_camera_controller;
 	InputState m_input_state;
@@ -176,9 +147,9 @@ private:
 	std::shared_ptr<Image2D> m_checker;
 	std::shared_ptr<Image2D> m_atlas;
 
-	int m_quad_rows = 32;
-	int m_quad_cols = 32;
-	float m_quad_stride = 0.1f;
+	int m_quad_rows = 4;
+	int m_quad_cols = 2;
+	float m_quad_stride = 0.15f;
 	float m_quad_size = 0.1f;
 
 	int m_fps_counter = 0;
@@ -284,18 +255,6 @@ struct EditorApp : Application {
 
 int main() {
 	std::cout << "hello world!\n";
-
-	//ThreadPool thread_pool(4);
-	//std::mutex mtx;
-
-	//for (int i = 0; i < 10; ++i) {
-	//	thread_pool.enqueue(
-	//		[&, i]() {
-	//			std::lock_guard<std::mutex> lock(mtx);
-	//			std::cout << "task" << i << " is running on thread " << std::this_thread::get_id() << "\n";
-	//			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	//		});
-	//}
 
 	EditorApp app;
 
