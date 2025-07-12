@@ -18,7 +18,17 @@ namespace z1 {
 		auto entity = std::make_shared<Entity>(handle, shared_from_this());
 		entity->add_component<TagComponent>(name);
 		entity->add_component<TransformComponent>();
+		entity->add_component<Scene::EntityPtr>(entity);
 		return entity;
+	}
+
+	std::shared_ptr<Entity> Scene::cast_to_entity(entt::entity handle) {
+		CORE_ASSERT(m_registry.valid(handle), "Entity handle is invalid!");
+		auto entity_ptr = m_registry.try_get<Scene::EntityPtr>(handle);
+		if (entity_ptr) {
+			return *entity_ptr;
+		}
+		return nullptr;
 	}
 
 	void Scene::on_update(float delta_time) {

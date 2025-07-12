@@ -15,8 +15,38 @@ namespace z1 {
 		void on_update(float delta_time);
 
 		std::shared_ptr<Entity> create_entity(std::string const& name);
+		std::shared_ptr<Entity> cast_to_entity(entt::entity handle);
+
+		size_t get_entity_count() const {
+			auto view = m_registry.view<TransformComponent>();
+			return view.size_hint();
+		}
+
+		entt::registry& get_registry() {
+			return m_registry;
+		}
 
 	private:
+		struct EntityPtr {
+			std::weak_ptr<Entity> m_ptr;
+
+			EntityPtr() = default;
+			EntityPtr(std::shared_ptr<Entity> const& entity)
+				: m_ptr(entity) {
+			}
+
+			EntityPtr(EntityPtr const&) = default;
+			EntityPtr& operator=(EntityPtr const&) = default;
+			EntityPtr(EntityPtr&&) = delete;
+			EntityPtr& operator=(EntityPtr&&) = delete;
+
+			~EntityPtr() = default;
+
+			operator std::shared_ptr<Entity>() const {
+				return m_ptr.lock();
+			}
+		};
+
 		friend struct Entity;
 		entt::registry m_registry;
 	};
