@@ -34,99 +34,36 @@ namespace z1 {
 
 	OpenGLRenderPass::OpenGLRenderPass(Description const& description) {
 
-		m_framebuffer = description.m_framebuffer;
-		m_shader = description.m_shader;
+		m_shader = description.shader;
 
-		m_dynamic_viewport = description.m_dynamic_viewport;
-
-		m_scissor = description.m_scissor;
-		m_dynamic_scissor = description.m_dynamic_scissor;
-
-		m_bind_func = [this, description] {
-			if (!description.m_dynamic_viewport) {
-				uint32_t w = description.m_viewport_width;
-				uint32_t h = description.m_viewport_height;
-
-				if (w == -1) {
-					w = m_framebuffer ? m_framebuffer->get_description().m_width : g_runtime_context.m_window->get_width();
-				}
-
-				if (h == -1) {
-					h = m_framebuffer ? m_framebuffer->get_description().m_height : g_runtime_context.m_window->get_height();
-				}
-
-				glViewport(
-					description.m_viewport_x,
-					description.m_viewport_y,
-					w,
-					h);
-			}
-
-			if (m_scissor && !description.m_dynamic_scissor) {
-				uint32_t w = description.m_scissor_width;
-				uint32_t h = description.m_scissor_height;
-
-				if (w == -1) {
-					w = m_framebuffer ? m_framebuffer->get_description().m_width : g_runtime_context.m_window->get_width();
-				}
-
-				if (h == -1) {
-					h = m_framebuffer ? m_framebuffer->get_description().m_height : g_runtime_context.m_window->get_height();
-				}
-
-				glEnable(GL_SCISSOR_TEST);
-				glScissor(
-					description.m_scissor_x,
-					description.m_scissor_y,
-					w,
-					h);
-			}
-
-			glClearColor(
-				description.m_clear_color_value.r,
-				description.m_clear_color_value.g,
-				description.m_clear_color_value.b,
-				description.m_clear_color_value.a);
-			glClearDepth(description.m_clear_depth_value);
-
-			uint32_t clear_flag = 0;
-			if (description.m_clear_color) {
-				clear_flag |= GL_COLOR_BUFFER_BIT;
-			}
-			if (description.m_clear_depth) {
-				clear_flag |= GL_DEPTH_BUFFER_BIT;
-			}
-			if (clear_flag) {
-				glClear(clear_flag);
-			}
-
-			if (description.m_depth_test) {
+		m_begin_func = [this, description] {
+			if (description.depth_test) {
 				glEnable(GL_DEPTH_TEST);
 			}
 			else {
 				glDisable(GL_DEPTH_TEST);
 			}
 
-			if (description.m_cull_mode == CullMode::None) {
+			if (description.cull_mode == CullMode::None) {
 				glDisable(GL_CULL_FACE);
 			}
 			else {
 				glEnable(GL_CULL_FACE);
-				glCullFace(cull_mode_to_opengl_type(description.m_cull_mode));
+				glCullFace(cull_mode_to_opengl_type(description.cull_mode));
 			}
 
-			if (description.m_blend) {
+			if (description.blend) {
 				glEnable(GL_BLEND);
 				glBlendFunc(
-					blend_factor_to_opengl_type(description.m_src_blend_factor),
-					blend_factor_to_opengl_type(description.m_dst_blend_factor));
+					blend_factor_to_opengl_type(description.src_blend_factor),
+					blend_factor_to_opengl_type(description.dst_blend_factor));
 			}
 			else {
 				glDisable(GL_BLEND);
 			}
 		};
 
-		m_unbind_func = [this] {
+		m_end_func = [this] {
 
 		};
 	}
@@ -135,23 +72,85 @@ namespace z1 {
 
 	}
 
-	void OpenGLRenderPass::bind() {
-		if (!m_framebuffer) m_framebuffer = g_runtime_context.m_main_framebuffer;
-
-		if (m_framebuffer) {
-			m_framebuffer->bind();
+	void OpenGLRenderPass::begin(BeginInfo const& info) {
+		if (info.framebuffer) {
+			info.framebuffer->bind();
 		}
 		else {
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
-		m_bind_func();
+
+		if (!info.dynamic_viewport) {
+			uint32_t w = info.viewport_width;
+			uint32_t h = info.viewport_height;
+
+			if (w == -1) {
+				w = Framebuffer::get_width(info.framebuffer);
+			}
+
+			if (h == -1) {
+				h = Framebuffer::get_height(info.framebuffer);
+			}
+
+			glViewport(
+				info.viewport_x,
+				info.viewport_y,
+				w,
+				h);
+		}
+
+		if (info.scissor && !info.dynamic_scissor) {
+			uint32_t w = info.scissor_width;
+			uint32_t h = info.scissor_height;
+
+			if (w == -1) {
+				w = Framebuffer::get_width(info.framebuffer);
+			}
+
+			if (h == -1) {
+				h = Framebuffer::get_height(info.framebuffer);
+			}
+
+			glEnable(GL_SCISSOR_TEST);
+			glScissor(
+				info.scissor_x,
+				info.scissor_y,
+				w,
+				h);
+		}
+
+		glClearColor(
+			info.clear_color_value.r,
+			info.clear_color_value.g,
+			info.clear_color_value.b,
+			info.clear_color_value.a);
+		glClearDepth(info.clear_depth_value);
+
+		uint32_t clear_flag = 0;
+		if (info.clear_color) {
+			clear_flag |= GL_COLOR_BUFFER_BIT;
+		}
+		if (info.clear_depth) {
+			clear_flag |= GL_DEPTH_BUFFER_BIT;
+		}
+		if (clear_flag) {
+			glClear(clear_flag);
+		}
+
+		m_begin_func();
 		if (m_shader) m_shader->bind();
+
+		m_framebuffer = info.framebuffer;
 	}
 
-	void OpenGLRenderPass::unbind() {
+	void OpenGLRenderPass::end() {
 		if (m_shader) m_shader->unbind();
-		m_unbind_func();
-		if (m_framebuffer) m_framebuffer->unbind();
+		m_end_func();
+
+		if (m_framebuffer) {
+			m_framebuffer->unbind();
+			m_framebuffer = nullptr;
+		}
 	}
 
 }

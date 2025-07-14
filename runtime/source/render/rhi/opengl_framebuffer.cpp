@@ -24,8 +24,8 @@ namespace z1 {
 
 		m_attachments = attachments;
 
-		m_description.m_width = width;
-		m_description.m_height = height;
+		m_description.width = width;
+		m_description.height = height;
 
 		create();
 	}
@@ -42,21 +42,21 @@ namespace z1 {
 
 		for (auto const& attachment : m_attachments) {
 			Image::Description desc{};
-			desc.m_width = m_description.m_width;
-			desc.m_height = m_description.m_height;
+			desc.m_width = m_description.width;
+			desc.m_height = m_description.height;
 			desc.m_depth = 1;
-			desc.m_format = attachment.m_format;
-			desc.m_sampler_mode = attachment.m_sampler_mode;
-			desc.m_wrap_mode = attachment.m_wrap_mode;
+			desc.m_format = attachment.format;
+			desc.m_sampler_mode = attachment.sampler_mode;
+			desc.m_wrap_mode = attachment.wrap_mode;
 			desc.m_mipmap = false;
 
 			auto image = new OpenGLImage2D(nullptr, 0, desc);
 
 			glBindTexture(GL_TEXTURE_2D, image->m_handle);
-			glFramebufferTexture(GL_FRAMEBUFFER, image_format_to_attachment_type(attachment.m_format, binding), image->m_handle, 0);
+			glFramebufferTexture(GL_FRAMEBUFFER, image_format_to_attachment_type(attachment.format, binding), image->m_handle, 0);
 			glBindTexture(GL_TEXTURE_2D, 0);
 
-			switch (attachment.m_format) {
+			switch (attachment.format) {
 			case ImageFormat::RGBA8:
 			case ImageFormat::RGBA32F:
 				binding++;
@@ -101,8 +101,8 @@ namespace z1 {
 	void OpenGLFramebuffer::resize(uint32_t width, uint32_t height) {
 		PROFILE_FUNCTION();
 		destroy();
-		m_description.m_width = width;
-		m_description.m_height = height;
+		m_description.width = width;
+		m_description.height = height;
 		create();
 	}
 

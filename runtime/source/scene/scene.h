@@ -2,6 +2,8 @@
 
 #include "core/core.h"
 #include "scene/component.h"
+#include "render/camera.h"
+#include "render/framebuffer.h"
 #include "entt.hpp"
 
 namespace z1 {
@@ -22,9 +24,9 @@ namespace z1 {
 			return view.size_hint();
 		}
 
-		entt::registry& get_registry() {
-			return m_registry;
-		}
+		entt::registry m_registry;
+		std::shared_ptr<Camera> m_main_camera;
+		std::shared_ptr<Framebuffer> m_main_framebuffer;
 
 	private:
 		struct EntityPtr {
@@ -46,9 +48,6 @@ namespace z1 {
 				return m_ptr.lock();
 			}
 		};
-
-		friend struct Entity;
-		entt::registry m_registry;
 	};
 
 }

@@ -64,8 +64,8 @@ void EditorGUI::draw() {
 			ImGui::EndMenuBar();
 		}
 
-		auto w = (float)m_viewport_framebuffer->get_description().m_width;
-		auto h = (float)m_viewport_framebuffer->get_description().m_height;
+		auto w = (float)m_viewport_framebuffer->get_description().width;
+		auto h = (float)m_viewport_framebuffer->get_description().height;
 
 		if (w != g_viewport_resolutions[m_current_resolution][0] || h != g_viewport_resolutions[m_current_resolution][1]) {
 			m_viewport_framebuffer->resize(g_viewport_resolutions[m_current_resolution][0], g_viewport_resolutions[m_current_resolution][1]);

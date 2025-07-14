@@ -31,7 +31,7 @@ namespace z1 {
 		Renderer2D();
 		~Renderer2D();
 
-		void prepare_draw();
+		void prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Camera> const& camera);
 		void draw();
 
 		void draw_quad(

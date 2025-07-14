@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/core.h"
+#include "core/window.h"
 #include "render/image.h"
 
 namespace z1 {
@@ -7,14 +9,14 @@ namespace z1 {
 	struct API Framebuffer {
 
 		struct Attachment {
-			ImageFormat m_format;
-			SamplerMode m_sampler_mode;
-			WrapMode m_wrap_mode;
+			ImageFormat format;
+			SamplerMode sampler_mode;
+			WrapMode wrap_mode;
 		};
 
 		struct Description {
-			uint32_t m_width;
-			uint32_t m_height;
+			uint32_t width;
+			uint32_t height;
 		};
 
 		virtual ~Framebuffer() = default;
@@ -35,6 +37,14 @@ namespace z1 {
 		static std::shared_ptr<Framebuffer> create(
 			uint32_t width, uint32_t height,
 			std::initializer_list<Attachment> attachments);
+
+		static inline uint32_t get_width(std::shared_ptr<Framebuffer> const& framebuffer) noexcept {
+			return framebuffer ? framebuffer->get_description().width : g_runtime_context.m_window->get_width();
+		}
+
+		static inline uint32_t get_height(std::shared_ptr<Framebuffer> const& framebuffer) noexcept {
+			return framebuffer ? framebuffer->get_description().height : g_runtime_context.m_window->get_height();
+		}
 
 	protected:
 		Description m_description;

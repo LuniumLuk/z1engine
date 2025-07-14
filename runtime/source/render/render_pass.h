@@ -27,55 +27,58 @@ namespace z1 {
 		Back,
 		FrontAndBack,
 	};
-
+	
+	// Here a RenderPass is a combination of RenderPass(SubPass) and Pipeline in Vulkan
+	// That is, the RenderPass here is a set of rendering states and a shader program that can be bound to a framebuffer.
 	struct API RenderPass {
 
 		struct Description {
-			// clear
-			bool m_clear_color = false;
-			bool m_clear_depth = false;
-			glm::vec4 m_clear_color_value = { 0.0f, 0.0f, 0.0f, 0.0f };
-			float m_clear_depth_value = 1.0f;
-
 			// depth
-			bool m_depth_test = false;
+			bool depth_test = false;
 
 			// blend
-			bool m_blend = false;
-			BlendFactor m_src_blend_factor = BlendFactor::SrcAlpha;
-			BlendFactor m_dst_blend_factor = BlendFactor::OneMinusSrcAlpha;
+			bool blend = false;
+			BlendFactor src_blend_factor = BlendFactor::SrcAlpha;
+			BlendFactor dst_blend_factor = BlendFactor::OneMinusSrcAlpha;
 
 			// culling
-			CullMode m_cull_mode = CullMode::Back;
-
-			// viewport
-			bool m_dynamic_viewport = false;
-			uint32_t m_viewport_x = 0;
-			uint32_t m_viewport_y = 0;
-			uint32_t m_viewport_width = UINT32_MAX;
-			uint32_t m_viewport_height = UINT32_MAX;
-
-			// scissor
-			bool m_scissor = false;
-			bool m_dynamic_scissor = false;
-			uint32_t m_scissor_x = 0;
-			uint32_t m_scissor_y = 0;
-			uint32_t m_scissor_width = UINT32_MAX;
-			uint32_t m_scissor_height = UINT32_MAX;
-
-			// framebuffer
-			std::shared_ptr<Framebuffer> m_framebuffer;
+			CullMode cull_mode = CullMode::Back;
 
 			// shader
-			std::shared_ptr<Shader> m_shader;
+			std::shared_ptr<Shader> shader;
 		};
 
 		static std::shared_ptr<RenderPass> build(Description const& description);
 
-		virtual void bind() = 0;
-		virtual void unbind() = 0;
+		struct BeginInfo {
+			// clear
+			bool clear_color = false;
+			bool clear_depth = false;
+			glm::vec4 clear_color_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+			float clear_depth_value = 1.0f;
 
-		std::shared_ptr<Framebuffer> m_framebuffer;
+			// viewport
+			bool dynamic_viewport = false;
+			uint32_t viewport_x = 0;
+			uint32_t viewport_y = 0;
+			uint32_t viewport_width = UINT32_MAX;
+			uint32_t viewport_height = UINT32_MAX;
+
+			// scissor
+			bool scissor = false;
+			bool dynamic_scissor = false;
+			uint32_t scissor_x = 0;
+			uint32_t scissor_y = 0;
+			uint32_t scissor_width = UINT32_MAX;
+			uint32_t scissor_height = UINT32_MAX;
+
+			// framebuffer
+			std::shared_ptr<Framebuffer> framebuffer = nullptr;
+		};
+
+		virtual void begin(BeginInfo const& info) = 0;
+		virtual void end() = 0;
+
 		std::shared_ptr<Shader> m_shader;
 	};
 

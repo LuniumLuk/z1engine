@@ -6,20 +6,17 @@
 namespace z1 {
 
 	struct OpenGLRenderPass : RenderPass {
-
 		OpenGLRenderPass(Description const& description);
 		~OpenGLRenderPass();
 
-		void bind() override;
-		void unbind() override;
+		void begin(BeginInfo const& info) override;
+		void end() override;
 
 	private:
-		std::function<void()> m_bind_func;
-		std::function<void()> m_unbind_func;
+		std::function<void()> m_begin_func;
+		std::function<void()> m_end_func;
 
-		bool m_dynamic_viewport;
-		bool m_scissor;
-		bool m_dynamic_scissor;
+		std::shared_ptr<Framebuffer> m_framebuffer = nullptr;
 	};
 
 }

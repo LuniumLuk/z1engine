@@ -41,10 +41,6 @@ namespace z1 {
 	}
 
 	void RuntimeContext::shutdown() {
-
-		m_main_camera.reset();
-		m_main_framebuffer.reset();
-
 		m_renderer_2d.reset();
 		m_renderer_mesh_viewer.reset();
 

@@ -53,17 +53,12 @@ namespace z1 {
 #endif
 
 		RenderPass::Description desc{};
-		desc.m_clear_color = false;
-		desc.m_clear_depth = false;
-
-		desc.m_depth_test = true;
-		desc.m_blend = true;
-
-		desc.m_framebuffer = nullptr;
+		desc.depth_test = true;
+		desc.blend = true;
 #ifdef BATCHED_RENDER
-		desc.m_shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d_batched.glsl");
+		desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d_batched.glsl");
 #else
-		desc.m_shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d.glsl");
+		desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d.glsl");
 #endif
 
 		m_render_pass = RenderPass::build(desc);
@@ -76,7 +71,7 @@ namespace z1 {
 
 	}
 
-	void Renderer2D::prepare_draw() {
+	void Renderer2D::prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Camera> const& camera) {
 		PROFILE_FUNCTION();
 
 		if (m_quads.empty()) return;
@@ -149,15 +144,20 @@ namespace z1 {
 		m_batches[curr_batch].m_index_num = index_offset - m_batches[curr_batch].m_index_offset;
 		m_batches[curr_batch].m_vertex_num = vertex_offset - m_batches[curr_batch].m_vertex_offset;
 #endif
+		if (!camera) return;
+
+		RenderPass::BeginInfo info{};
+		info.clear_color = false;
+		info.clear_depth = false;
+		info.framebuffer = framebuffer;
+
+		m_render_pass->begin(info);
+		m_render_pass->m_shader->set_uniform("u_projview", &camera->get_projview());
 	}
 
 	void Renderer2D::draw() {
 		PROFILE_FUNCTION();
-		if (!g_runtime_context.m_main_camera) return;
 
-		m_render_pass->bind();
-		g_runtime_context.m_main_camera->set_aspect((float)m_render_pass->m_framebuffer->get_description().m_height / (float)m_render_pass->m_framebuffer->get_description().m_width);
-		m_render_pass->m_shader->set_uniform("u_projview", &g_runtime_context.m_main_camera->get_projview());
 #ifdef BATCHED_RENDER
 		for (auto const& batch : m_batches) {
 			m_vertex_buffer->write(&m_quad_vertices[batch.m_vertex_offset], batch.m_vertex_num * sizeof(QuadVertex));
@@ -205,7 +205,7 @@ namespace z1 {
 			g_runtime_context.m_resource_manager->unbind_resource(prev_texture->get_resource_id());
 		}
 #endif
-		m_render_pass->unbind();
+		m_render_pass->end();
 
 		m_quads.clear();
 	}

@@ -32,11 +32,15 @@ namespace z1 {
 	}
 
 	void Scene::on_update(float delta_time) {
+		PROFILE_FUNCTION();
+
+		m_main_camera->set_aspect((float)Framebuffer::get_height(m_main_framebuffer) / (float)Framebuffer::get_width(m_main_framebuffer));
+
 		{
 			PROFILE_SCOPE("Renderer Mesh Viewer");
 
 			auto& renderer_mesh_viewer = g_runtime_context.m_renderer_mesh_viewer;
-			renderer_mesh_viewer->prepare_draw();
+			renderer_mesh_viewer->prepare_draw(m_main_framebuffer, m_main_camera);
 
 			glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
 			glm::vec3 sun_intensity = { .5f, .5f, .5f };
@@ -48,7 +52,6 @@ namespace z1 {
 				Renderer2D::Quad quad{};
 				renderer_mesh_viewer->m_render_pass->m_shader->set_uniform("u_model", &transform.get_transform());
 				mesh.m_mesh->draw();
-
 			}
 
 			renderer_mesh_viewer->after_draw();
@@ -73,7 +76,7 @@ namespace z1 {
 			}
 
 			renderer_2d->draw_quads(quads);
-			renderer_2d->prepare_draw();
+			renderer_2d->prepare_draw(m_main_framebuffer, m_main_camera);
 			renderer_2d->draw();
 		}
 	}

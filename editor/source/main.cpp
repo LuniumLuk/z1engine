@@ -10,6 +10,10 @@ struct EditorLayer : Layer {
 	EditorLayer() {
 		m_gui = std::make_shared<EditorGUI>();
 		m_active_scene = std::make_shared<Scene>();
+		m_active_scene->m_main_camera = Camera::create_ortho(0.0f, 0.0f, 1.0f, 1.0f, -10.0f, 10.0f);
+		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
+
+		m_camera_controller = std::make_shared<Generic2DCameraController>(m_active_scene->m_main_camera);
 
 		m_texture = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
 		m_checker = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
@@ -28,11 +32,6 @@ struct EditorLayer : Layer {
 			ent->get_component<TransformComponent>().m_scale = glm::vec3(10.0f, 10.0f, 1.0f);
 			m_entities.push_back(ent);
 		}
-
-		m_camera = Camera::create_ortho(0.0f, 0.0f, 1.0f, 1.0f, -10.0f, 10.0f);
-		m_camera_controller = std::make_shared<Generic2DCameraController>(m_camera);
-		g_runtime_context.m_main_camera = m_camera;
-		g_runtime_context.m_main_framebuffer = m_gui->get_viewport_framebuffer();
 
 		{
 			auto ent = m_active_scene->create_entity("Mesh_0");
@@ -146,7 +145,6 @@ private:
 	std::shared_ptr<Scene> m_active_scene;
 	std::vector<std::shared_ptr<Entity>> m_entities;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
-	std::shared_ptr<Camera> m_camera;
 	std::shared_ptr<Generic2DCameraController> m_camera_controller;
 	InputState m_input_state;
 	std::shared_ptr<Image2D> m_texture;
@@ -160,7 +158,7 @@ private:
 		ImGui::Begin("Scene");
 		ImGui::Text("Entities in scene: %d", m_active_scene->get_entity_count());
 		ImGui::Separator();
-		for (auto const& ent : m_active_scene->get_registry().view<TransformComponent>()) {
+		for (auto const& ent : m_active_scene->m_registry.view<TransformComponent>()) {
 			auto entity = m_active_scene->cast_to_entity(ent);
 			if (ImGui::Selectable(entity->get_component<TagComponent>().m_tag.c_str(), entity == m_selected_entity)) {
 				m_selected_entity = entity; // Update selection
