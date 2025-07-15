@@ -30,6 +30,6 @@
     layout(location = 0) out vec4 frag_color;
 
     void main() {
-        frag_color = v_color * texture(u_texture[int(v_texture_id)], v_uv);
+        frag_color = v_color * texture(u_texture[int(round(v_texture_id))], v_uv);
     }
 }
