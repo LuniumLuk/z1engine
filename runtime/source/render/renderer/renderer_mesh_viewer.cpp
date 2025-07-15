@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "render/shader.h"
-#include "render/camera.h"
 #include "render/framebuffer.h"
 #include "render/renderer/renderer_mesh_viewer.h"
 #include "glm/gtc/matrix_transform.hpp"
@@ -24,9 +23,8 @@ namespace z1 {
 
 	}
 
-	void RendererMeshViewer::prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Camera> const& camera) const {
+	void RendererMeshViewer::prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer) const {
 		PROFILE_FUNCTION();
-		if (!camera) return;
 
 		RenderPass::BeginInfo info{};
 		info.framebuffer = framebuffer;
@@ -36,9 +34,6 @@ namespace z1 {
 		info.clear_depth_value = 1.0f;
 
 		m_render_pass->begin(info);
-	
-		m_render_pass->m_shader->set_uniform("u_projview", &camera->get_projview());
-		m_render_pass->m_shader->set_uniform("u_cam_position", &camera->get_eye());
 	}
 
 	void RendererMeshViewer::after_draw() const {

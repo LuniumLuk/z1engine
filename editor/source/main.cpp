@@ -1,8 +1,10 @@
-#include <iostream>
-#include <z1engine.h>
-#include <glad/glad.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <gui.h>
+#include "iostream"
+#include "z1engine.h"
+#include "glad/glad.h"
+#include "glm/gtc/matrix_transform.hpp"
+#include "gui.h"
+#include "input_mgr.h"
+#include "camera_ctrl.h"
 
 using namespace z1;
 
@@ -10,10 +12,16 @@ struct EditorLayer : Layer {
 	EditorLayer() {
 		m_gui = std::make_shared<EditorGUI>();
 		m_active_scene = std::make_shared<Scene>();
-		m_active_scene->m_main_camera = Camera::create_ortho(0.0f, 0.0f, 1.0f, 1.0f, -10.0f, 10.0f);
+
+		{
+			auto ent = m_active_scene->create_entity("Main Camera");
+			ent->add_component<CameraComponent>();
+			ent->get_component<CameraComponent>().m_is_primary = true;
+		}
+
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 
-		m_camera_controller = std::make_shared<Generic2DCameraController>(m_active_scene->m_main_camera);
+		m_camera_controller = std::make_shared<Generic2DCameraController>(m_active_scene->get_main_camera());
 
 		m_texture = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
 		m_checker = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
@@ -22,7 +30,6 @@ struct EditorLayer : Layer {
 		{
 			auto ent = m_active_scene->create_entity("Square_0");
 			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), m_texture);
-			m_entities.push_back(ent);
 		}
 
 		{
@@ -30,7 +37,6 @@ struct EditorLayer : Layer {
 			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), m_checker);
 			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -9.5f);
 			ent->get_component<TransformComponent>().m_scale = glm::vec3(10.0f, 10.0f, 1.0f);
-			m_entities.push_back(ent);
 		}
 
 		{
@@ -38,11 +44,10 @@ struct EditorLayer : Layer {
 			auto mesh = io::load_static_mesh("asset/mesh/bunny.obj");
 			ent->add_component<StaticMeshComponent>(mesh);
 			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -5.0f);
-			m_entities.push_back(ent);
 		}
 
-		int quad_rows = 4;
-		int quad_cols = 4;
+		uint32_t quad_rows = 4;
+		uint32_t quad_cols = 4;
 		float quad_stride = 0.15f;
 		float quad_size = 0.1f;
 
@@ -55,7 +60,6 @@ struct EditorLayer : Layer {
 				ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), tile);
 				ent->get_component<TransformComponent>().m_location = glm::vec3(-(float)i * quad_stride - 0.2f, -(float)j * quad_stride - 0.2f, 1.0f);
 				ent->get_component<TransformComponent>().m_scale = glm::vec3(quad_size, quad_size, 1.0f);
-				m_entities.push_back(ent);
 			}
 		}
 
@@ -65,9 +69,12 @@ struct EditorLayer : Layer {
 				ent->add_component<SpriteComponent>(glm::vec4((float)(i % quad_rows) / quad_rows, (float)(j % quad_cols) / quad_cols, 1.0f, 1.0f));
 				ent->get_component<TransformComponent>().m_location = glm::vec3(i * quad_stride, j * quad_stride, 0.1f);
 				ent->get_component<TransformComponent>().m_scale = glm::vec3(quad_size, quad_size, 1.0f);
-				m_entities.push_back(ent);
 			}
 		}
+	}
+
+	~EditorLayer() {
+		//m_active_scene->m_entities.clear();
 	}
 
 	void on_attach() override {
@@ -84,17 +91,17 @@ struct EditorLayer : Layer {
 		}
 		m_camera_controller->m_drag_speed = m_gui->m_viewport_pixel_scale_x;
 
-		m_input_state.update(delta_time);
+		m_input_mgr.update(delta_time);
 		if (m_gui->is_viewport_focused()) {
-			m_camera_controller->update(m_input_state);
+			m_camera_controller->update(m_input_mgr);
 		}
-		m_input_state.reset();
+		m_input_mgr.reset();
 
 		m_active_scene->on_update(delta_time);
 	}
 
 	void on_event(Event& event) override {
-		m_input_state.on_event(event);
+		m_input_mgr.on_event(event);
 	}
 
 	void on_imgui_render() override {
@@ -143,10 +150,9 @@ struct EditorLayer : Layer {
 private:
 	std::shared_ptr<EditorGUI> m_gui;
 	std::shared_ptr<Scene> m_active_scene;
-	std::vector<std::shared_ptr<Entity>> m_entities;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
 	std::shared_ptr<Generic2DCameraController> m_camera_controller;
-	InputState m_input_state;
+	InputManager m_input_mgr;
 	std::shared_ptr<Image2D> m_texture;
 	std::shared_ptr<Image2D> m_checker;
 	std::shared_ptr<Image2D> m_atlas;

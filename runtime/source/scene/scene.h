@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/core.h"
-#include "scene/component.h"
-#include "render/camera.h"
+#include "scene/component/basic.h"
+#include "scene/component/camera.h"
 #include "render/framebuffer.h"
 #include "entt.hpp"
 
@@ -17,16 +17,18 @@ namespace z1 {
 		void on_update(float delta_time);
 
 		std::shared_ptr<Entity> create_entity(std::string const& name);
-		std::shared_ptr<Entity> cast_to_entity(entt::entity handle);
+		std::shared_ptr<Entity> cast_to_entity(entt::entity handle) const;
 
 		size_t get_entity_count() const {
 			auto view = m_registry.view<TransformComponent>();
 			return view.size_hint();
 		}
 
+		std::shared_ptr<Entity> get_main_camera() const;
+
 		entt::registry m_registry;
-		std::shared_ptr<Camera> m_main_camera;
 		std::shared_ptr<Framebuffer> m_main_framebuffer;
+		std::vector<std::shared_ptr<Entity>> m_entities;
 
 	private:
 		struct EntityPtr {

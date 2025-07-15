@@ -2,10 +2,12 @@
 
 #include "core/core.h"
 #include "scene/scene.h"
-#include "scene/component.h"
+#include "scene/component/basic.h"
 #include "entt.hpp"
 
 namespace z1 {
+
+	struct Scene;
 
 	struct API Entity {
 		Entity(entt::entity handle, std::weak_ptr<Scene> const& scene)
@@ -18,6 +20,9 @@ namespace z1 {
 		Entity& operator=(Entity&&) = default;
 
 		~Entity() {
+			if (m_is_destroyed) {
+				return; // already destroyed
+			}
 			CORE_ASSERT(is_valid(), "Entity is invalid!");
 			CORE_INFO("Destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
 			m_scene.lock()->m_registry.destroy(m_handle);
@@ -55,8 +60,11 @@ namespace z1 {
 		}
 
 	private:
-		entt::entity m_handle{ entt::null };
+		friend Scene;
+
+		entt::entity m_handle = entt::null;
 		std::weak_ptr<Scene> m_scene;
+		bool m_is_destroyed = false;
 	};
 
 }

@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "render/shader.h"
-#include "render/camera.h"
 #include "render/framebuffer.h"
 #include "render/renderer/renderer_2d.h"
 #include "glm/gtc/matrix_transform.hpp"
@@ -71,7 +70,7 @@ namespace z1 {
 
 	}
 
-	void Renderer2D::prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Camera> const& camera) {
+	void Renderer2D::prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer) {
 		PROFILE_FUNCTION();
 
 		if (m_quads.empty()) return;
@@ -144,15 +143,12 @@ namespace z1 {
 		m_batches[curr_batch].m_index_num = index_offset - m_batches[curr_batch].m_index_offset;
 		m_batches[curr_batch].m_vertex_num = vertex_offset - m_batches[curr_batch].m_vertex_offset;
 #endif
-		if (!camera) return;
-
 		RenderPass::BeginInfo info{};
 		info.clear_color = false;
 		info.clear_depth = false;
 		info.framebuffer = framebuffer;
 
 		m_render_pass->begin(info);
-		m_render_pass->m_shader->set_uniform("u_projview", &camera->get_projview());
 	}
 
 	void Renderer2D::draw() {

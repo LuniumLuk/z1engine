@@ -31,7 +31,7 @@ namespace z1 {
 		Renderer2D();
 		~Renderer2D();
 
-		void prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Camera> const& camera);
+		void prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer);
 		void draw();
 
 		void draw_quad(
@@ -57,6 +57,8 @@ namespace z1 {
 			std::shared_ptr<SubImage2D> const& texture);
 
 		void draw_quads(std::vector<Quad> const& quads);
+
+		std::shared_ptr<RenderPass> m_render_pass;
 
 	private:
 
@@ -96,7 +98,6 @@ namespace z1 {
 
 		std::shared_ptr<VertexBuffer> m_vertex_buffer;
 		std::shared_ptr<VertexArray> m_vertex_array;
-		std::shared_ptr<RenderPass> m_render_pass;
 		std::shared_ptr<Image2D> m_default_texture;
 
 	};

@@ -38,9 +38,7 @@ namespace z1 {
 				{DataType::Float4},
 			}, BufferUsage::Static);
 
-		Primitive prim{};
-		prim.m_primitive_type = type;
-		prim.m_vertex_array = VertexArray::create({ vertex_buffer });
+		Primitive prim{ type, VertexArray::create({ vertex_buffer }) };
 		m_primitives.push_back(prim);
 	}
 
@@ -54,9 +52,7 @@ namespace z1 {
 			}, BufferUsage::Static);
 		auto index_buffer = IndexBuffer::create(indices.data(), indices.size() * sizeof(int), BufferUsage::Static);
 
-		Primitive prim{};
-		prim.m_primitive_type = type;
-		prim.m_vertex_array = VertexArray::create({ vertex_buffer }, index_buffer);
+		Primitive prim{ type,  VertexArray::create({ vertex_buffer }, index_buffer) };
 		m_primitives.push_back(prim);
 	}
 

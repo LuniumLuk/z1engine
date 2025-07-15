@@ -112,9 +112,7 @@ namespace z1::io {
 		std::vector<StaticMesh::Primitive> mesh_primitives;
 		for (auto& indices : primitives) {
 			auto index_buffer = IndexBuffer::create(indices.data(), indices.size() * sizeof(uint32_t), BufferUsage::Static);
-			StaticMesh::Primitive prim{};
-			prim.m_primitive_type = PrimitiveType::Triangles;
-			prim.m_vertex_array = VertexArray::create({ vertex_buffer }, index_buffer);
+			StaticMesh::Primitive prim{ PrimitiveType::Triangles, VertexArray::create({ vertex_buffer }, index_buffer) };
 			mesh_primitives.push_back(prim);
 		}
 

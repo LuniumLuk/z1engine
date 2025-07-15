@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "scene/scene.h"
 #include "scene/entity.h"
+#include "scene/component/basic.h"
+#include "scene/component/camera.h"
+#include "scene/component/mesh.h"
+#include "scene/component/sprite.h"
 #include "core/core.h"
 #include "render/shader.h"
 #include "render/renderer/renderer_2d.h"
@@ -10,7 +14,14 @@ namespace z1 {
 
 	Scene::Scene() {}
 
-	Scene::~Scene() {}
+	Scene::~Scene() {
+		for (auto& entity : m_entities) {
+			if (entity) {
+				entity->m_is_destroyed = true; // just mark as destroyed, the entity will be removed anyway when the registry is cleared
+			}
+		}
+		m_registry.clear();
+	}
 
 	std::shared_ptr<Entity> Scene::create_entity(std::string const& name) {
 		entt::entity handle = m_registry.create();
@@ -19,10 +30,11 @@ namespace z1 {
 		entity->add_component<TagComponent>(name);
 		entity->add_component<TransformComponent>();
 		entity->add_component<Scene::EntityPtr>(entity);
+		m_entities.push_back(entity);
 		return entity;
 	}
 
-	std::shared_ptr<Entity> Scene::cast_to_entity(entt::entity handle) {
+	std::shared_ptr<Entity> Scene::cast_to_entity(entt::entity handle) const {
 		CORE_ASSERT(m_registry.valid(handle), "Entity handle is invalid!");
 		auto entity_ptr = m_registry.try_get<Scene::EntityPtr>(handle);
 		if (entity_ptr) {
@@ -31,16 +43,44 @@ namespace z1 {
 		return nullptr;
 	}
 
+	std::shared_ptr<Entity> Scene::get_main_camera() const {
+		auto view = m_registry.view<CameraComponent>();
+		for (auto& entity : view) {
+			auto& camera = view.get<CameraComponent>(entity);
+			if (camera.m_is_primary) {
+				return cast_to_entity(entity);
+			}
+		}
+		return nullptr;
+	}
+
 	void Scene::on_update(float delta_time) {
 		PROFILE_FUNCTION();
 
-		m_main_camera->set_aspect((float)Framebuffer::get_height(m_main_framebuffer) / (float)Framebuffer::get_width(m_main_framebuffer));
+		auto const& main_cam = get_main_camera();
+		if (!main_cam) {
+			CORE_ERROR("No main camera found in the scene!");
+			return;
+		}
+		auto& main_cc = main_cam->get_component<CameraComponent>();
+		auto& main_ct = main_cam->get_component<TransformComponent>();
 
+		if (!main_cc.m_use_fixed_aspect) {
+			main_cc.m_aspect = (float)Framebuffer::get_height(m_main_framebuffer) / (float)Framebuffer::get_width(m_main_framebuffer);
+		}
+
+		auto cam_up = main_ct.get_transform() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+		auto cam_forward = main_ct.get_transform() * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
+		auto cam_view = glm::lookAt(main_ct.m_location, main_ct.m_location + glm::vec3(cam_forward), glm::vec3(cam_up));
+
+		glm::mat4 cam_projview = main_cc.get_proj() * cam_view;
 		{
 			PROFILE_SCOPE("Renderer Mesh Viewer");
 
 			auto& renderer_mesh_viewer = g_runtime_context.m_renderer_mesh_viewer;
-			renderer_mesh_viewer->prepare_draw(m_main_framebuffer, m_main_camera);
+			renderer_mesh_viewer->prepare_draw(m_main_framebuffer);
+			renderer_mesh_viewer->m_render_pass->m_shader->set_uniform("u_projview", &cam_projview);
+			renderer_mesh_viewer->m_render_pass->m_shader->set_uniform("u_cam_position", &main_ct.m_location);
 
 			glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
 			glm::vec3 sun_intensity = { .5f, .5f, .5f };
@@ -76,7 +116,9 @@ namespace z1 {
 			}
 
 			renderer_2d->draw_quads(quads);
-			renderer_2d->prepare_draw(m_main_framebuffer, m_main_camera);
+			renderer_2d->prepare_draw(m_main_framebuffer);
+			renderer_2d->m_render_pass->m_shader->set_uniform("u_projview", &cam_projview);
+
 			renderer_2d->draw();
 		}
 	}

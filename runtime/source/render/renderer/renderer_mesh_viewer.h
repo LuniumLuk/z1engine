@@ -3,7 +3,6 @@
 #include "render/vertex_array.h"
 #include "render/render_pass.h"
 #include "render/framebuffer.h"
-#include "render/camera.h"
 
 namespace z1 {
 
@@ -12,7 +11,7 @@ namespace z1 {
 		RendererMeshViewer();
 		~RendererMeshViewer();
 
-		void prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Camera> const& camera) const;
+		void prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer) const;
 		void after_draw() const;
 
 		std::shared_ptr<RenderPass> m_render_pass;

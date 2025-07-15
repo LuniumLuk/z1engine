@@ -21,7 +21,6 @@ namespace z1 {
 			PrimitiveType m_primitive_type;
 			std::shared_ptr<VertexArray> m_vertex_array;
 
-			Primitive() = default;
 			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array)
 				: m_primitive_type(type), m_vertex_array(vertex_array) {
 			}
