@@ -21,7 +21,9 @@ struct EditorLayer : Layer {
 
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 
-		m_camera_controller = std::make_shared<Generic2DCameraController>(m_active_scene->get_main_camera());
+		m_ortho_camera_controller = std::make_shared<Generic2DCameraController>(m_active_scene->get_main_camera());
+		m_persp_camera_controller = std::make_shared<HoveringCameraController>(m_active_scene->get_main_camera());
+		m_camera_controller = m_persp_camera_controller;
 
 		m_texture = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
 		m_checker = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
@@ -63,8 +65,8 @@ struct EditorLayer : Layer {
 			}
 		}
 
-		for (int i = 0; i < quad_rows; ++i) {
-			for (int j = 0; j < quad_cols; ++j) {
+		for (uint32_t i = 0; i < quad_rows; ++i) {
+			for (uint32_t j = 0; j < quad_cols; ++j) {
 				auto ent = m_active_scene->create_entity("Quad_" + std::to_string(i * quad_rows + j));
 				ent->add_component<SpriteComponent>(glm::vec4((float)(i % quad_rows) / quad_rows, (float)(j % quad_cols) / quad_cols, 1.0f, 1.0f));
 				ent->get_component<TransformComponent>().m_location = glm::vec3(i * quad_stride, j * quad_stride, 0.1f);
@@ -74,7 +76,7 @@ struct EditorLayer : Layer {
 	}
 
 	~EditorLayer() {
-		//m_active_scene->m_entities.clear();
+
 	}
 
 	void on_attach() override {
@@ -89,7 +91,7 @@ struct EditorLayer : Layer {
 			m_fps_timer = 0.0;
 			m_fps_counter = 0;
 		}
-		m_camera_controller->m_drag_speed = m_gui->m_viewport_pixel_scale_x;
+		m_ortho_camera_controller->m_drag_speed = m_gui->m_viewport_pixel_scale_x;
 
 		m_input_mgr.update(delta_time);
 		if (m_gui->is_viewport_focused()) {
@@ -151,7 +153,9 @@ private:
 	std::shared_ptr<EditorGUI> m_gui;
 	std::shared_ptr<Scene> m_active_scene;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
-	std::shared_ptr<Generic2DCameraController> m_camera_controller;
+	std::shared_ptr<Generic2DCameraController> m_ortho_camera_controller;
+	std::shared_ptr<HoveringCameraController> m_persp_camera_controller;
+	std::shared_ptr<CameraController> m_camera_controller;
 	InputManager m_input_mgr;
 	std::shared_ptr<Image2D> m_texture;
 	std::shared_ptr<Image2D> m_checker;
@@ -230,6 +234,24 @@ private:
 						ImGui::Text("Triangle Count: %d", prim.get_triangle_count());
 						ImGui::Unindent();
 					}
+				}
+			}
+
+			if (m_selected_entity->has_component<CameraComponent>()) {
+				if (ImGui::CollapsingHeader("Camera")) {
+					auto& camera = m_selected_entity->get_component<CameraComponent>();
+					ImGui::Checkbox("Is Perspective", &camera.m_is_perspective);
+					if (camera.m_is_perspective) {
+						ImGui::InputFloat("Field of View", &camera.m_intrinsic.fov, 0.01f);
+					}
+					else {
+						ImGui::InputFloat("Frustum Size", &camera.m_intrinsic.size, 0.01f);
+					}
+					ImGui::InputFloat("Near", &camera.m_near, 0.01f);
+					ImGui::InputFloat("Far", &camera.m_far, 0.01f);
+					ImGui::InputFloat("Aspect Ratio", &camera.m_aspect, 0.01f);
+					ImGui::Checkbox("Use Fixed Aspect", &camera.m_use_fixed_aspect);
+					ImGui::Checkbox("Is Primary", &camera.m_is_primary);
 				}
 			}
 		}
