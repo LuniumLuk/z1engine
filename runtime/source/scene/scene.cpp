@@ -15,9 +15,13 @@ namespace z1 {
 	Scene::Scene() {}
 
 	Scene::~Scene() {
+		// when the scene is being destroyed, the weak_ptr to the scene in each entity will be expired
+		// that is when calling m_scene.lock() in Entity::get_component<EntityPtr>() will return nullptr
+		// thus, we just mark all entities as destroyed, and clear the registry
+		// the entities' dtor will avoid using the weak_ptr to the scene
 		for (auto& entity : m_entities) {
 			if (entity) {
-				entity->m_is_destroyed = true; // just mark as destroyed, the entity will be removed anyway when the registry is cleared
+				entity->m_is_destroyed = true;
 			}
 		}
 		m_registry.clear();

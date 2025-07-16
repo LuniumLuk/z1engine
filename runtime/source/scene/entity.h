@@ -20,8 +20,10 @@ namespace z1 {
 		Entity& operator=(Entity&&) = default;
 
 		~Entity() {
+			// when m_is_destroyed is true, the scene is being destroyed
+			// thus we should not try to access the scene and the registry
 			if (m_is_destroyed) {
-				return; // already destroyed
+				return;
 			}
 			CORE_ASSERT(is_valid(), "Entity is invalid!");
 			CORE_INFO("Destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
