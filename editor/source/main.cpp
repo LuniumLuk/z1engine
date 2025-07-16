@@ -28,6 +28,44 @@ struct EditorLayer : Layer {
 		m_ortho_camera_ctrl = std::make_shared<Generic2DCameraController>(ortho_cam);
 		m_persp_camera_ctrl = std::make_shared<HoveringCameraController>(persp_cam);
 
+		m_gui->m_draw_viewport_overlay_func = 
+			[&]() {
+				ImVec2 window_pos = ImVec2(
+					ImGui::GetWindowPos().x + ImGui::GetWindowSize().x,
+					ImGui::GetWindowPos().y + 40
+				);
+				ImVec2 window_pos_pivot = ImVec2(1.0f, 0.0f); // right-top pivot
+
+				ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+				ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+
+				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f)); // no border
+
+				if (ImGui::Begin("overlay on viewport", nullptr,
+					ImGuiWindowFlags_NoMove |
+					//ImGuiWindowFlags_NoBackground |
+					ImGuiWindowFlags_NoDecoration |
+					ImGuiWindowFlags_AlwaysAutoResize |
+					ImGuiWindowFlags_NoSavedSettings |
+					ImGuiWindowFlags_NoFocusOnAppearing |
+					ImGuiWindowFlags_NoNav))
+				{
+					if (m_ortho_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
+						ImGui::Text("camera ctrl:");
+						ImGui::InputFloat("move speed", &m_ortho_camera_ctrl->m_move_speed, 0.1f, 1.0f);
+						ImGui::InputFloat("zoom speed", &m_ortho_camera_ctrl->m_zoom_speed, 0.1f, 1.0f);
+					}
+					else if (m_persp_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
+						ImGui::Text("camera ctrl:");
+						ImGui::InputFloat("rotate speed", &m_persp_camera_ctrl->m_rotate_speed, 0.1f, 1.0f);
+						ImGui::InputFloat("move speed", &m_persp_camera_ctrl->m_move_speed, 0.1f, 1.0f);
+					}
+				}
+				ImGui::End();
+
+				ImGui::PopStyleColor();
+			};
+
 		m_texture = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
 		m_checker = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
 		m_atlas = io::load_image2d("asset/texture/roguelikeSheet_transparent.png", SamplerMode::Nearest);
@@ -117,43 +155,45 @@ struct EditorLayer : Layer {
 	void on_imgui_render() override {
 		m_gui->draw();
 
-		ImGui::Begin("resource info");
-		ImGui::Text("resources");
-		if (ImGui::BeginTable("resources", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-			ImGui::TableSetupColumn("id");
-			ImGui::TableSetupColumn("type");
-			ImGui::TableSetupColumn("binding");
-			ImGui::TableSetupColumn("ref count");
-			ImGui::TableSetupColumn("info");
-			ImGui::TableHeadersRow();
+		if (ImGui::Begin("resource info")) {
+			ImGui::Text("resources");
+			if (ImGui::BeginTable("resources", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+				ImGui::TableSetupColumn("id");
+				ImGui::TableSetupColumn("type");
+				ImGui::TableSetupColumn("binding");
+				ImGui::TableSetupColumn("ref count");
+				ImGui::TableSetupColumn("info");
+				ImGui::TableHeadersRow();
 
-			ImGui::TableNextRow();
-			for (auto const& resource : g_runtime_context.m_resource_manager->m_resources) {
-				if (!resource) continue;
-				ImGui::TableNextColumn(); ImGui::Text(std::to_string(resource->get_resource_id()).c_str());
-				ImGui::TableNextColumn(); ImGui::Text(get_resource_name(resource->get_resource_type()).c_str());
-				ImGui::TableNextColumn(); ImGui::Text(resource->get_binding() == INVALID_BINDING ? "none" : std::to_string(resource->get_binding()).c_str());
-				ImGui::TableNextColumn(); ImGui::Text(std::to_string(resource->get_ref_count()).c_str());
-				switch (resource->get_resource_type()) {
-				case ResourceType::Image:
-					ImGui::TableNextColumn(); ImGui::Text(get_image_info(g_runtime_context.m_resource_manager->get<Image>(resource->get_resource_id())).c_str()); break;
-				case ResourceType::UniformBuffer:
-					ImGui::TableNextColumn(); ImGui::Text(get_uniform_buffer_info(g_runtime_context.m_resource_manager->get<UniformBuffer>(resource->get_resource_id())).c_str()); break;
+				ImGui::TableNextRow();
+				for (auto const& resource : g_runtime_context.m_resource_manager->m_resources) {
+					if (!resource) continue;
+					ImGui::TableNextColumn(); ImGui::Text(std::to_string(resource->get_resource_id()).c_str());
+					ImGui::TableNextColumn(); ImGui::Text(get_resource_name(resource->get_resource_type()).c_str());
+					ImGui::TableNextColumn(); ImGui::Text(resource->get_binding() == INVALID_BINDING ? "none" : std::to_string(resource->get_binding()).c_str());
+					ImGui::TableNextColumn(); ImGui::Text(std::to_string(resource->get_ref_count()).c_str());
+					switch (resource->get_resource_type()) {
+					case ResourceType::Image:
+						ImGui::TableNextColumn(); ImGui::Text(get_image_info(g_runtime_context.m_resource_manager->get<Image>(resource->get_resource_id())).c_str()); break;
+					case ResourceType::UniformBuffer:
+						ImGui::TableNextColumn(); ImGui::Text(get_uniform_buffer_info(g_runtime_context.m_resource_manager->get<UniformBuffer>(resource->get_resource_id())).c_str()); break;
+					}
 				}
+				ImGui::EndTable();
 			}
-			ImGui::EndTable();
 		}
 		ImGui::End();
 
 		show_scene_graph();
 		show_properties();
 
-		ImGui::Begin("debug");
-		if (ImGui::RadioButton("v sync", g_runtime_context.m_window->is_v_sync_enabled())) {
-			g_runtime_context.m_window->set_v_sync(!g_runtime_context.m_window->is_v_sync_enabled());
-		}
+		if (ImGui::Begin("debug")) {
+			if (ImGui::RadioButton("v sync", g_runtime_context.m_window->is_v_sync_enabled())) {
+				g_runtime_context.m_window->set_v_sync(!g_runtime_context.m_window->is_v_sync_enabled());
+			}
 
-		ImGui::Text(std::string("viewport_pixel_scale_x: " + std::to_string(m_gui->m_viewport_pixel_scale_x)).c_str());
+			ImGui::Text(std::string("viewport_pixel_scale_x: " + std::to_string(m_gui->m_viewport_pixel_scale_x)).c_str());
+		}
 		ImGui::End();
 	}
 
@@ -172,95 +212,99 @@ private:
 	float m_fps_timer = 0.0;
 
 	void show_scene_graph() {
-		ImGui::Begin("Scene");
-		ImGui::Text("Entities in scene: %d", m_active_scene->get_entity_count());
-		ImGui::Separator();
-		for (auto const& ent : m_active_scene->m_registry.view<TransformComponent>()) {
-			auto entity = m_active_scene->cast_to_entity(ent);
-			if (ImGui::Selectable(entity->get_component<TagComponent>().m_tag.c_str(), entity == m_selected_entity)) {
-				m_selected_entity = entity; // Update selection
+		if (ImGui::Begin("scene")) {
+			ImGui::Text("entities in scene: %d", m_active_scene->get_entity_count());
+			ImGui::Separator();
+			for (auto const& ent : m_active_scene->m_registry.view<TransformComponent>()) {
+				auto entity = m_active_scene->cast_to_entity(ent);
+				if (ImGui::Selectable(entity->get_component<TagComponent>().m_tag.c_str(), entity == m_selected_entity)) {
+					m_selected_entity = entity; // Update selection
+				}
 			}
 		}
 		ImGui::End();
 	}
 
 	void show_properties() {
-		ImGui::Begin("Properties");
-		if (m_selected_entity) {
-			auto& tag = m_selected_entity->get_component<TagComponent>();
-			ImGui::Text(tag.m_tag.c_str());
+		if (ImGui::Begin("properties")) {
+			if (m_selected_entity) {
+				auto& tag = m_selected_entity->get_component<TagComponent>();
+				ImGui::Text(tag.m_tag.c_str());
 
-			if (ImGui::CollapsingHeader("Transform")) {
-				auto& transform = m_selected_entity->get_component<TransformComponent>();
-				ImGui::DragFloat3("  Location", &transform.m_location[0], 0.01f);
-				ImGui::DragFloat3("  Rotation", &transform.m_rotation[0], 0.1f);
-				ImGui::DragFloat3("  Scale", &transform.m_scale[0], 0.01f);
-			}
-
-			if (m_selected_entity->has_component<SpriteComponent>()) {
-				if (ImGui::CollapsingHeader("Sprite")) {
-					auto& sprite = m_selected_entity->get_component<SpriteComponent>();
-					ImGui::ColorEdit4("Color", &sprite.m_color[0]);
-					ImGui::Text("Texture");
+				if (ImGui::CollapsingHeader("transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+					auto& transform = m_selected_entity->get_component<TransformComponent>();
 					ImGui::Indent();
-					if (sprite.m_texture) {
-						auto w = sprite.m_texture->get_description().m_width;
-						auto h = sprite.m_texture->get_description().m_height;
-						ImGui::Image(sprite.m_texture->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-						ImGui::Text("Width: %d", w);
-						ImGui::Text("Height: %d", h);
-						ImGui::Text("Depth: %d", sprite.m_texture->get_description().m_depth);
-						ImGui::Text("Format: %s", get_image_format_name(sprite.m_texture->get_description().m_format).c_str());
-						ImGui::Text("Sampler Mode: %s", get_sampler_mode_name(sprite.m_texture->get_description().m_sampler_mode).c_str());
-						ImGui::Text("Wrap Mode: %s", get_wrap_mode_name(sprite.m_texture->get_description().m_wrap_mode).c_str());
-						ImGui::RadioButton("Mipmap", sprite.m_texture->get_description().m_mipmap);
-					}
-					else {
-						ImGui::Text("-");
-					}
-					ImGui::Unindent();
-
-					ImGui::DragFloat2("Tiling Scale", &sprite.m_tiling_scale[0], 0.01f);
-					ImGui::DragFloat2("Tiling Offset", &sprite.m_tiling_offset[0], 0.01f);
-					ImGui::Text("Texcoords");
-					ImGui::Indent();
-					for (int i = 0; i < 4; ++i) {
-						ImGui::DragFloat2(("Texcoord " + std::to_string(i)).c_str(), &sprite.m_texcoords[i][0], 0.01f);
-					}
+					ImGui::DragFloat3("location", &transform.m_location[0], 0.01f);
+					ImGui::DragFloat3("rotation", &transform.m_rotation[0], 0.1f);
+					ImGui::DragFloat3("scale", &transform.m_scale[0], 0.01f);
 					ImGui::Unindent();
 				}
 
-			}
-
-			if (m_selected_entity->has_component<StaticMeshComponent>()) {
-				if (ImGui::CollapsingHeader("Static Mesh")) {
-					auto& mesh = m_selected_entity->get_component<StaticMeshComponent>();
-					ImGui::Text("Primitives");
-					for (auto const& prim : mesh.m_mesh->m_primitives) {
+				if (m_selected_entity->has_component<SpriteComponent>()) {
+					if (ImGui::CollapsingHeader("sprite", ImGuiTreeNodeFlags_DefaultOpen)) {
+						auto& sprite = m_selected_entity->get_component<SpriteComponent>();
+						ImGui::ColorEdit4("color", &sprite.m_color[0]);
+						ImGui::Text("texture");
 						ImGui::Indent();
-						ImGui::Text("Triangle Count: %d", prim.get_triangle_count());
+						if (sprite.m_texture) {
+							auto w = sprite.m_texture->get_description().m_width;
+							auto h = sprite.m_texture->get_description().m_height;
+							ImGui::Image(sprite.m_texture->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+							ImGui::Text("width: %d", w);
+							ImGui::Text("height: %d", h);
+							ImGui::Text("depth: %d", sprite.m_texture->get_description().m_depth);
+							ImGui::Text("format: %s", get_image_format_name(sprite.m_texture->get_description().m_format).c_str());
+							ImGui::Text("sampler Mode: %s", get_sampler_mode_name(sprite.m_texture->get_description().m_sampler_mode).c_str());
+							ImGui::Text("wrap Mode: %s", get_wrap_mode_name(sprite.m_texture->get_description().m_wrap_mode).c_str());
+							ImGui::RadioButton("mipmap", sprite.m_texture->get_description().m_mipmap);
+						}
+						else {
+							ImGui::Text("-");
+						}
+						ImGui::Unindent();
+
+						ImGui::DragFloat2("tiling scale", &sprite.m_tiling_scale[0], 0.01f);
+						ImGui::DragFloat2("tiling offset", &sprite.m_tiling_offset[0], 0.01f);
+						ImGui::Text("texcoords");
+						ImGui::Indent();
+						for (int i = 0; i < 4; ++i) {
+							ImGui::DragFloat2(("texcoord " + std::to_string(i)).c_str(), &sprite.m_texcoords[i][0], 0.01f);
+						}
 						ImGui::Unindent();
 					}
-				}
-			}
 
-			if (m_selected_entity->has_component<CameraComponent>()) {
-				if (ImGui::CollapsingHeader("Camera")) {
-					auto& camera = m_selected_entity->get_component<CameraComponent>();
-					ImGui::Checkbox("Is Perspective", &camera.m_is_perspective);
-					if (camera.m_is_perspective) {
-						ImGui::InputFloat("Field of View", &camera.m_intrinsic.fov, 0.01f);
+				}
+
+				if (m_selected_entity->has_component<StaticMeshComponent>()) {
+					if (ImGui::CollapsingHeader("static mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
+						auto& mesh = m_selected_entity->get_component<StaticMeshComponent>();
+						ImGui::Text("primitives");
+						for (auto const& prim : mesh.m_mesh->m_primitives) {
+							ImGui::Indent();
+							ImGui::Text("triangle count: %d", prim.get_triangle_count());
+							ImGui::Unindent();
+						}
 					}
-					else {
-						ImGui::InputFloat("Frustum Size", &camera.m_intrinsic.size, 0.01f);
-					}
-					ImGui::InputFloat("Near", &camera.m_near, 0.01f);
-					ImGui::InputFloat("Far", &camera.m_far, 0.01f);
-					ImGui::InputFloat("Aspect Ratio", &camera.m_aspect, 0.01f);
-					ImGui::Checkbox("Use Fixed Aspect", &camera.m_use_fixed_aspect);
-					if (ImGui::RadioButton("Is Primary", camera.m_is_primary)) {
-						if (!camera.m_is_primary) {
-							m_active_scene->set_main_camera(m_selected_entity);
+				}
+
+				if (m_selected_entity->has_component<CameraComponent>()) {
+					if (ImGui::CollapsingHeader("camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+						auto& camera = m_selected_entity->get_component<CameraComponent>();
+						ImGui::Checkbox("is perspective", &camera.m_is_perspective);
+						if (camera.m_is_perspective) {
+							ImGui::InputFloat("field of view", &camera.m_intrinsic.fov, 0.01f);
+						}
+						else {
+							ImGui::InputFloat("frustum size", &camera.m_intrinsic.size, 0.01f);
+						}
+						ImGui::InputFloat("near", &camera.m_near, 0.01f);
+						ImGui::InputFloat("far", &camera.m_far, 0.01f);
+						ImGui::InputFloat("aspect ratio", &camera.m_aspect, 0.01f);
+						ImGui::Checkbox("use fixed aspect", &camera.m_use_fixed_aspect);
+						if (ImGui::RadioButton("is primary", camera.m_is_primary)) {
+							if (!camera.m_is_primary) {
+								m_active_scene->set_main_camera(m_selected_entity);
+							}
 						}
 					}
 				}
@@ -270,69 +314,70 @@ private:
 	}
 
 	void show_shader_info(std::shared_ptr<Shader> const& shader) {
-		ImGui::Begin("shader info");
-		ImGui::Text("basic info");
-		if (ImGui::BeginTable("basic info", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-			ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(shader->get_name().c_str());
-			ImGui::TableNextColumn(); ImGui::Text("path"); ImGui::TableNextColumn(); ImGui::Text(shader->get_path().c_str());
-			ImGui::EndTable();
-		}
-		ImGui::Text("shader attributes");
-		if (ImGui::BeginTable("shader attributes", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-			ImGui::TableSetupColumn("name");
-			ImGui::TableSetupColumn("type");
-			ImGui::TableSetupColumn("location");
-			ImGui::TableSetupColumn("count");
-			ImGui::TableHeadersRow();
-
-			for (auto& attrib : shader->get_attributes()) {
-				ImGui::TableNextColumn(); ImGui::Text(attrib.m_name.c_str());
-				ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(attrib.m_type)).c_str());
-				ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_location).c_str());
-				ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_count).c_str());
+		if (ImGui::Begin("shader info")) {
+			ImGui::Text("basic info");
+			if (ImGui::BeginTable("basic info", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+				ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(shader->get_name().c_str());
+				ImGui::TableNextColumn(); ImGui::Text("path"); ImGui::TableNextColumn(); ImGui::Text(shader->get_path().c_str());
+				ImGui::EndTable();
 			}
-			ImGui::EndTable();
-		}
-		ImGui::Text("shader uniforms");
-		if (ImGui::BeginTable("shader uniforms", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-			ImGui::TableSetupColumn("name");
-			ImGui::TableSetupColumn("type");
-			ImGui::TableSetupColumn("location");
-			ImGui::TableSetupColumn("count");
-			ImGui::TableHeadersRow();
+			ImGui::Text("shader attributes");
+			if (ImGui::BeginTable("shader attributes", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+				ImGui::TableSetupColumn("name");
+				ImGui::TableSetupColumn("type");
+				ImGui::TableSetupColumn("location");
+				ImGui::TableSetupColumn("count");
+				ImGui::TableHeadersRow();
 
-			ImGui::TableNextRow();
-			for (auto& uniform : shader->get_uniforms()) {
-				if (uniform.m_location == INVALID_LOCATION) continue;
-				ImGui::TableNextColumn(); ImGui::Text(uniform.m_name.c_str());
-				ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(uniform.m_type)).c_str());
-				ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_location).c_str());
-				ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_count).c_str());
+				for (auto& attrib : shader->get_attributes()) {
+					ImGui::TableNextColumn(); ImGui::Text(attrib.m_name.c_str());
+					ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(attrib.m_type)).c_str());
+					ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_location).c_str());
+					ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_count).c_str());
+				}
+				ImGui::EndTable();
 			}
-			ImGui::EndTable();
-		}
-		ImGui::Text("shader uniform blocks");
-		for (auto& block : shader->get_uniform_blocks()) {
-			if (ImGui::BeginTable("shader uniform blocks", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-				ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(block.m_name.c_str());
-				ImGui::TableNextColumn(); ImGui::Text("size"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_size).c_str());
-				ImGui::TableNextColumn(); ImGui::Text("binding"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_binding).c_str());
+			ImGui::Text("shader uniforms");
+			if (ImGui::BeginTable("shader uniforms", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+				ImGui::TableSetupColumn("name");
+				ImGui::TableSetupColumn("type");
+				ImGui::TableSetupColumn("location");
+				ImGui::TableSetupColumn("count");
+				ImGui::TableHeadersRow();
 
-				ImGui::TableNextColumn(); ImGui::Text("variables"); ImGui::TableNextColumn();
-				if (ImGui::BeginTable("variables", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-					ImGui::TableSetupColumn("name");
-					ImGui::TableSetupColumn("type");
-					ImGui::TableSetupColumn("count");
-					ImGui::TableHeadersRow();
+				ImGui::TableNextRow();
+				for (auto& uniform : shader->get_uniforms()) {
+					if (uniform.m_location == INVALID_LOCATION) continue;
+					ImGui::TableNextColumn(); ImGui::Text(uniform.m_name.c_str());
+					ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(uniform.m_type)).c_str());
+					ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_location).c_str());
+					ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_count).c_str());
+				}
+				ImGui::EndTable();
+			}
+			ImGui::Text("shader uniform blocks");
+			for (auto& block : shader->get_uniform_blocks()) {
+				if (ImGui::BeginTable("shader uniform blocks", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+					ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(block.m_name.c_str());
+					ImGui::TableNextColumn(); ImGui::Text("size"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_size).c_str());
+					ImGui::TableNextColumn(); ImGui::Text("binding"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_binding).c_str());
 
-					for (auto& variable : block.m_variables) {
-						ImGui::TableNextColumn(); ImGui::Text(variable.m_name.c_str());
-						ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(variable.m_type)).c_str());
-						ImGui::TableNextColumn(); ImGui::Text(std::to_string(variable.m_count).c_str());
+					ImGui::TableNextColumn(); ImGui::Text("variables"); ImGui::TableNextColumn();
+					if (ImGui::BeginTable("variables", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+						ImGui::TableSetupColumn("name");
+						ImGui::TableSetupColumn("type");
+						ImGui::TableSetupColumn("count");
+						ImGui::TableHeadersRow();
+
+						for (auto& variable : block.m_variables) {
+							ImGui::TableNextColumn(); ImGui::Text(variable.m_name.c_str());
+							ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(variable.m_type)).c_str());
+							ImGui::TableNextColumn(); ImGui::Text(std::to_string(variable.m_count).c_str());
+						}
+						ImGui::EndTable();
 					}
 					ImGui::EndTable();
 				}
-				ImGui::EndTable();
 			}
 		}
 		ImGui::End();
