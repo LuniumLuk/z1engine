@@ -24,6 +24,8 @@ namespace z1 {
 			return view.size();
 		}
 
+		void set_main_camera(std::shared_ptr<Entity> const& camera);
+
 		std::shared_ptr<Entity> get_main_camera() const;
 
 		entt::registry m_registry;

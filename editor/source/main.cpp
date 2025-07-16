@@ -13,17 +13,20 @@ struct EditorLayer : Layer {
 		m_gui = std::make_shared<EditorGUI>();
 		m_active_scene = std::make_shared<Scene>();
 
-		{
-			auto ent = m_active_scene->create_entity("Main Camera");
-			ent->add_component<CameraComponent>();
-			ent->get_component<CameraComponent>().m_is_primary = true;
-		}
+		auto persp_cam = m_active_scene->create_entity("Persp Camera");
+		persp_cam->add_component<CameraComponent>();
+
+		auto ortho_cam = m_active_scene->create_entity("Ortho Camera");
+		ortho_cam->add_component<CameraComponent>();
+		ortho_cam->get_component<CameraComponent>().m_is_perspective = false;
+		ortho_cam->get_component<CameraComponent>().m_near = -20.0f;
+		ortho_cam->get_component<CameraComponent>().m_far = 20.0f;
+		m_active_scene->set_main_camera(ortho_cam);
 
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 
-		m_ortho_camera_controller = std::make_shared<Generic2DCameraController>(m_active_scene->get_main_camera());
-		m_persp_camera_controller = std::make_shared<HoveringCameraController>(m_active_scene->get_main_camera());
-		m_camera_controller = m_persp_camera_controller;
+		m_ortho_camera_ctrl = std::make_shared<Generic2DCameraController>(ortho_cam);
+		m_persp_camera_ctrl = std::make_shared<HoveringCameraController>(persp_cam);
 
 		m_texture = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
 		m_checker = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
@@ -91,11 +94,16 @@ struct EditorLayer : Layer {
 			m_fps_timer = 0.0;
 			m_fps_counter = 0;
 		}
-		m_ortho_camera_controller->m_drag_speed = m_gui->m_viewport_pixel_scale_x;
+		m_ortho_camera_ctrl->m_drag_speed = m_gui->m_viewport_pixel_scale_x;
 
 		m_input_mgr.update(delta_time);
 		if (m_gui->is_viewport_focused()) {
-			m_camera_controller->update(m_input_mgr);
+			if (m_ortho_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
+				m_ortho_camera_ctrl->update(m_input_mgr);
+			}
+			else if (m_persp_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
+				m_persp_camera_ctrl->update(m_input_mgr);
+			}
 		}
 		m_input_mgr.reset();
 
@@ -153,9 +161,8 @@ private:
 	std::shared_ptr<EditorGUI> m_gui;
 	std::shared_ptr<Scene> m_active_scene;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
-	std::shared_ptr<Generic2DCameraController> m_ortho_camera_controller;
-	std::shared_ptr<HoveringCameraController> m_persp_camera_controller;
-	std::shared_ptr<CameraController> m_camera_controller;
+	std::shared_ptr<Generic2DCameraController> m_ortho_camera_ctrl;
+	std::shared_ptr<HoveringCameraController> m_persp_camera_ctrl;
 	InputManager m_input_mgr;
 	std::shared_ptr<Image2D> m_texture;
 	std::shared_ptr<Image2D> m_checker;
@@ -251,7 +258,11 @@ private:
 					ImGui::InputFloat("Far", &camera.m_far, 0.01f);
 					ImGui::InputFloat("Aspect Ratio", &camera.m_aspect, 0.01f);
 					ImGui::Checkbox("Use Fixed Aspect", &camera.m_use_fixed_aspect);
-					ImGui::Checkbox("Is Primary", &camera.m_is_primary);
+					if (ImGui::RadioButton("Is Primary", camera.m_is_primary)) {
+						if (!camera.m_is_primary) {
+							m_active_scene->set_main_camera(m_selected_entity);
+						}
+					}
 				}
 			}
 		}

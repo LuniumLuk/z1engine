@@ -47,6 +47,23 @@ namespace z1 {
 		return nullptr;
 	}
 
+	void Scene::set_main_camera(std::shared_ptr<Entity> const& camera) {
+		CORE_ASSERT(camera->has_component<CameraComponent>(), "Entity has no CameraComponent!");
+		if (camera->get_component<CameraComponent>().m_is_primary) {
+			return;
+		}
+
+		auto view = m_registry.view<CameraComponent>();
+		for (auto& entity : view) {
+			auto& camera = view.get<CameraComponent>(entity);
+			if (camera.m_is_primary) {
+				camera.m_is_primary = false; // unset the previous primary camera
+			}
+		}
+
+		camera->get_component<CameraComponent>().m_is_primary = true;
+	}
+
 	std::shared_ptr<Entity> Scene::get_main_camera() const {
 		auto view = m_registry.view<CameraComponent>();
 		for (auto& entity : view) {
