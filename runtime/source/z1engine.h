@@ -22,7 +22,7 @@
 
 #include "scene/scene.h"
 #include "scene/entity.h"
-#include "scene/component/basic.h"
+#include "scene/component/base.h"
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"

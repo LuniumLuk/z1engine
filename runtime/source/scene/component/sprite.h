@@ -31,13 +31,6 @@ namespace z1 {
 			, m_texture(texture->m_image)
 			, m_texcoords(texture->m_texcoords) {
 		}
-
-		SpriteComponent(SpriteComponent const&) = default;
-		SpriteComponent& operator=(SpriteComponent const&) = default;
-		SpriteComponent(SpriteComponent&&) = delete;
-		SpriteComponent& operator=(SpriteComponent&&) = delete;
-
-		~SpriteComponent() = default;
 	};
 
 }

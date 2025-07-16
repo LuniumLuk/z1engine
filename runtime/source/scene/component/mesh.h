@@ -10,13 +10,6 @@ namespace z1 {
 
 		StaticMeshComponent(std::shared_ptr<StaticMesh> const& mesh) noexcept
 			: m_mesh(mesh) {}
-
-		StaticMeshComponent(StaticMeshComponent const&) = default;
-		StaticMeshComponent& operator=(StaticMeshComponent const&) = default;
-		StaticMeshComponent(StaticMeshComponent&&) = delete;
-		StaticMeshComponent& operator=(StaticMeshComponent&&) = delete;
-
-		~StaticMeshComponent() = default;
 	};
 
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/core.h"
-#include "scene/component/basic.h"
+#include "scene/component/base.h"
 #include "scene/component/camera.h"
 #include "render/framebuffer.h"
 #include "entt.hpp"
@@ -21,7 +21,7 @@ namespace z1 {
 
 		size_t get_entity_count() const {
 			auto view = m_registry.view<TransformComponent>();
-			return view.size_hint();
+			return view.size();
 		}
 
 		std::shared_ptr<Entity> get_main_camera() const;

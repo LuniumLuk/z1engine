@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "scene/scene.h"
 #include "scene/entity.h"
-#include "scene/component/basic.h"
+#include "scene/component/base.h"
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
@@ -70,7 +70,7 @@ namespace z1 {
 		auto& main_ct = main_cam->get_component<TransformComponent>();
 
 		if (!main_cc.m_use_fixed_aspect) {
-			main_cc.m_aspect = (float)Framebuffer::get_height(m_main_framebuffer) / (float)Framebuffer::get_width(m_main_framebuffer);
+			main_cc.m_aspect = (float)Framebuffer::get_width(m_main_framebuffer) / (float)Framebuffer::get_height(m_main_framebuffer);
 		}
 
 		auto cam_up = main_ct.get_transform() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);

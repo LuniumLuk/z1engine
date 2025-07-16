@@ -2,7 +2,7 @@
 
 #include "core/core.h"
 #include "scene/scene.h"
-#include "scene/component/basic.h"
+#include "scene/component/base.h"
 #include "entt.hpp"
 
 namespace z1 {
