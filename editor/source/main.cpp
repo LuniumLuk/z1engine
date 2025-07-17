@@ -89,6 +89,12 @@ struct EditorLayer : Layer {
 			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -5.0f);
 		}
 
+		{
+			auto ent = m_active_scene->create_entity("Mesh_1");
+			auto mesh = io::load_static_mesh("asset/fireplace_room/fireplace_room.obj");
+			ent->add_component<StaticMeshComponent>(mesh);
+		}
+
 		uint32_t quad_rows = 4;
 		uint32_t quad_cols = 4;
 		float quad_stride = 0.15f;
