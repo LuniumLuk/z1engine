@@ -10,7 +10,7 @@
 #include "render/resource.h"
 #include "render/graphics_context.h"
 #include "render/renderer/renderer_2d.h"
-#include "render/renderer/renderer_mesh_viewer.h"
+#include "render/renderer/renderer_forward.h"
 #include "3rdparty/imgui_layer.h"
 
 namespace z1 {
@@ -37,12 +37,12 @@ namespace z1 {
 		m_layer_stack = std::make_shared<LayerStack>();
 
 		m_renderer_2d = std::make_shared<Renderer2D>();
-		m_renderer_mesh_viewer = std::make_shared<RendererMeshViewer>();
+		m_renderer_forward = std::make_shared<RendererForward>();
 	}
 
 	void RuntimeContext::shutdown() {
 		m_renderer_2d.reset();
-		m_renderer_mesh_viewer.reset();
+		m_renderer_forward.reset();
 
 		m_layer_stack.reset();
 		m_imgui_layer.reset();

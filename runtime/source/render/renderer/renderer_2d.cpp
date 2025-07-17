@@ -2,6 +2,10 @@
 #include "render/shader.h"
 #include "render/framebuffer.h"
 #include "render/renderer/renderer_2d.h"
+#include "scene/scene.h"
+#include "scene/entity.h"
+#include "scene/component/camera.h"
+#include "scene/component/sprite.h"
 #include "glm/gtc/matrix_transform.hpp"
 
 namespace z1 {
@@ -70,6 +74,48 @@ namespace z1 {
 
 	}
 
+	void Renderer2D::draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer) {
+		PROFILE_FUNCTION();
+
+		auto const& main_cam = scene->get_main_camera();
+		if (!main_cam) {
+			CORE_ERROR("No main camera found in the scene!");
+			return;
+		}
+
+		auto& camera_comp = main_cam->get_component<CameraComponent>();
+		if (!camera_comp.m_use_fixed_aspect) {
+			camera_comp.m_aspect = (float)Framebuffer::get_width(framebuffer) / (float)Framebuffer::get_height(framebuffer);
+		}
+
+		auto& camera_trans = main_cam->get_component<TransformComponent>();
+
+		auto cam_up = camera_trans.get_transform() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+		auto cam_forward = camera_trans.get_transform() * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
+		auto cam_view = glm::lookAt(camera_trans.m_location, camera_trans.m_location + glm::vec3(cam_forward), glm::vec3(cam_up));
+
+		glm::mat4 cam_projview = camera_comp.get_proj() * cam_view;
+
+		std::vector<Renderer2D::Quad> quads;
+		auto view = scene->m_registry.view<TransformComponent const, SpriteComponent const>();
+		for (auto [entity, transform, sprite] : view.each()) {
+			Renderer2D::Quad quad{};
+			quad.m_transform = transform.get_transform();
+			quad.m_color = sprite.m_color;
+			quad.m_texture = sprite.m_texture;
+			quad.m_tiling_scale = sprite.m_tiling_scale;
+			quad.m_tiling_offset = sprite.m_tiling_offset;
+			quad.m_texcoords = sprite.m_texcoords;
+			quads.push_back(quad);
+		}
+
+		draw_quads(quads);
+		prepare_draw(framebuffer);
+		m_render_pass->m_shader->set_uniform("u_projview", &cam_projview);
+		batch_draw();
+		after_draw();
+	}
+
 	void Renderer2D::prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer) {
 		PROFILE_FUNCTION();
 
@@ -84,7 +130,6 @@ namespace z1 {
 			}
 		});
 
-#ifdef BATCHED_RENDER
 		std::vector<glm::vec4> quad_pos = {
 			{-0.5f, -0.5f, 0.0f, 1.0f},
 			{ 0.5f, -0.5f, 0.0f, 1.0f},
@@ -142,7 +187,7 @@ namespace z1 {
 		}
 		m_batches[curr_batch].m_index_num = index_offset - m_batches[curr_batch].m_index_offset;
 		m_batches[curr_batch].m_vertex_num = vertex_offset - m_batches[curr_batch].m_vertex_offset;
-#endif
+
 		RenderPass::BeginInfo info{};
 		info.clear_color = false;
 		info.clear_depth = false;
@@ -151,10 +196,9 @@ namespace z1 {
 		m_render_pass->begin(info);
 	}
 
-	void Renderer2D::draw() {
+	void Renderer2D::batch_draw() {
 		PROFILE_FUNCTION();
 
-#ifdef BATCHED_RENDER
 		for (auto const& batch : m_batches) {
 			m_vertex_buffer->write(&m_quad_vertices[batch.m_vertex_offset], batch.m_vertex_num * sizeof(QuadVertex));
 
@@ -174,35 +218,11 @@ namespace z1 {
 				g_runtime_context.m_resource_manager->unbind_resource(texture->get_resource_id());
 			}
 		}
-#else
-		std::shared_ptr<Image2D> prev_texture = nullptr;
-		for (auto const& quad : m_quads) {
-			if (quad.m_texture != prev_texture) {
-				if (prev_texture) {
-					g_runtime_context.m_resource_manager->unbind_resource(prev_texture->get_resource_id());
-				}
+	}
 
-				auto texture_binding = g_runtime_context.m_resource_manager->bind_resource(quad.m_texture->get_resource_id());
-				quad.m_texture->bind(texture_binding);
-				m_render_pass->m_shader->set_uniform_binding("u_texture", texture_binding);
-
-				prev_texture = quad.m_texture;
-			}
-
-			m_render_pass->m_shader->set_uniform("u_model", &quad.m_model);
-			m_render_pass->m_shader->set_uniform("u_color", &quad.m_color);
-			m_render_pass->m_shader->set_uniform("u_tiling_factor", &quad.m_tiling_factor);
-
-			m_vertex_array->bind();
-			m_vertex_array->draw(PrimitiveType::Triangles);
-			m_vertex_array->unbind();
-		}
-		if (prev_texture) {
-			g_runtime_context.m_resource_manager->unbind_resource(prev_texture->get_resource_id());
-		}
-#endif
+	void Renderer2D::after_draw() {
+		PROFILE_FUNCTION();
 		m_render_pass->end();
-
 		m_quads.clear();
 	}
 

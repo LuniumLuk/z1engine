@@ -37,6 +37,7 @@
 #include "render/vertex_array.h"
 #include "render/framebuffer.h"
 #include "render/renderer/renderer_2d.h"
+#include "render/renderer/renderer_forward.h"
 
 #include "utils/instrumentor.h"
 #include "utils/thread_pool.h"

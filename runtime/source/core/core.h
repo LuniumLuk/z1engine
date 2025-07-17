@@ -37,7 +37,7 @@ namespace z1 {
 	struct InputSystem;
 	struct ResourceManager;
 	struct Renderer2D;
-	struct RendererMeshViewer;
+	struct RendererForward;
 	struct Scene;
 
 	struct API RuntimeContext {
@@ -55,7 +55,7 @@ namespace z1 {
 		std::shared_ptr<InputSystem> m_input_system;
 		std::shared_ptr<ResourceManager> m_resource_manager;
 		std::shared_ptr<Renderer2D> m_renderer_2d;
-		std::shared_ptr<RendererMeshViewer> m_renderer_mesh_viewer;
+		std::shared_ptr<RendererForward> m_renderer_forward;
 		std::shared_ptr<Scene> m_scene;
 
 	};

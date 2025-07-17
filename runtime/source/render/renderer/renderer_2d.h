@@ -31,9 +31,6 @@ namespace z1 {
 		Renderer2D();
 		~Renderer2D();
 
-		void prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer);
-		void draw();
-
 		void draw_quad(
 			glm::vec3 const& position,
 			glm::vec2 const& size,
@@ -58,9 +55,15 @@ namespace z1 {
 
 		void draw_quads(std::vector<Quad> const& quads);
 
-		std::shared_ptr<RenderPass> m_render_pass;
+		void draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer);
 
 	private:
+
+		void prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer);
+		void batch_draw();
+		void after_draw();
+
+		std::shared_ptr<RenderPass> m_render_pass;
 
 		struct QuadData {
 			glm::mat4 m_model;

@@ -6,11 +6,14 @@
 
 namespace z1 {
 
-	struct API RendererMeshViewer {
+	struct API RendererForward {
 
-		RendererMeshViewer();
-		~RendererMeshViewer();
+		RendererForward();
+		~RendererForward();
 
+		void draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer);
+
+	private:
 		void prepare_draw(std::shared_ptr<Framebuffer> const& framebuffer) const;
 		void after_draw() const;
 
