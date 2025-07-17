@@ -25,8 +25,19 @@ namespace z1 {
 		return 0;
 	}
 
+	StaticMesh::StaticMesh(std::vector<Primitive> const& primitives, glm::vec3 const& bound_min, glm::vec3 const& bound_max)
+		: m_primitives(primitives), m_bound_min(bound_min), m_bound_max(bound_max) {}
+
 	StaticMesh::StaticMesh(std::vector<Primitive> const& primitives)
 		: m_primitives(primitives) {
+		m_bound_min = glm::vec3(std::numeric_limits<float>::max());
+		m_bound_max = glm::vec3(std::numeric_limits<float>::min());
+		for (auto const& prim : m_primitives) {
+			if (prim.is_bounding_box_valid()) {
+				m_bound_min = glm::min(m_bound_min, prim.m_bound_min);
+				m_bound_max = glm::max(m_bound_max, prim.m_bound_max);
+			}
+		}
 	}
 
 	StaticMesh::StaticMesh(std::vector<VertexData> const& vertices, PrimitiveType type) {
@@ -38,8 +49,18 @@ namespace z1 {
 				{DataType::Float4},
 			}, BufferUsage::Static);
 
-		Primitive prim{ type, VertexArray::create({ vertex_buffer }) };
+		glm::vec3 prim_min(0.0f), prim_max(0.0f);
+		if (!vertices.empty()) {
+			prim_min = prim_max = vertices[0].position;
+			for (auto const& v : vertices) {
+				prim_min = glm::min(prim_min, v.position);
+				prim_max = glm::max(prim_max, v.position);
+			}
+		}
+		Primitive prim{ type, VertexArray::create({ vertex_buffer }), prim_min, prim_max };
 		m_primitives.push_back(prim);
+		m_bound_min = prim_min;
+		m_bound_max = prim_max;
 	}
 
 	StaticMesh::StaticMesh(std::vector<VertexData> const& vertices, std::vector<uint32_t> const& indices, PrimitiveType type) {
@@ -52,8 +73,18 @@ namespace z1 {
 			}, BufferUsage::Static);
 		auto index_buffer = IndexBuffer::create(indices.data(), indices.size() * sizeof(int), BufferUsage::Static);
 
-		Primitive prim{ type,  VertexArray::create({ vertex_buffer }, index_buffer) };
+		glm::vec3 prim_min(0.0f), prim_max(0.0f);
+		if (!vertices.empty()) {
+			prim_min = prim_max = vertices[0].position;
+			for (auto const& v : vertices) {
+				prim_min = glm::min(prim_min, v.position);
+				prim_max = glm::max(prim_max, v.position);
+			}
+		}
+		Primitive prim{ type,  VertexArray::create({ vertex_buffer }, index_buffer), prim_min, prim_max };
 		m_primitives.push_back(prim);
+		m_bound_min = prim_min;
+		m_bound_max = prim_max;
 	}
 
 	void StaticMesh::draw() const {

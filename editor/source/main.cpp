@@ -278,10 +278,14 @@ private:
 				if (m_selected_entity->has_component<StaticMeshComponent>()) {
 					if (ImGui::CollapsingHeader("static mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& mesh = m_selected_entity->get_component<StaticMeshComponent>();
+						ImGui::Text("bound min: (%f, %f, %f)", mesh.m_mesh->m_bound_min.x, mesh.m_mesh->m_bound_min.y, mesh.m_mesh->m_bound_min.z);
+						ImGui::Text("bound max: (%f, %f, %f)", mesh.m_mesh->m_bound_max.x, mesh.m_mesh->m_bound_max.y, mesh.m_mesh->m_bound_max.z);
 						ImGui::Text("primitives");
 						for (auto const& prim : mesh.m_mesh->m_primitives) {
 							ImGui::Indent();
 							ImGui::Text("triangle count: %d", prim.get_triangle_count());
+							ImGui::Text("bound min: (%f, %f, %f)", prim.m_bound_min.x, prim.m_bound_min.y, prim.m_bound_min.z);
+							ImGui::Text("bound max: (%f, %f, %f)", prim.m_bound_max.x, prim.m_bound_max.y, prim.m_bound_max.z);
 							ImGui::Unindent();
 						}
 					}
