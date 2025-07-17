@@ -6,7 +6,6 @@
 
 namespace z1 {
 	struct Framebuffer;
-	struct Shader;
 
 	enum struct API BlendFactor {
 		Zero = 0,
@@ -43,9 +42,6 @@ namespace z1 {
 
 			// culling
 			CullMode cull_mode = CullMode::Back;
-
-			// shader
-			std::shared_ptr<Shader> shader;
 		};
 
 		static std::shared_ptr<RenderPass> build(Description const& description);
@@ -78,8 +74,6 @@ namespace z1 {
 
 		virtual void begin(BeginInfo const& info) = 0;
 		virtual void end() = 0;
-
-		std::shared_ptr<Shader> m_shader;
 	};
 
 }

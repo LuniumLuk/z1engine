@@ -1,4 +1,5 @@
 #include "render/image.h"
+#include "render/shader.h"
 #include "render/buffer.h"
 #include "render/vertex_array.h"
 #include "render/render_pass.h"
@@ -79,7 +80,6 @@ namespace z1 {
 		};
 		std::vector<QuadData> m_quads;
 
-#ifdef BATCHED_RENDER
 		struct QuadVertex {
 			glm::vec3 m_position;
 			glm::vec2 m_texcoord;
@@ -97,12 +97,11 @@ namespace z1 {
 			uint32_t m_vertex_num;
 		};
 		std::vector<BatchData> m_batches;
-#endif
 
 		std::shared_ptr<VertexBuffer> m_vertex_buffer;
 		std::shared_ptr<VertexArray> m_vertex_array;
 		std::shared_ptr<Image2D> m_default_texture;
-
+		std::shared_ptr<Shader> m_shader;
 	};
 
 }

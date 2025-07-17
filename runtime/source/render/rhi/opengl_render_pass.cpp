@@ -33,9 +33,6 @@ namespace z1 {
 	}
 
 	OpenGLRenderPass::OpenGLRenderPass(Description const& description) {
-
-		m_shader = description.shader;
-
 		m_begin_func = [this, description] {
 			if (description.depth_test) {
 				glEnable(GL_DEPTH_TEST);
@@ -138,13 +135,11 @@ namespace z1 {
 		}
 
 		m_begin_func();
-		if (m_shader) m_shader->bind();
 
 		m_framebuffer = info.framebuffer;
 	}
 
 	void OpenGLRenderPass::end() {
-		if (m_shader) m_shader->unbind();
 		m_end_func();
 
 		if (m_framebuffer) {

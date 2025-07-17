@@ -18,8 +18,9 @@ namespace z1 {
 
 		desc.cull_mode = CullMode::Back;
 
-		desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/mesh_viewer.glsl");
 		m_render_pass = RenderPass::build(desc);
+		// TODO: temporary, later will be replaced by material system
+		m_shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/mesh_viewer.glsl");
 	}
 
 	RendererForward::~RendererForward() {
@@ -67,19 +68,23 @@ namespace z1 {
 		glm::mat4 cam_projview = camera_comp.get_proj() * cam_view;
 
 		prepare_draw(framebuffer);
-		m_render_pass->m_shader->set_uniform("u_projview", &cam_projview);
-		m_render_pass->m_shader->set_uniform("u_cam_position", &camera_trans.m_location);
+
+		m_shader->bind();
+		m_shader->set_uniform("u_projview", &cam_projview);
+		m_shader->set_uniform("u_cam_position", &camera_trans.m_location);
 
 		glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
 		glm::vec3 sun_intensity = { .5f, .5f, .5f };
-		m_render_pass->m_shader->set_uniform("u_sun_direction", &sun_dir);
-		m_render_pass->m_shader->set_uniform("u_sun_intensity", &sun_intensity);
+		m_shader->set_uniform("u_sun_direction", &sun_dir);
+		m_shader->set_uniform("u_sun_intensity", &sun_intensity);
 
 		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 		for (auto [entity, transform, mesh] : view.each()) {
-			m_render_pass->m_shader->set_uniform("u_model", &transform.get_transform());
+			m_shader->set_uniform("u_model", &transform.get_transform());
 			mesh.m_mesh->draw();
 		}
+
+		m_shader->unbind();
 
 		after_draw();
 	}

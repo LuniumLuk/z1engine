@@ -11,7 +11,6 @@
 namespace z1 {
 
 	Renderer2D::Renderer2D() {
-#ifdef BATCHED_RENDER
 		m_vertex_buffer = VertexBuffer::create(nullptr, s_max_quad_vertices_per_batch * sizeof(QuadVertex),
 			{
 				{DataType::Float3},
@@ -37,37 +36,16 @@ namespace z1 {
 		auto index_buffer = IndexBuffer::create(vertex_indices, s_max_quad_indices_per_batch * sizeof(uint32_t), BufferUsage::Static);
 
 		m_vertex_array = VertexArray::create({ m_vertex_buffer }, index_buffer);
-#else
-		float vertices[] = {
-			-0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
-			 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-			-0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
-			-0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
-			 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-			 0.5f,  0.5f, 0.0f, 1.0f, 1.0f,
-		};
-
-		m_vertex_buffer = VertexBuffer::create(vertices, sizeof(vertices),
-			{
-				{DataType::Float3},
-				{DataType::Float2},
-			});
-		m_vertex_array = VertexArray::create({ m_vertex_buffer });
-#endif
 
 		RenderPass::Description desc{};
 		desc.depth_test = true;
 		desc.blend = true;
-#ifdef BATCHED_RENDER
-		desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d_batched.glsl");
-#else
-		desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d.glsl");
-#endif
 
 		m_render_pass = RenderPass::build(desc);
 
 		uint32_t white = 0xffffffff;
 		m_default_texture = Image2D::create(&white, sizeof(white), 1, 1, ImageFormat::RGBA8);
+		m_shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d_batched.glsl");
 	}
 
 	Renderer2D::~Renderer2D() {
@@ -111,8 +89,12 @@ namespace z1 {
 
 		draw_quads(quads);
 		prepare_draw(framebuffer);
-		m_render_pass->m_shader->set_uniform("u_projview", &cam_projview);
+
+		m_shader->bind();
+		m_shader->set_uniform("u_projview", &cam_projview);
 		batch_draw();
+		m_shader->unbind();
+
 		after_draw();
 	}
 
@@ -198,7 +180,6 @@ namespace z1 {
 
 	void Renderer2D::batch_draw() {
 		PROFILE_FUNCTION();
-
 		for (auto const& batch : m_batches) {
 			m_vertex_buffer->write(&m_quad_vertices[batch.m_vertex_offset], batch.m_vertex_num * sizeof(QuadVertex));
 
@@ -208,7 +189,7 @@ namespace z1 {
 				texture->bind(texture_binding);
 				bindings[index] = texture_binding;
 			}
-			m_render_pass->m_shader->set_uniform("u_texture[0]", bindings.data());
+			m_shader->set_uniform("u_texture[0]", bindings.data());
 
 			m_vertex_array->bind();
 			m_vertex_array->draw(PrimitiveType::Triangles, batch.m_index_num);

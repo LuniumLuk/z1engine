@@ -19,6 +19,9 @@ namespace z1 {
 
 		std::shared_ptr<RenderPass> m_render_pass;
 
+		// TODO: temporary, later will be replaced by material system
+		std::shared_ptr<Shader> m_shader;
+
 	};
 
 }
