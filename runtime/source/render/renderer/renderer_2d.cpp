@@ -37,15 +37,16 @@ namespace z1 {
 
 		m_vertex_array = VertexArray::create({ m_vertex_buffer }, index_buffer);
 
-		RenderPass::Description desc{};
+		Pipeline::Description desc{};
 		desc.depth_test = true;
 		desc.blend = true;
+		desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d_batched.glsl");
+		m_pipeline = Pipeline::build(desc);
 
-		m_render_pass = RenderPass::build(desc);
+		m_render_pass = RenderPass::build();
 
 		uint32_t white = 0xffffffff;
 		m_default_texture = Image2D::create(&white, sizeof(white), 1, 1, ImageFormat::RGBA8);
-		m_shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d_batched.glsl");
 	}
 
 	Renderer2D::~Renderer2D() {
@@ -90,10 +91,10 @@ namespace z1 {
 		draw_quads(quads);
 		prepare_draw(framebuffer);
 
-		m_shader->bind();
-		m_shader->set_uniform("u_projview", &cam_projview);
+		m_pipeline->bind();
+		m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);
 		batch_draw();
-		m_shader->unbind();
+		m_pipeline->unbind();
 
 		after_draw();
 	}
@@ -175,7 +176,7 @@ namespace z1 {
 		info.clear_depth = false;
 		info.framebuffer = framebuffer;
 
-		m_render_pass->begin(info);
+		m_render_pass->bind(info);
 	}
 
 	void Renderer2D::batch_draw() {
@@ -189,7 +190,7 @@ namespace z1 {
 				texture->bind(texture_binding);
 				bindings[index] = texture_binding;
 			}
-			m_shader->set_uniform("u_texture[0]", bindings.data());
+			m_pipeline->m_shader->set_uniform("u_texture[0]", bindings.data());
 
 			m_vertex_array->bind();
 			m_vertex_array->draw(PrimitiveType::Triangles, batch.m_index_num);
@@ -203,7 +204,7 @@ namespace z1 {
 
 	void Renderer2D::after_draw() {
 		PROFILE_FUNCTION();
-		m_render_pass->end();
+		m_render_pass->unbind();
 		m_quads.clear();
 	}
 

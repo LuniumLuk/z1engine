@@ -1,5 +1,5 @@
 #include "render/image.h"
-#include "render/shader.h"
+#include "render/pipeline.h"
 #include "render/buffer.h"
 #include "render/vertex_array.h"
 #include "render/render_pass.h"
@@ -101,7 +101,7 @@ namespace z1 {
 		std::shared_ptr<VertexBuffer> m_vertex_buffer;
 		std::shared_ptr<VertexArray> m_vertex_array;
 		std::shared_ptr<Image2D> m_default_texture;
-		std::shared_ptr<Shader> m_shader;
+		std::shared_ptr<Pipeline> m_pipeline;
 	};
 
 }
