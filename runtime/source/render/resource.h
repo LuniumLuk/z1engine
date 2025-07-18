@@ -25,8 +25,18 @@ namespace z1 {
 	}
 #undef X
 
+	// resources are objects that occupy shader resource slots when bound.
+	// this system uses a resource manager to automatically manage binding points.
+	// 
+	// example: binding a Image2D resource
+	//   1. retrieve the actual binding point:
+	//      auto binding = g_runtime_context.m_resource_manager.bind_resource(img->get_resource_id());
+	//   2. assign the binding to the shader:
+	//      shader->set_uniform_binding("u_texture", binding);
+	// 
+	// this approach allows binding/unbinding resources in any order while minimizing
+	// actual RHI binding calls, as the system efficiently reuses binding points.
 	struct API Resource {
-		friend struct Renderer;
 		friend struct ResourceManager;
 
 		Resource(ResourceType type);
