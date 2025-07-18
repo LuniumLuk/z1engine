@@ -27,12 +27,18 @@ namespace z1 {
 
 		for (auto& uniform : shader->get_uniforms()) {
 			if (uniform.m_location == INVALID_LOCATION) continue;
+			if (uniform.m_type == DataType::None) continue;
 
 			Variable v{};
 			v.name = uniform.m_name;
 			v.type = uniform.m_type;
 			v.location = uniform.m_location;
 			v.count = uniform.m_count;
+			if (v.type == DataType::Mat3 || v.type == DataType::Mat4) {
+				// matrices are not supposed to be set as material variables
+				// they should be managed by engine internally
+				v.visible = false;
+			}
 			if (v.type == DataType::Sampler2D || v.type == DataType::SamplerCube) {
 				v.default_value.resource_id = INVALID_LOCATION;
 			}
