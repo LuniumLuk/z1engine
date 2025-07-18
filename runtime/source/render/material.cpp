@@ -33,6 +33,9 @@ namespace z1 {
 			v.type = uniform.m_type;
 			v.location = uniform.m_location;
 			v.count = uniform.m_count;
+			if (v.type == DataType::Sampler2D || v.type == DataType::SamplerCube) {
+				v.default_value.resource_id = INVALID_LOCATION;
+			}
 			m_variables[v.name] = v;
 		}
 

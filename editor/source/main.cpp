@@ -13,17 +13,6 @@ struct EditorLayer : Layer {
 		m_gui = std::make_shared<EditorGUI>();
 		m_active_scene = std::make_shared<Scene>();
 
-		{
-			Pipeline::Description desc{};
-			desc.depth_test = true;
-			desc.blend = true;
-			desc.cull_mode = CullMode::Back;
-			desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/mesh_viewer.glsl");
-			auto pipeline = Pipeline::build(desc);
-			m_material = std::make_shared<Material>("M_MeshViewer", pipeline);
-			m_material_instance = std::make_shared<MaterialInstance>("MI_MeshViewer", m_material);
-		}
-
 		auto persp_cam = m_active_scene->create_entity("Persp Camera");
 		persp_cam->add_component<CameraComponent>();
 
@@ -80,6 +69,19 @@ struct EditorLayer : Layer {
 		m_texture = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.png");
 		m_checker = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
 		m_atlas = io::load_image2d("asset/texture/roguelikeSheet_transparent.png", SamplerMode::Nearest);
+
+		{
+			Pipeline::Description desc{};
+			desc.depth_test = true;
+			desc.blend = true;
+			desc.cull_mode = CullMode::Back;
+			desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d.glsl");
+			auto pipeline = Pipeline::build(desc);
+			m_material = std::make_shared<Material>("M_Sprite2D", pipeline);
+			m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
+			m_material_instance->m_override_variables["u_texture"].default_value.resource_id = m_texture->get_resource_id();
+			m_material_instance->m_override_variables["u_texture"].default_value.valid = true;
+		}
 
 		{
 			auto ent = m_active_scene->create_entity("Square_0");
@@ -419,21 +421,29 @@ private:
 			for (auto& [name, var] : material->m_override_variables) {
 				if (!var.visible) continue;
 
-				ImGui::Checkbox(("##" + name).c_str(), &var.default_value.valid);
+				ImGui::Checkbox(name.c_str(), &var.default_value.valid);
 				ImGui::SameLine();
 				if (!var.default_value.valid) {
 					ImGui::BeginDisabled();
 				}
 				switch (var.type) {
-				case DataType::Float: ImGui::InputFloat(name.c_str(), var.default_value.vec); break;
-				case DataType::Float2: ImGui::InputFloat2(name.c_str(), var.default_value.vec); break;
-				case DataType::Float3: ImGui::InputFloat3(name.c_str(), var.default_value.vec); break;
-				case DataType::Float4: ImGui::InputFloat4(name.c_str(), var.default_value.vec); break;
-				case DataType::Int: ImGui::InputInt(name.c_str(), var.default_value.ivec); break;
-				case DataType::Int2: ImGui::InputInt2(name.c_str(), var.default_value.ivec); break;
-				case DataType::Int3: ImGui::InputInt3(name.c_str(), var.default_value.ivec); break;
-				case DataType::Int4: ImGui::InputInt4(name.c_str(), var.default_value.ivec); break;
+				case DataType::Float: ImGui::InputFloat(("##" + name).c_str(), var.default_value.vec); break;
+				case DataType::Float2: ImGui::InputFloat2(("##" + name).c_str(), var.default_value.vec); break;
+				case DataType::Float3: ImGui::InputFloat3(("##" + name).c_str(), var.default_value.vec); break;
+				case DataType::Float4: ImGui::InputFloat4(("##" + name).c_str(), var.default_value.vec); break;
+				case DataType::Int: ImGui::InputInt(("##" + name).c_str(), var.default_value.ivec); break;
+				case DataType::Int2: ImGui::InputInt2(("##" + name).c_str(), var.default_value.ivec); break;
+				case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
+				case DataType::Int4: ImGui::InputInt4(("##" + name).c_str(), var.default_value.ivec); break;
 				}
+
+				if (var.type == DataType::Sampler2D && var.default_value.resource_id != INVALID_INDEX) {
+					auto image = g_runtime_context.m_resource_manager->get<Image2D>(var.default_value.resource_id);
+					auto w = image->get_description().m_width;
+					auto h = image->get_description().m_height;
+					ImGui::Image(image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+				}
+
 				if (!var.default_value.valid) {
 					ImGui::EndDisabled();
 				}
@@ -469,15 +479,11 @@ struct EditorApp : Application {
 	};
 };
 
-#include <chrono>
-
 int main() {
 	std::cout << "hello world!\n";
 
 	EditorApp app;
-
 	app.init();
-
 	app.run();
 
 	return 0;
