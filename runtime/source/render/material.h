@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/core.h"
-#include "render/render_pass.h"
+#include "render/pipeline.h"
 #include "render/resource.h"
 #include "render/shader.h"
 #include "render/image.h"
@@ -9,62 +9,42 @@
 namespace z1 {
 
 	struct API Material {
+		struct Variable {
+			std::string name;
+			DataType type = DataType::None;
+			uint32_t location = INVALID_LOCATION; // location in shader
+			uint32_t count = 1;                   // number of elements, for array or vector
+			bool visible = true;
 
-		struct Uniform {
-			std::string m_name;
-			union {
-				uint32_t m_resource_id;
-				void* m_data = nullptr;
+			struct Value {
+				union {
+					uint32_t resource_id;    // store Image2D and ImageCube
+					int ivec[4];             // store int, ivec2, ivec3, ivec4
+					float vec[4] = { 0.0f }; // store float, vec2, vec3, vec4
+				};
+				bool valid = false;
 			};
-			bool m_is_resource = true;
 
-			Uniform(std::string const& name, uint32_t id)
-				: m_name(name)
-				, m_resource_id(id)
-				, m_is_resource(true) {}
-
-			Uniform(std::string const& name, void* data)
-				: m_name(name)
-				, m_data(data)
-				, m_is_resource(false) {}
+			Value default_value = {};
 		};
 
-		void bind(std::shared_ptr<Shader> const& shader) const {
-			for (auto const& uniform : m_uniforms) {
-				if (uniform->m_is_resource) {
-					switch (g_runtime_context.m_resource_manager->get(uniform->m_resource_id)->get_resource_type()) {
-					case ResourceType::Image:
-						shader->set_uniform_binding(uniform->m_name, g_runtime_context.m_resource_manager->bind_resource(uniform->m_resource_id));
-						break;
-					case ResourceType::UniformBuffer:
-						shader->set_uniform_block_binding(uniform->m_name, g_runtime_context.m_resource_manager->bind_resource(uniform->m_resource_id));
-						break;
-					}
-				}
-				else {
-					shader->set_uniform(uniform->m_name, uniform->m_data);
-				}
-			}
-		}
+		Material(std::string const& name, std::shared_ptr<Pipeline> const& pipeline);
 
-		void unbind() const {
-			for (auto const& uniform : m_uniforms) {
-				if (uniform->m_is_resource) {
-					g_runtime_context.m_resource_manager->unbind_resource(uniform->m_resource_id);
-				}
-			}
-		}
-
-		/*
-		* call register uniform for every uniform (variable, image or uniform buffer)
-		* so that when bind() is called, all uniform will be automatically bind
-		*/
-		void register_uniform(Uniform* uniform) {
-			m_uniforms.push_back(uniform);
-		}
+		std::string m_name;
+		std::shared_ptr<Pipeline> m_pipeline;
+		std::unordered_map<std::string, Variable> m_variables;
 
 	private:
-		std::vector<Uniform*> m_uniforms;
+		void parse_reflection_line(const std::string& line);
+	};
+
+	struct API MaterialInstance {
+
+		MaterialInstance(std::string const& name, std::shared_ptr<Material> const& material);
+
+		std::string m_name;
+		std::shared_ptr<Material> m_material;
+		std::unordered_map<std::string, Material::Variable> m_override_variables;
 
 	};
 

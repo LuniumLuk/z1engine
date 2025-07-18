@@ -13,6 +13,17 @@ struct EditorLayer : Layer {
 		m_gui = std::make_shared<EditorGUI>();
 		m_active_scene = std::make_shared<Scene>();
 
+		{
+			Pipeline::Description desc{};
+			desc.depth_test = true;
+			desc.blend = true;
+			desc.cull_mode = CullMode::Back;
+			desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/mesh_viewer.glsl");
+			auto pipeline = Pipeline::build(desc);
+			m_material = std::make_shared<Material>("M_MeshViewer", pipeline);
+			m_material_instance = std::make_shared<MaterialInstance>("MI_MeshViewer", m_material);
+		}
+
 		auto persp_cam = m_active_scene->create_entity("Persp Camera");
 		persp_cam->add_component<CameraComponent>();
 
@@ -192,6 +203,8 @@ struct EditorLayer : Layer {
 
 		show_scene_graph();
 		show_properties();
+		show_shader_info(m_material->m_pipeline->m_shader);
+		show_material_info(m_material_instance);
 
 		if (ImGui::Begin("debug")) {
 			if (ImGui::RadioButton("v sync", g_runtime_context.m_window->is_v_sync_enabled())) {
@@ -213,6 +226,9 @@ private:
 	std::shared_ptr<Image2D> m_texture;
 	std::shared_ptr<Image2D> m_checker;
 	std::shared_ptr<Image2D> m_atlas;
+
+	std::shared_ptr<Material> m_material;
+	std::shared_ptr<MaterialInstance> m_material_instance;
 
 	int m_fps_counter = 0;
 	float m_fps_timer = 0.0;
@@ -387,6 +403,39 @@ private:
 						ImGui::EndTable();
 					}
 					ImGui::EndTable();
+				}
+			}
+		}
+		ImGui::End();
+	}
+
+	void show_material_info(std::shared_ptr<MaterialInstance> const& material) {
+		if (ImGui::Begin("material instance")) {
+			ImGui::Text("name: %s", material->m_name.c_str());
+			ImGui::Text("parent material: %s", material->m_material->m_name.c_str());
+			ImGui::Text("shader name: %s", material->m_material->m_pipeline->m_shader->get_name().c_str());
+
+			ImGui::Text("variables");
+			for (auto& [name, var] : material->m_override_variables) {
+				if (!var.visible) continue;
+
+				ImGui::Checkbox(("##" + name).c_str(), &var.default_value.valid);
+				ImGui::SameLine();
+				if (!var.default_value.valid) {
+					ImGui::BeginDisabled();
+				}
+				switch (var.type) {
+				case DataType::Float: ImGui::InputFloat(name.c_str(), var.default_value.vec); break;
+				case DataType::Float2: ImGui::InputFloat2(name.c_str(), var.default_value.vec); break;
+				case DataType::Float3: ImGui::InputFloat3(name.c_str(), var.default_value.vec); break;
+				case DataType::Float4: ImGui::InputFloat4(name.c_str(), var.default_value.vec); break;
+				case DataType::Int: ImGui::InputInt(name.c_str(), var.default_value.ivec); break;
+				case DataType::Int2: ImGui::InputInt2(name.c_str(), var.default_value.ivec); break;
+				case DataType::Int3: ImGui::InputInt3(name.c_str(), var.default_value.ivec); break;
+				case DataType::Int4: ImGui::InputInt4(name.c_str(), var.default_value.ivec); break;
+				}
+				if (!var.default_value.valid) {
+					ImGui::EndDisabled();
 				}
 			}
 		}

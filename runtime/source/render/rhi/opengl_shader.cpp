@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "render/rhi/opengl_shader.h"
+#include "utils/parser.h"
 #include "glad/glad.h"
 
 namespace z1 {
@@ -66,21 +67,6 @@ namespace z1 {
 		link_shaders(shaders);
 	}
 
-	static size_t find_paired_brackets(std::string const& code, size_t start) {
-		size_t pos = code.find('{', start);
-		size_t counter = 1;
-		while (counter > 0 && pos != std::string::npos) {
-			pos += 1;
-			if (code[pos] == '{') {
-				counter += 1;
-			}
-			else if (code[pos] == '}') {
-				counter -= 1;
-			}
-		}
-		return pos;
-	}
-
 	static ShaderModule::Stage str_to_shader_stage(std::string const& stage) {
 		if (stage == "vert") return ShaderModule::Stage::Vertex;
 		if (stage == "frag") return ShaderModule::Stage::Fragment;
@@ -88,7 +74,7 @@ namespace z1 {
 		if (stage == "comp") return ShaderModule::Stage::Compute;
 		if (stage == "tesc") return ShaderModule::Stage::TessellationControl;
 		if (stage == "tese") return ShaderModule::Stage::TessellationEvaluation;
-		CORE_ASSERT(false, "Unknown shader stage!");
+		CORE_ASSERT(false, "unknown shader stage!");
 		return ShaderModule::Stage::None;
 	}
 

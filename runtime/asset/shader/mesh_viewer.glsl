@@ -7,6 +7,13 @@
     layout(location = 3) uniform vec3 u_sun_intensity;
     layout(location = 4) uniform vec3 u_cam_position;
 }
+@reflections: {
+    u_projview [invisible] // mat4, set by the engine
+    u_model [invisible] // mat4, set by the engine
+    u_sun_direction = vec3 0.0 0.0 -1.0 // Direction of the sun
+    u_sun_intensity = vec3 1.0 1.0 1.0 // Intensity of the sun light
+    u_cam_position [invisible] // vec3, set by the engine
+}
 @stage: vert {
     layout(location = 0) in vec3 a_pos;
     layout(location = 1) in vec3 a_normal;

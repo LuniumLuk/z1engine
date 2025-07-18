@@ -7,6 +7,12 @@
     layout(location = 3) uniform sampler2D u_texture;
     layout(location = 4) uniform vec4 u_tiling_factor;
 }
+@reflections: {
+    u_projview [invisible] // mat4, set by the engine
+    u_model [invisible] // mat4, set by the engine
+    u_color = vec4 1.0 1.0 1.0 1.0 // RGBA
+    u_tiling_factor = vec4 1.0 1.0 0.0 0.0 // x, y, offset_x, offset_y
+}
 @stage: vert {
     layout(location = 0) in vec3 a_pos;
     layout(location = 1) in vec2 a_uv;
