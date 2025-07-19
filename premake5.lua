@@ -17,6 +17,47 @@ workspace "z1engine"
         include "3rdparty/glfw"
         include "3rdparty/glad"
         include "3rdparty/imgui"
+        include "3rdparty/lz4"
+        include "bakery"
+
+    group "test"
+        project "bakery_test"
+            location "bakery/test"
+            kind "ConsoleApp"
+            language "C++"
+            cppdialect "C++17"
+            staticruntime "on"
+
+            targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
+            objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
+
+            files
+            {
+                "bakery/test/main.cpp",
+            }
+
+            includedirs
+            {
+                "bakery/source",
+            }
+
+            links
+            {
+                "bakery",
+                "lz4",
+            }
+
+            filter "system:windows"
+                systemversion "latest"
+                defines "PLATFORM_WINDOWS"
+
+            filter "configurations:Debug"
+                defines { "DEBUG", "ENABLE_ASSERTS" }
+                symbols "on"
+
+            filter "configurations:Release"
+                defines "RELEASE"
+                optimize "on"
 
     group ""
 
@@ -42,6 +83,7 @@ workspace "z1engine"
         includedirs
         {
             "%{prj.name}/source",
+            "bakery/source",
             "3rdparty",
             "3rdparty/glfw/include",
             "3rdparty/glad/include",
@@ -55,6 +97,7 @@ workspace "z1engine"
             "glfw",
             "glad",
             "imgui",
+            "bakery",
             "opengl32.lib",
         }
 
@@ -114,6 +157,7 @@ workspace "z1engine"
         {
             "runtime/source",
             "editor/source",
+            "bakery/source",
             "3rdparty",
             "3rdparty/glfw/include",
             "3rdparty/glad/include",

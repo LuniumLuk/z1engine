@@ -1,20 +1,27 @@
 #include "pch.h"
 #include "io/image_loader.h"
-#include "stb/stb_image.h"
+#include "bakery.h"
+//#include "stb/stb_image.h"
 #include "tinyexr/tinyexr.h"
 
 namespace z1::io {
 
 	bool file_is_ldr_image(Filepath const& path) noexcept {
 		auto ext = path.extension().string();
-		const std::vector<std::string> imageExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".psd", ".gif", ".pic" };
-		return std::find(imageExtensions.begin(), imageExtensions.end(), ext) != imageExtensions.end();
+		const std::vector<std::string> exts = { ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".psd", ".gif", ".pic" };
+		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
 	bool file_is_hdr_image(Filepath const& path) noexcept {
 		auto ext = path.extension().string();
-		const std::vector<std::string> imageExtensions = { ".exr" };
-		return std::find(imageExtensions.begin(), imageExtensions.end(), ext) != imageExtensions.end();
+		const std::vector<std::string> exts = { ".exr" };
+		return std::find(exts.begin(), exts.end(), ext) != exts.end();
+	}
+
+	bool file_is_compressed_image(Filepath const& path) noexcept {
+		auto ext = path.extension().string();
+		const std::vector<std::string> exts = { ".bin" };
+		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
 	std::shared_ptr<Image2D> load_image2d(
@@ -24,18 +31,16 @@ namespace z1::io {
 		PROFILE_FUNCTION();
 		auto ext = path.extension().string();
 
-		const std::vector<std::string> stbExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".psd", ".gif", ".pic" };
-		if (std::find(stbExtensions.begin(), stbExtensions.end(), ext) != stbExtensions.end()) {
-			int width, height, channels;
-			stbi_set_flip_vertically_on_load(true);
-			stbi_uc* data = stbi_load(path.string().c_str(), &width, &height, &channels, 4);
+		if (file_is_compressed_image(path)) {
+			int width, height;
+			auto data = bakery::load_compressed_image(path, &width, &height);
 			if (data) {
 				auto image = Image2D::create(
-					data, width * height * 4 * sizeof(stbi_uc),
+					data, width * height * 4 * sizeof(unsigned char),
 					width, height,
 					ImageFormat::RGBA8,
 					sampler_mode, wrap_mode);
-				stbi_image_free(data);
+				bakery::free_loaded_data(data);
 				return image;
 			}
 			else {
@@ -43,8 +48,24 @@ namespace z1::io {
 			}
 		}
 
-		const std::vector<std::string> exrExtensions = { ".exr" };
-		if (std::find(exrExtensions.begin(), exrExtensions.end(), ext) != exrExtensions.end()) {
+		if (file_is_ldr_image(path)) {
+			int width, height;
+			auto data = bakery::load_uncompressed_image(path, &width, &height);
+			if (data) {
+				auto image = Image2D::create(
+					data, width * height * 4 * sizeof(unsigned char),
+					width, height,
+					ImageFormat::RGBA8,
+					sampler_mode, wrap_mode);
+				bakery::free_loaded_data(data);
+				return image;
+			}
+			else {
+				CORE_ERROR("failed to load image: {0}", path);
+			}
+		}
+
+		if (file_is_hdr_image(path)) {
 			float* data;
 			const char* err = nullptr;
 			int width, height;
