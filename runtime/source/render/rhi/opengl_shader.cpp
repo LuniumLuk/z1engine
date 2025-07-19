@@ -5,6 +5,43 @@
 
 namespace z1 {
 
+	static std::string process_includes(const std::string& input, const std::string& search_dir) {
+		std::string result;
+		std::istringstream input_stream(input);
+		std::string line;
+		std::regex include_regex(R"(^\s*#include\s*<([^>]+)>\s*$)");
+
+		while (std::getline(input_stream, line)) {
+			std::smatch match;
+			if (std::regex_match(line, match, include_regex)) {
+				// found an #include directive
+				std::string filename = match[1].str();
+				std::ifstream file(search_dir + filename);
+
+				if (file.is_open()) {
+					// read the entire file content
+					std::stringstream file_stream;
+					file_stream << file.rdbuf();
+					file.close();
+
+					// replace the #include line with file content
+					result += file_stream.str() + "\n";
+				}
+				else {
+					CORE_ERROR("failed to open included file: {0}", search_dir + filename);
+					// if the file cannot be opened, keep the #include line as-is
+					result += line + "\n";
+				}
+			}
+			else {
+				// not an #include line, add it as-is
+				result += line + "\n";
+			}
+		}
+
+		return result;
+	}
+
 	static DataType opengl_type_to_data_type(GLenum type) {
 		switch (type) {
 		case GL_FLOAT: return DataType::Float;
@@ -111,6 +148,7 @@ namespace z1 {
 			auto src = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
 
 			src = uniforms + src;
+			src = process_includes(src, path.parent_path().string() + "/");
 
 			CORE_INFO("loading shader stage [{0}] from file {1}", type, path);
 			shaders.push_back(new OpenGLShaderModule(str_to_shader_stage(type), src));

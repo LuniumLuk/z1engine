@@ -6,6 +6,7 @@
 #define NOMINMAX
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
+#include <regex>
 #include <utility>
 #include <memory>
 #include <algorithm>
