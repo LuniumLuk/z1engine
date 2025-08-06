@@ -26,6 +26,7 @@
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
+#include "scene/component/script.h"
 
 #include "render/graphics_context.h"
 #include "render/mesh.h"

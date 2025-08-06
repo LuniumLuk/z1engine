@@ -3,6 +3,7 @@
 #include "core/core.h"
 #include "scene/scene.h"
 #include "scene/component/base.h"
+#include "scene/component/script.h"
 #include "entt.hpp"
 
 namespace z1 {
@@ -59,6 +60,14 @@ namespace z1 {
 
 		bool is_valid() const {
 			return !m_scene.expired() && m_scene.lock()->m_registry.valid(m_handle);
+		}
+
+		template<typename T, typename... Args>
+		void add_script(Args&&... args) {
+			CORE_ASSERT(is_valid(), "Entity is invalid!");
+			auto& entity_ptr = get_component<Scene::EntityPtr>().m_ptr;
+			auto& script_comp = m_scene.lock()->m_registry.get_or_emplace<ScriptComponent>(m_handle, entity_ptr);
+			script_comp.bind<T>(std::forward<Args>(args)...);
 		}
 
 	private:

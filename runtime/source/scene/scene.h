@@ -33,6 +33,7 @@ namespace z1 {
 		std::vector<std::shared_ptr<Entity>> m_entities;
 
 	private:
+		friend struct Entity;
 		struct EntityPtr {
 			std::weak_ptr<Entity> m_ptr;
 

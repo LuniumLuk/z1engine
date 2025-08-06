@@ -5,6 +5,7 @@
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
+#include "scene/component/script.h"
 #include "core/core.h"
 #include "render/shader.h"
 #include "render/renderer/renderer_2d.h"
@@ -77,6 +78,13 @@ namespace z1 {
 
 	void Scene::on_update(float delta_time) {
 		PROFILE_FUNCTION();
+		auto view = m_registry.view<ScriptComponent const>();
+		for (auto [entity, script_comp] : view.each()) {
+			for (auto& script : script_comp.m_scripts) {
+				script->on_update(delta_time);
+			}
+		}
+
 		g_runtime_context.m_renderer_forward->draw(shared_from_this(), m_main_framebuffer);
 		g_runtime_context.m_renderer_2d->draw(shared_from_this(), m_main_framebuffer);
 	}

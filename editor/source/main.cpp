@@ -8,6 +8,30 @@
 
 using namespace z1;
 
+struct CameraCtrlScript : ScriptBase {
+	void on_create() override {
+		std::cout << "CameraCtrlScript::on_create, entity tag: " << get_entity()->get_component<TagComponent>().m_tag << std::endl;
+	}
+
+	void on_update(float delta_time) override {
+		//std::cout << "CameraCtrlScript::on_update\n";
+
+		if (g_runtime_context.m_input_system->is_key_pressed(KEY_A)) {
+			get_entity()->get_component<TransformComponent>().m_location.x -= 0.1f;
+		}
+		if (g_runtime_context.m_input_system->is_key_pressed(KEY_D)) {
+			get_entity()->get_component<TransformComponent>().m_location.x += 0.1f;
+		}
+		if (g_runtime_context.m_input_system->is_key_pressed(KEY_W)) {
+			get_entity()->get_component<TransformComponent>().m_location.y += 0.1f;
+		}
+		if (g_runtime_context.m_input_system->is_key_pressed(KEY_S)) {
+			get_entity()->get_component<TransformComponent>().m_location.y -= 0.1f;
+		}
+	}
+};
+
+
 struct EditorLayer : Layer {
 	EditorLayer() {
 		m_gui = std::make_shared<EditorGUI>();
@@ -22,6 +46,10 @@ struct EditorLayer : Layer {
 		ortho_cam->get_component<CameraComponent>().m_near = -20.0f;
 		ortho_cam->get_component<CameraComponent>().m_far = 20.0f;
 		m_active_scene->set_main_camera(ortho_cam);
+
+		// test script
+		ortho_cam->add_script<CameraCtrlScript>();
+		persp_cam->add_script<CameraCtrlScript>();
 
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 
@@ -156,10 +184,10 @@ struct EditorLayer : Layer {
 		m_input_mgr.update(delta_time);
 		if (m_gui->is_viewport_focused()) {
 			if (m_ortho_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
-				m_ortho_camera_ctrl->update(m_input_mgr);
+				//m_ortho_camera_ctrl->update(m_input_mgr);
 			}
 			else if (m_persp_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
-				m_persp_camera_ctrl->update(m_input_mgr);
+				//m_persp_camera_ctrl->update(m_input_mgr);
 			}
 		}
 		m_input_mgr.reset();
