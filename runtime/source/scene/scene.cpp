@@ -5,7 +5,6 @@
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
-#include "scene/component/script.h"
 #include "core/core.h"
 #include "render/shader.h"
 #include "render/renderer/renderer_2d.h"
@@ -16,6 +15,15 @@ namespace z1 {
 	Scene::Scene() {}
 
 	Scene::~Scene() {
+		auto view = m_registry.view<ScriptComponent>();
+		for (auto [entity, script_comp] : view.each()) {
+			for (auto& script : script_comp.m_scripts) {
+				if (script.instance) {
+					script.detach_func(script);
+				}
+			}
+		}
+
 		// when the scene is being destroyed, the weak_ptr to the scene in each entity will be expired
 		// that is when calling m_scene.lock() in Entity::get_component<EntityPtr>() will return nullptr
 		// thus, we just mark all entities as destroyed, and clear the registry
@@ -78,10 +86,23 @@ namespace z1 {
 
 	void Scene::on_update(float delta_time) {
 		PROFILE_FUNCTION();
-		auto view = m_registry.view<ScriptComponent const>();
+		auto view = m_registry.view<ScriptComponent>();
 		for (auto [entity, script_comp] : view.each()) {
-			for (auto& script : script_comp.m_scripts) {
-				script->on_update(delta_time);
+			for (auto it = script_comp.m_scripts.begin(); it != script_comp.m_scripts.end();) {
+				auto& script = *it;
+				if (!script.instance) {
+					script.attach_func(script);
+				}
+				if (script.instance) {
+					script.instance->on_update(delta_time);
+					if (!script.instance->is_valid()) {
+						script.detach_func(script);
+						it = script_comp.m_scripts.erase(it);
+					}
+					else {
+						++it;
+					}
+				}
 			}
 		}
 

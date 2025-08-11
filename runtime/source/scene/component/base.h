@@ -38,4 +38,106 @@ namespace z1 {
 		}
 	};
 
+	struct Entity;
+
+
+	struct API ScriptBase {
+
+		virtual void on_attach() = 0;
+		virtual void on_update(float delta_time) = 0;
+		virtual void on_detach() = 0;
+
+		template<typename T>
+		bool has_component() const {
+			return m_entity.lock()->has_component<T>();
+		}
+
+		template<typename T>
+		T& get_component() const {
+			return m_entity.lock()->get_component<T>();
+		}
+
+		template<typename T, typename... Args>
+		T& add_component(Args&&... args) {
+			return m_entity.lock()->add_component<T>(std::forward<Args>(args)...);
+		}
+
+		template<typename T>
+		void remove_component() {
+			return m_entity.lock()->remove_component<T>();
+		}
+
+		template <typename T = void>
+		// we use a template here to ensure that the function compiles correctly.
+		// without this template, the compiler would be unable to instantiate the function
+		// because the full definition of 'Entity' is not available at this point.
+		// The 'Entity' used in this context is only a forward declaration, so the compiler
+		// needs the template to delay the function instantiation until the full type definition
+		// of 'Entity' is accessible, allowing the function to work properly when the definition is known.
+		bool is_entity_valid() const {
+			return m_entity.lock()->is_valid();
+		}
+
+		bool is_valid() const {
+			return m_is_valid;
+		}
+
+		void destroy() {
+			m_is_valid = false;
+		}
+
+	private:
+		friend struct ScriptComponent;
+		std::weak_ptr<Entity> m_entity;
+		bool m_is_valid = true;
+
+	};
+
+	struct API ScriptComponent {
+
+		struct ScriptData {
+			ScriptData(ScriptData const&) = delete;
+			ScriptData& operator=(ScriptData const&) = delete;
+
+			ScriptData(ScriptData &&) = default;
+			ScriptData& operator=(ScriptData &&) = default;
+
+			ScriptBase* instance = nullptr;
+			std::function<void(ScriptData&)> attach_func = nullptr;
+			std::function<void(ScriptData&)> detach_func = nullptr;
+		};
+
+		std::weak_ptr<Entity> m_entity;
+		std::vector<ScriptData> m_scripts;
+
+		ScriptComponent(ScriptComponent const&) = delete;
+		ScriptComponent& operator=(ScriptComponent const&) = delete;
+
+		ScriptComponent(ScriptComponent&&) = default;
+		ScriptComponent& operator=(ScriptComponent&&) = default;
+
+		ScriptComponent(std::weak_ptr<Entity> const& entity) noexcept
+			: m_entity(entity) {
+		}
+
+		template<typename ScriptType, typename... Args>
+		void bind(Args&&... args) {
+			ScriptData sd{};
+			sd.attach_func = [this](ScriptData& d)
+				{
+					d.instance = new ScriptType(std::forward<Args>(args)...);
+					d.instance->m_entity = m_entity;
+					d.instance->on_attach();
+				};
+
+			sd.detach_func = [](ScriptData& d)
+				{
+					d.instance->on_detach();
+					delete d.instance;
+				};
+
+			m_scripts.emplace_back(std::forward<ScriptData>(sd));
+		}
+	};
+
 }
