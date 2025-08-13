@@ -1,199 +1,234 @@
 workspace "z1engine"
-    architecture "x64"
-    startproject "editor"
-    configurations { "Debug", "Release", "Profile" }
+	architecture "x64"
+	startproject "editor"
+	configurations { "Debug", "Release", "Profile" }
 
-    configurations
-    {
-        "Debug",
-        "Release",
-    }
+	configurations
+	{
+		"Debug",
+		"Release",
+	}
 
-    outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-    enginedir = path.getabsolute("%{prj.name}")
+	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+	enginedir = path.getabsolute("%{prj.name}")
 
-    group "deps"
+	function create_test(testname, filepath)
+		project(testname)
+			kind "ConsoleApp"
+			language "C++"
+			cppdialect "C++17"
+			targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
+			objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
+			files { filepath }
+			includedirs {
+				"runtime/source",
+				"3rdparty",
+				"3rdparty/glfw/include",
+				"3rdparty/glad/include",
+				"3rdparty/imgui",
+				"3rdparty/glm",
+				"3rdparty/entt",
+			}
+			links { "runtime" }
+			filter "system:windows"
+				systemversion "latest"
+				defines "PLATFORM_WINDOWS"
+			filter "configurations:Debug"
+				defines { "DEBUG", "ENABLE_ASSERTS" }
+				symbols "on"
+			filter "configurations:Release"
+				defines "RELEASE"
+				optimize "on"
+	end
 
-        include "3rdparty/glfw"
-        include "3rdparty/glad"
-        include "3rdparty/imgui"
-        include "3rdparty/lz4"
-        include "bakery"
+	group "deps"
 
-    group "test"
-        project "bakery_test"
-            location "bakery/test"
-            kind "ConsoleApp"
-            language "C++"
-            cppdialect "C++17"
-            staticruntime "on"
+		include "3rdparty/glfw"
+		include "3rdparty/glad"
+		include "3rdparty/imgui"
+		include "3rdparty/lz4"
+		include "bakery"
 
-            targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
-            objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
+	group "test"
+		project "test_bakery"
+			location "bakery/test"
+			kind "ConsoleApp"
+			language "C++"
+			cppdialect "C++17"
+			staticruntime "on"
 
-            files
-            {
-                "bakery/test/main.cpp",
-            }
+			targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
+			objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
 
-            includedirs
-            {
-                "bakery/source",
-            }
+			files
+			{
+				"bakery/test/main.cpp",
+			}
 
-            links
-            {
-                "bakery",
-                "lz4",
-            }
+			includedirs
+			{
+				"bakery/source",
+			}
 
-            filter "system:windows"
-                systemversion "latest"
-                defines "PLATFORM_WINDOWS"
+			links
+			{
+				"bakery",
+				"lz4",
+			}
 
-            filter "configurations:Debug"
-                defines { "DEBUG", "ENABLE_ASSERTS" }
-                symbols "on"
+			filter "system:windows"
+				systemversion "latest"
+				defines "PLATFORM_WINDOWS"
 
-            filter "configurations:Release"
-                defines "RELEASE"
-                optimize "on"
+			filter "configurations:Debug"
+				defines { "DEBUG", "ENABLE_ASSERTS" }
+				symbols "on"
 
-    group ""
+			filter "configurations:Release"
+				defines "RELEASE"
+				optimize "on"
 
-    project "runtime"
-        location "runtime"
-        kind "StaticLib"
-        language "C++"
-        cppdialect "C++17"
-        staticruntime "on"
+		local testfiles = os.matchfiles("test/**.cpp")
+		for _, filepath in ipairs(testfiles) do
+			local testname = path.getbasename(filepath)
+			create_test(testname, filepath)
+		end
 
-        targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
-        objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
+	group ""
 
-        pchheader "pch.h"
-        pchsource "runtime/source/pch.cpp"
+	project "runtime"
+		location "runtime"
+		kind "StaticLib"
+		language "C++"
+		cppdialect "C++17"
+		staticruntime "on"
 
-        files
-        {
-            "%{prj.name}/source/**.h",
-            "%{prj.name}/source/**.cpp",
-        }
+		targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
+		objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
 
-        includedirs
-        {
-            "%{prj.name}/source",
-            "bakery/source",
-            "3rdparty",
-            "3rdparty/glfw/include",
-            "3rdparty/glad/include",
-            "3rdparty/imgui",
-            "3rdparty/glm",
-            "3rdparty/entt",
-        }
+		pchheader "pch.h"
+		pchsource "runtime/source/pch.cpp"
 
-        links
-        {
-            "glfw",
-            "glad",
-            "imgui",
-            "bakery",
-            "opengl32.lib",
-        }
+		files
+		{
+			"%{prj.name}/source/**.h",
+			"%{prj.name}/source/**.cpp",
+		}
 
-        linkoptions { "/IGNORE:4006" }
+		includedirs
+		{
+			"%{prj.name}/source",
+			"bakery/source",
+			"3rdparty",
+			"3rdparty/glfw/include",
+			"3rdparty/glad/include",
+			"3rdparty/imgui",
+			"3rdparty/glm",
+			"3rdparty/entt",
+		}
 
-        filter "system:windows"
-            systemversion "latest"
+		links
+		{
+			"glfw",
+			"glad",
+			"imgui",
+			"bakery",
+			"opengl32.lib",
+		}
 
-            defines
-            {
-                "PLATFORM_WINDOWS",
-                "BUILD_DLL",
-                "ENGINE_DIR=\"" .. enginedir .. "/\"",
-                "glfw_INCLUDE_NONE",
-            }
+		linkoptions { "/IGNORE:4006" }
 
-        filter "configurations:Debug"
-            defines
-            {
-                "DEBUG",
-                "ENABLE_ASSERTS",
-            }
-            runtime "Debug"
-            symbols "on"
+		filter "system:windows"
+			systemversion "latest"
 
-        filter "configurations:Release"
-            defines "RELEASE"
-            runtime "Release"
-            optimize "on"
+			defines
+			{
+				"PLATFORM_WINDOWS",
+				"BUILD_DLL",
+				"ENGINE_DIR=\"" .. enginedir .. "/\"",
+				"glfw_INCLUDE_NONE",
+			}
 
-        filter "configurations:Profile"
-            defines
-            {
-                "ENABLE_PROFILE",
-                "RELEASE",
-            }
-            runtime "Release"
-            optimize "on"
+		filter "configurations:Debug"
+			defines
+			{
+				"DEBUG",
+				"ENABLE_ASSERTS",
+			}
+			runtime "Debug"
+			symbols "on"
 
-    project "editor"
-        location "editor"
-        kind "ConsoleApp"
-        language "C++"
-        cppdialect "C++17"
-        staticruntime "on"
+		filter "configurations:Release"
+			defines "RELEASE"
+			runtime "Release"
+			optimize "on"
 
-        targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
-        objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
+		filter "configurations:Profile"
+			defines
+			{
+				"ENABLE_PROFILE",
+				"RELEASE",
+			}
+			runtime "Release"
+			optimize "on"
 
-        files
-        {
-            "%{prj.name}/source/**.h",
-            "%{prj.name}/source/**.cpp"
-        }
+	project "editor"
+		location "editor"
+		kind "ConsoleApp"
+		language "C++"
+		cppdialect "C++17"
+		staticruntime "on"
 
-        includedirs
-        {
-            "runtime/source",
-            "editor/source",
-            "bakery/source",
-            "3rdparty",
-            "3rdparty/glfw/include",
-            "3rdparty/glad/include",
-            "3rdparty/imgui",
-            "3rdparty/glm",
-            "3rdparty/entt",
-        }
+		targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
+		objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
 
-        links
-        {
-            "runtime"
-        }
+		files
+		{
+			"%{prj.name}/source/**.h",
+			"%{prj.name}/source/**.cpp"
+		}
 
-        filter "system:windows"
-            systemversion "latest"
-            defines
-            {
-                "PLATFORM_WINDOWS",
-            }
+		includedirs
+		{
+			"runtime/source",
+			"editor/source",
+			"bakery/source",
+			"3rdparty",
+			"3rdparty/glfw/include",
+			"3rdparty/glad/include",
+			"3rdparty/imgui",
+			"3rdparty/glm",
+			"3rdparty/entt",
+		}
 
-        filter "configurations:Debug"
-            defines
-            {
-                "DEBUG",
-                "ENABLE_ASSERTS",
-            }
-            symbols "on"
+		links
+		{
+			"runtime"
+		}
 
-        filter "configurations:Release"
-            defines "RELEASE"
-            optimize "on"
+		filter "system:windows"
+			systemversion "latest"
+			defines
+			{
+				"PLATFORM_WINDOWS",
+			}
 
-        filter "configurations:Profile"
-            defines
-            {
-                "ENABLE_PROFILE",
-                "RELEASE"
-            }
-            optimize "on"
+		filter "configurations:Debug"
+			defines
+			{
+				"DEBUG",
+				"ENABLE_ASSERTS",
+			}
+			symbols "on"
+
+		filter "configurations:Release"
+			defines "RELEASE"
+			optimize "on"
+
+		filter "configurations:Profile"
+			defines
+			{
+				"ENABLE_PROFILE",
+				"RELEASE"
+			}
+			optimize "on"

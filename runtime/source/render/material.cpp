@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "utils/str_utils.h"
+#include "utils/string_utils.h"
 #include "render/material.h"
 
 namespace z1 {

@@ -43,8 +43,8 @@ struct API HoveringCameraController : CameraController {
 			move.z += m_move_speed * (float)state.m_delta_time;
 		}
 
-		auto postive_x = transform.get_rotation() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-		auto postive_z = transform.get_rotation() * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
+		auto postive_x = transform.get_world_rotation() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+		auto postive_z = transform.get_world_rotation() * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
 		move = move.x * glm::vec3(postive_x) + move.z * glm::vec3(postive_z);
 
 		transform.m_location += move;
@@ -96,8 +96,8 @@ struct API Generic2DCameraController : CameraController {
 
 		auto& transform = m_camera->get_component<TransformComponent>();
 
-		auto postive_x = transform.get_transform() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-		auto postive_y = transform.get_transform() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+		auto postive_x = transform.get_world_transform() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+		auto postive_y = transform.get_world_transform() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
 		move = move.x * glm::vec3(postive_x) + move.y * glm::vec3(postive_y);
 
 		transform.m_location += move;

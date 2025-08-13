@@ -40,6 +40,8 @@
 #include "render/renderer/renderer_forward.h"
 
 #include "utils/instrumentor.h"
+#include "utils/random_utils.h"
+#include "utils/string_utils.h"
 #include "utils/thread_pool.h"
 
 #include "io/image_loader.h"

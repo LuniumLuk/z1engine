@@ -69,8 +69,8 @@ namespace z1 {
 
 		auto& camera_trans = main_cam->get_component<TransformComponent>();
 
-		auto cam_up = camera_trans.get_transform() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
-		auto cam_forward = camera_trans.get_transform() * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
+		auto cam_up = camera_trans.get_world_transform() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+		auto cam_forward = camera_trans.get_world_transform() * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
 		auto cam_view = glm::lookAt(camera_trans.m_location, camera_trans.m_location + glm::vec3(cam_forward), glm::vec3(cam_up));
 
 		glm::mat4 cam_projview = camera_comp.get_proj() * cam_view;
@@ -79,7 +79,7 @@ namespace z1 {
 		auto view = scene->m_registry.view<TransformComponent const, SpriteComponent const>();
 		for (auto [entity, transform, sprite] : view.each()) {
 			Renderer2D::Quad quad{};
-			quad.m_transform = transform.get_transform();
+			quad.m_transform = transform.get_world_transform();
 			quad.m_color = sprite.m_color;
 			quad.m_texture = sprite.m_texture;
 			quad.m_tiling_scale = sprite.m_tiling_scale;
