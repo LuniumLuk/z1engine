@@ -18,10 +18,10 @@ namespace z1 {
 		int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 		CORE_ASSERT(status, "failed to initialize Glad!");
 
-		CORE_INFO("opengl info:");
-		CORE_INFO("    vendor: {0}", (char*)glGetString(GL_VENDOR));
-		CORE_INFO("    renderer: {0}", (char*)glGetString(GL_RENDERER));
-		CORE_INFO("    version: {0}", (char*)glGetString(GL_VERSION));
+		CORE_DEBUG("opengl info:");
+		CORE_DEBUG("    vendor: {0}", (char*)glGetString(GL_VENDOR));
+		CORE_DEBUG("    renderer: {0}", (char*)glGetString(GL_RENDERER));
+		CORE_DEBUG("    version: {0}", (char*)glGetString(GL_VERSION));
 
 		GLint val;
 		glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &val);

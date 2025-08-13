@@ -16,7 +16,7 @@ namespace z1 {
 	}
 
 	ImGuiLayer::~ImGuiLayer() {
-
+		CORE_DEBUG("shutting down ImGuiLayer ...");
 	}
 
 	void ImGuiLayer::on_attach() {

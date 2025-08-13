@@ -6,11 +6,11 @@
 #include "core/log.h"
 #include "core/io.h"
 #include "core/input.h"
-#include "scene/scene.h"
 #include "render/resource.h"
 #include "render/graphics_context.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
+#include "io/asset_manager.h"
 #include "3rdparty/imgui_layer.h"
 
 namespace z1 {
@@ -31,7 +31,7 @@ namespace z1 {
 		m_graphics_context->init();
 
 		m_resource_manager = std::make_shared<ResourceManager>();
-		m_scene = std::make_shared<Scene>();
+		m_asset_manager = std::make_shared<AssetManager>();
 
 		m_imgui_layer = std::make_shared<ImGuiLayer>();
 		m_layer_stack = std::make_shared<LayerStack>();
@@ -41,15 +41,19 @@ namespace z1 {
 	}
 
 	void RuntimeContext::shutdown() {
-		m_renderer_2d.reset();
 		m_renderer_forward.reset();
+		m_renderer_2d.reset();
 
 		m_layer_stack.reset();
 		m_imgui_layer.reset();
+
+		m_asset_manager.reset();
 		m_resource_manager.reset();
+
 		m_graphics_context.reset();
 
 		m_input_system.reset();
+
 		m_window.reset();
 
 		m_file_system.reset();

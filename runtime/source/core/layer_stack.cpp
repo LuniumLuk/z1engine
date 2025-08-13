@@ -8,6 +8,7 @@ namespace z1 {
 	}
 
 	LayerStack::~LayerStack() {
+		CORE_DEBUG("shutting down LayerStack ...");
 		for (auto const& layer : m_layers) {
 			layer->on_detach();
 		}

@@ -6,6 +6,7 @@
 #include "scene/entity.h"
 #include "scene/component/camera.h"
 #include "scene/component/sprite.h"
+#include "io/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
 
 namespace z1 {
@@ -40,7 +41,7 @@ namespace z1 {
 		Pipeline::Description desc{};
 		desc.depth_test = true;
 		desc.blend = true;
-		desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d_batched.glsl");
+		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("asset/shader/sprite_2d_batched.glsl");
 		m_pipeline = Pipeline::build(desc);
 
 		m_render_pass = RenderPass::build();

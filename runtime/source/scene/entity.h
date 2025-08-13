@@ -26,7 +26,7 @@ namespace z1 {
 				return;
 			}
 			CORE_ASSERT(is_valid(), "Entity is invalid!");
-			CORE_INFO("Destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
+			CORE_INFO("destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
 			m_scene.lock()->m_registry.destroy(m_handle);
 		}
 

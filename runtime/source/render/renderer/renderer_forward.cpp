@@ -6,6 +6,7 @@
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "render/renderer/renderer_forward.h"
+#include "io/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
 
 namespace z1 {
@@ -16,7 +17,7 @@ namespace z1 {
 		desc.depth_test = true;
 		desc.blend = true;
 		desc.cull_mode = CullMode::Back;
-		desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/mesh_viewer.glsl");
+		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("asset/shader/mesh_viewer.glsl");
 		m_pipeline = Pipeline::build(desc);
 
 		m_render_pass = RenderPass::build();

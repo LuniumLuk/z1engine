@@ -150,7 +150,7 @@ namespace z1 {
 			src = uniforms + src;
 			src = process_includes(src, path.parent_path().string() + "/");
 
-			CORE_INFO("loading shader stage [{0}] from file {1}", type, path);
+			CORE_DEBUG("loading shader stage [{0}] from file {1}", type, path);
 			shaders.push_back(new OpenGLShaderModule(str_to_shader_stage(type), src));
 
 			pos = code.find(stage_token, bracket_end + 1);
