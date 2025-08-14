@@ -24,7 +24,7 @@ namespace z1 {
 		m_data.width = config.width;
 		m_data.height = config.height;
 
-		CORE_INFO("creating window {0} ({1}, {2})", config.title, config.width, config.height);
+		CORE_DEBUG("creating window {0} ({1}, {2})", config.title, config.width, config.height);
 
 		if (!s_is_glfw_initialized) {
 			{

@@ -44,5 +44,6 @@
 #include "utils/string_utils.h"
 #include "utils/thread_pool.h"
 
+#include "io/asset_manager.h"
 #include "io/image_loader.h"
 #include "io/mesh_loader.h"

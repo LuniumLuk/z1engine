@@ -47,10 +47,11 @@ struct EditorLayer : Layer {
 		persp_cam->add_component<CameraComponent>();
 
 		auto ortho_cam = m_active_scene->create_entity("Ortho Camera");
-		ortho_cam->add_component<CameraComponent>();
-		ortho_cam->get_component<CameraComponent>().m_is_perspective = false;
-		ortho_cam->get_component<CameraComponent>().m_near = -20.0f;
-		ortho_cam->get_component<CameraComponent>().m_far = 20.0f;
+		auto& ortho_cc = ortho_cam->add_component<CameraComponent>();
+		ortho_cc.m_is_perspective = false;
+		ortho_cc.m_near = -20.0f;
+		ortho_cc.m_far = 20.0f;
+		ortho_cc.m_intrinsic.size = 4.0f; // frustum size
 		m_active_scene->set_main_camera(ortho_cam);
 
 		// test script
@@ -100,16 +101,17 @@ struct EditorLayer : Layer {
 				ImGui::PopStyleColor();
 			};
 
-		m_texture = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/awesomeface.bin");
-		m_checker = io::load_image2d(g_runtime_context.m_file_system->m_engine_dir / "asset/texture/tira-checker.jpg");
-		m_atlas = io::load_image2d("asset/texture/roguelikeSheet_transparent.png", SamplerMode::Nearest);
+		m_texture = g_runtime_context.m_asset_manager->get<Image2D>("asset/texture/awesomeface.bin");
+		m_checker = g_runtime_context.m_asset_manager->get<Image2D>("asset/texture/tira-checker.jpg");
+		// TODO: need support for image settings (sampler mode and wrap mode)
+		m_atlas = g_runtime_context.m_asset_manager->get<Image2D>("asset/texture/roguelikeSheet_transparent.png");
 
 		{
 			Pipeline::Description desc{};
 			desc.depth_test = true;
 			desc.blend = true;
 			desc.cull_mode = CullMode::Back;
-			desc.shader = Shader::create(g_runtime_context.m_file_system->m_engine_dir / "asset/shader/sprite_2d.glsl");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("asset/shader/sprite_2d.glsl");
 			auto pipeline = Pipeline::build(desc);
 			m_material = std::make_shared<Material>("M_Sprite2D", pipeline);
 			m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
@@ -131,15 +133,17 @@ struct EditorLayer : Layer {
 
 		{
 			auto ent = m_active_scene->create_entity("Mesh_0");
-			auto mesh = io::load_static_mesh("asset/mesh/bunny.obj");
-			ent->add_component<StaticMeshComponent>(mesh);
+			ent->add_component<StaticMeshComponent>(
+				g_runtime_context.m_asset_manager->get<StaticMesh>("asset/mesh/bunny.obj")
+			);
 			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -5.0f);
 		}
 
 		{
 			auto ent = m_active_scene->create_entity("Mesh_1");
-			auto mesh = io::load_static_mesh("asset/fireplace_room/fireplace_room.obj");
-			ent->add_component<StaticMeshComponent>(mesh);
+			ent->add_component<StaticMeshComponent>(
+				g_runtime_context.m_asset_manager->get<StaticMesh>("asset/fireplace_room/fireplace_room.obj")
+			);
 		}
 
 		uint32_t quad_rows = 4;

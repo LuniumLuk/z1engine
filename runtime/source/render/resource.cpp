@@ -7,12 +7,12 @@ namespace z1 {
 	Resource::Resource(ResourceType type)
 		: m_type(type)
 		, m_id(g_runtime_context.m_resource_manager->register_resource(this)) {
-		CORE_INFO("resource created, type: {0}, id: {1}", get_resource_name(m_type), m_id);
+		CORE_DEBUG("resource created, type: {0}, id: {1}", get_resource_name(m_type), m_id);
 	}
 
 	Resource::~Resource() {
 		g_runtime_context.m_resource_manager->unregister_resource(m_id);
-		CORE_INFO("resource destroyed, type: {0}, id: {1}", get_resource_name(m_type), m_id);
+		CORE_DEBUG("resource destroyed, type: {0}, id: {1}", get_resource_name(m_type), m_id);
 	}
 
 	ResourceManager::ResourceManager() {
@@ -26,12 +26,12 @@ namespace z1 {
 			m_valid_uniform_buffer_bindings.push(max_uniform_buffer_binding - 1 - i);
 		}
 
-		CORE_INFO("init resource manager with max image bindings: {0}", max_image_binding);
-		CORE_INFO("init resource manager with max uniform buffer bindings: {0}", max_uniform_buffer_binding);
+		CORE_DEBUG("init resource manager with max image bindings: {0}", max_image_binding);
+		CORE_DEBUG("init resource manager with max uniform buffer bindings: {0}", max_uniform_buffer_binding);
 	}
 
 	ResourceManager::~ResourceManager() {
-
+		CORE_DEBUG("shutting down ResourceManager ...");
 	}
 
 	uint32_t ResourceManager::bind_resource(uint32_t id) {

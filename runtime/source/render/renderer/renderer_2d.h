@@ -3,6 +3,7 @@
 #include "render/buffer.h"
 #include "render/vertex_array.h"
 #include "render/render_pass.h"
+#include "scene/scene.h"
 
 namespace z1 {
 

@@ -38,7 +38,7 @@ namespace z1 {
 
 	std::shared_ptr<Entity> Scene::create_entity(std::string const& name) {
 		entt::entity handle = m_registry.create();
-		CORE_INFO("Creating entity {} ({})", name, static_cast<uint32_t>(handle));
+		CORE_INFO("creating entity {} ({})", name, static_cast<uint32_t>(handle));
 		auto entity = std::make_shared<Entity>(handle, shared_from_this());
 		entity->add_component<TagComponent>(name);
 		entity->add_component<TransformComponent>();
