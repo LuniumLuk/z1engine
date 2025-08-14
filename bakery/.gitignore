@@ -1,2 +1,2 @@
-!test/asset/**
-test/asset/*.bin
+!asset/**
+asset/*.bin

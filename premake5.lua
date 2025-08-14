@@ -14,12 +14,14 @@ workspace "z1engine"
 
 	function create_test(testname, filepath)
 		project(testname)
+			location "test"
 			kind "ConsoleApp"
 			language "C++"
 			cppdialect "C++17"
 			targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
 			objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
 			files { filepath }
+			defines { "YAML_CPP_STATIC_DEFINE" }
 			includedirs {
 				"runtime/source",
 				"3rdparty",
@@ -28,6 +30,8 @@ workspace "z1engine"
 				"3rdparty/imgui",
 				"3rdparty/glm",
 				"3rdparty/entt",
+				"3rdparty/yaml-cpp/include",
+				"bakery/source"
 			}
 			links { "runtime" }
 			filter "system:windows"
@@ -35,9 +39,11 @@ workspace "z1engine"
 				defines "PLATFORM_WINDOWS"
 			filter "configurations:Debug"
 				defines { "DEBUG", "ENABLE_ASSERTS" }
+				staticruntime "on"
 				symbols "on"
 			filter "configurations:Release"
 				defines "RELEASE"
+				staticruntime "on"
 				optimize "on"
 	end
 
@@ -47,46 +53,10 @@ workspace "z1engine"
 		include "3rdparty/glad"
 		include "3rdparty/imgui"
 		include "3rdparty/lz4"
+		include "3rdparty/yaml-cpp"
 		include "bakery"
 
 	group "test"
-		project "test_bakery"
-			location "bakery/test"
-			kind "ConsoleApp"
-			language "C++"
-			cppdialect "C++17"
-			staticruntime "on"
-
-			targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
-			objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
-
-			files
-			{
-				"bakery/test/main.cpp",
-			}
-
-			includedirs
-			{
-				"bakery/source",
-			}
-
-			links
-			{
-				"bakery",
-				"lz4",
-			}
-
-			filter "system:windows"
-				systemversion "latest"
-				defines "PLATFORM_WINDOWS"
-
-			filter "configurations:Debug"
-				defines { "DEBUG", "ENABLE_ASSERTS" }
-				symbols "on"
-
-			filter "configurations:Release"
-				defines "RELEASE"
-				optimize "on"
 
 		local testfiles = os.matchfiles("test/**.cpp")
 		for _, filepath in ipairs(testfiles) do
@@ -109,6 +79,8 @@ workspace "z1engine"
 		pchheader "pch.h"
 		pchsource "runtime/source/pch.cpp"
 
+		defines { "YAML_CPP_STATIC_DEFINE" }
+
 		files
 		{
 			"%{prj.name}/source/**.h",
@@ -125,6 +97,7 @@ workspace "z1engine"
 			"3rdparty/imgui",
 			"3rdparty/glm",
 			"3rdparty/entt",
+			"3rdparty/yaml-cpp/include",
 		}
 
 		links
@@ -133,6 +106,7 @@ workspace "z1engine"
 			"glad",
 			"imgui",
 			"bakery",
+			"yaml-cpp",
 			"opengl32.lib",
 		}
 

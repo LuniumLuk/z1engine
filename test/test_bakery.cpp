@@ -46,8 +46,8 @@ static void check_file_size(const std::string& filepath) {
 }
 
 int main() {
-	const char* input = "asset/wood.png";
-	const char* output = "asset/wood.bin";
+	const char* input = "../bakery/asset/wood.png";
+	const char* output = "../bakery/asset/wood.bin";
 
 	z1::bakery::compress_image(input, output);
 
