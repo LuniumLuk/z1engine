@@ -50,6 +50,7 @@ void EditorGUI::draw() {
 
 	if (m_window_viewport) {
 		if (ImGui::Begin("viewport", nullptr, ImGuiWindowFlags_MenuBar)) {
+			m_is_viewport_focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
 
 			if (m_draw_viewport_overlay_func) {
 				m_draw_viewport_overlay_func();
@@ -91,8 +92,21 @@ void EditorGUI::draw() {
 			m_viewport_pixel_scale_x = 1.0f / present_size.x;
 
 			ImGui::BeginChild("viewport_child", present_size, false, ImGuiWindowFlags_NoScrollbar);
-			m_is_viewport_focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
 			ImGui::Image(m_viewport_framebuffer->get_attachment_native_handle(0), present_size, ImVec2(0, 1), ImVec2(1, 0));
+			m_is_viewport_hovered = ImGui::IsItemHovered();
+
+			if (m_is_viewport_hovered) {
+				ImVec2 image_min = ImGui::GetItemRectMin(); // top-left corner of the last item
+				ImVec2 image_max = ImGui::GetItemRectMax(); // bottom-right corner (optional)
+				ImVec2 mouse_pos = ImGui::GetMousePos();
+
+				// relative mouse position inside the image
+				ImVec2 local_pos = ImVec2(mouse_pos.x - image_min.x, mouse_pos.y - image_min.y);
+				ImVec2 image_rect = ImVec2(image_max.x - image_min.x, image_max.y - image_min.y);
+
+				m_viewport_mouse_x = local_pos.x / image_rect.x;
+				m_viewport_mouse_y = 1.0f - local_pos.y / image_rect.y;
+			}
 			ImGui::EndChild();
 		}
 		ImGui::End();

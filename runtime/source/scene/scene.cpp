@@ -40,7 +40,7 @@ namespace z1 {
 		entt::entity handle = m_registry.create();
 		CORE_INFO("creating entity {} ({})", name, static_cast<uint32_t>(handle));
 		auto entity = std::make_shared<Entity>(handle, shared_from_this());
-		entity->add_component<TagComponent>(name);
+		entity->add_component<TagComponent>(name, static_cast<uint32_t>(m_entities.size()));
 		entity->add_component<TransformComponent>();
 		entity->add_component<Scene::EntityPtr>(entity);
 		m_entities.push_back(entity);

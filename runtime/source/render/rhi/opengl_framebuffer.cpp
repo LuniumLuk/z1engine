@@ -40,6 +40,7 @@ namespace z1 {
 
 		uint32_t binding = 0;
 
+		m_attachment_ids.clear();
 		for (auto const& attachment : m_attachments) {
 			Image::Description desc{};
 			desc.m_width = m_description.width;
@@ -51,10 +52,13 @@ namespace z1 {
 			desc.m_mipmap = false;
 
 			auto image = new OpenGLImage2D(nullptr, 0, desc);
+			auto attachment_id = image_format_to_attachment_type(attachment.format, binding);
 
 			glBindTexture(GL_TEXTURE_2D, image->m_handle);
-			glFramebufferTexture(GL_FRAMEBUFFER, image_format_to_attachment_type(attachment.format, binding), image->m_handle, 0);
+			glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, image->m_handle, 0);
 			glBindTexture(GL_TEXTURE_2D, 0);
+
+			m_attachment_ids.push_back(attachment_id);
 
 			switch (attachment.format) {
 			case ImageFormat::RGBA8:
@@ -106,9 +110,26 @@ namespace z1 {
 		create();
 	}
 
-	void OpenGLFramebuffer::read_pixels(uint32_t x, uint32_t y, uint32_t width, uint32_t height, void const* data) const {
+	void OpenGLFramebuffer::read_pixel(uint32_t attachment, uint32_t x, uint32_t y, void* data) const {
+		read_pixels(attachment, x, y, 1, 1, data);
+	}
+
+	void OpenGLFramebuffer::read_pixels(uint32_t attachment, uint32_t x, uint32_t y, uint32_t width, uint32_t height, void* data) const {
 		PROFILE_FUNCTION();
-		UNIMPLEMENTED_FUNCTION();
+
+		if (attachment >= m_attachments.size()) {
+			CORE_WARN("attachment required is out of range!");
+			return;
+		}
+
+		bind();
+		glReadBuffer(m_attachment_ids[attachment]);
+		glReadPixels(
+			x, y, width, height,
+			image_format_to_opengl_format(m_attachments[attachment].format),
+			image_format_to_opengl_data_type(m_attachments[attachment].format),
+			data);
+		unbind();
 	}
 
 	void OpenGLFramebuffer::bind_attachment(uint32_t index, uint32_t binding) const {

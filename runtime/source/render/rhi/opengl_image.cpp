@@ -1,13 +1,12 @@
 #include "pch.h"
 #include "render/rhi/opengl_image.h"
-#include "glad/glad.h"
 
 namespace z1 {
 
 	// helper functions
 	// --------------------------------------------------
 
-	static GLenum image_format_to_opengl_internal_format(ImageFormat format) {
+	GLenum image_format_to_opengl_internal_format(ImageFormat format) {
 		switch (format) {
 		case ImageFormat::RGBA8: return GL_RGBA8;
 		case ImageFormat::RGBA32F: return GL_RGBA32F;
@@ -18,7 +17,7 @@ namespace z1 {
 		return 0;
 	}
 
-	static GLenum image_format_to_opengl_format(ImageFormat format) {
+	GLenum image_format_to_opengl_format(ImageFormat format) {
 		switch (format) {
 		case ImageFormat::RGBA8: return GL_RGBA;
 		case ImageFormat::RGBA32F: return GL_RGBA;
@@ -29,7 +28,7 @@ namespace z1 {
 		return 0;
 	}
 
-	static GLenum image_format_to_opengl_data_type(ImageFormat format) {
+	GLenum image_format_to_opengl_data_type(ImageFormat format) {
 		switch (format) {
 		case ImageFormat::RGBA8: return GL_UNSIGNED_BYTE;
 		case ImageFormat::RGBA32F: return GL_FLOAT;
@@ -40,7 +39,7 @@ namespace z1 {
 		return 0;
 	}
 
-	static GLenum sampler_mode_to_opengl_type(SamplerMode mode) {
+	GLenum sampler_mode_to_opengl_type(SamplerMode mode) {
 		switch (mode) {
 		case SamplerMode::Linear: return GL_LINEAR;
 		case SamplerMode::Nearest: return GL_NEAREST;
@@ -49,7 +48,7 @@ namespace z1 {
 		return 0;
 	}
 
-	static GLenum sampler_mode_to_opengl_mipmap_type(SamplerMode mode) {
+	GLenum sampler_mode_to_opengl_mipmap_type(SamplerMode mode) {
 		switch (mode) {
 		case SamplerMode::Linear: return GL_LINEAR_MIPMAP_LINEAR;
 		case SamplerMode::Nearest: return GL_NEAREST_MIPMAP_NEAREST;
@@ -58,7 +57,7 @@ namespace z1 {
 		return 0;
 	}
 
-	static GLenum wrap_mode_to_opengl_type(WrapMode mode) {
+	GLenum wrap_mode_to_opengl_type(WrapMode mode) {
 		switch (mode) {
 		case WrapMode::Repeat: return GL_REPEAT;
 		case WrapMode::MirroredRepeat: return GL_MIRRORED_REPEAT;
@@ -69,7 +68,7 @@ namespace z1 {
 		return 0;
 	}
 
-	static size_t image_format_to_opengl_data_size(ImageFormat format) {
+	size_t image_format_to_opengl_data_size(ImageFormat format) {
 		switch (format) {
 		case ImageFormat::RGBA8: return 4;
 		case ImageFormat::RGBA32F: return 16;

@@ -5,6 +5,7 @@
 #include "gui.h"
 #include "input_mgr.h"
 #include "camera_ctrl.h"
+#include "picking_system.h"
 
 using namespace z1;
 
@@ -171,6 +172,10 @@ struct EditorLayer : Layer {
 				ent->get_component<TransformComponent>().m_scale = glm::vec3(quad_size, quad_size, 1.0f);
 			}
 		}
+
+		m_picking = std::make_shared<PickingSystem>(
+			m_gui->get_viewport_framebuffer()->get_description().width,
+			m_gui->get_viewport_framebuffer()->get_description().height);
 	}
 
 	~EditorLayer() {
@@ -206,7 +211,31 @@ struct EditorLayer : Layer {
 	}
 
 	void on_event(Event& event) override {
+		auto dispatcher = EventDispatcher(event);
+		dispatcher.dispatch<MouseButtonPressedEvent>(BIND_EVENT_FN(EditorLayer::on_mouse_pressed));
 		m_input_mgr.on_event(event);
+	}
+
+	bool on_mouse_pressed(MouseButtonPressedEvent& event) {
+		if (event.GetButton() == MOUSE_BUTTON_LEFT) {
+			if (m_gui->is_viewport_focused() && m_gui->is_viewport_hovered()) {
+				m_picking->render(m_active_scene);
+
+				float x = 0.0f;
+				float y = 0.0f;
+				m_gui->get_mouse_cursor_on_viewport(&x, &y);
+
+				auto object_id = m_picking->query(x, y);
+				if (object_id == INVALID_INDEX) {
+					m_selected_entity = nullptr;
+				}
+				else {
+					m_selected_entity = m_active_scene->m_entities[object_id];
+					m_picked_from_viewport = true;
+				}
+			}
+		}
+		return true;
 	}
 
 	void on_imgui_render() override {
@@ -259,6 +288,7 @@ struct EditorLayer : Layer {
 private:
 	std::shared_ptr<EditorGUI> m_gui;
 	std::shared_ptr<Scene> m_active_scene;
+	bool m_picked_from_viewport = false;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
 	std::shared_ptr<Generic2DCameraController> m_ortho_camera_ctrl;
 	std::shared_ptr<HoveringCameraController> m_persp_camera_ctrl;
@@ -269,6 +299,8 @@ private:
 
 	std::shared_ptr<Material> m_material;
 	std::shared_ptr<MaterialInstance> m_material_instance;
+
+	std::shared_ptr<PickingSystem> m_picking;
 
 	int m_fps_counter = 0;
 	float m_fps_timer = 0.0;
@@ -281,6 +313,10 @@ private:
 				auto entity = m_active_scene->cast_to_entity(ent);
 				if (ImGui::Selectable(entity->get_component<TagComponent>().m_tag.c_str(), entity == m_selected_entity)) {
 					m_selected_entity = entity; // Update selection
+				}
+				if (m_picked_from_viewport && entity == m_selected_entity) {
+					ImGui::SetScrollHereY();
+					m_picked_from_viewport = false;
 				}
 			}
 		}
