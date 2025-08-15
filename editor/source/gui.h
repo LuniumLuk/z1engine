@@ -35,13 +35,21 @@ struct EditorGUI {
 
 	std::shared_ptr<Framebuffer> const& get_viewport_framebuffer() const { return m_viewport_framebuffer; }
 	bool is_viewport_focused() const { return m_is_viewport_focused; }
+	bool is_viewport_hovered() const { return m_is_viewport_hovered; }
+	void get_mouse_cursor_on_viewport(float* x, float* y) const {
+		*x = m_viewport_mouse_x;
+		*y = m_viewport_mouse_y;
+	}
 
 	std::function<void()> m_draw_viewport_overlay_func = nullptr;
 
 	bool m_dockspace = true;
 	bool m_window_viewport = true;
 	bool m_is_viewport_focused = false;
+	bool m_is_viewport_hovered = false;
 	uint32_t m_current_resolution = 0;
 	std::shared_ptr<Framebuffer> m_viewport_framebuffer;
 	float m_viewport_pixel_scale_x = 0.0f;
+	float m_viewport_mouse_x = 0.0f;
+	float m_viewport_mouse_y = 0.0f;
 };

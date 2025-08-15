@@ -10,8 +10,9 @@ namespace z1 {
 
 	struct API TagComponent {
 		std::string m_tag;
+		uint32_t m_id = 0;
 		TagComponent() = default;
-		TagComponent(std::string const& tag) : m_tag(tag) {}
+		TagComponent(std::string const& tag, uint32_t id) : m_tag(tag), m_id(id) {}
 	};
 
 	struct API TransformComponent {

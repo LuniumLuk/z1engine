@@ -1,8 +1,23 @@
 #pragma once
 
 #include "render/image.h"
+#include "glad/glad.h"
 
 namespace z1 {
+
+	GLenum image_format_to_opengl_internal_format(ImageFormat format);
+
+	GLenum image_format_to_opengl_format(ImageFormat format);
+
+	GLenum image_format_to_opengl_data_type(ImageFormat format);
+
+	GLenum sampler_mode_to_opengl_type(SamplerMode mode);
+
+	GLenum sampler_mode_to_opengl_mipmap_type(SamplerMode mode);
+
+	GLenum wrap_mode_to_opengl_type(WrapMode mode);
+
+	size_t image_format_to_opengl_data_size(ImageFormat format);
 
 	struct OpenGLImage2D : Image2D {
 		friend struct OpenGLFramebuffer;
