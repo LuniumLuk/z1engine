@@ -8,6 +8,12 @@
 
 namespace z1 {
 
+	template <typename, typename = void>
+	struct has_m_guid : std::false_type {};
+
+	template <typename T>
+	struct has_m_guid<T, std::void_t<decltype(std::declval<T>().m_guid)>> : std::true_type {};
+
 	template<typename T>
 	struct API AssetLoader {
 		static std::shared_ptr<T> load(Filepath const&) {
@@ -67,6 +73,10 @@ namespace z1 {
 			}
 
 			auto asset = AssetLoader<T>::load(m_cached_files[guid]);
+			if constexpr (has_m_guid<T>::value) {
+				asset->m_guid = guid;
+			}
+
 			map[guid] = asset;
 			return asset;
 		}

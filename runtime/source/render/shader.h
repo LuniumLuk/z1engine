@@ -2,6 +2,7 @@
 
 #include "render/data_types.h"
 #include "core/io.h"
+#include "core/guid.h"
 #include <string>
 
 namespace z1 {
@@ -112,6 +113,8 @@ namespace z1 {
 
 		std::string const& get_name() const { return m_name; }
 		std::string const& get_path() const { return m_path; }
+
+		Guid m_guid{};
 
 	protected:
 		std::vector<Variable> m_attributes;

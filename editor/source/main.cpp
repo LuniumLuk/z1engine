@@ -220,6 +220,8 @@ struct EditorLayer : Layer {
 	bool on_mouse_pressed(MouseButtonPressedEvent& event) {
 		if (event.GetButton() == MOUSE_BUTTON_LEFT) {
 			if (m_gui->is_viewport_focused() && m_gui->is_viewport_hovered()) {
+				auto start = std::chrono::high_resolution_clock::now();
+
 				m_picking->render(m_active_scene);
 
 				float x = 0.0f;
@@ -234,6 +236,12 @@ struct EditorLayer : Layer {
 					m_selected_entity = m_active_scene->m_entities[object_id];
 					m_picked_from_viewport = true;
 				}
+
+				auto end = std::chrono::high_resolution_clock::now();
+				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+					end - start
+				).count();
+				std::cout << "picking object (ms): " << ms << "\n";
 			}
 		}
 		return true;
@@ -355,6 +363,7 @@ private:
 							auto w = sprite.m_texture->get_description().m_width;
 							auto h = sprite.m_texture->get_description().m_height;
 							ImGui::Image(sprite.m_texture->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+							ImGui::Text("guid: %s", sprite.m_texture->m_guid.value.c_str());
 							ImGui::Text("width: %d", w);
 							ImGui::Text("height: %d", h);
 							ImGui::Text("depth: %d", sprite.m_texture->get_description().m_depth);
@@ -383,6 +392,7 @@ private:
 				if (m_selected_entity->has_component<StaticMeshComponent>()) {
 					if (ImGui::CollapsingHeader("static mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& mesh = m_selected_entity->get_component<StaticMeshComponent>();
+						ImGui::Text("guid: %s", mesh.m_mesh->m_guid.value.c_str());
 						ImGui::Text("bound min: (%f, %f, %f)", mesh.m_mesh->m_bound_min.x, mesh.m_mesh->m_bound_min.y, mesh.m_mesh->m_bound_min.z);
 						ImGui::Text("bound max: (%f, %f, %f)", mesh.m_mesh->m_bound_max.x, mesh.m_mesh->m_bound_max.y, mesh.m_mesh->m_bound_max.z);
 						ImGui::Text("primitives");
@@ -428,6 +438,7 @@ private:
 			if (ImGui::BeginTable("basic info", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
 				ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(shader->get_name().c_str());
 				ImGui::TableNextColumn(); ImGui::Text("path"); ImGui::TableNextColumn(); ImGui::Text(shader->get_path().c_str());
+				ImGui::TableNextColumn(); ImGui::Text("guid"); ImGui::TableNextColumn(); ImGui::Text(shader->m_guid.value.c_str());
 				ImGui::EndTable();
 			}
 			ImGui::Text("shader attributes");

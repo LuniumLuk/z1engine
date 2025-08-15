@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/guid.h"
 #include "render/vertex_array.h"
 #include "glm/glm.hpp"
 
@@ -43,6 +44,7 @@ namespace z1 {
 		void draw() const;
 		void draw_instanced(uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) const;
 
+		Guid m_guid{};
 		std::vector<Primitive> m_primitives;
 
 		// axis-aligned bounding box for the whole mesh

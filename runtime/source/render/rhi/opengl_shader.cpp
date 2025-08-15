@@ -116,8 +116,8 @@ namespace z1 {
 	}
 
 	OpenGLShader::OpenGLShader(Filepath const& path) {
-		m_path = path.string();
-		m_name = path.filename().string();
+		m_path = path.generic_string();
+		m_name = path.filename().generic_string();
 
 		const char* uniform_token = "@uniforms:";
 		const size_t uniform_token_len = strlen(uniform_token);
