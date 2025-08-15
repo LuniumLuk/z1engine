@@ -434,20 +434,11 @@ FodyWeavers.xsd
 build
 build-int
 
-# Asset
-*.png
-*.jpg
-*.exr
-*.hdr
-*.gltf
-*.glb
-*.obj
-*.mtl
-*.ply
-*.fbx
-*.json
-
 # Ignore all .vcxproj files
 *.vcxproj*
 *.sln
 *.ini
+
+*.meta.yaml
+.vscode
+cache

@@ -7,6 +7,7 @@
 #include "camera_ctrl.h"
 
 using namespace z1;
+namespace fs = std::filesystem;
 
 struct CameraCtrlScript : ScriptBase {
 	void on_attach() override {
@@ -101,17 +102,17 @@ struct EditorLayer : Layer {
 				ImGui::PopStyleColor();
 			};
 
-		m_texture = g_runtime_context.m_asset_manager->get<Image2D>("asset/texture/awesomeface.bin");
-		m_checker = g_runtime_context.m_asset_manager->get<Image2D>("asset/texture/tira-checker.jpg");
+		m_texture = g_runtime_context.m_asset_manager->get<Image2D>("texture/awesomeface.png");
+		m_checker = g_runtime_context.m_asset_manager->get<Image2D>("texture/tira-checker.jpg");
 		// TODO: need support for image settings (sampler mode and wrap mode)
-		m_atlas = g_runtime_context.m_asset_manager->get<Image2D>("asset/texture/roguelikeSheet_transparent.png");
+		m_atlas = g_runtime_context.m_asset_manager->get<Image2D>("texture/roguelikeSheet_transparent.png");
 
 		{
 			Pipeline::Description desc{};
 			desc.depth_test = true;
 			desc.blend = true;
 			desc.cull_mode = CullMode::Back;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("asset/shader/sprite_2d.glsl");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/sprite_2d.glsl");
 			auto pipeline = Pipeline::build(desc);
 			m_material = std::make_shared<Material>("M_Sprite2D", pipeline);
 			m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
@@ -134,7 +135,7 @@ struct EditorLayer : Layer {
 		{
 			auto ent = m_active_scene->create_entity("Mesh_0");
 			ent->add_component<StaticMeshComponent>(
-				g_runtime_context.m_asset_manager->get<StaticMesh>("asset/mesh/bunny.obj")
+				g_runtime_context.m_asset_manager->get<StaticMesh>("mesh/bunny.obj")
 			);
 			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -5.0f);
 		}
@@ -142,7 +143,7 @@ struct EditorLayer : Layer {
 		{
 			auto ent = m_active_scene->create_entity("Mesh_1");
 			ent->add_component<StaticMeshComponent>(
-				g_runtime_context.m_asset_manager->get<StaticMesh>("asset/fireplace_room/fireplace_room.obj")
+				g_runtime_context.m_asset_manager->get<StaticMesh>("fireplace_room/fireplace_room.obj")
 			);
 		}
 
@@ -252,6 +253,12 @@ struct EditorLayer : Layer {
 			}
 
 			ImGui::Text(std::string("viewport_pixel_scale_x: " + std::to_string(m_gui->m_viewport_pixel_scale_x)).c_str());
+
+			if (ImGui::Button("save imgui ini")) {
+				fs::path ini_path = "imgui.ini";
+				fs::path default_path = "editor/default.ini";
+				fs::copy_file(ini_path, default_path, fs::copy_options::overwrite_existing);
+			}
 		}
 		ImGui::End();
 	}
@@ -513,15 +520,32 @@ private:
 
 struct EditorApp : Application {
 	void init() override {
+		fs::path ini_path = "imgui.ini";
+		if (!fs::exists(ini_path)) {
+			fs::path default_path = "editor/default.ini";
+			if (fs::exists(default_path)) {
+				fs::copy_file(default_path, ini_path);
+			}
+		}
+
 		push_layer(std::make_shared<EditorLayer>());
 	};
 };
 
 int main() {
+	auto start = std::chrono::high_resolution_clock::now();
 	std::cout << "hello world!\n";
 
 	EditorApp app;
 	app.init();
+
+	auto end = std::chrono::high_resolution_clock::now();
+	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+		end - start
+	).count();
+
+	std::cout << "app launch (ms): " << ms << "\n";
+
 	app.run();
 
 	return 0;

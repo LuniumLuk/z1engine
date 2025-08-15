@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "render/rhi/opengl_shader.h"
-#include "utils/string_utils.h"
+#include "util/string_utils.h"
 #include "glad/glad.h"
 
 namespace z1 {

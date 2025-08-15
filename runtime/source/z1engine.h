@@ -39,11 +39,11 @@
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
 
-#include "utils/instrumentor.h"
-#include "utils/random_utils.h"
-#include "utils/string_utils.h"
-#include "utils/thread_pool.h"
+#include "util/instrumentor.h"
+#include "util/random_utils.h"
+#include "util/string_utils.h"
+#include "util/thread_pool.h"
 
-#include "io/asset_manager.h"
+#include "core/asset_manager.h"
 #include "io/image_loader.h"
 #include "io/mesh_loader.h"
