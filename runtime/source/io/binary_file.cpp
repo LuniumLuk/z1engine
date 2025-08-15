@@ -13,7 +13,7 @@ namespace z1 {
 		BinaryFileHeader header;
 		ifs.read(reinterpret_cast<char*>(&header), sizeof(header));
 
-		if (header.magic != 0x42494E46) {
+		if (header.magic != BINARY_FILE_MAGIC) {
 			CORE_ERROR("invalid magic number in {0}", path);
 			return false;
 		}
