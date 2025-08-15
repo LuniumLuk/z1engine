@@ -45,5 +45,6 @@
 #include "util/thread_pool.h"
 
 #include "core/asset_manager.h"
+#include "io/binary_file.h"
 #include "io/image_loader.h"
 #include "io/mesh_loader.h"
