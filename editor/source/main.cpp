@@ -133,9 +133,9 @@ struct EditorLayer : Layer {
 			}
 		}
 
-		m_picking = std::make_shared<PickingSystem>(
-			m_gui->get_viewport_framebuffer()->get_description().width,
-			m_gui->get_viewport_framebuffer()->get_description().height);
+		// picking system doesn¡¯t need to be that precise
+		// so we use default resolution here (512x512)
+		m_picking = std::make_shared<PickingSystem>();
 	}
 
 	~EditorLayer() {

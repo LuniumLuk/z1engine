@@ -4,7 +4,7 @@ using namespace z1;
 
 struct PickingSystem {
 
-	PickingSystem(uint32_t w, uint32_t h);
+	PickingSystem(uint32_t w = 512, uint32_t h = 512);
 
 	void render(std::shared_ptr<Scene> const& scene) const;
 
