@@ -1,6 +1,3 @@
-//#include <cstdint>
-//#include <string>
-//#include <vector>
 #pragma once
 
 #include "core/core.h"
@@ -9,27 +6,37 @@
 
 #define BINARY_FILE_MAGIC 0x5A314246 // 'Z1BF'
 
-namespace z1 {
+namespace z1::io {
 
+#pragma pack(push, 1)
 	struct BinaryFileHeader {
 		uint32_t magic = BINARY_FILE_MAGIC;
 		uint32_t version = 1;
 		uint64_t yaml_size = 0;
 		uint64_t data_size = 0;
 	};
+#pragma pack(pop)
 
 	struct BinaryFile {
 
+		struct DataSlice {
+			const void* ptr = nullptr;
+			size_t size = 0;
+
+			bool valid() const noexcept { return ptr != nullptr && size > 0; }
+		};
+
 		bool load(Filepath const& path);
-		bool dump(Filepath const& path) const;
+		bool save(Filepath const& path) const;
 
 		void set_yaml(std::string const& yaml);
 		std::string const& get_yaml() const;
 
-		void set_data(const void* data, size_t size);
+		void reserve(size_t size);
+		void set_data(const void* data, size_t size, size_t offset = 0);
 		const size_t get_data_size() const;
-		const std::vector<uint8_t>& get_data() const;
-		void const* get_data_ptr(size_t offset = 0, size_t size = WHOLE_SIZE) const;
+		std::vector<uint8_t> const& get_data() const;
+		DataSlice get_data_slice(size_t offset = 0, size_t size = WHOLE_SIZE) const;
 
 	private:
 		std::string m_yaml;

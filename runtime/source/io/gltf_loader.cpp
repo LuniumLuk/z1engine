@@ -66,11 +66,11 @@ namespace z1::io {
 	}
 
 	template<typename T>
-	static void process_indices(const void* ptr, size_t count, StaticMesh::Storage& mesh_storage, uint32_t& index_pos, uint32_t vertex_start) {
+	static void process_indices(const void* ptr, size_t count, std::shared_ptr<StaticMesh::Storage> const& mesh_storage, uint32_t& index_start, uint32_t vertex_start) {
 		const T* buf = static_cast<const T*>(ptr);
 		for (size_t i = 0; i < count; ++i) {
-			mesh_storage.indices.push_back(buf[i] + vertex_start);
-			++index_pos;
+			mesh_storage->indices.push_back(buf[i] + vertex_start);
+			++index_start;
 		}
 	}
 
@@ -116,9 +116,9 @@ namespace z1::io {
 			}
 		}
 
-		StaticMesh::Storage mesh_storage{};
-		mesh_storage.bound_min = glm::vec3{ FLT_MAX };
-		mesh_storage.bound_max = glm::vec3{ FLT_MIN };
+		auto mesh_storage = std::make_shared<StaticMesh::Storage>();
+		mesh_storage->bound_min = glm::vec3{ FLT_MAX };
+		mesh_storage->bound_max = glm::vec3{ FLT_MIN };
 
 		uint32_t mesh_vertex_count = 0;
 		uint32_t mesh_index_count = 0;
@@ -136,8 +136,8 @@ namespace z1::io {
 				}
 			}
 
-			mesh_storage.vertices.reserve(mesh_vertex_count);
-			mesh_storage.indices.reserve(mesh_index_count);
+			mesh_storage->vertices.reserve(mesh_vertex_count);
+			mesh_storage->indices.reserve(mesh_index_count);
 
 			for (auto const& primitive : mesh.primitives) {
 
@@ -154,8 +154,8 @@ namespace z1::io {
 					prim_storage.bound_min = glm::make_vec3(accessor_pos.minValues.data());
 					prim_storage.bound_max = glm::make_vec3(accessor_pos.maxValues.data());
 					// update mesh bound
-					mesh_storage.bound_min = glm::min(mesh_storage.bound_min, prim_storage.bound_min);
-					mesh_storage.bound_max = glm::max(mesh_storage.bound_max, prim_storage.bound_max);
+					mesh_storage->bound_min = glm::min(mesh_storage->bound_min, prim_storage.bound_min);
+					mesh_storage->bound_max = glm::max(mesh_storage->bound_max, prim_storage.bound_max);
 
 					prim_storage.vertex_count = static_cast<uint32_t>(accessor_pos.count);
 
@@ -206,7 +206,7 @@ namespace z1::io {
 						//}
 						//if (glm::length(vert.weight) == 0.0f) vert.weight.x = 1.0f;
 
-						mesh_storage.vertices.push_back(vert);
+						mesh_storage->vertices.push_back(vert);
 					}
 				}
 
@@ -236,29 +236,10 @@ namespace z1::io {
 					}
 				}
 
-				mesh_storage.primitives.push_back(prim_storage);
+				mesh_storage->primitives.push_back(prim_storage);
 			}
 
-			auto vertex_buffer = VertexBuffer::create(
-				mesh_storage.vertices.data(),
-				mesh_storage.vertices.size() * sizeof(StaticMesh::VertexData),
-				StaticMesh::VertexData::s_layout, BufferUsage::Static);
-			std::vector<StaticMesh::Primitive> mesh_primitives;
-			for (auto const& prim_storage : mesh_storage.primitives) {
-				auto& indices = prim_storage.index_start;
-				auto index_buffer = IndexBuffer::create(
-					&mesh_storage.indices[prim_storage.index_start],
-					prim_storage.index_count * sizeof(uint32_t), BufferUsage::Static);
-				StaticMesh::Primitive prim{
-					PrimitiveType::Triangles,
-					VertexArray::create({ vertex_buffer }, index_buffer),
-					prim_storage.bound_min,
-					prim_storage.bound_max,
-				};
-				mesh_primitives.push_back(prim);
-			}
-
-			auto static_mesh = std::make_shared<StaticMesh>(mesh_primitives, mesh_storage.bound_min, mesh_storage.bound_max);
+			auto static_mesh = std::make_shared<StaticMesh>(mesh_storage);
 			entity->add_component<StaticMeshComponent>(static_mesh);
 		}
 	}

@@ -49,3 +49,4 @@
 #include "io/image_loader.h"
 #include "io/obj_loader.h"
 #include "io/gltf_loader.h"
+#include "io/mesh_storage.h"

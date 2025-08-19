@@ -34,8 +34,27 @@ namespace z1 {
 		return 0;
 	}
 
-	StaticMesh::StaticMesh(std::vector<Primitive> const& primitives, glm::vec3 const& bound_min, glm::vec3 const& bound_max)
-		: m_primitives(primitives), m_bound_min(bound_min), m_bound_max(bound_max) {}
+	StaticMesh::StaticMesh(std::shared_ptr<Storage> const& storage)
+		: m_bound_min(storage->bound_min)
+		, m_bound_max(storage->bound_max) {
+		auto vertex_buffer = VertexBuffer::create(
+			storage->vertices.data(),
+			storage->vertices.size() * sizeof(StaticMesh::VertexData),
+			StaticMesh::VertexData::s_layout, BufferUsage::Static);
+		for (auto const& prim_storage : storage->primitives) {
+			auto& indices = prim_storage.index_start;
+			auto index_buffer = IndexBuffer::create(
+				&storage->indices[prim_storage.index_start],
+				prim_storage.index_count * sizeof(uint32_t), BufferUsage::Static);
+			StaticMesh::Primitive prim{
+				PrimitiveType::Triangles,
+				VertexArray::create({ vertex_buffer }, index_buffer),
+				prim_storage.bound_min,
+				prim_storage.bound_max,
+			};
+			m_primitives.push_back(prim);
+		}
+	}
 
 	StaticMesh::StaticMesh(std::vector<Primitive> const& primitives)
 		: m_primitives(primitives) {
@@ -48,6 +67,9 @@ namespace z1 {
 			}
 		}
 	}
+
+	StaticMesh::StaticMesh(std::vector<Primitive> const& primitives, glm::vec3 const& bound_min, glm::vec3 const& bound_max)
+		: m_primitives(primitives), m_bound_min(bound_min), m_bound_max(bound_max) {}
 
 	StaticMesh::StaticMesh(std::vector<VertexData> const& vertices, PrimitiveType type) {
 		auto vertex_buffer = VertexBuffer::create((void*)vertices.data(), vertices.size() * sizeof(VertexData),

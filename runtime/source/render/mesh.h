@@ -106,6 +106,7 @@ namespace z1 {
 			glm::vec3 bound_max;
 		};
 
+		StaticMesh(std::shared_ptr<Storage> const& storage);
 		StaticMesh(std::vector<Primitive> const& primitives);
 		StaticMesh(std::vector<Primitive> const& primitives, glm::vec3 const& bound_min, glm::vec3 const& bound_max);
 		StaticMesh(std::vector<VertexData> const& vertices, PrimitiveType type);

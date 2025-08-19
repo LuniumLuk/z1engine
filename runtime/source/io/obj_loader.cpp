@@ -11,7 +11,7 @@ namespace z1::io {
 		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
-	std::shared_ptr<StaticMesh> load_obj_mesh(Filepath const& path) {
+	std::shared_ptr<StaticMesh::Storage> load_obj_mesh_storage(Filepath const& path) {
 		tinyobj::ObjReaderConfig readerConfig;
 		readerConfig.mtl_search_path = path.parent_path().string() + "/"; // Path to .mtl file, relative to .obj file
 
@@ -33,21 +33,24 @@ namespace z1::io {
 		auto& shapes = reader.GetShapes();
 		auto& materials = reader.GetMaterials();
 
-		std::vector<StaticMesh::VertexData> vertices;
-		std::vector<std::vector<uint32_t>> primitives;
-		std::vector<glm::vec3> primitive_bound_mins;
-		std::vector<glm::vec3> primitive_bound_maxs;
-		uint32_t base_index_offset = 0;
+		auto mesh_storage = std::make_shared<StaticMesh::Storage>();
+		mesh_storage->bound_min = glm::vec3{ FLT_MAX };
+		mesh_storage->bound_max = glm::vec3{ FLT_MIN };
 
-		glm::vec3 mesh_min = glm::vec3(std::numeric_limits<float>::max());
-		glm::vec3 mesh_max = glm::vec3(std::numeric_limits<float>::min());
+		uint32_t prim_index_start = 0;
+		uint32_t base_index_offset = 0;
 
 		// loop over shapes
 		for (size_t s = 0; s < shapes.size(); ++s) {
 			// loop over faces(polygon)
-			std::vector<uint32_t> indices;
-			glm::vec3 prim_min = glm::vec3(std::numeric_limits<float>::max());
-			glm::vec3 prim_max = glm::vec3(std::numeric_limits<float>::min());
+
+			StaticMesh::Primitive::Storage prim_storage{};
+			prim_storage.bound_min = glm::vec3{ FLT_MAX };
+			prim_storage.bound_max = glm::vec3{ FLT_MIN };
+			prim_storage.index_start = prim_index_start;
+			prim_storage.index_count = 0;
+			prim_storage.vertex_count = 0;
+
 			size_t index_offset = 0;
 			for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); ++f) {
 				size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
@@ -81,20 +84,19 @@ namespace z1::io {
 					vdata.color.b = attrib.colors[3 * size_t(idx.vertex_index) + 2];
 					vdata.color.a = 1.0f; // Default alpha value
 
-					vertices.push_back(vdata);
-					// update mesh bounds
-					mesh_min = glm::min(mesh_min, vdata.position);
-					mesh_max = glm::max(mesh_max, vdata.position);
-					// update primitive bounds
-					prim_min = glm::min(prim_min, vdata.position);
-					prim_max = glm::max(prim_max, vdata.position);
+					mesh_storage->vertices.push_back(vdata);
+
+					prim_storage.vertex_count += 1;
+					prim_storage.bound_min = glm::min(prim_storage.bound_min, vdata.position);
+					prim_storage.bound_max = glm::max(prim_storage.bound_max, vdata.position);
 				}
 
 				for (uint32_t v = 2; v < fv; ++v) {
 					// triangulate the face
-					indices.push_back(base_index_offset + 0);
-					indices.push_back(base_index_offset + v - 1);
-					indices.push_back(base_index_offset + v);
+					mesh_storage->indices.push_back(base_index_offset + 0);
+					mesh_storage->indices.push_back(base_index_offset + v - 1);
+					mesh_storage->indices.push_back(base_index_offset + v);
+					prim_storage.index_count += 3;
 				}
 
 				base_index_offset += static_cast<uint32_t>(fv);
@@ -104,34 +106,26 @@ namespace z1::io {
 				// shapes[s].mesh.material_ids[f];
 			}
 
-			if (!indices.empty()) {
-				primitives.push_back(indices);
-				primitive_bound_mins.push_back(prim_min);
-				primitive_bound_maxs.push_back(prim_max);
+			prim_index_start += prim_storage.index_count;
+			if (prim_storage.vertex_count) {
+				// update mesh bounds
+				mesh_storage->bound_min = glm::min(mesh_storage->bound_min, prim_storage.bound_min);
+				mesh_storage->bound_max = glm::max(mesh_storage->bound_max, prim_storage.bound_max);
+				mesh_storage->primitives.push_back(prim_storage);
 			}
 		}
 
-		if (vertices.empty() || primitives.empty()) {
+		if (mesh_storage->vertices.empty() || mesh_storage->primitives.empty()) {
 			CORE_ERROR("failed to load static mesh: {0} - no vertices or primitives found", path);
-			return nullptr;
+			return {};
 		}
 
-		auto vertex_buffer = VertexBuffer::create(
-			vertices.data(), vertices.size() * sizeof(StaticMesh::VertexData),
-			StaticMesh::VertexData::s_layout, BufferUsage::Static);
-		std::vector<StaticMesh::Primitive> mesh_primitives;
-		for (size_t i = 0; i < primitives.size(); ++i) {
-			auto& indices = primitives[i];
-			auto index_buffer = IndexBuffer::create(indices.data(), indices.size() * sizeof(uint32_t), BufferUsage::Static);
-			StaticMesh::Primitive prim{
-				PrimitiveType::Triangles,
-				VertexArray::create({ vertex_buffer }, index_buffer),
-				primitive_bound_mins[i], primitive_bound_maxs[i]
-			};
-			mesh_primitives.push_back(prim);
-		}
+		return mesh_storage;
+	}
 
-		return std::make_shared<StaticMesh>(mesh_primitives, mesh_min, mesh_max);
+	std::shared_ptr<StaticMesh> load_obj_mesh(Filepath const& path) {
+		auto const& storage = load_obj_mesh_storage(path);
+		return std::make_shared<StaticMesh>(storage);
 	}
 
 }

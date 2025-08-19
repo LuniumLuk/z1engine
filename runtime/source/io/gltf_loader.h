@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/io.h"
 #include "scene/scene.h"
 
