@@ -47,7 +47,7 @@ workspace "z1engine"
 				optimize "on"
 	end
 
-	group "dependent"
+	group "dependency"
 
 		include "3rdparty/glfw"
 		include "3rdparty/glad"
