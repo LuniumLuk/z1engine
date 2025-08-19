@@ -66,7 +66,7 @@ namespace z1 {
 					else if (io::file_is_compressed_image(path)) {
 						type = "image";
 					}
-					else if (io::file_is_static_mesh(path)) {
+					else if (io::file_is_obj_mesh(path)) {
 						type = "static mesh";
 					}
 					else if (file_is_shader(path)) {

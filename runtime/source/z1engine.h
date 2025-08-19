@@ -46,4 +46,5 @@
 
 #include "core/asset_manager.h"
 #include "io/image_loader.h"
-#include "io/mesh_loader.h"
+#include "io/obj_loader.h"
+#include "io/gltf_loader.h"

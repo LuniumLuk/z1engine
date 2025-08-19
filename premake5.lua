@@ -14,7 +14,7 @@ workspace "z1engine"
 
 	function create_test(testname, filepath)
 		project(testname)
-			location "test"
+			location "test/workspace"
 			kind "ConsoleApp"
 			language "C++"
 			cppdialect "C++17"
@@ -47,7 +47,7 @@ workspace "z1engine"
 				optimize "on"
 	end
 
-	group "deps"
+	group "dependent"
 
 		include "3rdparty/glfw"
 		include "3rdparty/glad"

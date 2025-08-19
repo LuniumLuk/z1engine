@@ -4,7 +4,7 @@
 #include "core/guid.h"
 #include "render/shader.h"
 #include "io/image_loader.h"
-#include "io/mesh_loader.h"
+#include "io/obj_loader.h"
 
 namespace z1 {
 
@@ -152,7 +152,7 @@ namespace z1 {
 		static std::shared_ptr<StaticMesh> load(Filepath const& path) {
 			auto full_path = g_runtime_context.m_asset_manager->resolve_path(path);
 			if (!full_path.empty()) {
-				return io::load_static_mesh(full_path);
+				return io::load_obj_mesh(full_path);
 			}
 
 			CORE_ERROR("failed to load StaticMesh asset: {0}", path);

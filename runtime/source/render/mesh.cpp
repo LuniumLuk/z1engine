@@ -3,6 +3,15 @@
 
 namespace z1 {
 
+	VertexBuffer::Layout const StaticMesh::VertexData::s_layout = {
+			{DataType::Float3},
+			{DataType::Float3},
+			{DataType::Float2},
+			{DataType::Float2},
+			{DataType::Float4},
+			{DataType::Float4},
+	};
+
 	size_t StaticMesh::Primitive::get_triangle_count() const {
 		auto vcount = m_vertex_array->get_element_count();
 		switch (m_primitive_type) {
@@ -42,12 +51,7 @@ namespace z1 {
 
 	StaticMesh::StaticMesh(std::vector<VertexData> const& vertices, PrimitiveType type) {
 		auto vertex_buffer = VertexBuffer::create((void*)vertices.data(), vertices.size() * sizeof(VertexData),
-			{
-				{DataType::Float3},
-				{DataType::Float3},
-				{DataType::Float2},
-				{DataType::Float4},
-			}, BufferUsage::Static);
+			StaticMesh::VertexData::s_layout, BufferUsage::Static);
 
 		glm::vec3 prim_min(0.0f), prim_max(0.0f);
 		if (!vertices.empty()) {
@@ -65,12 +69,7 @@ namespace z1 {
 
 	StaticMesh::StaticMesh(std::vector<VertexData> const& vertices, std::vector<uint32_t> const& indices, PrimitiveType type) {
 		auto vertex_buffer = VertexBuffer::create((void*)vertices.data(), vertices.size() * sizeof(VertexData),
-			{
-				{DataType::Float3},
-				{DataType::Float3},
-				{DataType::Float2},
-				{DataType::Float4},
-			}, BufferUsage::Static);
+			StaticMesh::VertexData::s_layout, BufferUsage::Static);
 		auto index_buffer = IndexBuffer::create(indices.data(), indices.size() * sizeof(int), BufferUsage::Static);
 
 		glm::vec3 prim_min(0.0f), prim_max(0.0f);

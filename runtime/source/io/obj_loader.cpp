@@ -1,17 +1,17 @@
 #include "pch.h"
-#include "io/mesh_loader.h"
+#include "io/obj_loader.h"
 
 #include "tinyobjloader/tiny_obj_loader.h"
 
 namespace z1::io {
 
-	bool file_is_static_mesh(Filepath const& path) noexcept {
+	bool file_is_obj_mesh(Filepath const& path) noexcept {
 		auto ext = path.extension().string();
-		const std::vector<std::string> imageExtensions = { ".obj" };
-		return std::find(imageExtensions.begin(), imageExtensions.end(), ext) != imageExtensions.end();
+		const std::vector<std::string> exts = { ".obj" };
+		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
-	std::shared_ptr<StaticMesh> load_static_mesh(Filepath const& path) {
+	std::shared_ptr<StaticMesh> load_obj_mesh(Filepath const& path) {
 		tinyobj::ObjReaderConfig readerConfig;
 		readerConfig.mtl_search_path = path.parent_path().string() + "/"; // Path to .mtl file, relative to .obj file
 
@@ -71,8 +71,8 @@ namespace z1::io {
 
 					// check if `texcoord_index` is zero or positive. negative = no texcoord data
 					if (idx.texcoord_index >= 0) {
-						vdata.tex_coord.x = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-						vdata.tex_coord.y = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+						vdata.texcoord0.x = attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
+						vdata.texcoord0.y = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
 					}
 
 					// optional: vertex colors
@@ -118,12 +118,7 @@ namespace z1::io {
 
 		auto vertex_buffer = VertexBuffer::create(
 			vertices.data(), vertices.size() * sizeof(StaticMesh::VertexData),
-			{
-				{DataType::Float3},
-				{DataType::Float3},
-				{DataType::Float2},
-				{DataType::Float4},
-			}, BufferUsage::Static);
+			StaticMesh::VertexData::s_layout, BufferUsage::Static);
 		std::vector<StaticMesh::Primitive> mesh_primitives;
 		for (size_t i = 0; i < primitives.size(); ++i) {
 			auto& indices = primitives[i];
