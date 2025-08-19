@@ -37,6 +37,7 @@ namespace z1 {
 		uint32_t get_height() const { return m_data.height; }
 
 		void add_event_callback(EventCallbackFn const& callback) { m_data.event_callbacks.push_back(callback); }
+		void clear_event_callbacks() { m_data.event_callbacks.clear(); }
 		void set_v_sync(bool enabled);
 		bool is_v_sync_enabled() const;
 
@@ -47,8 +48,8 @@ namespace z1 {
 	private:
 		void shutdown();
 
-		GLFWwindow* m_window;
-		WindowData m_data;
+		GLFWwindow* m_window = nullptr;
+		WindowData m_data = {};
 	};
 
 }

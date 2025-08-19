@@ -163,9 +163,13 @@ namespace z1 {
 		template<typename ScriptType, typename... Args>
 		void bind(Args&&... args) {
 			ScriptData sd{};
-			sd.attach_func = [this](ScriptData& d)
+			auto params = std::make_tuple(std::forward<Args>(args)...);
+			sd.attach_func = [this, params = std::move(params)](ScriptData& d)
 				{
-					d.instance = new ScriptType(std::forward<Args>(args)...);
+					std::apply([&](auto&&... unpacked)
+						{
+							d.instance = new ScriptType(std::forward<decltype(unpacked)>(unpacked)...);
+						}, params);
 					d.instance->m_entity = m_entity;
 					d.instance->on_attach();
 				};

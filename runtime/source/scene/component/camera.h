@@ -24,13 +24,23 @@ namespace z1 {
 		}
 
 		void zoom(float zoom) {
-			CORE_ASSERT(zoom > 0.0f, "zoom factor must be positive");
+			if (!(zoom > 0.0f) || std::isnan(zoom) || std::isinf(zoom)) {
+				CORE_ERROR("invalid zoom factor: {}", zoom);
+				return;
+			}
+
+			constexpr float epsilon = 1e-6f; // lower bound
+			zoom = std::max(zoom, epsilon);
+
 			if (m_is_perspective) {
 				m_intrinsic.fov /= zoom;
-				m_intrinsic.fov = std::clamp(m_intrinsic.fov, 0.0f, 180.0f);
+				// keep fov in a meaningful range
+				m_intrinsic.fov = std::clamp(m_intrinsic.fov, 1.0f, 179.0f);
 			}
 			else {
 				m_intrinsic.size /= zoom;
+				// prevent collapse or explosion of size
+				m_intrinsic.size = std::clamp(m_intrinsic.size, epsilon, 1e6f);
 			}
 		}
 

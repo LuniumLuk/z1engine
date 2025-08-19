@@ -3,6 +3,7 @@
 #include "core/application.h"
 #include "core/window.h"
 #include "core/timer.h"
+#include "core/input.h"
 #include "core/layer_stack.h"
 #include "3rdparty/imgui_layer.h"
 #include "event/application_event.h"
@@ -51,6 +52,7 @@ namespace z1 {
 				}
 			}
 
+			g_runtime_context.m_input_system->reset();
 			g_runtime_context.m_window->on_update();
 			g_runtime_context.m_graphics_context->end_frame();
 			g_runtime_context.m_graphics_context->swap_buffers();

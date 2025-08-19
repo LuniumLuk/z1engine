@@ -25,7 +25,7 @@ namespace z1 {
 		m_window = std::make_shared<Window>();
 		m_window->init(Window::Config());
 
-		m_input_system = std::make_shared<InputSystem>();
+		m_input_system = std::make_shared<InputSystem>(m_window);
 
 		m_graphics_context = GraphicsContext::create();
 		m_graphics_context->init();
@@ -41,6 +41,8 @@ namespace z1 {
 	}
 
 	void RuntimeContext::shutdown() {
+		m_window->clear_event_callbacks();
+
 		m_renderer_forward.reset();
 		m_renderer_2d.reset();
 

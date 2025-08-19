@@ -3,42 +3,11 @@
 #include "glad/glad.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "gui.h"
-#include "input_mgr.h"
 #include "camera_ctrl.h"
 #include "picking_system.h"
 
 using namespace z1;
 namespace fs = std::filesystem;
-
-struct CameraCtrlScript : ScriptBase {
-	void on_attach() override {
-		std::cout << "CameraCtrlScript::on_attach, entity tag: " << get_component<TagComponent>().m_tag << std::endl;
-	}
-
-	void on_update(float delta_time) override {
-		if (g_runtime_context.m_input_system->is_key_pressed(KEY_A)) {
-			get_component<TransformComponent>().m_location.x -= 0.1f;
-		}
-		if (g_runtime_context.m_input_system->is_key_pressed(KEY_D)) {
-			get_component<TransformComponent>().m_location.x += 0.1f;
-		}
-		if (g_runtime_context.m_input_system->is_key_pressed(KEY_W)) {
-			get_component<TransformComponent>().m_location.y += 0.1f;
-		}
-		if (g_runtime_context.m_input_system->is_key_pressed(KEY_S)) {
-			get_component<TransformComponent>().m_location.y -= 0.1f;
-		}
-
-		if (g_runtime_context.m_input_system->is_key_pressed(KEY_F)) {
-			destroy(); // destroy this script itself
-		}
-	}
-
-	void on_detach() override {
-		std::cout << "CameraCtrlScript::on_detach" << std::endl;
-	}
-};
-
 
 struct EditorLayer : Layer {
 	EditorLayer() {
@@ -57,13 +26,10 @@ struct EditorLayer : Layer {
 		m_active_scene->set_main_camera(ortho_cam);
 
 		// test script
-		ortho_cam->attach_script<CameraCtrlScript>();
-		persp_cam->attach_script<CameraCtrlScript>();
+		ortho_cam->attach_script<Generic2DCameraCtrlScript>(m_gui);
+		persp_cam->attach_script<HoveringCameraCtrlScript>(m_gui);
 
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
-
-		m_ortho_camera_ctrl = std::make_shared<Generic2DCameraController>(ortho_cam);
-		m_persp_camera_ctrl = std::make_shared<HoveringCameraController>(persp_cam);
 
 		m_gui->m_draw_viewport_overlay_func = 
 			[&]() {
@@ -87,26 +53,17 @@ struct EditorLayer : Layer {
 					ImGuiWindowFlags_NoFocusOnAppearing |
 					ImGuiWindowFlags_NoNav))
 				{
-					if (m_ortho_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
-						ImGui::Text("camera ctrl:");
-						ImGui::InputFloat("move speed", &m_ortho_camera_ctrl->m_move_speed, 0.1f, 1.0f);
-						ImGui::InputFloat("zoom speed", &m_ortho_camera_ctrl->m_zoom_speed, 0.1f, 1.0f);
-					}
-					else if (m_persp_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
-						ImGui::Text("camera ctrl:");
-						ImGui::InputFloat("rotate speed", &m_persp_camera_ctrl->m_rotate_speed, 0.1f, 1.0f);
-						ImGui::InputFloat("move speed", &m_persp_camera_ctrl->m_move_speed, 0.1f, 1.0f);
-					}
+					ImGui::Text("overlay on viewport");
 				}
 				ImGui::End();
 
 				ImGui::PopStyleColor();
 			};
 
-		m_texture = g_runtime_context.m_asset_manager->get<Image2D>("texture/awesomeface.png");
-		m_checker = g_runtime_context.m_asset_manager->get<Image2D>("texture/tira-checker.jpg");
+		auto tex0 = g_runtime_context.m_asset_manager->get<Image2D>("texture/awesomeface.png");
+		auto tex1 = g_runtime_context.m_asset_manager->get<Image2D>("texture/tira-checker.jpg");
 		// TODO: need support for image settings (sampler mode and wrap mode)
-		m_atlas = g_runtime_context.m_asset_manager->get<Image2D>("texture/roguelikeSheet_transparent.png");
+		auto tex2 = g_runtime_context.m_asset_manager->get<Image2D>("texture/roguelikeSheet_transparent.png");
 
 		{
 			Pipeline::Description desc{};
@@ -117,18 +74,18 @@ struct EditorLayer : Layer {
 			auto pipeline = Pipeline::build(desc);
 			m_material = std::make_shared<Material>("M_Sprite2D", pipeline);
 			m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
-			m_material_instance->m_override_variables["u_texture"].default_value.resource_id = m_texture->get_resource_id();
+			m_material_instance->m_override_variables["u_texture"].default_value.resource_id = tex0->get_resource_id();
 			m_material_instance->m_override_variables["u_texture"].default_value.valid = true;
 		}
 
 		{
 			auto ent = m_active_scene->create_entity("Square_0");
-			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), m_texture);
+			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), tex0);
 		}
 
 		{
 			auto ent = m_active_scene->create_entity("Square_1");
-			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), m_checker);
+			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), tex1);
 			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -9.5f);
 			ent->get_component<TransformComponent>().m_scale = glm::vec3(10.0f, 10.0f, 1.0f);
 		}
@@ -159,7 +116,7 @@ struct EditorLayer : Layer {
 		uint32_t stride = 1;
 		for (uint32_t i = 0; i < quad_rows; ++i) {
 			for (uint32_t j = 0; j < quad_cols; ++j) {
-				auto tile = SubImage2D::create(m_atlas, i * (tile_size + stride), j * (tile_size + stride), tile_size, tile_size, true);
+				auto tile = SubImage2D::create(tex2, i * (tile_size + stride), j * (tile_size + stride), tile_size, tile_size, true);
 				auto ent = m_active_scene->create_entity("SubImage2D_" + std::to_string(i * quad_rows + j));
 				ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), tile);
 				ent->get_component<TransformComponent>().m_location = glm::vec3(-(float)i * quad_stride - 0.2f, -(float)j * quad_stride - 0.2f, 1.0f);
@@ -197,26 +154,12 @@ struct EditorLayer : Layer {
 			m_fps_timer = 0.0;
 			m_fps_counter = 0;
 		}
-		m_ortho_camera_ctrl->m_drag_speed = m_gui->m_viewport_pixel_scale_x;
-
-		m_input_mgr.update(delta_time);
-		if (m_gui->is_viewport_focused()) {
-			if (m_ortho_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
-				//m_ortho_camera_ctrl->update(m_input_mgr);
-			}
-			else if (m_persp_camera_ctrl->get_camera()->get_component<CameraComponent>().m_is_primary) {
-				//m_persp_camera_ctrl->update(m_input_mgr);
-			}
-		}
-		m_input_mgr.reset();
-
 		m_active_scene->on_update(delta_time);
 	}
 
 	void on_event(Event& event) override {
 		auto dispatcher = EventDispatcher(event);
 		dispatcher.dispatch<MouseButtonPressedEvent>(BIND_EVENT_FN(EditorLayer::on_mouse_pressed));
-		m_input_mgr.on_event(event);
 	}
 
 	bool on_mouse_pressed(MouseButtonPressedEvent& event) {
@@ -307,12 +250,6 @@ private:
 	std::shared_ptr<Scene> m_active_scene;
 	bool m_picked_from_viewport = false;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
-	std::shared_ptr<Generic2DCameraController> m_ortho_camera_ctrl;
-	std::shared_ptr<HoveringCameraController> m_persp_camera_ctrl;
-	InputManager m_input_mgr;
-	std::shared_ptr<Image2D> m_texture;
-	std::shared_ptr<Image2D> m_checker;
-	std::shared_ptr<Image2D> m_atlas;
 
 	std::shared_ptr<Material> m_material;
 	std::shared_ptr<MaterialInstance> m_material_instance;
