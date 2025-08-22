@@ -16,6 +16,13 @@ namespace z1::bakery {
 		int width, height;
 		auto data = load_uncompressed_image(input, &width, &height);
 
+		auto res = compress_image_data(output, data, width, height);
+
+		free_loaded_data(data);
+		return res;
+	}
+
+	bool compress_image_data(std::filesystem::path const& output, unsigned char const* data, int width, int height) {
 		// compress with LZ4
 		int uncompressed_size = width * height * 4;
 		int max_compressed_size = LZ4_compressBound(uncompressed_size);
@@ -28,9 +35,18 @@ namespace z1::bakery {
 		int compressed_size = LZ4_compress_default(
 			(const char*)data, compressed_data, uncompressed_size, max_compressed_size
 		);
+		if (!compressed_size) {
+			log_error("failed to compress image data");
+			return false;
+		}
 
 		// save to custom binary file (width, height, compressed data)
-		FILE* f = fopen(output.string().c_str(), "wb");
+		FILE* f = fopen(output.generic_string().c_str(), "wb");
+		if (!f) {
+			log_error("failed to open output file");
+			log_error(output.generic_string());
+			return false;
+		}
 		fwrite(&width, sizeof(int), 1, f);
 		fwrite(&height, sizeof(int), 1, f);
 		fwrite(&compressed_size, sizeof(int), 1, f);
@@ -38,7 +54,6 @@ namespace z1::bakery {
 		fclose(f);
 
 		// cleanup
-		free_loaded_data(data);
 		free(compressed_data);
 		return true;
 	}

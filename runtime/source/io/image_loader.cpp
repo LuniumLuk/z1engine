@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "io/image_loader.h"
 #include "bakery.h"
-//#include "stb/stb_image.h"
 #include "tinyexr/tinyexr.h"
 
 namespace z1::io {

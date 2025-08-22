@@ -7,6 +7,7 @@
 namespace z1::bakery {
 
 	bool compress_image(std::filesystem::path const& input, std::filesystem::path const& output);
+	bool compress_image_data(std::filesystem::path const& output, unsigned char const* data, int width, int height);
 
 	const unsigned char* load_uncompressed_image(std::filesystem::path const& path, int* width, int* height);
 	const unsigned char* load_compressed_image(std::filesystem::path const& path, int* width, int* height);
