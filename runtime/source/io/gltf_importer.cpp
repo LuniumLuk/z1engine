@@ -1,5 +1,6 @@
 #include "pch.h"
-#include "io/gltf_loader.h"
+#include "io/gltf_importer.h"
+#include "io/mesh_storage.h"
 #include "scene/entity.h"
 #include "scene/component/mesh.h"
 #include "render/mesh.h"
@@ -11,9 +12,9 @@
 
 namespace z1::io {
 
-	bool file_is_gltf(Filepath const& path) noexcept {
+	bool GltfImporter::can_import(Filepath const& path) {
 		auto ext = path.extension().string();
-		const std::vector<std::string> exts = { ".gltf", ".glb"};
+		const std::vector<std::string> exts = { ".gltf", ".glb" };
 		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
@@ -100,20 +101,20 @@ namespace z1::io {
 	}
 
 	static void load_node(
-		std::shared_ptr<Scene> const& scene,
-		TransformComponent* parent,
+		GltfImporterSettings const& settings,
 		tinygltf::Node const& node,
-		tinygltf::Model const& model) {
+		tinygltf::Model const& model,
+		ImportResult& ret) {
 
 		auto const& name = node.name;
-		auto entity = scene->create_entity(name);
+		/*auto entity = scene->create_entity(name);
 		auto& transform_comp = entity->get_component<TransformComponent>();
 		transform_comp.m_parent = parent;
-		transform_comp.set_local_transform(get_transform(node));
+		transform_comp.set_local_transform(get_transform(node));*/
 
 		if (node.children.size() > 0) {
 			for (auto i : node.children) {
-				load_node(scene, &transform_comp, model.nodes[i], model);
+				load_node(settings, model.nodes[i], model, ret);
 			}
 		}
 
@@ -240,8 +241,26 @@ namespace z1::io {
 				mesh_storage->primitives.push_back(prim_storage);
 			}
 
-			auto static_mesh = std::make_shared<StaticMesh>(mesh_storage);
-			entity->add_component<StaticMeshComponent>(static_mesh);
+			std::string name = mesh.name.empty() ? ("SM_" + std::to_string(node.mesh)) : mesh.name;
+			Filepath path = settings.target_path / name;
+
+			AssetMetaData meta{};
+			meta.guid = Guid::generate();
+			meta.type = "static mesh";
+			meta.path = path.generic_string();
+
+			Filepath file = settings.cache_dir / (meta.guid.value + ".bin");
+			Filepath meta_file = file;
+			meta_file += ".meta.yaml";
+
+			if (io::save_static_mesh_storage(file, mesh_storage)) {
+				meta.save(meta_file);
+				ret.assets.push_back(meta);
+				ret.files.push_back(file);
+			}
+
+			//auto static_mesh = std::make_shared<StaticMesh>(mesh_storage);
+			//entity->add_component<StaticMeshComponent>(static_mesh);
 		}
 	}
 
@@ -272,7 +291,7 @@ namespace z1::io {
 		return true;
 	}
 
-	static void load_textures(tinygltf::Model& model, Filepath const& model_path) {
+	static void import_textures(GltfImporterSettings const& settings, tinygltf::Model& model, ImportResult& ret) {
 		for (auto const& tex : model.textures) {
 			if (tex.source < 0 || tex.source >= model.images.size()) {
 				continue;
@@ -301,34 +320,47 @@ namespace z1::io {
 				continue;
 			}
 
-			std::string name = image.name.empty() ? ("texture_" + std::to_string(tex.source)) : image.name;
-			std::replace(name.begin(), name.end(), '/', '_');
-			std::replace(name.begin(), name.end(), '\\', '_');
-			std::replace(name.begin(), name.end(), ':', '_');
+			std::string name = image.name.empty() ? ("T_" + std::to_string(tex.source)) : image.name;
+			Filepath path = settings.target_path / name;
 
-			Filepath path = model_path;
-			path += ".import";
-			path /= (name + ".bin");
+			AssetMetaData meta{};
+			meta.guid = Guid::generate();
+			meta.type = "image";
+			meta.path = path.generic_string();
+
+			Filepath file = settings.cache_dir / (meta.guid.value + ".bin");
+			Filepath meta_file = file;
+			meta_file += ".meta.yaml";
 
 			try {
-				std::filesystem::create_directories(path.parent_path());
+				std::filesystem::create_directories(file.parent_path());
 				bakery::compress_image_data(
-					path,
+					file,
 					data_ptr,
 					image.width,
 					image.height
 				);
+				meta.save(meta_file);
 			}
 			catch (std::exception const& e) {
 				CORE_ERROR("failed to compress image {}: {}", name, e.what());
+				continue;
 			}
+
+			ret.assets.push_back(meta);
+			ret.files.push_back(file);
 		}
 	}
 
-	void load_gltf_scene(std::shared_ptr<Scene> const& scene, Filepath const& path) {
+	ImportResult GltfImporter::import(GltfImporterSettings const& settings) {
+		ImportResult ret{};
 
-		if (!file_is_gltf(path)) {
-			CORE_WARN("{0} is not a common gltf file", path);
+		auto const& src_path = settings.source_path;
+		auto const& tar_path = settings.target_path;
+
+		if (!can_import(src_path)) {
+			CORE_WARN("{0} is not a common gltf file", src_path.generic_string());
+			return ret;
 		}
 
 		tinygltf::Model model{};
@@ -336,22 +368,22 @@ namespace z1::io {
 		std::string err;
 		std::string warn;
 
-		bool result = loader.LoadBinaryFromFile(&model, &err, &warn, path.string());
+		bool result = loader.LoadBinaryFromFile(&model, &err, &warn, src_path.string());
 
 		if (!err.empty()) {
-			CORE_ERROR("failed to load static mesh: {0}", path);
+			CORE_ERROR("failed to load static mesh: {0}", src_path.generic_string());
 			CORE_ERROR("TinyGLTF: {0}", err);
-			return;
+			return ret;
 		}
 		if (!warn.empty()) {
 			CORE_WARN("TinyGLTF: {0}", warn);
 		}
 		if (!result) {
-			CORE_ERROR("failed to load static mesh: {0}", path);
-			return;
+			CORE_ERROR("failed to load static mesh: {0}", src_path.generic_string());
+			return ret;
 		}
 
-		load_textures(model, path);
+		import_textures(settings, model, ret);
 
 		// load default scene.
 		auto const& default_scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
@@ -361,8 +393,11 @@ namespace z1::io {
 		// primitives will be loaded as 'StaticMesh::Primitive'
 		for (auto i : default_scene.nodes) {
 			auto const& node = model.nodes[i];
-			load_node(scene, nullptr, node, model);
+			load_node(settings, node, model, ret);
 		}
+
+		ret.success = true;
+		return ret;
 
 		//loadAnimations(model);
 		//loadSkins(model);

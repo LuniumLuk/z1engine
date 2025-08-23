@@ -6,6 +6,47 @@
 namespace z1 {
 	namespace fs = std::filesystem;
 
+	bool AssetMetaData::save(Filepath const& p) const {
+		YAML::Emitter emitter;
+
+		emitter << YAML::BeginMap;
+		emitter << YAML::Key << "guid" << YAML::Value << guid.value;
+		emitter << YAML::Key << "type" << YAML::Value << type;
+		emitter << YAML::Key << "root" << YAML::Value << root;
+		emitter << YAML::Key << "path" << YAML::Value << path;
+		emitter << YAML::EndMap;
+
+		try {
+			fs::create_directories(p.parent_path());
+			std::ofstream fout(p);
+			fout << emitter.c_str();
+			fout.close();
+		}
+		catch (std::exception const& e) {
+			CORE_ERROR("failed to save to {}: {}", p.generic_string(), e.what());
+			return false;
+		}
+
+		return true;
+	}
+
+	bool AssetMetaData::load(Filepath const& p) {
+		try {
+			YAML::Node node = YAML::LoadFile(p.string());
+
+			guid = Guid::make(node["guid"].as<std::string>());
+			type = node["type"].as<std::string>();
+			root = node["root"].as<std::string>();
+			path = node["path"].as<std::string>();
+		}
+		catch (std::exception const& e) {
+			CORE_ERROR("failed to load from {}: {}", p.generic_string(), e.what());
+			return false;
+		}
+
+		return true;
+	}
+
 	AssetManager::AssetManager() {
 		Filepath cwd = fs::current_path();
 		CORE_INFO("current working directory: {0}", cwd.generic_string());
@@ -50,12 +91,9 @@ namespace z1 {
 				}
 
 				if (has_meta) {
-					YAML::Node node = YAML::LoadFile(meta_path.string());
-
-					meta.guid = Guid::make(node["guid"].as<std::string>());
-					meta.type = node["type"].as<std::string>();
-					meta.root = node["root"].as<std::string>();
-					meta.path = node["path"].as<std::string>();
+					if (!meta.load(meta_path)) {
+						continue;
+					}
 				}
 				else {
 					// --- guess type ---
@@ -83,21 +121,9 @@ namespace z1 {
 					meta.root = root.generic_string();
 					meta.path = fs::relative(path, root).generic_string();
 
-					YAML::Emitter emitter;
-
-					emitter << YAML::BeginMap;
-					emitter << YAML::Key << "guid" << YAML::Value << meta.guid.value;
-					emitter << YAML::Key << "type" << YAML::Value << meta.type;
-					emitter << YAML::Key << "root" << YAML::Value << meta.root;
-					emitter << YAML::Key << "path" << YAML::Value << meta.path;
-					emitter << YAML::EndMap;
-
-					CORE_INFO("create meta for asset: {0}", meta.path);
-
-					fs::create_directories(meta_path.parent_path());
-					std::ofstream fout(meta_path);
-					fout << emitter.c_str();
-					fout.close();
+					if (meta.save(meta_path)) {
+						CORE_INFO("create meta for asset: {0}", meta.path);
+					}
 				}
 
 				// --- register asset ---

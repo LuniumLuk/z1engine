@@ -29,7 +29,7 @@ namespace YAML {
 
 namespace z1::io {
 
-	void save_static_mesh_storage(Filepath const& path, std::shared_ptr<StaticMesh::Storage> const& storage) {
+	bool save_static_mesh_storage(Filepath const& path, std::shared_ptr<StaticMesh::Storage> const& storage) {
 		BinaryFile file{};
 
 		auto vdata_size = storage->vertices.size() * sizeof(StaticMesh::VertexData);
@@ -67,7 +67,7 @@ namespace z1::io {
 		std::cout << "----yaml----\n";
 
 		file.set_yaml(yaml.c_str());
-		file.save(path);
+		return file.save(path);
 	}
 
 	std::shared_ptr<StaticMesh::Storage> load_static_mesh_storage(Filepath const& path) {

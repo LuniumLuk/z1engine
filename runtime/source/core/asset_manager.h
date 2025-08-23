@@ -26,6 +26,9 @@ namespace z1 {
 		std::string type;
 		std::string root;
 		std::string path;
+
+		bool save(Filepath const& path) const;
+		bool load(Filepath const& path);
 	};
 
 	struct API AssetManager {

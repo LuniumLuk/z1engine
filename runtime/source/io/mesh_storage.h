@@ -6,7 +6,7 @@
 
 namespace z1::io {
 
-	void save_static_mesh_storage(Filepath const& path, std::shared_ptr<StaticMesh::Storage> const& storage);
+	bool save_static_mesh_storage(Filepath const& path, std::shared_ptr<StaticMesh::Storage> const& storage);
 
 	std::shared_ptr<StaticMesh::Storage> load_static_mesh_storage(Filepath const& path);
 

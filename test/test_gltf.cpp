@@ -14,8 +14,13 @@ int main() {
 	Filepath cwd = std::filesystem::current_path();
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
-	auto scene = std::make_shared<Scene>();
-	io::load_gltf_scene(scene, "../../editor/asset/mesh/DamagedHelmet.glb");
+	io::GltfImporterSettings settings{};
+	settings.name = "DamagedHelmet";
+	settings.source_path = "../../editor/asset/mesh/DamagedHelmet.glb";
+	settings.target_path = "DamagedHelmet";
+	settings.cache_dir = "cache";
+
+	io::GltfImporter::import(settings);
 
 	return 0;
 }
