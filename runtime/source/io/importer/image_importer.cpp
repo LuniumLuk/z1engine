@@ -47,9 +47,11 @@ namespace z1::io {
 
 		if (file_is_ldr_image(settings.file)) {
 			bakery::compress_image(settings.file, import_file);
+			meta.extra["hdr"] = false;
 		}
 		else if (file_is_hdr_image(settings.file)) {
 			g_runtime_context.m_file_system->copy_file(settings.file, import_file);
+			meta.extra["hdr"] = true;
 		}
 		meta.save(import_meta);
 

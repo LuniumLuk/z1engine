@@ -128,6 +128,7 @@ namespace z1 {
 
 	bool AssetManager::register_asset(AssetMetaData const& meta, Filepath const& root) {
 		Filepath file = root / meta.path;
+		file += ".bin";
 
 		if (!register_guid(meta.guid)) {
 			CORE_ERROR("duplicate guid found: {0}, file: {1}", meta.guid, file.generic_string());
@@ -135,7 +136,7 @@ namespace z1 {
 		}
 
 		m_asset_metas[meta.guid] = meta;
-		m_guid_to_file_mapping[meta.guid] = root / meta.path;
+		m_guid_to_file_mapping[meta.guid] = file;
 		m_path_to_guid_mapping[meta.path] = meta.guid;
 
 		return true;

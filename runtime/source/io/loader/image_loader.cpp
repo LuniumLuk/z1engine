@@ -26,13 +26,8 @@ namespace z1::io {
 		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
-	std::shared_ptr<Image2D> load_image2d_asset(Filepath const& path) {
+	std::shared_ptr<Image2D> load_image2d_asset(Guid const& guid) {
 		PROFILE_FUNCTION();
-		auto guid = g_runtime_context.m_asset_manager->get_guid_from_path(path);
-		if (!guid.is_valid()) {
-			CORE_ERROR("failed to find asset with path: {0}", path);
-			return nullptr;
-		}
 		auto meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 
@@ -45,51 +40,12 @@ namespace z1::io {
 			wrap_mode = static_cast<WrapMode>(meta.extra["wrap_mode"].as<int>());
 		}
 
-		return io::load_image2d(file, sampler_mode, wrap_mode);
-	}
-
-	std::shared_ptr<Image2D> load_image2d(
-		Filepath const& file,
-		SamplerMode sampler_mode,
-		WrapMode wrap_mode) {
-		PROFILE_FUNCTION();
-		auto ext = file.extension().string();
-
-		if (file_is_compressed_image(file)) {
-			int width, height;
-			auto data = bakery::load_compressed_image(file, &width, &height);
-			if (data) {
-				auto image = Image2D::create(
-					data, width * height * 4 * sizeof(unsigned char),
-					width, height,
-					ImageFormat::RGBA8,
-					sampler_mode, wrap_mode);
-				bakery::free_loaded_data(data);
-				return image;
-			}
-			else {
-				CORE_ERROR("failed to load image: {0}", file);
-			}
+		bool is_hdr = false;
+		if (meta.extra["hdr"]) {
+			is_hdr = meta.extra["hdr"].as<bool>();
 		}
 
-		if (file_is_ldr_image(file)) {
-			int width, height;
-			auto data = bakery::load_uncompressed_image(file, &width, &height);
-			if (data) {
-				auto image = Image2D::create(
-					data, width * height * 4 * sizeof(unsigned char),
-					width, height,
-					ImageFormat::RGBA8,
-					sampler_mode, wrap_mode);
-				bakery::free_loaded_data(data);
-				return image;
-			}
-			else {
-				CORE_ERROR("failed to load image: {0}", file);
-			}
-		}
-
-		if (file_is_hdr_image(file)) {
+		if (is_hdr) {
 			float* data;
 			const char* err = nullptr;
 			int width, height;
@@ -111,8 +67,23 @@ namespace z1::io {
 				}
 			}
 		}
+		else {
+			int width, height;
+			auto data = bakery::load_compressed_image(file, &width, &height);
+			if (data) {
+				auto image = Image2D::create(
+					data, width * height * 4 * sizeof(unsigned char),
+					width, height,
+					ImageFormat::RGBA8,
+					sampler_mode, wrap_mode);
+				bakery::free_loaded_data(data);
+				return image;
+			}
+			else {
+				CORE_ERROR("failed to load image: {0}", file);
+			}
+		}
 
-		CORE_ERROR("unsupported image format: {0}", file);
 		return nullptr;
 	}
 

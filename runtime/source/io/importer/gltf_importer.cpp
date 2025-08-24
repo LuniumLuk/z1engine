@@ -355,6 +355,7 @@ namespace z1::io {
 
 			meta.extra["sampler_mode"] = (int)sampler_mode;
 			meta.extra["wrap_mode"] = (int)wrap_mode;
+			meta.extra["hdr"] = false;
 
 			g_runtime_context.m_asset_manager->register_asset(meta, settings.root);
 
