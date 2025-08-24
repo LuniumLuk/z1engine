@@ -4,10 +4,6 @@ using namespace z1;
 
 struct OurApp : Application {
 	void init() override {
-		for (auto const& root : g_runtime_context.m_asset_manager->get_search_roots()) {
-			std::cout << root << std::endl;
-		}
-
 		terminate();
 	};
 };

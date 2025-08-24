@@ -34,4 +34,20 @@ namespace z1 {
 		return false;
 	}
 
+	bool FileSystem::copy_file(Filepath const& src, Filepath const& dst, bool overwrite) noexcept {
+		namespace fs = std::filesystem;
+		try {
+			fs::copy_file(src, dst, overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::skip_existing);
+			return true;
+		}
+		catch (const fs::filesystem_error& e) {
+			CORE_ERROR("failed to copy file from {0} to {1}, reason: {2}", src.generic_string(), dst.generic_string(), e.what());
+			return false;
+		}
+		catch (const std::exception& e) {
+			CORE_ERROR("failed to copy file from {0} to {1}, reason: {2}", src.generic_string(), dst.generic_string(), e.what());
+			return false;
+		}
+	}
+
 }

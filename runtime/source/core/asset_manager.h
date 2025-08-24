@@ -3,8 +3,9 @@
 #include "core/core.h"
 #include "core/guid.h"
 #include "render/shader.h"
-#include "io/image_loader.h"
-#include "io/obj_loader.h"
+#include "io/loader/image_loader.h"
+#include "io/loader/obj_loader.h"
+#include "yaml-cpp/yaml.h"
 
 namespace z1 {
 
@@ -24,8 +25,8 @@ namespace z1 {
 	struct AssetMetaData {
 		Guid guid;
 		std::string type;
-		std::string root;
-		std::string path;
+		Filepath path;
+		YAML::Node extra;
 
 		bool save(Filepath const& path) const;
 		bool load(Filepath const& path);
@@ -35,14 +36,16 @@ namespace z1 {
 		AssetManager();
 		~AssetManager();
 
-		void scan_assets(bool force_refresh = false);
-		void import_asset(Guid const& guid, bool force_refresh = false);
-		void remove_asset(Guid const& guid, bool delete_source = true);
+		void scan_content();
+
+		//void scan_assets(bool force_refresh = false);
+		//void import_asset(Guid const& guid, bool force_refresh = false);
+		void remove_asset(Guid const& guid);
 
 		bool has_asset(Guid const& guid) const;
 		AssetMetaData get_meta(Guid const& guid) const;
 
-		Guid get_guid_from_path(Filepath const& path) {
+		Guid get_guid_from_path(Filepath const& path) const {
 			auto it = m_path_to_guid_mapping.find(path);
 			if (it != m_path_to_guid_mapping.end()) {
 				return it->second;
@@ -70,12 +73,12 @@ namespace z1 {
 				return it->second;
 			}
 
-			if (m_cached_files.find(guid) == m_cached_files.end()) {
+			if (m_guid_to_file_mapping.find(guid) == m_guid_to_file_mapping.end()) {
 				CORE_ERROR("failed to find asset with guid: {0}", guid);
 				return nullptr;
 			}
 
-			auto asset = AssetLoader<T>::load(m_cached_files[guid]);
+			auto asset = AssetLoader<T>::load(m_guid_to_file_mapping[guid]);
 			if constexpr (has_m_guid<T>::value) {
 				asset->m_guid = guid;
 			}
@@ -84,12 +87,19 @@ namespace z1 {
 			return asset;
 		}
 
-		std::vector<Filepath> const& get_search_roots() const {
-			return m_search_roots;
+		std::vector<Filepath> const& get_content_roots() const {
+			return m_content_roots;
 		}
 
-		void add_search_root(Filepath const& root) {
-			m_search_roots.push_back(root);
+		void add_content_root(Filepath const& root) {
+			m_content_roots.push_back(root);
+		}
+
+		Filepath get_file_from_guid(Guid const& guid) const {
+			if (m_guid_to_file_mapping.find(guid) != m_guid_to_file_mapping.end()) {
+				return m_guid_to_file_mapping.at(guid);
+			}
+			return {};
 		}
 
 		Filepath resolve_path(Filepath const& path) const {
@@ -98,15 +108,22 @@ namespace z1 {
 				return path;
 			}
 
-			// search in all configured search paths
-			for (auto const& root : get_search_roots()) {
-				auto candidate = root / path;
-				if (std::filesystem::exists(candidate)) {
-					return candidate;
-				}
+			auto guid = get_guid_from_path(path);
+			if (!guid.is_valid()) {
+				return {};
 			}
-			return {};
+
+			auto file = get_file_from_guid(guid);
+			if (!std::filesystem::exists(file)) {
+				return {};
+			}
+
+			return file;
 		}
+
+		bool register_asset(AssetMetaData const& meta, Filepath const& root);
+		// check if guid is already registered, if not register it and return true
+		bool register_guid(Guid const& guid);
 
 	private:
 		template<typename T>
@@ -125,28 +142,18 @@ namespace z1 {
 			return *std::any_cast<std::unordered_map<Guid, std::shared_ptr<T>>>(&it->second);
 		}
 
-		bool register_guid(Guid const& guid);
-		bool copy_file(Filepath const& src, Filepath const& dst) const;
-
-		std::vector<Filepath> m_search_roots;
-		Filepath m_cache_dir;
+		std::vector<Filepath> m_content_roots;
 		std::unordered_map<size_t, std::any> m_storages;
 		std::unordered_map<Guid, AssetMetaData> m_asset_metas;
 		std::unordered_set<Guid> m_guid_registry;
-		std::unordered_map<Guid, Filepath> m_cached_files;
+		std::unordered_map<Guid, Filepath> m_guid_to_file_mapping;
 		std::unordered_map<Filepath, Guid> m_path_to_guid_mapping;
 	};
 
 	template<>
 	struct API AssetLoader<Image2D> {
 		static std::shared_ptr<Image2D> load(Filepath const& path) {
-			auto full_path = g_runtime_context.m_asset_manager->resolve_path(path);
-			if (!full_path.empty()) {
-				return io::load_image2d(full_path);
-			}
-
-			CORE_ERROR("failed to load Image2D asset: {0}", path);
-			return nullptr;
+			return io::load_image2d_asset(path);
 		}
 	};
 

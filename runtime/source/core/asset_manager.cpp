@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "core/asset_manager.h"
+
 #include "bakery.h"
-#include "yaml-cpp/yaml.h"
 
 namespace z1 {
 	namespace fs = std::filesystem;
@@ -12,8 +12,8 @@ namespace z1 {
 		emitter << YAML::BeginMap;
 		emitter << YAML::Key << "guid" << YAML::Value << guid.value;
 		emitter << YAML::Key << "type" << YAML::Value << type;
-		emitter << YAML::Key << "root" << YAML::Value << root;
-		emitter << YAML::Key << "path" << YAML::Value << path;
+		emitter << YAML::Key << "path" << YAML::Value << path.generic_string();
+		emitter << YAML::Key << "extra" << YAML::Value << extra;
 		emitter << YAML::EndMap;
 
 		try {
@@ -36,8 +36,8 @@ namespace z1 {
 
 			guid = Guid::make(node["guid"].as<std::string>());
 			type = node["type"].as<std::string>();
-			root = node["root"].as<std::string>();
 			path = node["path"].as<std::string>();
+			extra = node["extra"];
 		}
 		catch (std::exception const& e) {
 			CORE_ERROR("failed to load from {}: {}", p.generic_string(), e.what());
@@ -51,24 +51,23 @@ namespace z1 {
 		Filepath cwd = fs::current_path();
 		CORE_INFO("current working directory: {0}", cwd.generic_string());
 
-		m_search_roots.push_back("editor/asset");
-		m_search_roots.push_back("runtime/asset");
-		m_cache_dir = "cache";
-
-		scan_assets();
+		m_content_roots.push_back("content");
+		scan_content();
 	}
 
 	AssetManager::~AssetManager() {
 		CORE_DEBUG("shutting down AssetManager ...");
 	}
 
-	void AssetManager::scan_assets(bool force_refresh) {
+	void AssetManager::scan_content() {
 		m_asset_metas.clear();
 		m_guid_registry.clear();
+		m_guid_to_file_mapping.clear();
+		m_path_to_guid_mapping.clear();
 
-		for (auto const& root : get_search_roots()) {
+		for (auto const& root : get_content_roots()) {
 			if (!fs::exists(root)) {
-				CORE_WARN("missing root path: {0}", root.generic_string());
+				CORE_WARN("missing content path: {0}", root.generic_string());
 				continue;
 			}
 
@@ -76,198 +75,41 @@ namespace z1 {
 				if (!entry.is_regular_file())
 					continue;
 
-				auto const& path = entry.path();
-				if (path.extension() == ".yaml")
-					continue; // skip meta files themselves
-
-				// check if meta exists
-				fs::path meta_path = path;
-				meta_path += ".meta.yaml";
+				auto const& file = entry.path();
+				if (file.extension() != ".yaml")
+					continue; // skip non-meta files
 
 				AssetMetaData meta;
-				bool has_meta = fs::exists(meta_path);
-				if (force_refresh) {
-					has_meta = false;
-				}
-
-				if (has_meta) {
-					if (!meta.load(meta_path)) {
-						continue;
-					}
-				}
-				else {
-					// --- guess type ---
-					std::string type{};
-					if (io::file_is_ldr_image(path) || io::file_is_hdr_image(path)) {
-						type = "image";
-					}
-					else if (io::file_is_compressed_image(path)) {
-						type = "image";
-					}
-					else if (io::file_is_obj_mesh(path)) {
-						type = "static mesh";
-					}
-					else if (file_is_shader(path)) {
-						type = "shader";
-					}
-					else {
-						CORE_WARN("skip unknown asset: {0}", path.generic_string());
-						continue;
-					}
-
-					// --- create new meta ---
-					meta.guid = Guid::generate();
-					meta.type = type;
-					meta.root = root.generic_string();
-					meta.path = fs::relative(path, root).generic_string();
-
-					if (meta.save(meta_path)) {
-						CORE_INFO("create meta for asset: {0}", meta.path);
-					}
-				}
-
-				// --- register asset ---
-				if (!register_guid(meta.guid)) {
-					CORE_ERROR("duplicated guid detected: {0} for: {1}", meta.guid, meta.path);
+				if (!meta.load(file)) {
+					CORE_ERROR("failed to load meta file: {0}", file.generic_string());
 					continue;
 				}
-				m_asset_metas[meta.guid] = meta;
-				m_path_to_guid_mapping[meta.path] = meta.guid;
 
-				// --- import asset ---
-				import_asset(meta.guid, force_refresh);
+				if (!register_asset(meta, root)) {
+					continue;
+				}
 			}
 		}
 	}
 
-	void AssetManager::import_asset(Guid const& guid, bool force_refresh) {
+	void AssetManager::remove_asset(Guid const& guid) {
 		AssetMetaData const& meta = get_meta(guid);
 		if (!meta.guid.is_valid()) {
 			return;
 		}
 
-		// --- resolve the physical asset path ---
-		Filepath root = meta.root;
-		if (root.empty() || !fs::exists(root)) {
-			CORE_ERROR("asset import failed, root not found for asset: {0}, root: {1}", meta.path, meta.root);
-			return;
-		}
-
-		Filepath src_path = root / meta.path;
-		if (!fs::exists(src_path)) {
-			CORE_ERROR("asset import failed, source file not exists: {0}", src_path.generic_string());
-			return;
-		}
-
-		// --- load meta.yaml ---
-		Filepath meta_path = src_path;
-		meta_path += ".meta.yaml";
-
-		YAML::Node node = YAML::LoadFile(meta_path.string());
-		std::string type = node["type"].as<std::string>();
-
-		// --- process based on type ---
-		Filepath cache_path;
-		Filepath cache_meta_path;
-		if (type == "image") {
-			cache_path = m_cache_dir / (guid.value + ".bin");
-			cache_meta_path = cache_path;
-			cache_meta_path += ".meta.yaml";
-
-			if (fs::exists(cache_path))
-
-			fs::create_directories(cache_path.parent_path());
-
-			if (!fs::exists(cache_path) || force_refresh) {
-				if (io::file_is_compressed_image(src_path)) {
-					copy_file(src_path, cache_path);
-				}
-				else if (io::file_is_ldr_image(src_path)) {
-					bakery::compress_image(src_path, cache_path);
-				}
-				else if (io::file_is_hdr_image(src_path)) {
-					copy_file(src_path, cache_path);
-				}
-			}
-		}
-		else if (type == "shader") {
-			cache_path = m_cache_dir / meta.path;
-			cache_meta_path = cache_path;
-			cache_meta_path += ".meta.yaml";
-
-			fs::create_directories(cache_path.parent_path());
-
-			if (!fs::exists(cache_path) || force_refresh) {
-				copy_file(src_path, cache_path);
-			}
-		}
-		else if (type == "static mesh") {
-			cache_path = m_cache_dir / meta.path;
-			cache_meta_path = cache_path;
-			cache_meta_path += ".meta.yaml";
-
-			fs::create_directories(cache_path.parent_path());
-
-			if (!fs::exists(cache_path) || force_refresh) {
-				copy_file(src_path, cache_path);
-			}
-
-			if (src_path.extension() == ".obj") {
-				Filepath mtl_path = meta.path;
-				mtl_path.replace_extension(".mtl");
-				Filepath src_mtl_path = root / mtl_path;
-				if (fs::exists(src_mtl_path)) {
-					Filepath cache_mtl_path = m_cache_dir / mtl_path;
-					if (!fs::exists(cache_mtl_path) || force_refresh) {
-						copy_file(src_mtl_path, cache_mtl_path);
-					}
-				}
-			}
-		}
-		else {
-			CORE_ERROR("asset import failed, unsupported type: {0}", type);
-			return;
-		}
-
-		if (!fs::exists(cache_meta_path) || force_refresh) {
-			CORE_INFO("import asset to cache: {0}", meta.path);
-			copy_file(meta_path, cache_meta_path);
-		}
-		m_cached_files[meta.guid] = cache_path;
-		m_path_to_guid_mapping[meta.path] = meta.guid;
-	}
-
-	void AssetManager::remove_asset(Guid const& guid, bool delete_source) {
-		AssetMetaData const& meta = get_meta(guid);
-		if (!meta.guid.is_valid()) {
-			return;
-		}
+		Filepath file = resolve_path(meta.path);
 
 		m_guid_registry.erase(guid);
 		m_asset_metas.erase(m_asset_metas.find(guid));
+		m_guid_to_file_mapping.erase(m_guid_to_file_mapping.find(guid));
 		m_path_to_guid_mapping.erase(m_path_to_guid_mapping.find(meta.path));
 
-		auto it = m_cached_files.find(guid);
-		if (it != m_cached_files.end()) {
-			Filepath cached_meta_path = it->second;
+		if (!file.empty()) {
+			Filepath cached_meta_path = file;
 			cached_meta_path += ".meta.yaml";
-			fs::remove(it->second);
+			fs::remove(file);
 			fs::remove(cached_meta_path);
-			m_cached_files.erase(it);
-		}
-
-		if (delete_source) {
-			Filepath root = meta.root;
-			Filepath src_path = root / meta.path;
-			if (fs::exists(src_path)) {
-				fs::remove(src_path);
-			}
-
-			Filepath meta_path = src_path;
-			meta_path += ".meta.yaml";
-			if (fs::exists(meta_path)) {
-				fs::remove(meta_path);
-			}
 		}
 	}
 
@@ -284,6 +126,21 @@ namespace z1 {
 		return it->second;
 	}
 
+	bool AssetManager::register_asset(AssetMetaData const& meta, Filepath const& root) {
+		Filepath file = root / meta.path;
+
+		if (!register_guid(meta.guid)) {
+			CORE_ERROR("duplicate guid found: {0}, file: {1}", meta.guid, file.generic_string());
+			return false;
+		}
+
+		m_asset_metas[meta.guid] = meta;
+		m_guid_to_file_mapping[meta.guid] = root / meta.path;
+		m_path_to_guid_mapping[meta.path] = meta.guid;
+
+		return true;
+	}
+
 	bool AssetManager::register_guid(Guid const& guid) {
 		auto [it, inserted] = m_guid_registry.insert(guid);
 
@@ -292,21 +149,6 @@ namespace z1 {
 		}
 
 		return true;
-	}
-
-	bool AssetManager::copy_file(Filepath const& src, Filepath const& dst) const {
-		try {
-			fs::copy_file(src, dst, fs::copy_options::overwrite_existing);
-			return true;
-		}
-		catch (const fs::filesystem_error& e) {
-			CORE_ERROR("failed to copy file from {0} to {1}, reason: {2}", src.generic_string(), dst.generic_string(), e.what());
-			return false;
-		}
-		catch (const std::exception& e) {
-			CORE_ERROR("failed to copy file from {0} to {1}, reason: {2}", src.generic_string(), dst.generic_string(), e.what());
-			return false;
-		}
 	}
 
 }

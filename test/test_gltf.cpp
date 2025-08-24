@@ -16,9 +16,9 @@ int main() {
 
 	io::GltfImporterSettings settings{};
 	settings.name = "DamagedHelmet";
-	settings.source_path = "../../editor/asset/mesh/DamagedHelmet.glb";
-	settings.target_path = "DamagedHelmet";
-	settings.cache_dir = "cache";
+	settings.file = "../../editor/asset/mesh/DamagedHelmet.glb";
+	settings.path = "DamagedHelmet";
+	settings.root = "content";
 
 	io::GltfImporter::import(settings);
 

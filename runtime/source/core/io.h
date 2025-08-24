@@ -13,6 +13,7 @@ namespace z1 {
 	struct API FileSystem {
 		std::string read_file(Filepath const& path) noexcept;
 		bool write_file(Filepath const& path, void const* data, size_t size) noexcept;
+		bool copy_file(Filepath const& src, Filepath const& dst, bool overwrite = true) noexcept;
 
 #ifdef ENGINE_DIR
 		Filepath m_engine_dir = ENGINE_DIR;

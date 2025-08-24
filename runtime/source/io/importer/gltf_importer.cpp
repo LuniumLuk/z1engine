@@ -1,6 +1,6 @@
 #include "pch.h"
-#include "io/gltf_importer.h"
-#include "io/mesh_storage.h"
+#include "io/importer/gltf_importer.h"
+#include "io/loader/mesh_storage.h"
 #include "scene/entity.h"
 #include "scene/component/mesh.h"
 #include "render/mesh.h"
@@ -9,6 +9,7 @@
 #include "bakery.h"
 #include "tinygltf/tiny_gltf.h"
 #include "glm/gtc/type_ptr.hpp"
+#include "yaml-cpp/yaml.h"
 
 namespace z1::io {
 
@@ -242,21 +243,21 @@ namespace z1::io {
 			}
 
 			std::string name = mesh.name.empty() ? ("SM_" + std::to_string(node.mesh)) : mesh.name;
-			Filepath path = settings.target_path / name;
+			Filepath import_file = settings.root / settings.path / (name + ".bin");
+			Filepath import_meta = import_file;
+			import_meta += ".meta.yaml";
 
 			AssetMetaData meta{};
 			meta.guid = Guid::generate();
 			meta.type = "static mesh";
-			meta.path = path.generic_string();
+			meta.path = settings.path / name;
 
-			Filepath file = settings.cache_dir / (meta.guid.value + ".bin");
-			Filepath meta_file = file;
-			meta_file += ".meta.yaml";
+			g_runtime_context.m_asset_manager->register_asset(meta, settings.root);
 
-			if (io::save_static_mesh_storage(file, mesh_storage)) {
-				meta.save(meta_file);
+			if (io::save_static_mesh_storage(import_file, mesh_storage)) {
+				meta.save(import_meta);
 				ret.assets.push_back(meta);
-				ret.files.push_back(file);
+				ret.files.push_back(import_file);
 			}
 
 			//auto static_mesh = std::make_shared<StaticMesh>(mesh_storage);
@@ -321,26 +322,50 @@ namespace z1::io {
 			}
 
 			std::string name = image.name.empty() ? ("T_" + std::to_string(tex.source)) : image.name;
-			Filepath path = settings.target_path / name;
+			Filepath import_file = settings.root / settings.path / (name + ".bin");
+			Filepath import_meta = import_file;
+			import_meta += ".meta.yaml";
 
 			AssetMetaData meta{};
 			meta.guid = Guid::generate();
 			meta.type = "image";
-			meta.path = path.generic_string();
+			meta.path = settings.path / name;
 
-			Filepath file = settings.cache_dir / (meta.guid.value + ".bin");
-			Filepath meta_file = file;
-			meta_file += ".meta.yaml";
+			auto const& sampler = model.samplers[tex.sampler];
+			// TODO
+			// here we only use min filter as the sampler mode
+			SamplerMode sampler_mode = SamplerMode::Linear;
+			switch (sampler.minFilter) {
+			case TINYGLTF_TEXTURE_FILTER_NEAREST:
+			case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+			case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+				sampler_mode = SamplerMode::Nearest; break;
+			default: break;
+			}
+
+			WrapMode wrap_mode = WrapMode::Repeat;
+			switch (sampler.wrapS) {
+			case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+				wrap_mode = WrapMode::ClampToEdge; break;
+			case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+				wrap_mode = WrapMode::MirroredRepeat; break;
+			default: break;
+			}
+
+			meta.extra["sampler_mode"] = (int)sampler_mode;
+			meta.extra["wrap_mode"] = (int)wrap_mode;
+
+			g_runtime_context.m_asset_manager->register_asset(meta, settings.root);
 
 			try {
-				std::filesystem::create_directories(file.parent_path());
+				std::filesystem::create_directories(import_file.parent_path());
 				bakery::compress_image_data(
-					file,
+					import_file,
 					data_ptr,
 					image.width,
 					image.height
 				);
-				meta.save(meta_file);
+				meta.save(import_meta);
 			}
 			catch (std::exception const& e) {
 				CORE_ERROR("failed to compress image {}: {}", name, e.what());
@@ -348,18 +373,15 @@ namespace z1::io {
 			}
 
 			ret.assets.push_back(meta);
-			ret.files.push_back(file);
+			ret.files.push_back(import_file);
 		}
 	}
 
 	ImportResult GltfImporter::import(GltfImporterSettings const& settings) {
 		ImportResult ret{};
 
-		auto const& src_path = settings.source_path;
-		auto const& tar_path = settings.target_path;
-
-		if (!can_import(src_path)) {
-			CORE_WARN("{0} is not a common gltf file", src_path.generic_string());
+		if (!can_import(settings.file)) {
+			CORE_WARN("{0} is not a common gltf file", settings.file.generic_string());
 			return ret;
 		}
 
@@ -368,10 +390,10 @@ namespace z1::io {
 		std::string err;
 		std::string warn;
 
-		bool result = loader.LoadBinaryFromFile(&model, &err, &warn, src_path.string());
+		bool result = loader.LoadBinaryFromFile(&model, &err, &warn, settings.file.string());
 
 		if (!err.empty()) {
-			CORE_ERROR("failed to load static mesh: {0}", src_path.generic_string());
+			CORE_ERROR("failed to load static mesh: {0}", settings.file.generic_string());
 			CORE_ERROR("TinyGLTF: {0}", err);
 			return ret;
 		}
@@ -379,7 +401,7 @@ namespace z1::io {
 			CORE_WARN("TinyGLTF: {0}", warn);
 		}
 		if (!result) {
-			CORE_ERROR("failed to load static mesh: {0}", src_path.generic_string());
+			CORE_ERROR("failed to load static mesh: {0}", settings.file.generic_string());
 			return ret;
 		}
 

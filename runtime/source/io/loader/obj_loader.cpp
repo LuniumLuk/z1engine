@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "io/obj_loader.h"
+#include "io/loader/obj_loader.h"
 
 #include "tinyobjloader/tiny_obj_loader.h"
 

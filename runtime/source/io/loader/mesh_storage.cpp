@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "io/mesh_storage.h"
+#include "io/loader/mesh_storage.h"
 #include "yaml-cpp/yaml.h"
 
 namespace YAML {
