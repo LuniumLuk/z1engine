@@ -13,7 +13,7 @@
 
 namespace z1::io {
 
-	bool GltfImporter::can_import(Filepath const& path) {
+	bool GltfImporter::can_import(Filepath const& path) noexcept {
 		auto ext = path.extension().string();
 		const std::vector<std::string> exts = { ".gltf", ".glb" };
 		return std::find(exts.begin(), exts.end(), ext) != exts.end();
@@ -333,7 +333,8 @@ namespace z1::io {
 
 			auto const& sampler = model.samplers[tex.sampler];
 			// TODO
-			// here we only use min filter as the sampler mode
+			// here we only use min filter as sampler mode
+			// and only use wrap s as wrap mode
 			SamplerMode sampler_mode = SamplerMode::Linear;
 			switch (sampler.minFilter) {
 			case TINYGLTF_TEXTURE_FILTER_NEAREST:

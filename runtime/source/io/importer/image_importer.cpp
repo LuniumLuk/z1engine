@@ -34,13 +34,6 @@ namespace z1::io {
 		Filepath import_meta = import_file;
 		import_meta += ".meta.yaml";
 
-		if (file_is_ldr_image(settings.file)) {
-			bakery::compress_image(settings.file, import_file);
-		}
-		else if (file_is_hdr_image(settings.file)) {
-			g_runtime_context.m_file_system->copy_file(settings.file, import_file);
-		}
-
 		AssetMetaData meta{};
 		meta.guid = Guid::generate();
 		meta.type = "image";
@@ -48,7 +41,17 @@ namespace z1::io {
 		meta.extra["sampler_mode"] = (int)settings.sampler_mode;
 		meta.extra["wrap_mode"] = (int)settings.wrap_mode;
 
-		g_runtime_context.m_asset_manager->register_asset(meta, settings.root);
+		if (!g_runtime_context.m_asset_manager->register_asset(meta, settings.root)) {
+			return ret;
+		}
+
+		if (file_is_ldr_image(settings.file)) {
+			bakery::compress_image(settings.file, import_file);
+		}
+		else if (file_is_hdr_image(settings.file)) {
+			g_runtime_context.m_file_system->copy_file(settings.file, import_file);
+		}
+		meta.save(import_meta);
 
 		ret.assets.push_back(meta);
 		ret.files.push_back(import_file);
