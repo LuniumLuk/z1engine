@@ -14,13 +14,23 @@ int main() {
 	Filepath cwd = std::filesystem::current_path();
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
-	io::GltfImporterSettings settings{};
-	settings.name = "DamagedHelmet";
-	settings.file = "../../editor/asset/mesh/DamagedHelmet.glb";
-	settings.path = "DamagedHelmet";
-	settings.root = "content";
+	z1::g_runtime_context.m_asset_manager->get_content_roots();
 
-	io::GltfImporter::import(settings);
+	{
+		io::GltfImporterSettings settings{};
+		settings.file = "../../editor/asset/mesh/DamagedHelmet.glb";
+		settings.path = "DamagedHelmet";
+		settings.root = "content";
+		io::GltfImporter().import(settings);
+	}
+
+	{
+		io::ImageImporterSettings settings{};
+		settings.file = "../../editor/asset/texture/roguelikeSheet_transparent.png";
+		settings.path = "roguelikeSheet_transparent";
+		settings.root = "content";
+		io::ImageImporter().import(settings);
+	}
 
 	return 0;
 }

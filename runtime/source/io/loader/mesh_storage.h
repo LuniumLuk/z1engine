@@ -10,4 +10,6 @@ namespace z1::io {
 
 	std::shared_ptr<StaticMesh::Storage> load_static_mesh_storage(Filepath const& path);
 
+	std::shared_ptr<StaticMesh> load_static_mesh_asset(Guid const& guid);
+
 }

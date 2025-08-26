@@ -15,7 +15,6 @@ namespace z1::io {
 	};
 
 	struct ImporterSettings {
-		std::string name;
 		Filepath file;
 		Filepath path;
 		Filepath root;

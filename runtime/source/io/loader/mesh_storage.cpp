@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "io/loader/mesh_storage.h"
+#include "core/core.h"
+#include "core/asset_manager.h"
 #include "util/yaml.h"
 
 namespace z1::io {
@@ -46,7 +48,71 @@ namespace z1::io {
 	}
 
 	std::shared_ptr<StaticMesh::Storage> load_static_mesh_storage(Filepath const& path) {
-		return nullptr;
+		BinaryFile file{};
+
+		if (!file.load(path)) {
+			CORE_ERROR("failed to load static mesh storage: {0}", path.generic_string());
+			return nullptr;
+		}
+
+		YAML::Node node = YAML::Load(file.get_yaml());
+		auto storage = std::make_shared<StaticMesh::Storage>();
+
+		storage->guid.value = node["guid"].as<std::string>();
+		YAML::convert<glm::vec3>::decode(node["bound_min"], storage->bound_min);
+		YAML::convert<glm::vec3>::decode(node["bound_max"], storage->bound_max);
+		auto vertex_count = node["vertex_count"].as<size_t>();
+		auto index_count = node["index_count"].as<size_t>();
+
+		for (auto const& prim_node : node["primitives"]) {
+			StaticMesh::Primitive::Storage prim_storage{};
+			prim_storage.index_start = prim_node["index_start"].as<uint32_t>();
+			prim_storage.index_count = prim_node["index_count"].as<uint32_t>();
+			prim_storage.vertex_count = prim_node["vertex_count"].as<uint32_t>();
+			YAML::convert<glm::vec3>::decode(prim_node["bound_min"], prim_storage.bound_min);
+			YAML::convert<glm::vec3>::decode(prim_node["bound_max"], prim_storage.bound_max);
+			prim_storage.material.value = prim_node["guid"].as<std::string>();
+			prim_storage.has_indices = prim_node["has_indices"].as<bool>();
+			prim_storage.has_normal = prim_node["has_normal"].as<bool>();
+			prim_storage.has_tangent = prim_node["has_tangent"].as<bool>();
+			storage->primitives.push_back(prim_storage);
+		}
+
+		storage->vertices.resize(vertex_count);
+		storage->indices.resize(index_count);
+
+		auto vdata_size = vertex_count * sizeof(StaticMesh::VertexData);
+		auto idata_size = index_count * sizeof(uint32_t);
+
+		auto vdata_slice = file.get_data_slice(0, vdata_size);
+		if (vdata_slice.size != vdata_size) {
+			CORE_ERROR("corrupted static mesh storage: {0}", path.generic_string());
+			return nullptr;
+		}
+		std::memcpy(storage->vertices.data(), vdata_slice.ptr, vdata_slice.size);
+
+		auto idata_slice = file.get_data_slice(vdata_size, idata_size);
+		if (idata_slice.size != idata_size) {
+			CORE_ERROR("corrupted static mesh storage: {0}", path.generic_string());
+			return nullptr;
+		}
+		std::memcpy(storage->indices.data(), idata_slice.ptr, idata_slice.size);
+
+		return storage;
+	}
+
+	std::shared_ptr<StaticMesh> load_static_mesh_asset(Guid const& guid) {
+		PROFILE_FUNCTION();
+		auto meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
+
+		auto storage = load_static_mesh_storage(file);
+		if (!storage) {
+			CORE_ERROR("failed to load static mesh storage: {0}", file.generic_string());
+			return nullptr;
+		}
+
+		return std::make_shared<StaticMesh>(storage);
 	}
 
 }

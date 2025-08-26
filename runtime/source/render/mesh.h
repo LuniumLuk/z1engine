@@ -91,7 +91,6 @@ namespace z1 {
 			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array)
 				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(0.0f), m_bound_max(0.0f) {}
 
-
 			size_t get_triangle_count() const;
 
 			bool is_bounding_box_valid() const { return m_bound_min != m_bound_max; }

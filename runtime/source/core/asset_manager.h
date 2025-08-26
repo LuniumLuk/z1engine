@@ -17,7 +17,7 @@ namespace z1 {
 
 	template<typename T>
 	struct API AssetLoader {
-		static std::shared_ptr<T> load(Filepath const&) {
+		static std::shared_ptr<T> load(Guid const& guid) {
 			CORE_ASSERT(sizeof(T) == 0, "AssetLoader<T> not implemented for this asset type.");
 		}
 	};
@@ -78,7 +78,7 @@ namespace z1 {
 				return nullptr;
 			}
 
-			auto asset = AssetLoader<T>::load(m_guid_to_file_mapping[guid]);
+			auto asset = AssetLoader<T>::load(guid);
 			if constexpr (has_m_guid<T>::value) {
 				asset->m_guid = guid;
 			}
@@ -152,33 +152,27 @@ namespace z1 {
 
 	template<>
 	struct API AssetLoader<Image2D> {
-		static std::shared_ptr<Image2D> load(Filepath const& path) {
-			return io::load_image2d_asset(path);
+		static std::shared_ptr<Image2D> load(Guid const& guid) {
+			return io::load_image2d_asset(guid);
 		}
 	};
 
 	template<>
 	struct API AssetLoader<StaticMesh> {
-		static std::shared_ptr<StaticMesh> load(Filepath const& path) {
-			auto full_path = g_runtime_context.m_asset_manager->resolve_path(path);
-			if (!full_path.empty()) {
-				return io::load_obj_mesh(full_path);
-			}
-
-			CORE_ERROR("failed to load StaticMesh asset: {0}", path);
-			return nullptr;
+		static std::shared_ptr<StaticMesh> load(Guid const& guid) {
+			return io::load_static_mesh_asset(guid);
 		}
 	};
 
 	template<>
 	struct API AssetLoader<Shader> {
-		static std::shared_ptr<Shader> load(Filepath const& path) {
-			auto full_path = g_runtime_context.m_asset_manager->resolve_path(path);
-			if (!full_path.empty()) {
-				return Shader::create(full_path);
-			}
+		static std::shared_ptr<Shader> load(Guid const& guid) {
+			//auto full_path = g_runtime_context.m_asset_manager->resolve_path(path);
+			//if (!full_path.empty()) {
+			//	return Shader::create(full_path);
+			//}
 
-			CORE_ERROR("failed to load Shader asset: {0}", path);
+			//CORE_ERROR("failed to load Shader asset: {0}", path);
 			return nullptr;
 		}
 	};
