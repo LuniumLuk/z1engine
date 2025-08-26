@@ -21,6 +21,8 @@ namespace z1::io {
 		yaml << YAML::Key << "guid" << YAML::Value << storage->guid.value;
 		yaml << YAML::Key << "bound_min" << YAML::Value << storage->bound_min;
 		yaml << YAML::Key << "bound_max" << YAML::Value << storage->bound_max;
+		yaml << YAML::Key << "vertex_count" << YAML::Value << storage->vertices.size();
+		yaml << YAML::Key << "index_count" << YAML::Value << storage->indices.size();
 		yaml << YAML::Key << "primitives" << YAML::Value << YAML::BeginSeq;
 
 		for (auto const& prim : storage->primitives) {
@@ -59,8 +61,8 @@ namespace z1::io {
 		auto storage = std::make_shared<StaticMesh::Storage>();
 
 		storage->guid.value = node["guid"].as<std::string>();
-		YAML::convert<glm::vec3>::decode(node["bound_min"], storage->bound_min);
-		YAML::convert<glm::vec3>::decode(node["bound_max"], storage->bound_max);
+		storage->bound_min = node["bound_min"].as<glm::vec3>();
+		storage->bound_max = node["bound_max"].as<glm::vec3>();
 		auto vertex_count = node["vertex_count"].as<size_t>();
 		auto index_count = node["index_count"].as<size_t>();
 
@@ -69,8 +71,8 @@ namespace z1::io {
 			prim_storage.index_start = prim_node["index_start"].as<uint32_t>();
 			prim_storage.index_count = prim_node["index_count"].as<uint32_t>();
 			prim_storage.vertex_count = prim_node["vertex_count"].as<uint32_t>();
-			YAML::convert<glm::vec3>::decode(prim_node["bound_min"], prim_storage.bound_min);
-			YAML::convert<glm::vec3>::decode(prim_node["bound_max"], prim_storage.bound_max);
+			prim_storage.bound_min = prim_node["bound_min"].as<glm::vec3>();
+			prim_storage.bound_max = prim_node["bound_max"].as<glm::vec3>();
 			prim_storage.material.value = prim_node["guid"].as<std::string>();
 			prim_storage.has_indices = prim_node["has_indices"].as<bool>();
 			prim_storage.has_normal = prim_node["has_normal"].as<bool>();

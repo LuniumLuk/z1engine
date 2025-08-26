@@ -4,7 +4,7 @@
 #include "core/guid.h"
 #include "render/shader.h"
 #include "io/loader/image_loader.h"
-#include "io/loader/obj_loader.h"
+#include "io/loader/mesh_storage.h"
 #include "util/yaml.h"
 
 namespace z1 {
