@@ -87,12 +87,20 @@ namespace z1 {
 			return asset;
 		}
 
-		std::vector<Filepath> const& get_content_roots() const {
-			return m_content_roots;
+		static Filepath const& get_content_root() {
+			return s_content_root;
 		}
 
-		void add_content_root(Filepath const& root) {
-			m_content_roots.push_back(root);
+		static void set_content_root(Filepath const& root) {
+			s_content_root = root;
+		}
+
+		static std::vector<Filepath> const& get_shader_roots() {
+			return s_shader_roots;
+		}
+
+		static void add_shader_root(Filepath const& root) {
+			s_shader_roots.push_back(root);
 		}
 
 		Filepath get_file_from_guid(Guid const& guid) const {
@@ -121,7 +129,7 @@ namespace z1 {
 			return file;
 		}
 
-		bool register_asset(AssetMetaData const& meta, Filepath const& root);
+		bool register_asset(AssetMetaData const& meta, Filepath const& root, std::string const& ext = ".bin");
 		// check if guid is already registered, if not register it and return true
 		bool register_guid(Guid const& guid);
 
@@ -142,7 +150,8 @@ namespace z1 {
 			return *std::any_cast<std::unordered_map<Guid, std::shared_ptr<T>>>(&it->second);
 		}
 
-		std::vector<Filepath> m_content_roots;
+		static Filepath s_content_root;
+		static std::vector<Filepath> s_shader_roots;
 		std::unordered_map<size_t, std::any> m_storages;
 		std::unordered_map<Guid, AssetMetaData> m_asset_metas;
 		std::unordered_set<Guid> m_guid_registry;
@@ -167,12 +176,11 @@ namespace z1 {
 	template<>
 	struct API AssetLoader<Shader> {
 		static std::shared_ptr<Shader> load(Guid const& guid) {
-			//auto full_path = g_runtime_context.m_asset_manager->resolve_path(path);
-			//if (!full_path.empty()) {
-			//	return Shader::create(full_path);
-			//}
-
-			//CORE_ERROR("failed to load Shader asset: {0}", path);
+			auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
+			if (!file.empty()) {
+				return Shader::create(file);
+			}
+			CORE_ERROR("failed to load shader: {0}", guid.value);
 			return nullptr;
 		}
 	};

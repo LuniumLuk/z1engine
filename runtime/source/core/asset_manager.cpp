@@ -6,6 +6,10 @@
 namespace z1 {
 	namespace fs = std::filesystem;
 
+	// static member initialization
+	Filepath AssetManager::s_content_root = "";
+	std::vector<Filepath> AssetManager::s_shader_roots = {};
+
 	bool AssetMetaData::save(Filepath const& p) const {
 		YAML::Emitter emitter;
 
@@ -51,7 +55,9 @@ namespace z1 {
 		Filepath cwd = fs::current_path();
 		CORE_INFO("current working directory: {0}", cwd.generic_string());
 
-		m_content_roots.push_back("content");
+		if (s_content_root.empty()) {
+			s_content_root = cwd / "content";
+		}
 		scan_content();
 	}
 
@@ -65,10 +71,11 @@ namespace z1 {
 		m_guid_to_file_mapping.clear();
 		m_path_to_guid_mapping.clear();
 
-		for (auto const& root : get_content_roots()) {
+		{
+			auto const& root = get_content_root();
+
 			if (!fs::exists(root)) {
 				CORE_WARN("missing content path: {0}", root.generic_string());
-				continue;
 			}
 
 			for (auto& entry : fs::recursive_directory_iterator(root)) {
@@ -86,6 +93,32 @@ namespace z1 {
 				}
 
 				if (!register_asset(meta, root)) {
+					continue;
+				}
+			}
+		}
+
+		for (auto const& root : get_shader_roots()) {
+			if (!fs::exists(root)) {
+				CORE_WARN("missing shader path: {0}", root.generic_string());
+				continue;
+			}
+
+			for (auto& entry : fs::recursive_directory_iterator(root)) {
+				if (!entry.is_regular_file())
+					continue;
+
+				auto const& file = entry.path();
+				if (file.extension() != ".glsl")
+					continue; // skip non-shader files
+
+				// currently just generate new guid for shaders
+				AssetMetaData meta{};
+				meta.guid = Guid::generate();
+				meta.type = "shader";
+				meta.path = fs::relative(file, root).generic_string();
+
+				if (!register_asset(meta, root, "")) {
 					continue;
 				}
 			}
@@ -126,9 +159,9 @@ namespace z1 {
 		return it->second;
 	}
 
-	bool AssetManager::register_asset(AssetMetaData const& meta, Filepath const& root) {
+	bool AssetManager::register_asset(AssetMetaData const& meta, Filepath const& root, std::string const& ext) {
 		Filepath file = root / meta.path;
-		file += ".bin";
+		file += ext;
 
 		if (!register_guid(meta.guid)) {
 			CORE_ERROR("duplicate guid found: {0}, file: {1}", meta.guid, file.generic_string());

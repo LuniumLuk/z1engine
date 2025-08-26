@@ -45,9 +45,10 @@
 #include "util/string_utils.h"
 #include "util/thread_pool.h"
 
+#include "io/binary_file.h"
 #include "io/importer/importer.h"
 #include "io/importer/gltf_importer.h"
-#include "io/binary_file.h"
 #include "io/importer/image_importer.h"
 #include "io/loader/obj_loader.h"
 #include "io/loader/mesh_storage.h"
+#include "io/exporter/scene_exporter.h"

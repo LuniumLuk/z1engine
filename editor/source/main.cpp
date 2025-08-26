@@ -105,7 +105,7 @@ struct EditorLayer : Layer {
 			);
 		}
 
-		io::load_gltf_scene(m_active_scene, "editor/asset/mesh/DamagedHelmet.glb");
+		//io::load_gltf_scene(m_active_scene, "editor/asset/mesh/DamagedHelmet.glb");
 
 		uint32_t quad_rows = 4;
 		uint32_t quad_cols = 4;
