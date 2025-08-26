@@ -5,7 +5,7 @@
 #include "render/shader.h"
 #include "io/loader/image_loader.h"
 #include "io/loader/obj_loader.h"
-#include "yaml-cpp/yaml.h"
+#include "util/yaml.h"
 
 namespace z1 {
 

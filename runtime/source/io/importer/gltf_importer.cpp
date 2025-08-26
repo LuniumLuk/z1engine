@@ -5,11 +5,11 @@
 #include "scene/component/mesh.h"
 #include "render/mesh.h"
 #include "render/material.h"
+#include "util/yaml.h"
 
 #include "bakery.h"
 #include "tinygltf/tiny_gltf.h"
 #include "glm/gtc/type_ptr.hpp"
-#include "yaml-cpp/yaml.h"
 
 namespace z1::io {
 

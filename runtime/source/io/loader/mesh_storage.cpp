@@ -1,31 +1,6 @@
 #include "pch.h"
 #include "io/loader/mesh_storage.h"
-#include "yaml-cpp/yaml.h"
-
-namespace YAML {
-
-	template<>
-	struct convert<glm::vec3> {
-		static Node encode(const glm::vec3& rhs) {
-			Node node;
-			node.push_back(rhs.x);
-			node.push_back(rhs.y);
-			node.push_back(rhs.z);
-			return node;
-		}
-
-		static bool decode(const Node& node, glm::vec3& rhs) {
-			if (!node.IsSequence() || node.size() != 3) {
-				return false;
-			}
-			rhs.x = node[0].as<float>();
-			rhs.y = node[1].as<float>();
-			rhs.z = node[2].as<float>();
-			return true;
-		}
-	};
-
-} // namespace YAML
+#include "util/yaml.h"
 
 namespace z1::io {
 
@@ -42,8 +17,8 @@ namespace z1::io {
 		YAML::Emitter yaml;
 		yaml << YAML::BeginMap;
 		yaml << YAML::Key << "guid" << YAML::Value << storage->guid.value;
-		yaml << YAML::Key << "bound_min" << YAML::Value << YAML::convert<glm::vec3>::encode(storage->bound_min);
-		yaml << YAML::Key << "bound_max" << YAML::Value << YAML::convert<glm::vec3>::encode(storage->bound_max);
+		yaml << YAML::Key << "bound_min" << YAML::Value << storage->bound_min;
+		yaml << YAML::Key << "bound_max" << YAML::Value << storage->bound_max;
 		yaml << YAML::Key << "primitives" << YAML::Value << YAML::BeginSeq;
 
 		for (auto const& prim : storage->primitives) {
@@ -51,8 +26,8 @@ namespace z1::io {
 			yaml << YAML::Key << "index_start" << YAML::Value << prim.index_start;
 			yaml << YAML::Key << "index_count" << YAML::Value << prim.index_count;
 			yaml << YAML::Key << "vertex_count" << YAML::Value << prim.vertex_count;
-			yaml << YAML::Key << "bound_min" << YAML::Value << YAML::convert<glm::vec3>::encode(prim.bound_min);
-			yaml << YAML::Key << "bound_max" << YAML::Value << YAML::convert<glm::vec3>::encode(prim.bound_max);
+			yaml << YAML::Key << "bound_min" << YAML::Value << prim.bound_min;
+			yaml << YAML::Key << "bound_max" << YAML::Value << prim.bound_max;
 			yaml << YAML::Key << "guid" << YAML::Value << prim.material.value;
 			yaml << YAML::Key << "has_indices" << YAML::Value << prim.has_indices;
 			yaml << YAML::Key << "has_normal" << YAML::Value << prim.has_normal;

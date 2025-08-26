@@ -1,10 +1,10 @@
 #include "pch.h"
 #include "io/loader/image_loader.h"
 #include "core/asset_manager.h"
+#include "util/yaml.h"
 
 #include "bakery.h"
 #include "tinyexr/tinyexr.h"
-#include "yaml-cpp/yaml.h"
 
 namespace z1::io {
 
