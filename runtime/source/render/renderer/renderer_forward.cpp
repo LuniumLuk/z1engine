@@ -17,7 +17,7 @@ namespace z1 {
 		desc.depth_test = true;
 		desc.blend = true;
 		desc.cull_mode = CullMode::Back;
-		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/mesh_viewer.glsl");
+		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("mesh_viewer");
 		m_pipeline = Pipeline::build(desc);
 
 		m_render_pass = RenderPass::build();

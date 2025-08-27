@@ -174,6 +174,7 @@ workspace "z1engine"
 			"3rdparty/imgui",
 			"3rdparty/glm",
 			"3rdparty/entt",
+			"3rdparty/yaml-cpp/include",
 		}
 
 		links

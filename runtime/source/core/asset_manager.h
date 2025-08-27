@@ -87,22 +87,6 @@ namespace z1 {
 			return asset;
 		}
 
-		static Filepath const& get_content_root() {
-			return s_content_root;
-		}
-
-		static void set_content_root(Filepath const& root) {
-			s_content_root = root;
-		}
-
-		static std::vector<Filepath> const& get_shader_roots() {
-			return s_shader_roots;
-		}
-
-		static void add_shader_root(Filepath const& root) {
-			s_shader_roots.push_back(root);
-		}
-
 		Filepath get_file_from_guid(Guid const& guid) const {
 			if (m_guid_to_file_mapping.find(guid) != m_guid_to_file_mapping.end()) {
 				return m_guid_to_file_mapping.at(guid);

@@ -30,7 +30,9 @@ namespace z1::io {
 			return ret;
 		}
 
-		Filepath import_file = settings.root / settings.path;
+		auto const& root = FileSystem::s_content_root;
+
+		Filepath import_file = root / settings.path;
 		import_file += ".bin";
 		Filepath import_meta = import_file;
 		import_meta += ".meta.yaml";
@@ -42,7 +44,7 @@ namespace z1::io {
 		meta.extra["sampler_mode"] = (int)settings.sampler_mode;
 		meta.extra["wrap_mode"] = (int)settings.wrap_mode;
 
-		if (!g_runtime_context.m_asset_manager->register_asset(meta, settings.root)) {
+		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return ret;
 		}
 

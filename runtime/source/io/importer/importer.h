@@ -17,7 +17,6 @@ namespace z1::io {
 	struct ImporterSettings {
 		Filepath file;
 		Filepath path;
-		Filepath root;
 	};
 
 	template <typename Settings>

@@ -1,14 +1,11 @@
 #include "pch.h"
 #include "core/asset_manager.h"
+#include "core/io.h"
 
 #include "bakery.h"
 
 namespace z1 {
 	namespace fs = std::filesystem;
-
-	// static member initialization
-	Filepath AssetManager::s_content_root = "";
-	std::vector<Filepath> AssetManager::s_shader_roots = {};
 
 	bool AssetMetaData::save(Filepath const& p) const {
 		YAML::Emitter emitter;
@@ -55,9 +52,9 @@ namespace z1 {
 		Filepath cwd = fs::current_path();
 		CORE_INFO("current working directory: {0}", cwd.generic_string());
 
-		if (s_content_root.empty()) {
-			s_content_root = cwd / "content";
-		}
+		CORE_INFO("content root: {0}", FileSystem::s_content_root.generic_string());
+		CORE_INFO("engine shader root: {0}", FileSystem::s_engine_shader_root.generic_string());
+
 		scan_content();
 	}
 
@@ -72,10 +69,10 @@ namespace z1 {
 		m_path_to_guid_mapping.clear();
 
 		{
-			auto const& root = get_content_root();
+			auto const& root = FileSystem::s_content_root;
 
 			if (!fs::exists(root)) {
-				CORE_WARN("missing content path: {0}", root.generic_string());
+				fs::create_directories(root);
 			}
 
 			for (auto& entry : fs::recursive_directory_iterator(root)) {
@@ -98,10 +95,11 @@ namespace z1 {
 			}
 		}
 
-		for (auto const& root : get_shader_roots()) {
+		{
+			auto const& root = FileSystem::s_engine_shader_root;
+
 			if (!fs::exists(root)) {
-				CORE_WARN("missing shader path: {0}", root.generic_string());
-				continue;
+				CORE_WARN("missing engine shader root: {0}", root.generic_string());
 			}
 
 			for (auto& entry : fs::recursive_directory_iterator(root)) {
@@ -112,13 +110,15 @@ namespace z1 {
 				if (file.extension() != ".glsl")
 					continue; // skip non-shader files
 
-				// currently just generate new guid for shaders
-				AssetMetaData meta{};
-				meta.guid = Guid::generate();
-				meta.type = "shader";
-				meta.path = fs::relative(file, root).generic_string();
+				Filepath path = fs::relative(file.parent_path() / file.stem(), root);
 
-				if (!register_asset(meta, root, "")) {
+				AssetMetaData meta{};
+				// using path as guid, since we currently don't have a better way to generate stable guids for files
+				meta.guid = Guid::make(path.generic_string());
+				meta.type = "shader";
+				meta.path = path.generic_string();
+
+				if (!register_asset(meta, root, ".glsl")) {
 					continue;
 				}
 			}

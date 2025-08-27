@@ -1,17 +1,17 @@
 #include "pch.h"
-#include "io/loader/obj_loader.h"
+#include "io/importer/obj_importer.h"
 
 #include "tinyobjloader/tiny_obj_loader.h"
 
 namespace z1::io {
 
-	bool file_is_obj_mesh(Filepath const& path) noexcept {
+	bool ObjImporter::can_import(Filepath const& path) noexcept {
 		auto ext = path.extension().string();
 		const std::vector<std::string> exts = { ".obj" };
 		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
-	std::shared_ptr<StaticMesh::Storage> load_obj_mesh_storage(Filepath const& path) {
+	static std::shared_ptr<StaticMesh::Storage> import_obj_as_mesh_storage(Filepath const& path) {
 		tinyobj::ObjReaderConfig readerConfig;
 		readerConfig.mtl_search_path = path.parent_path().string() + "/"; // Path to .mtl file, relative to .obj file
 
@@ -22,7 +22,7 @@ namespace z1::io {
 				CORE_ERROR("failed to load static mesh: {0}", path);
 				CORE_ERROR("TinyObjReader: {0}", reader.Error());
 			}
-			exit(1);
+			return nullptr;
 		}
 
 		if (!reader.Warning().empty()) {
@@ -117,15 +117,45 @@ namespace z1::io {
 
 		if (mesh_storage->vertices.empty() || mesh_storage->primitives.empty()) {
 			CORE_ERROR("failed to load static mesh: {0} - no vertices or primitives found", path);
-			return {};
+			return nullptr;
 		}
 
 		return mesh_storage;
 	}
 
-	std::shared_ptr<StaticMesh> load_obj_mesh(Filepath const& path) {
-		auto const& storage = load_obj_mesh_storage(path);
-		return std::make_shared<StaticMesh>(storage);
+	ImportResult ObjImporter::import(ObjImporterSettings const& settings) {
+		ImportResult ret{};
+		if (!can_import(settings.file)) {
+			CORE_WARN("{0} is not a common obj file", settings.file.generic_string());
+			return ret;
+		}
+
+		auto const& root = FileSystem::s_content_root;
+
+		Filepath import_file = root / settings.path;
+		import_file += ".bin";
+		Filepath import_meta = import_file;
+		import_meta += ".meta.yaml";
+
+		AssetMetaData meta{};
+		meta.guid = Guid::generate();
+		meta.type = "static mesh";
+		meta.path = settings.path;
+
+		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
+			return ret;
+		}
+
+		auto mesh_storage = import_obj_as_mesh_storage(settings.file);
+
+		if (mesh_storage && io::save_static_mesh_storage(import_file, mesh_storage)) {
+			meta.save(import_meta);
+			ret.assets.push_back(meta);
+			ret.files.push_back(import_file);
+			ret.success = true;
+		}
+
+		return ret;
 	}
 
 }

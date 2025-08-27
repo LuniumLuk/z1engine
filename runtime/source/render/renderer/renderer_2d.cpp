@@ -41,7 +41,7 @@ namespace z1 {
 		Pipeline::Description desc{};
 		desc.depth_test = true;
 		desc.blend = true;
-		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/sprite_2d_batched.glsl");
+		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("sprite_2d_batched");
 		m_pipeline = Pipeline::build(desc);
 
 		m_render_pass = RenderPass::build();

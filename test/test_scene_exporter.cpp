@@ -59,8 +59,7 @@ struct OurApp : Application {
 
 int main() {
 
-	AssetManager::add_shader_root("../../runtime/asset");
-	AssetManager::add_shader_root("../../editor/asset");
+	AssetManager::add_shader_root("../../engine/shader");
 
 	OurApp app;
 	app.init();

@@ -60,17 +60,16 @@ struct EditorLayer : Layer {
 				ImGui::PopStyleColor();
 			};
 
-		auto tex0 = g_runtime_context.m_asset_manager->get<Image2D>("texture/awesomeface.png");
-		auto tex1 = g_runtime_context.m_asset_manager->get<Image2D>("texture/tira-checker.jpg");
-		// TODO: need support for image settings (sampler mode and wrap mode)
-		auto tex2 = g_runtime_context.m_asset_manager->get<Image2D>("texture/roguelikeSheet_transparent.png");
+		auto tex0 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_awesomeface");
+		auto tex1 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_tira-checker");
+		auto tex2 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_roguelikeSheet");
 
 		{
 			Pipeline::Description desc{};
 			desc.depth_test = true;
 			desc.blend = true;
 			desc.cull_mode = CullMode::Back;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/sprite_2d.glsl");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("sprite_2d");
 			auto pipeline = Pipeline::build(desc);
 			m_material = std::make_shared<Material>("M_Sprite2D", pipeline);
 			m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
@@ -93,7 +92,7 @@ struct EditorLayer : Layer {
 		{
 			auto ent = m_active_scene->create_entity("Mesh_0");
 			ent->add_component<StaticMeshComponent>(
-				g_runtime_context.m_asset_manager->get<StaticMesh>("mesh/bunny.obj")
+				g_runtime_context.m_asset_manager->get<StaticMesh>("SM_bunny")
 			);
 			ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -5.0f);
 		}
@@ -101,11 +100,9 @@ struct EditorLayer : Layer {
 		{
 			auto ent = m_active_scene->create_entity("Mesh_1");
 			ent->add_component<StaticMeshComponent>(
-				g_runtime_context.m_asset_manager->get<StaticMesh>("fireplace_room/fireplace_room.obj")
+				g_runtime_context.m_asset_manager->get<StaticMesh>("SM_fireplace_room")
 			);
 		}
-
-		//io::load_gltf_scene(m_active_scene, "editor/asset/mesh/DamagedHelmet.glb");
 
 		uint32_t quad_rows = 4;
 		uint32_t quad_cols = 4;
@@ -133,7 +130,7 @@ struct EditorLayer : Layer {
 			}
 		}
 
-		// picking system doesn¡¯t need to be that precise
+		// picking system doesnï¿½ï¿½t need to be that precise
 		// so we use default resolution here (512x512)
 		m_picking = std::make_shared<PickingSystem>();
 	}

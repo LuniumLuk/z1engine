@@ -242,8 +242,10 @@ namespace z1::io {
 				mesh_storage->primitives.push_back(prim_storage);
 			}
 
+			auto const& root = FileSystem::s_content_root;
+
 			std::string name = mesh.name.empty() ? ("SM_" + std::to_string(node.mesh)) : mesh.name;
-			Filepath import_file = settings.root / settings.path / (name + ".bin");
+			Filepath import_file = root / settings.path / (name + ".bin");
 			Filepath import_meta = import_file;
 			import_meta += ".meta.yaml";
 
@@ -252,7 +254,7 @@ namespace z1::io {
 			meta.type = "static mesh";
 			meta.path = settings.path / name;
 
-			g_runtime_context.m_asset_manager->register_asset(meta, settings.root);
+			g_runtime_context.m_asset_manager->register_asset(meta, root);
 
 			if (io::save_static_mesh_storage(import_file, mesh_storage)) {
 				meta.save(import_meta);
@@ -321,8 +323,10 @@ namespace z1::io {
 				continue;
 			}
 
+			auto const& root = FileSystem::s_content_root;
+
 			std::string name = image.name.empty() ? ("T_" + std::to_string(tex.source)) : image.name;
-			Filepath import_file = settings.root / settings.path / (name + ".bin");
+			Filepath import_file = root / settings.path / (name + ".bin");
 			Filepath import_meta = import_file;
 			import_meta += ".meta.yaml";
 
@@ -357,7 +361,7 @@ namespace z1::io {
 			meta.extra["wrap_mode"] = (int)wrap_mode;
 			meta.extra["hdr"] = false;
 
-			g_runtime_context.m_asset_manager->register_asset(meta, settings.root);
+			g_runtime_context.m_asset_manager->register_asset(meta, root);
 
 			try {
 				std::filesystem::create_directories(import_file.parent_path());

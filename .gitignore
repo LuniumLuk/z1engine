@@ -442,3 +442,4 @@ build-int
 *.meta.yaml
 .vscode
 cache
+content

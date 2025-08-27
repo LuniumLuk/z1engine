@@ -3,6 +3,10 @@
 
 namespace z1 {
 
+	Filepath FileSystem::s_content_root = "content";
+	Filepath FileSystem::s_cache_root = "cache";
+	Filepath FileSystem::s_engine_shader_root = "engine/shader";
+
 	std::string FileSystem::read_file(Filepath const& path) noexcept {
 		PROFILE_FUNCTION();
 		std::ifstream in(path.string(), std::ios::in | std::ios::binary);

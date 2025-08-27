@@ -21,6 +21,10 @@ namespace z1 {
 		Filepath m_engine_dir = "../runtime";
 #endif
 
+		static Filepath s_content_root;
+		static Filepath s_cache_root;
+		static Filepath s_engine_shader_root;
+
 	};
 
 }
