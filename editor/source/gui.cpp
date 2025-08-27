@@ -3,51 +3,49 @@
 
 #include <windows.h>
 #include <commdlg.h>
+#include <glfw/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <glfw/glfw3native.h>
 
 using namespace z1;
 
-// https://cplusplus.com/forum/windows/74644/#msg400037
-static std::string wstrtostr(const std::wstring& wstr) {
-	std::string str;
-	char* sz = new char[wstr.length() + 1];
-	sz[wstr.size()] = '\0';
-	WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, sz, (int)wstr.length(), NULL, NULL);
-	str = sz;
-	delete[] sz;
-	return str;
-}
+std::string open_file_dialog(char const* filter) {
+	OPENFILENAMEA ofn;      // common dialog box structure
+	char file[256] = { 0 }; // buffer for file name
 
-static void strtowstr(std::string const& str, wchar_t* wstr) {
-	mbstowcs(wstr, str.c_str(), str.size() + 1);
-}
-
-static std::string open_file_dialog(std::string const& filter = "All Files\0*.*\0") {
-	OPENFILENAME ofn;       // common dialog box structure
-	wchar_t file[260] = {}; // buffer for file name
-	HWND hwnd{};            // owner window
-	HANDLE hf{};            // file handle
-
-	wchar_t wfilter[256] = {};
-	strtowstr(filter, wfilter);
-
-	// initialize OPENFILENAME
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = hwnd;
+	ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)g_runtime_context.m_window->get_native_window());
 	ofn.lpstrFile = file;
-	// set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-	// use the contents of file to initialize itself.
 	ofn.lpstrFile[0] = '\0';
 	ofn.nMaxFile = sizeof(file);
-	ofn.lpstrFilter = wfilter;
+	ofn.lpstrFilter = filter;
 	ofn.nFilterIndex = 1;
-	ofn.lpstrFileTitle = NULL;
-	ofn.nMaxFileTitle = 0;
-	ofn.lpstrInitialDir = NULL;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
-	if (GetOpenFileName(&ofn) == TRUE) {
-		return wstrtostr(ofn.lpstrFile);
+	if (GetOpenFileNameA(&ofn) == TRUE) {
+		return ofn.lpstrFile;
+	}
+
+	return std::string(); // empty if canceled
+}
+
+std::string save_file_dialog(char const* filter) {
+	OPENFILENAMEA ofn;      // common dialog box structure
+	char file[256] = { 0 }; // buffer for file name
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)g_runtime_context.m_window->get_native_window());
+	ofn.lpstrFile = file;
+	ofn.lpstrFile[0] = '\0';
+	ofn.nMaxFile = sizeof(file);
+	ofn.lpstrFilter = filter;
+	ofn.nFilterIndex = 1;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+	if (GetSaveFileNameA(&ofn) == TRUE) {
+		return ofn.lpstrFile;
 	}
 
 	return std::string(); // empty if canceled
@@ -89,14 +87,8 @@ void EditorGUI::draw() {
 			}
 
 			if (ImGui::BeginMenuBar()) {
-				if (ImGui::BeginMenu("import")) {
-					if (ImGui::MenuItem("wavefront (.obj)")) {
-						Filepath file = open_file_dialog("Wavefront OBJ\0*.obj\0All Files\0*.*\0");
-						std::cout << "import file: " << file.generic_string() << "\n";
-						Filepath cwd = std::filesystem::current_path();
-						std::cout << "current working directory: " << cwd.generic_string() << std::endl;
-					}
-					ImGui::EndMenu();
+				if (m_draw_menu_bar_items_func) {
+					m_draw_menu_bar_items_func();
 				}
 				ImGui::EndMenuBar();
 			}

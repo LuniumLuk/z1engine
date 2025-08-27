@@ -92,10 +92,12 @@ namespace z1 {
 	}
 
 	void Application::push_layer(std::shared_ptr<Layer> const& layer) {
+		layer->m_attached_application = this;
 		g_runtime_context.m_layer_stack->push_layer(layer);
 	}
 
 	void Application::push_overlay(std::shared_ptr<Layer> const& overlay) {
+		overlay->m_attached_application = this;
 		g_runtime_context.m_layer_stack->push_overlay(overlay);
 	}
 

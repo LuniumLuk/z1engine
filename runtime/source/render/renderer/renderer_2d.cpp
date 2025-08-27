@@ -59,7 +59,6 @@ namespace z1 {
 
 		auto const& main_cam = scene->get_main_camera();
 		if (!main_cam) {
-			CORE_ERROR("No main camera found in the scene!");
 			return;
 		}
 

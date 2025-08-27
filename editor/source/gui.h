@@ -42,6 +42,7 @@ struct EditorGUI {
 	}
 
 	std::function<void()> m_draw_viewport_overlay_func = nullptr;
+	std::function<void()> m_draw_menu_bar_items_func = nullptr;
 
 	bool m_dockspace = true;
 	bool m_window_viewport = true;
@@ -53,3 +54,6 @@ struct EditorGUI {
 	float m_viewport_mouse_x = 0.0f;
 	float m_viewport_mouse_y = 0.0f;
 };
+
+std::string open_file_dialog(char const* filter = "All Files\0*.*\0");
+std::string save_file_dialog(char const* filter = "All Files\0*.*\0");

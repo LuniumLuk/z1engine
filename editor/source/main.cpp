@@ -60,6 +60,32 @@ struct EditorLayer : Layer {
 				ImGui::PopStyleColor();
 			};
 
+		m_gui->m_draw_menu_bar_items_func =
+			[&]() {
+				if (ImGui::BeginMenu("file")) {
+					if (ImGui::MenuItem("new")) {
+						m_selected_entity = nullptr;
+						m_active_scene = std::make_shared<Scene>();
+						m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
+					}
+					if (ImGui::MenuItem("open...")) {
+						Filepath file = open_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
+						std::cout << "opening file: " << file.generic_string() << "\n";
+					}
+					if (ImGui::MenuItem("save as...")) {
+						Filepath file = save_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
+						if (file.extension() != ".yaml") {
+							file += ".yaml";
+						}
+						io::SceneExporter::export_scene(file, m_active_scene);
+					}
+					if (ImGui::MenuItem("exit")) {
+						terminate();
+					}
+					ImGui::EndMenu();
+				}
+			};
+
 		auto tex0 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_awesomeface");
 		auto tex1 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_tira-checker");
 		auto tex2 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_roguelikeSheet");
@@ -262,7 +288,8 @@ private:
 			ImGui::Separator();
 			for (auto const& ent : m_active_scene->m_registry.view<TransformComponent>()) {
 				auto entity = m_active_scene->cast_to_entity(ent);
-				if (ImGui::Selectable(entity->get_component<TagComponent>().m_tag.c_str(), entity == m_selected_entity)) {
+				auto const& tag = entity->get_component<TagComponent>();
+				if (ImGui::Selectable((tag.m_tag + "##" + std::to_string(tag.m_id)).c_str(), entity == m_selected_entity)) {
 					m_selected_entity = entity; // Update selection
 				}
 				if (m_picked_from_viewport && entity == m_selected_entity) {
@@ -270,15 +297,41 @@ private:
 					m_picked_from_viewport = false;
 				}
 			}
+
+			if (ImGui::BeginPopupContextWindow()) {
+				if (ImGui::MenuItem("create empty entity")) {
+					m_active_scene->create_entity("new entity");
+				}
+				ImGui::EndPopup();
+			}
 		}
 		ImGui::End();
 	}
 
+	template<typename T>
+	void component_context_menu(const char* label, std::shared_ptr<Entity> const& entity) {
+		if (entity->has_component<T>()) {
+			if (ImGui::MenuItem(std::string("remove ").append(label).c_str())) {
+				entity->remove_component<T>();
+			}
+		}
+		else {
+			if (ImGui::MenuItem(std::string("add ").append(label).c_str())) {
+				entity->add_component<T>();
+			}
+		}
+	}
+
 	void show_properties() {
+		static char name_buffer[256] = {};
+
 		if (ImGui::Begin("properties")) {
 			if (m_selected_entity) {
 				auto& tag = m_selected_entity->get_component<TagComponent>();
-				ImGui::Text(tag.m_tag.c_str());
+				strcpy_s(name_buffer, tag.m_tag.c_str());
+				if (ImGui::InputText("##tag", name_buffer, IM_ARRAYSIZE(name_buffer))) {
+					tag.m_tag = std::string(name_buffer);
+				}
 
 				if (ImGui::CollapsingHeader("transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 					auto& transform = m_selected_entity->get_component<TransformComponent>();
@@ -361,7 +414,18 @@ private:
 								m_active_scene->set_main_camera(m_selected_entity);
 							}
 						}
+						if (ImGui::BeginPopupContextWindow()) {
+							if (ImGui::MenuItem("remove camera component")) {
+							}
+							ImGui::EndPopup();
+						}
 					}
+				}
+
+				if (ImGui::BeginPopupContextWindow()) {
+					component_context_menu<CameraComponent>("camera component", m_selected_entity);
+					component_context_menu<SpriteComponent>("sprite component", m_selected_entity);
+					ImGui::EndPopup();
 				}
 			}
 		}

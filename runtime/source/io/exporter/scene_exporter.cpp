@@ -86,7 +86,12 @@ namespace z1::io {
 				yaml << YAML::Key << "sprite" << YAML::Value;
 				yaml << YAML::BeginMap;
 				yaml << YAML::Key << "color" << YAML::Value << sprite.m_color;
-				yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_guid.value;
+				if (sprite.m_texture) {
+					yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_guid.value;
+				}
+				else {
+					yaml << YAML::Key << "texture" << YAML::Value << YAML::Null;
+				}
 				yaml << YAML::Key << "tiling_scale" << YAML::Value << sprite.m_tiling_scale;
 				yaml << YAML::Key << "tiling_offset" << YAML::Value << sprite.m_tiling_offset;
 				yaml << YAML::Key << "texcoords" << YAML::Value;

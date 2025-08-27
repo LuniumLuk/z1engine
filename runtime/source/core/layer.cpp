@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "core/layer.h"
+#include "core/application.h"
 
 namespace z1 {
 
@@ -7,5 +8,9 @@ namespace z1 {
 		: m_name(name) {}
 
 	Layer::~Layer() {}
+
+	void Layer::terminate() const {
+		m_attached_application->terminate();
+	}
 
 }

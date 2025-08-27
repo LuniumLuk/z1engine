@@ -30,9 +30,17 @@ namespace z1 {
 	void RendererForward::draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer) {
 		PROFILE_FUNCTION();
 
+		RenderPass::BeginInfo info{};
+		info.framebuffer = framebuffer;
+		info.clear_color = true;
+		info.clear_depth = true;
+		info.clear_color_value = { 0.1f, 0.1f, 0.1f, 1.0f };
+		info.clear_depth_value = 1.0f;
+		m_render_pass->bind(info);
+
 		auto const& main_cam = scene->get_main_camera();
 		if (!main_cam) {
-			CORE_ERROR("No main camera found in the scene!");
+			m_render_pass->unbind();
 			return;
 		}
 
@@ -52,14 +60,6 @@ namespace z1 {
 		/*
 			main render pass
 		*/
-
-		RenderPass::BeginInfo info{};
-		info.framebuffer = framebuffer;
-		info.clear_color = true;
-		info.clear_depth = true;
-		info.clear_color_value = { 0.1f, 0.1f, 0.1f, 1.0f };
-		info.clear_depth_value = 1.0f;
-		m_render_pass->bind(info);
 
 		m_pipeline->bind();
 		m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);

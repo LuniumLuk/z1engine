@@ -44,7 +44,20 @@ PickingSystem::PickingSystem(uint32_t w, uint32_t h) {
 }
 
 void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
+	RenderPass::BeginInfo info{};
+	info.framebuffer = m_framebuffer;
+	info.clear_color = true;
+	info.clear_depth = true;
+	info.clear_color_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+	info.clear_depth_value = 1.0f;
+	m_render_pass->bind(info);
+
 	auto const& main_cam = scene->get_main_camera();
+	if (!main_cam) {
+		m_render_pass->unbind();
+		return;
+	}
+
 	auto& camera_comp = main_cam->get_component<CameraComponent>();
 
 	auto& camera_trans = main_cam->get_component<TransformComponent>();
@@ -54,14 +67,6 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 	auto cam_view = glm::lookAt(camera_trans.m_location, camera_trans.m_location + glm::vec3(cam_forward), glm::vec3(cam_up));
 
 	glm::mat4 cam_projview = camera_comp.get_proj() * cam_view;
-
-	RenderPass::BeginInfo info{};
-	info.framebuffer = m_framebuffer;
-	info.clear_color = true;
-	info.clear_depth = true;
-	info.clear_color_value = { 0.0f, 0.0f, 0.0f, 0.0f };
-	info.clear_depth_value = 1.0f;
-	m_render_pass->bind(info);
 
 	m_pipeline->bind();
 	m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);

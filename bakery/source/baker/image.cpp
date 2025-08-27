@@ -41,6 +41,7 @@ namespace z1::bakery {
 		}
 
 		// save to custom binary file (width, height, compressed data)
+		std::filesystem::create_directories(output.parent_path());
 		FILE* f = fopen(output.generic_string().c_str(), "wb");
 		if (!f) {
 			log_error("failed to open output file");

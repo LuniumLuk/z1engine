@@ -27,7 +27,7 @@ struct CameraCtrlScript : ScriptBase {
 		m_mouse_last_x = mouse_x;
 		m_mouse_last_y = mouse_y;
 
-		if (!m_gui->is_viewport_focused()) return false;
+		if (!m_gui->is_viewport_focused() || !m_gui->is_viewport_hovered()) return false;
 
 		return true;
 	}

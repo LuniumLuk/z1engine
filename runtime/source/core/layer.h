@@ -20,6 +20,8 @@ namespace z1 {
 
 		std::string const& get_name() const { return m_name; }
 
+		void terminate() const;
+
 	private:
 		std::string m_name;
 
