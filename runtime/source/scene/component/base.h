@@ -80,12 +80,16 @@ namespace z1 {
 
 	struct Entity;
 
+#define REGISTER_SCRIPT(ScriptType) \
+	std::string get_script_name() const override { return #ScriptType; }
 
 	struct API ScriptBase {
 
 		virtual void on_attach() = 0;
 		virtual void on_update(float delta_time) = 0;
 		virtual void on_detach() = 0;
+
+		virtual std::string get_script_name() const { return "unregistered"; }
 
 		template<typename T>
 		bool has_component() const {
@@ -181,6 +185,33 @@ namespace z1 {
 				};
 
 			m_scripts.emplace_back(std::forward<ScriptData>(sd));
+		}
+
+		template<typename ScriptType>
+		void unbind() {
+			auto it = std::find_if(m_scripts.begin(), m_scripts.end(),
+				[](ScriptData const& sd) {
+					return dynamic_cast<ScriptType*>(sd.instance) != nullptr;
+				});
+
+			if (it != m_scripts.end()) {
+				if (it->detach_func) {
+					it->detach_func(*it);
+				}
+				m_scripts.erase(it);
+			}
+		}
+
+		void unbind_at(size_t index) {
+			if (index >= m_scripts.size()) {
+				return;
+			}
+
+			auto& sd = m_scripts[index];
+			if (sd.detach_func) {
+				sd.detach_func(sd);
+			}
+			m_scripts.erase(m_scripts.begin() + index);
 		}
 	};
 

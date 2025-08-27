@@ -43,6 +43,8 @@ struct CameraCtrlScript : ScriptBase {
 };
 
 struct HoveringCameraCtrlScript : CameraCtrlScript {
+	REGISTER_SCRIPT(HoveringCameraCtrlScript)
+
 	HoveringCameraCtrlScript(std::shared_ptr<EditorGUI> const& gui)
 		: CameraCtrlScript(gui) {
 	}
@@ -84,6 +86,8 @@ struct HoveringCameraCtrlScript : CameraCtrlScript {
 };
 
 struct Generic2DCameraCtrlScript : CameraCtrlScript {
+	REGISTER_SCRIPT(Generic2DCameraCtrlScript)
+
 	Generic2DCameraCtrlScript(std::shared_ptr<EditorGUI> const& gui)
 		: CameraCtrlScript(gui) {
 	}

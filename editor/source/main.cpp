@@ -15,19 +15,6 @@ struct EditorLayer : Layer {
 		m_active_scene = std::make_shared<Scene>();
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 
-		//auto persp_cam = m_active_scene->create_entity("Persp Camera");
-		//persp_cam->add_component<CameraComponent>();
-		//auto ortho_cam = m_active_scene->create_entity("Ortho Camera");
-		//auto& ortho_cc = ortho_cam->add_component<CameraComponent>();
-		//ortho_cc.m_is_perspective = false;
-		//ortho_cc.m_near = -20.0f;
-		//ortho_cc.m_far = 20.0f;
-		//ortho_cc.m_intrinsic.size = 4.0f; // frustum size
-		//m_active_scene->set_main_camera(ortho_cam);
-		//// test script
-		//ortho_cam->attach_script<Generic2DCameraCtrlScript>(m_gui);
-		//persp_cam->attach_script<HoveringCameraCtrlScript>(m_gui);
-
 		m_gui->m_draw_viewport_overlay_func = 
 			[&]() {
 				ImVec2 window_pos = ImVec2(
@@ -254,8 +241,8 @@ private:
 		ImGui::End();
 	}
 
-	template<typename T>
-	void component_context_menu(const char* label, std::shared_ptr<Entity> const& entity) {
+	template<typename T, typename... Args>
+	void component_context_menu(const char* label, std::shared_ptr<Entity> const& entity, Args&&... args) {
 		if (entity->has_component<T>()) {
 			if (ImGui::MenuItem(std::string("remove ").append(label).c_str())) {
 				entity->remove_component<T>();
@@ -263,7 +250,7 @@ private:
 		}
 		else {
 			if (ImGui::MenuItem(std::string("add ").append(label).c_str())) {
-				entity->add_component<T>();
+				entity->add_component<T>(std::forward<Args>(args)...);
 			}
 		}
 	}
@@ -363,17 +350,44 @@ private:
 					}
 				}
 
+				if (m_selected_entity->has_component<ScriptComponent>()) {
+					if (ImGui::CollapsingHeader("script", ImGuiTreeNodeFlags_DefaultOpen)) {
+						auto& script = m_selected_entity->get_component<ScriptComponent>();
+						bool new_script_added = false;
+						if (ImGui::BeginCombo("add", "select script...")) {
+							if (ImGui::Selectable("Generic2DCameraCtrlScript")) {
+								m_selected_entity->attach_script<Generic2DCameraCtrlScript>(m_gui);
+								new_script_added = true;
+							}
+							if (ImGui::Selectable("HoveringCameraCtrlScript")) {
+								m_selected_entity->attach_script<HoveringCameraCtrlScript>(m_gui);
+								new_script_added = true;
+							}
+							ImGui::EndCombo();
+						}
+						if (!new_script_added) {
+							ImGui::Text("attached:");
+							ImGui::Separator();
+							size_t to_remove = INVALID_INDEX;
+							for (size_t i = 0; i < script.m_scripts.size(); ++i) {
+								auto const& sd = script.m_scripts[i];
+								ImGui::Text(sd.instance->get_script_name().c_str());
+								ImGui::SameLine();
+								if (ImGui::Button("remove")) {
+									to_remove = i;
+								}
+							}
+							if (to_remove != INVALID_INDEX) {
+								script.unbind_at(to_remove);
+							}
+						}
+					}
+				}
+
 				if (ImGui::BeginPopupContextWindow()) {
 					component_context_menu<CameraComponent>("camera component", m_selected_entity);
 					component_context_menu<SpriteComponent>("sprite component", m_selected_entity);
-					if (m_selected_entity->has_component<CameraComponent>() && !m_selected_entity->has_component<ScriptComponent>()) {
-						if (ImGui::MenuItem("attach 2d camera controller")) {
-							m_selected_entity->attach_script<Generic2DCameraCtrlScript>(m_gui);
-						}
-						if (ImGui::MenuItem("attach hovering camera controller")) {
-							m_selected_entity->attach_script<HoveringCameraCtrlScript>(m_gui);
-						}
-					}
+					component_context_menu<ScriptComponent>("script component", m_selected_entity, m_selected_entity);
 					ImGui::EndPopup();
 				}
 			}
