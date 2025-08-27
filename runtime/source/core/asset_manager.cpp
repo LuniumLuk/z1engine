@@ -89,6 +89,11 @@ namespace z1 {
 					continue;
 				}
 
+				// currently we skip scene files
+				if (meta.type == "scene") {
+					continue;
+				}
+
 				if (!register_asset(meta, root)) {
 					continue;
 				}
