@@ -157,6 +157,8 @@ workspace "z1engine"
 		objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
 		debugdir "%{wks.location}"
 
+		defines { "YAML_CPP_STATIC_DEFINE" }
+
 		files
 		{
 			"%{prj.name}/source/**.h",
