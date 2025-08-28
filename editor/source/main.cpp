@@ -18,6 +18,17 @@ struct EditorLayer : Layer {
 		m_active_scene = std::make_shared<Scene>();
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 		m_browser = std::make_unique<ContentBrowser>();
+		m_browser->m_on_asset_opened =
+			[&](AssetMetaData* meta) {
+				if (!meta) return;
+				if (meta->root == "engine") return;
+
+				if (meta->type == "scene") {
+					m_active_scene = io::SceneSerializer::deserialize_scene(FileSystem::s_content_root / (meta->path.string() + ".yaml"));
+					m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
+					m_selected_entity = nullptr;
+				}
+			};
 
 		m_gui->m_draw_viewport_overlay_func = 
 			[&]() {

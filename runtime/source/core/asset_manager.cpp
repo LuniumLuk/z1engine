@@ -93,7 +93,8 @@ namespace z1 {
 
 				// currently we skip scene files
 				if (meta.type == "scene") {
-					continue;
+					meta.path = fs::relative(file.parent_path() / file.stem(), root);
+					meta.guid.value = meta.path.generic_string();
 				}
 
 				if (!register_asset(meta, root)) {

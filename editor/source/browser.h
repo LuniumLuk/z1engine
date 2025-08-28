@@ -85,6 +85,11 @@ struct ContentBrowser {
 					m_selected_in_hierachy = child.get();
 					m_selected_in_folder = nullptr;
 				}
+				else {
+					if (m_on_asset_opened) {
+						m_on_asset_opened(child->meta);
+					}
+				}
 			}
 
 			// handle right-click
@@ -145,6 +150,7 @@ struct ContentBrowser {
 		ImGui::End();
 	}
 
+	std::function<void(AssetMetaData* meta)> m_on_asset_opened;
 	AssetNode* m_selected_in_hierachy = nullptr;
 	AssetNode* m_selected_in_folder = nullptr;
 };
