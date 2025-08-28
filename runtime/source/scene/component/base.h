@@ -5,6 +5,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtx/matrix_decompose.hpp"
+#include "glm/gtx/euler_angles.hpp"
 
 namespace z1 {
 
@@ -76,10 +77,11 @@ namespace z1 {
 
 		glm::mat4 get_local_rotation() const {
 			glm::mat4 rotation = glm::mat4(1.0f);
-			// rotation order: yaw -> pitch -> roll
+			// rotation order: roll -> yaw -> pitch
+			// as in consistent with ImGuizmo
+			rotation = glm::rotate(rotation, glm::radians(m_rotation.z), { 0.0f, 0.0f, 1.0f });
 			rotation = glm::rotate(rotation, glm::radians(m_rotation.y), { 0.0f, 1.0f, 0.0f });
 			rotation = glm::rotate(rotation, glm::radians(m_rotation.x), { 1.0f, 0.0f, 0.0f });
-			rotation = glm::rotate(rotation, glm::radians(m_rotation.z), { 0.0f, 0.0f, 1.0f });
 			return rotation;
 		}
 
