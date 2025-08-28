@@ -7,6 +7,7 @@
 #include "gui.h"
 #include "camera_ctrl.h"
 #include "picking_system.h"
+#include "browser.h"
 
 using namespace z1;
 namespace fs = std::filesystem;
@@ -16,6 +17,7 @@ struct EditorLayer : Layer {
 		m_gui = std::make_shared<EditorGUI>();
 		m_active_scene = std::make_shared<Scene>();
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
+		m_browser = std::make_unique<ContentBrowser>();
 
 		m_gui->m_draw_viewport_overlay_func = 
 			[&]() {
@@ -227,6 +229,7 @@ struct EditorLayer : Layer {
 
 		show_scene_graph();
 		show_properties();
+		m_browser->draw();
 		//show_shader_info(m_material->m_pipeline->m_shader);
 		//show_material_info(m_material_instance);
 
@@ -249,6 +252,7 @@ struct EditorLayer : Layer {
 private:
 	std::shared_ptr<EditorGUI> m_gui;
 	std::shared_ptr<Scene> m_active_scene;
+	std::unique_ptr<ContentBrowser> m_browser;
 	bool m_picked_from_viewport = false;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
 

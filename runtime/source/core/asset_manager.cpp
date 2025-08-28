@@ -67,6 +67,7 @@ namespace z1 {
 		m_guid_registry.clear();
 		m_guid_to_file_mapping.clear();
 		m_path_to_guid_mapping.clear();
+		m_asset_tree_root = std::make_unique<AssetNode>();
 
 		{
 			auto const& root = FileSystem::s_content_root;
@@ -84,6 +85,7 @@ namespace z1 {
 					continue; // skip non-meta files
 
 				AssetMetaData meta;
+				meta.root = "content";
 				if (!meta.load(file)) {
 					CORE_ERROR("failed to load meta file: {0}", file.generic_string());
 					continue;
@@ -119,6 +121,7 @@ namespace z1 {
 
 				AssetMetaData meta{};
 				// using path as guid, since we currently don't have a better way to generate stable guids for files
+				meta.root = "engine";
 				meta.guid = Guid::make(path.generic_string());
 				meta.type = "shader";
 				meta.path = path.generic_string();
@@ -176,6 +179,31 @@ namespace z1 {
 		m_asset_metas[meta.guid] = meta;
 		m_guid_to_file_mapping[meta.guid] = file;
 		m_path_to_guid_mapping[meta.path] = meta.guid;
+
+		AssetNode* node = m_asset_tree_root.get();
+		auto asset_name = meta.path.filename();
+		auto editor_path = meta.root / meta.path;
+		for (auto const& part : editor_path) {
+			auto name = part.string();
+			bool is_folder = (name != asset_name.string());
+			auto it = node->children.find(name);
+			if (it == node->children.end()) {
+				auto new_node = std::make_unique<AssetNode>();
+				new_node->name = name;
+				new_node->parent = node;
+				if (!is_folder) {
+					new_node->meta = &m_asset_metas[meta.guid];
+				}
+				node = (node->children[name] = std::move(new_node)).get();
+			}
+			else {
+				node = it->second.get();
+			}
+
+			if (!is_folder) {
+				node->meta = &m_asset_metas[meta.guid];
+			}
+		}
 
 		return true;
 	}

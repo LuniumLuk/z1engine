@@ -27,9 +27,31 @@ namespace z1 {
 		std::string type;
 		Filepath path;
 		YAML::Node extra;
+		// this field is mainly for editor to distinguish
+		// between normal content and engine content
+		// it will not be saved to actual meta file
+		std::string root;
 
 		bool save(Filepath const& path) const;
 		bool load(Filepath const& path);
+	};
+
+	struct AssetNode {
+		std::string name;
+		AssetMetaData* meta = nullptr;
+		AssetNode* parent = nullptr;
+		std::unordered_map<std::string, std::unique_ptr<AssetNode>> children;
+
+		bool is_root() const { return parent == nullptr; }
+		bool is_folder() const { return meta == nullptr; }
+		bool has_subfolder() const {
+			for (auto const& [_, child] : children) {
+				if (child->is_folder()) {
+					return true;
+				}
+			}
+			return false;
+		}
 	};
 
 	struct API AssetManager {
@@ -117,6 +139,8 @@ namespace z1 {
 		// check if guid is already registered, if not register it and return true
 		bool register_guid(Guid const& guid);
 
+		AssetNode* get_asset_tree_root() const { return m_asset_tree_root.get(); }
+
 	private:
 		template<typename T>
 		std::unordered_map<Guid, std::shared_ptr<T>>& storage() {
@@ -141,6 +165,7 @@ namespace z1 {
 		std::unordered_set<Guid> m_guid_registry;
 		std::unordered_map<Guid, Filepath> m_guid_to_file_mapping;
 		std::unordered_map<Filepath, Guid> m_path_to_guid_mapping;
+		std::unique_ptr<AssetNode> m_asset_tree_root;
 	};
 
 	template<>
