@@ -59,14 +59,7 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 	}
 
 	auto& camera_comp = main_cam->get_component<CameraComponent>();
-
-	auto& camera_trans = main_cam->get_component<TransformComponent>();
-
-	auto cam_up = camera_trans.get_world_transform() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
-	auto cam_forward = camera_trans.get_world_transform() * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
-	auto cam_view = glm::lookAt(camera_trans.m_location, camera_trans.m_location + glm::vec3(cam_forward), glm::vec3(cam_up));
-
-	glm::mat4 cam_projview = camera_comp.get_proj() * cam_view;
+	glm::mat4 cam_projview = camera_comp.get_proj() * camera_comp.get_view();
 
 	m_pipeline->bind();
 	m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);

@@ -2,6 +2,8 @@
 #include "z1engine.h"
 #include "glad/glad.h"
 #include "glm/gtc/matrix_transform.hpp"
+#include "imgui/imgui.h"
+#include "imguizmo/ImGuizmo.h"
 #include "gui.h"
 #include "camera_ctrl.h"
 #include "picking_system.h"
@@ -76,6 +78,34 @@ struct EditorLayer : Layer {
 				}
 			};
 
+		m_gui->m_draw_viewport_func =
+			[&]() {
+				if (m_selected_entity) {
+					auto const& cam = m_active_scene->get_main_camera();
+					if (cam) {
+						ImVec2 image_min = ImGui::GetItemRectMin(); // top-left corner
+						ImVec2 image_max = ImGui::GetItemRectMax(); // bottom-right corner
+						ImVec2 present_size = ImVec2(image_max.x - image_min.x, image_max.y - image_min.y);
+
+						auto transform = m_selected_entity->get_component<TransformComponent>().get_world_transform();
+
+						ImGuizmo::SetRect(image_min.x, image_min.y, present_size.x, present_size.y);
+						auto view = cam->get_component<CameraComponent>().get_view();
+						auto proj = cam->get_component<CameraComponent>().get_proj();
+						ImGuizmo::Manipulate(&view[0][0], &proj[0][0], m_current_gizmo_operation, m_current_gizmo_mode, &transform[0][0], NULL, NULL);
+
+						m_is_using_gizmo = ImGuizmo::IsUsing() || ImGuizmo::IsOver();
+						if (m_is_using_gizmo) {
+							glm::vec3 translation{}, rotation{}, scale{};
+							ImGuizmo::DecomposeMatrixToComponents(&transform[0][0], &translation.x, &rotation.x, &scale.x);
+							m_selected_entity->get_component<TransformComponent>().m_location = translation;
+							m_selected_entity->get_component<TransformComponent>().m_rotation = rotation;
+							m_selected_entity->get_component<TransformComponent>().m_scale = scale;
+						}
+					}
+				}
+			};
+
 		//{
 		//	Pipeline::Description desc{};
 		//	desc.depth_test = true;
@@ -116,11 +146,26 @@ struct EditorLayer : Layer {
 	void on_event(Event& event) override {
 		auto dispatcher = EventDispatcher(event);
 		dispatcher.dispatch<MouseButtonPressedEvent>(BIND_EVENT_FN(EditorLayer::on_mouse_pressed));
+		dispatcher.dispatch<KeyPressedEvent>(BIND_EVENT_FN(EditorLayer::on_key_pressed));
+	}
+
+	bool on_key_pressed(KeyPressedEvent& event) {
+		switch (event.get_keycode()) {
+		case KEY_W:
+			m_current_gizmo_operation = ImGuizmo::OPERATION::TRANSLATE; break;
+		case KEY_E:
+			m_current_gizmo_operation = ImGuizmo::OPERATION::ROTATE; break;
+		case KEY_R:
+			m_current_gizmo_operation = ImGuizmo::OPERATION::SCALE; break;
+		default:
+			break;
+		}
+		return true;
 	}
 
 	bool on_mouse_pressed(MouseButtonPressedEvent& event) {
-		if (event.GetButton() == MOUSE_BUTTON_LEFT) {
-			if (m_gui->is_viewport_focused() && m_gui->is_viewport_hovered()) {
+		if (event.get_button() == MOUSE_BUTTON_LEFT) {
+			if (m_gui->is_viewport_focused() && m_gui->is_viewport_hovered() && !m_is_using_gizmo) {
 				auto start = std::chrono::high_resolution_clock::now();
 
 				m_picking->render(m_active_scene);
@@ -211,6 +256,10 @@ private:
 	std::shared_ptr<MaterialInstance> m_material_instance;
 
 	std::shared_ptr<PickingSystem> m_picking;
+
+	bool m_is_using_gizmo = false;
+	ImGuizmo::OPERATION m_current_gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
+	ImGuizmo::MODE m_current_gizmo_mode = ImGuizmo::MODE::LOCAL;
 
 	int m_fps_counter = 0;
 	float m_fps_timer = 0.0;

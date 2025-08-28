@@ -8,6 +8,7 @@
 #include "glfw/glfw3.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
+#include "imguizmo/ImGuizmo.h"
 
 namespace z1 {
 
@@ -53,6 +54,7 @@ namespace z1 {
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
 	}
 
 	void ImGuiLayer::end() {

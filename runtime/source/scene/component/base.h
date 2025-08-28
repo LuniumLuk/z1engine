@@ -8,6 +8,23 @@
 
 namespace z1 {
 
+	template<typename... Deps>
+	struct Requires {
+		using requires_tuple = std::tuple<Deps...>;  // marker type
+
+		std::tuple<Deps*...> m_deps{};
+
+		template<typename T>
+		void set_dependency(T& dep) {
+			std::get<T*>(m_deps) = &dep;
+		}
+
+		template<typename T>
+		T& get_component() const {
+			return *std::get<T*>(m_deps);
+		}
+	};
+
 	struct API TagComponent {
 		std::string m_tag;
 		uint32_t m_id = 0;
@@ -74,6 +91,17 @@ namespace z1 {
 			if (glm::decompose(transform, m_scale, orientation, m_location, skew, perspective)) {
 				glm::vec3 euler = glm::eulerAngles(orientation);
 				m_rotation = glm::degrees(euler);
+			}
+		}
+
+		void set_world_transform(glm::mat4 const& transform) {
+			if (m_parent) {
+				glm::mat4 parent_world = m_parent->get_world_transform();
+				glm::mat4 local_transform = glm::inverse(parent_world) * transform;
+				set_local_transform(local_transform);
+			}
+			else {
+				set_local_transform(transform);
 			}
 		}
 	};

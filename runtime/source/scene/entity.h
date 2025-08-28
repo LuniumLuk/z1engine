@@ -7,6 +7,29 @@
 
 namespace z1 {
 
+	// helpers to setup requires of a component
+
+	// trait: check if T has requires_tuple
+	template<typename, typename = void>
+	struct has_requires : std::false_type {};
+
+	template<typename T>
+	struct has_requires<T, std::void_t<typename T::requires_tuple>> : std::true_type {};
+
+	template<typename T>
+	inline constexpr bool has_requires_v = has_requires<T>::value;
+
+	template<typename Tuple, typename Func, std::size_t... I>
+	void for_each_type(Func&& f, std::index_sequence<I...>) {
+		(f(std::tuple_element_t<I, Tuple>{}), ...);
+	}
+
+	template<typename Tuple, typename Func>
+	void for_each_type(Func&& f) {
+		for_each_type<Tuple>(std::forward<Func>(f),
+			std::make_index_sequence<std::tuple_size_v<Tuple>>{});
+	}
+
 	struct Scene;
 
 	struct API Entity {
@@ -47,7 +70,25 @@ namespace z1 {
 		T& add_component(Args&&... args) {
 			CORE_ASSERT(is_valid(), "Entity is invalid!");
 			CORE_ASSERT(!has_component<T>(), "Entity already has component of type " + std::string(typeid(T).name()) + "!");
-			return m_scene.lock()->m_registry.emplace<T>(m_handle, std::forward<Args>(args)...);
+			auto& reg = m_scene.lock()->m_registry;
+			auto& comp = reg.emplace<T>(m_handle, std::forward<Args>(args)...);
+
+			if constexpr (has_requires_v<T>) {
+				using Reqs = typename T::requires_tuple;
+
+				for_each_type<Reqs>(
+					[&](auto type_holder) {
+						using Dep = std::decay_t<decltype(type_holder)>;
+
+						if (!reg.any_of<Dep>(m_handle)) {
+							reg.emplace<Dep>(m_handle);
+						}
+
+						comp.set_dependency(reg.get<Dep>(m_handle));
+					});
+			}
+
+			return comp;
 		}
 
 		template<typename T>

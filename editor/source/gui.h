@@ -43,6 +43,7 @@ struct EditorGUI {
 
 	std::function<void()> m_draw_viewport_overlay_func = nullptr;
 	std::function<void()> m_draw_menu_bar_items_func = nullptr;
+	std::function<void()> m_draw_viewport_func = nullptr;
 
 	bool m_dockspace = true;
 	bool m_window_viewport = true;

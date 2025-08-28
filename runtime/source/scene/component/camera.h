@@ -6,10 +6,11 @@
 #include "event/mouse_event.h"
 #include "glm/glm.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
+#include "scene/component/base.h"
 
 namespace z1 {
 
-	struct API CameraComponent {
+	struct API CameraComponent : Requires<TransformComponent> {
 		CameraComponent() = default;
 
 		glm::mat4 get_proj() const {
@@ -21,6 +22,20 @@ namespace z1 {
 				float half_width = half_height * m_aspect;
 				return glm::ortho(-half_width, half_width, -half_height, half_height, m_near, m_far);
 			}
+		}
+
+		glm::mat4 get_view() const {
+			auto& transform = get_component<TransformComponent>();
+			auto world_transform = transform.get_world_transform();
+
+			auto up = world_transform * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+			auto forward = world_transform * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
+			return glm::lookAt(transform.m_location, transform.m_location + glm::vec3(forward), glm::vec3(up));
+		}
+
+		glm::vec3 get_position() const {
+			auto& transform = get_component<TransformComponent>();
+			return transform.m_location;
 		}
 
 		void zoom(float zoom) {

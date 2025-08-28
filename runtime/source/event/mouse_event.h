@@ -45,7 +45,7 @@ namespace z1 {
 	};
 
 	struct API MouseButtonEvent : Event {
-		int GetButton() const { return m_mouse_button; }
+		int get_button() const { return m_mouse_button; }
 
 		EVENT_STRUCT_CATEGORY(EventCategoryMouseButton | EventCategoryInput)
 
@@ -63,7 +63,7 @@ namespace z1 {
 
 		std::string to_string() const override {
 			std::stringstream ss;
-			ss << "MouseButtonPressedEvent: " << GetButton();
+			ss << "MouseButtonPressedEvent: " << get_button();
 			return ss.str();
 		}
 
@@ -76,7 +76,7 @@ namespace z1 {
 
 		std::string to_string() const override {
 			std::stringstream ss;
-			ss << "MouseButtonReleasedEvent: " << GetButton();
+			ss << "MouseButtonReleasedEvent: " << get_button();
 			return ss.str();
 		}
 

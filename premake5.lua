@@ -54,6 +54,7 @@ workspace "z1engine"
 		include "3rdparty/imgui"
 		include "3rdparty/lz4"
 		include "3rdparty/yaml-cpp"
+		include "3rdparty/imguizmo"
 		include "bakery"
 
 	group "test"
@@ -95,6 +96,7 @@ workspace "z1engine"
 			"3rdparty/glfw/include",
 			"3rdparty/glad/include",
 			"3rdparty/imgui",
+			"3rdparty/imguizmo",
 			"3rdparty/glm",
 			"3rdparty/entt",
 			"3rdparty/yaml-cpp/include",
@@ -105,6 +107,7 @@ workspace "z1engine"
 			"glfw",
 			"glad",
 			"imgui",
+			"imguizmo",
 			"bakery",
 			"yaml-cpp",
 			"opengl32.lib",
@@ -174,6 +177,7 @@ workspace "z1engine"
 			"3rdparty/glfw/include",
 			"3rdparty/glad/include",
 			"3rdparty/imgui",
+			"3rdparty/imguizmo",
 			"3rdparty/glm",
 			"3rdparty/entt",
 			"3rdparty/yaml-cpp/include",

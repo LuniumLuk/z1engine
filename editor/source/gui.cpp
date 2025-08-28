@@ -156,6 +156,11 @@ void EditorGUI::draw() {
 				m_viewport_mouse_x = local_pos.x / image_rect.x;
 				m_viewport_mouse_y = 1.0f - local_pos.y / image_rect.y;
 			}
+
+			if (m_draw_viewport_func) {
+				m_draw_viewport_func();
+			}
+
 			ImGui::EndChild();
 		}
 		ImGui::End();
