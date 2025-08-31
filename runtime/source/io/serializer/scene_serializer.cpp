@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "io/scene_serializer.h"
+#include "io/serializer/scene_serializer.h"
 #include "core/asset_manager.h"
 #include "scene/entity.h"
 #include "scene/component/base.h"
@@ -10,7 +10,7 @@
 
 namespace z1::io {
 
-	bool SceneSerializer::serialize_scene(Filepath const& file, std::shared_ptr<Scene> const& scene) {
+	bool SceneSerializer::serialize(Filepath const& file, std::shared_ptr<Scene> const& scene) {
 
 		// map transform pointer to entity ID for parent reference
 		std::unordered_map<void*, uint32_t> transform_ptr_to_id;
@@ -116,7 +116,7 @@ namespace z1::io {
 		return true;
 	}
 
-	std::shared_ptr<Scene> SceneSerializer::deserialize_scene(Filepath const& file) {
+	std::shared_ptr<Scene> SceneSerializer::deserialize(Filepath const& file) {
 		auto scene = std::make_shared<Scene>();
 
 		std::ifstream stream(file.string());

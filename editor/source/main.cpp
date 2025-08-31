@@ -24,7 +24,7 @@ struct EditorLayer : Layer {
 				if (meta->root == "engine") return;
 
 				if (meta->type == "scene") {
-					m_active_scene = io::SceneSerializer::deserialize_scene(FileSystem::s_content_root / (meta->path.string() + ".yaml"));
+					m_active_scene = io::SceneSerializer::deserialize(FileSystem::s_content_root / (meta->path.string() + ".yaml"));
 					m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 					m_selected_entity = nullptr;
 				}
@@ -70,7 +70,7 @@ struct EditorLayer : Layer {
 					if (ImGui::MenuItem("open...")) {
 						Filepath file = open_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
 						if (!file.empty()) {
-							m_active_scene = io::SceneSerializer::deserialize_scene(file);
+							m_active_scene = io::SceneSerializer::deserialize(file);
 							m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 							m_selected_entity = nullptr;
 						}
@@ -81,7 +81,7 @@ struct EditorLayer : Layer {
 							if (file.extension() != ".yaml") {
 								file += ".yaml";
 							}
-							io::SceneSerializer::serialize_scene(file, m_active_scene);
+							io::SceneSerializer::serialize(file, m_active_scene);
 						}
 					}
 					if (ImGui::MenuItem("exit")) {
@@ -119,18 +119,18 @@ struct EditorLayer : Layer {
 				}
 			};
 
-		//{
-		//	Pipeline::Description desc{};
-		//	desc.depth_test = true;
-		//	desc.blend = true;
-		//	desc.cull_mode = CullMode::Back;
-		//	desc.shader = g_runtime_context.m_asset_manager->get<Shader>("sprite_2d");
-		//	auto pipeline = Pipeline::build(desc);
-		//	m_material = std::make_shared<Material>("M_Sprite2D", pipeline);
-		//	m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
-		//	m_material_instance->m_override_variables["u_texture"].default_value.resource_id = tex0->get_resource_id();
-		//	m_material_instance->m_override_variables["u_texture"].default_value.valid = true;
-		//}
+		{
+			Pipeline::Description desc{};
+			desc.depth_test = true;
+			desc.blend = true;
+			desc.cull_mode = CullMode::Back;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("sprite_2d");
+			auto pipeline = Pipeline::build(desc);
+			auto material = std::make_shared<Material>("M_Sprite2D", pipeline);
+			/*m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
+			m_material_instance->m_override_variables["u_texture"].default_value.resource_id = tex0->get_resource_id();
+			m_material_instance->m_override_variables["u_texture"].default_value.valid = true;*/
+		}
 
 		// picking system doesn��t need to be that precise
 		// so we use default resolution here (512x512)
@@ -266,9 +266,6 @@ private:
 	std::unique_ptr<ContentBrowser> m_browser;
 	bool m_picked_from_viewport = false;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
-
-	std::shared_ptr<Material> m_material;
-	std::shared_ptr<MaterialInstance> m_material_instance;
 
 	std::shared_ptr<PickingSystem> m_picking;
 

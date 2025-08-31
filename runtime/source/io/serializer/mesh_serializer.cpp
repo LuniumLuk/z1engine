@@ -1,12 +1,12 @@
 #include "pch.h"
-#include "io/loader/mesh_storage.h"
+#include "io/serializer/mesh_serializer.h"
 #include "core/core.h"
 #include "core/asset_manager.h"
 #include "util/yaml.h"
 
 namespace z1::io {
 
-	bool save_static_mesh_storage(Filepath const& path, std::shared_ptr<StaticMesh::Storage> const& storage) {
+	bool StaticMeshSerializer::serialize(Filepath const& path, std::shared_ptr<StaticMesh::Storage> const& storage) {
 		BinaryFile file{};
 
 		auto vdata_size = storage->vertices.size() * sizeof(StaticMesh::VertexData);
@@ -49,7 +49,7 @@ namespace z1::io {
 		return file.save(path);
 	}
 
-	std::shared_ptr<StaticMesh::Storage> load_static_mesh_storage(Filepath const& path) {
+	std::shared_ptr<StaticMesh::Storage> StaticMeshSerializer::deserialize(Filepath const& path) {
 		BinaryFile file{};
 
 		if (!file.load(path)) {
@@ -108,7 +108,7 @@ namespace z1::io {
 		auto meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 
-		auto storage = load_static_mesh_storage(file);
+		auto storage = StaticMeshSerializer::deserialize(file);
 		if (!storage) {
 			CORE_ERROR("failed to load static mesh storage: {0}", file.generic_string());
 			return nullptr;

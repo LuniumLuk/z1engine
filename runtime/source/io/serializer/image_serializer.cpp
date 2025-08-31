@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "io/loader/image_loader.h"
+#include "io/serializer/image_serializer.h"
 #include "core/asset_manager.h"
 #include "util/yaml.h"
 

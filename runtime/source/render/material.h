@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/core.h"
+#include "core/guid.h"
 #include "render/pipeline.h"
 #include "render/resource.h"
 #include "render/shader.h"
@@ -34,6 +35,8 @@ namespace z1 {
 		std::shared_ptr<Pipeline> m_pipeline;
 		std::unordered_map<std::string, Variable> m_variables;
 
+		Guid m_guid{};
+
 	private:
 		void parse_reflection_line(const std::string& line);
 	};
@@ -45,6 +48,8 @@ namespace z1 {
 		std::string m_name;
 		std::shared_ptr<Material> m_material;
 		std::unordered_map<std::string, Material::Variable> m_override_variables;
+
+		Guid m_guid{};
 
 	};
 

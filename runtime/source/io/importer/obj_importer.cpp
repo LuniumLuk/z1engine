@@ -148,7 +148,7 @@ namespace z1::io {
 
 		auto mesh_storage = import_obj_as_mesh_storage(settings.file);
 
-		if (mesh_storage && io::save_static_mesh_storage(import_file, mesh_storage)) {
+		if (mesh_storage && io::StaticMeshSerializer::serialize(import_file, mesh_storage)) {
 			meta.save(import_meta);
 			ret.assets.push_back(meta);
 			ret.files.push_back(import_file);

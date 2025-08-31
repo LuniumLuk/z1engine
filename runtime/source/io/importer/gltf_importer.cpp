@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "io/importer/gltf_importer.h"
-#include "io/loader/mesh_storage.h"
+#include "io/serializer/mesh_serializer.h"
 #include "scene/entity.h"
 #include "scene/component/mesh.h"
 #include "render/mesh.h"
@@ -256,7 +256,7 @@ namespace z1::io {
 
 			g_runtime_context.m_asset_manager->register_asset(meta, root);
 
-			if (io::save_static_mesh_storage(import_file, mesh_storage)) {
+			if (io::StaticMeshSerializer::serialize(import_file, mesh_storage)) {
 				meta.save(import_meta);
 				ret.assets.push_back(meta);
 				ret.files.push_back(import_file);

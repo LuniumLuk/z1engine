@@ -11,10 +11,12 @@ namespace z1::io {
 		WrapMode wrap_mode = WrapMode::Repeat;
 	};
 
-	struct ImageImporter : Importer<ImageImporterSettings> {
-		virtual ~ImageImporter() = default;
-		bool can_import(Filepath const& path) noexcept override;
-		ImportResult import(ImageImporterSettings const& settings) override;
+	struct ImageImporter : Importer<ImageImporter, ImageImporterSettings> {
+
+		static bool can_import(Filepath const& path) noexcept;
+
+		static ImportResult import(ImageImporterSettings const& settings);
+
 	};
 
 }

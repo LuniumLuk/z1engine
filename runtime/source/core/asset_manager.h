@@ -3,8 +3,8 @@
 #include "core/core.h"
 #include "core/guid.h"
 #include "render/shader.h"
-#include "io/loader/image_loader.h"
-#include "io/loader/mesh_storage.h"
+#include "io/serializer/image_serializer.h"
+#include "io/serializer/mesh_serializer.h"
 #include "util/yaml.h"
 
 namespace z1 {

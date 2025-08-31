@@ -10,10 +10,12 @@ namespace z1::io {
 
 	};
 
-	struct ObjImporter : Importer<ObjImporterSettings> {
-		virtual ~ObjImporter() = default;
-		bool can_import(Filepath const& path) noexcept override;
-		ImportResult import(ObjImporterSettings const& settings) override;
+	struct ObjImporter : Importer<ObjImporter, ObjImporterSettings> {
+
+		static bool can_import(Filepath const& path) noexcept;
+
+		static ImportResult import(ObjImporterSettings const& settings);
+
 	};
 
 }

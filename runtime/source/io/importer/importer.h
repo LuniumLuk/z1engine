@@ -19,14 +19,16 @@ namespace z1::io {
 		Filepath path;
 	};
 
-	template <typename Settings>
+	template <typename Derived, typename Settings>
 	struct Importer {
 
-		virtual ~Importer() = default;
+		static bool can_import(Filepath const& path) noexcept {
+			return Derived::can_import(path);
+		}
 
-		virtual bool can_import(Filepath const& path) noexcept = 0;
-
-		virtual ImportResult import(Settings const& settings) = 0;
+		static ImportResult import(Settings const& settings) {
+			return Derived::import(settings);
+		}
 
 	};
 

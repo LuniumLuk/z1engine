@@ -9,10 +9,12 @@ namespace z1::io {
 
 	};
 
-	struct GltfImporter : Importer<GltfImporterSettings> {
-		virtual ~GltfImporter() = default;
-		bool can_import(Filepath const& path) noexcept override;
-		ImportResult import(GltfImporterSettings const& settings) override;
+	struct GltfImporter : Importer<GltfImporter, GltfImporterSettings> {
+
+		static bool can_import(Filepath const& path) noexcept;
+
+		static ImportResult import(GltfImporterSettings const& settings);
+
 	};
 
 }
