@@ -377,8 +377,8 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # VS Code files for those working on multiple tools
-.vscode/*
-!.vscode/settings.json
+.vscode/settings.json
+!.vscode/c_cpp_properties.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
@@ -440,6 +440,5 @@ build-int
 *.ini
 
 *.meta.yaml
-.vscode
 cache
 content
