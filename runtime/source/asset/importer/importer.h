@@ -2,7 +2,7 @@
 
 #include "core/core.h"
 #include "core/io.h"
-#include "core/asset_manager.h"
+#include "asset/asset_manager.h"
 
 namespace z1::io {
 

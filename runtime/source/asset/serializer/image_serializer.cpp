@@ -1,6 +1,6 @@
 #include "pch.h"
-#include "io/serializer/image_serializer.h"
-#include "core/asset_manager.h"
+#include "asset/serializer/image_serializer.h"
+#include "asset/asset_manager.h"
 #include "util/yaml.h"
 
 #include "bakery.h"

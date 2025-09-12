@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/io.h"
-#include "io/importer/importer.h"
+#include "asset/importer/importer.h"
 #include "render/image.h"
 
 namespace z1::io {

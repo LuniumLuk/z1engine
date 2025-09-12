@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/io.h"
-#include "io/serializer/serializer.h"
-#include "io/serializer/binary_file.h"
+#include "asset/serializer/serializer.h"
+#include "asset/serializer/binary_file.h"
 #include "render/mesh.h"
 
 namespace z1::io {

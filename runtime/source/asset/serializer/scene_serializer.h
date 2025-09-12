@@ -2,7 +2,7 @@
 
 #include "core/io.h"
 #include "scene/scene.h"
-#include "io/serializer/serializer.h"
+#include "asset/serializer/serializer.h"
 
 namespace z1::io {
 

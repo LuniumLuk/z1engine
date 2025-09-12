@@ -1,6 +1,6 @@
 #include "pch.h"
-#include "io/importer/gltf_importer.h"
-#include "io/serializer/mesh_serializer.h"
+#include "asset/importer/gltf_importer.h"
+#include "asset/serializer/mesh_serializer.h"
 #include "scene/entity.h"
 #include "scene/component/mesh.h"
 #include "render/mesh.h"

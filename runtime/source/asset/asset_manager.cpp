@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "core/asset_manager.h"
+#include "asset/asset_manager.h"
 #include "core/io.h"
 
 #include "bakery.h"

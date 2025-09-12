@@ -1,6 +1,6 @@
 #include "pch.h"
-#include "io/serializer/scene_serializer.h"
-#include "core/asset_manager.h"
+#include "asset/serializer/scene_serializer.h"
+#include "asset/asset_manager.h"
 #include "scene/entity.h"
 #include "scene/component/base.h"
 #include "scene/component/camera.h"

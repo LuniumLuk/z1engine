@@ -1,7 +1,7 @@
 #include "pch.h"
-#include "io/serializer/mesh_serializer.h"
+#include "asset/serializer/mesh_serializer.h"
 #include "core/core.h"
-#include "core/asset_manager.h"
+#include "asset/asset_manager.h"
 #include "util/yaml.h"
 
 namespace z1::io {

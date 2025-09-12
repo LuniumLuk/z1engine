@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "io/importer/image_importer.h"
+#include "asset/importer/image_importer.h"
 #include "util/yaml.h"
 
 #include "bakery.h"

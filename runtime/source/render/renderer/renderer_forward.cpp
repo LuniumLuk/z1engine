@@ -6,7 +6,7 @@
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "render/renderer/renderer_forward.h"
-#include "core/asset_manager.h"
+#include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
 
 namespace z1 {

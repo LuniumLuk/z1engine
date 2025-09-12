@@ -10,7 +10,7 @@
 #include "render/graphics_context.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
-#include "core/asset_manager.h"
+#include "asset/asset_manager.h"
 #include "3rdparty/imgui_layer.h"
 
 namespace z1 {
