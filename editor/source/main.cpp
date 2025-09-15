@@ -19,12 +19,12 @@ struct EditorLayer : Layer {
 		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 		m_browser = std::make_unique<ContentBrowser>();
 		m_browser->m_on_asset_opened =
-			[&](AssetMetaData* meta) {
+			[&](AssetMeta* meta) {
 				if (!meta) return;
 				if (meta->root == "engine") return;
 
 				if (meta->type == "scene") {
-					m_active_scene = io::SceneSerializer::deserialize(FileSystem::s_content_root / (meta->path.string() + ".yaml"));
+					m_active_scene = SceneSerializer::deserialize(FileSystem::s_content_root / (meta->path.string() + ".yaml"));
 					m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 					m_selected_entity = nullptr;
 				}
@@ -70,7 +70,7 @@ struct EditorLayer : Layer {
 					if (ImGui::MenuItem("open...")) {
 						Filepath file = open_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
 						if (!file.empty()) {
-							m_active_scene = io::SceneSerializer::deserialize(file);
+							m_active_scene = SceneSerializer::deserialize(file);
 							m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 							m_selected_entity = nullptr;
 						}
@@ -81,7 +81,7 @@ struct EditorLayer : Layer {
 							if (file.extension() != ".yaml") {
 								file += ".yaml";
 							}
-							io::SceneSerializer::serialize(file, m_active_scene);
+							SceneSerializer::serialize(file, m_active_scene);
 						}
 					}
 					if (ImGui::MenuItem("exit")) {

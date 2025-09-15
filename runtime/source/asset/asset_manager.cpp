@@ -7,47 +7,6 @@
 namespace z1 {
 	namespace fs = std::filesystem;
 
-	bool AssetMetaData::save(Filepath const& p) const {
-		YAML::Emitter emitter;
-
-		emitter << YAML::BeginMap;
-		emitter << YAML::Key << "guid" << YAML::Value << guid.value;
-		emitter << YAML::Key << "type" << YAML::Value << type;
-		emitter << YAML::Key << "path" << YAML::Value << path.generic_string();
-		emitter << YAML::Key << "extra" << YAML::Value << extra;
-		emitter << YAML::EndMap;
-
-		try {
-			fs::create_directories(p.parent_path());
-			std::ofstream fout(p);
-			fout << emitter.c_str();
-			fout.close();
-		}
-		catch (std::exception const& e) {
-			CORE_ERROR("failed to save to {}: {}", p.generic_string(), e.what());
-			return false;
-		}
-
-		return true;
-	}
-
-	bool AssetMetaData::load(Filepath const& p) {
-		try {
-			YAML::Node node = YAML::LoadFile(p.string());
-
-			guid = Guid::make(node["guid"].as<std::string>());
-			type = node["type"].as<std::string>();
-			path = node["path"].as<std::string>();
-			extra = node["extra"];
-		}
-		catch (std::exception const& e) {
-			CORE_ERROR("failed to load from {}: {}", p.generic_string(), e.what());
-			return false;
-		}
-
-		return true;
-	}
-
 	AssetManager::AssetManager() {
 		Filepath cwd = fs::current_path();
 		CORE_INFO("current working directory: {0}", cwd.generic_string());
@@ -84,17 +43,15 @@ namespace z1 {
 				if (file.extension() != ".yaml")
 					continue; // skip non-meta files
 
-				AssetMetaData meta;
-				meta.root = "content";
-				if (!meta.load(file)) {
+				AssetMeta meta;
+				try {
+					YAML::Node node = YAML::LoadFile(file.string());
+					meta = node["meta"].as<AssetMeta>();
+					meta.root = "content";
+				}
+				catch (std::exception const& e) {
 					CORE_ERROR("failed to load meta file: {0}", file.generic_string());
 					continue;
-				}
-
-				// currently we skip scene files
-				if (meta.type == "scene") {
-					meta.path = fs::relative(file.parent_path() / file.stem(), root);
-					meta.guid.value = meta.path.generic_string();
 				}
 
 				if (!register_asset(meta, root)) {
@@ -120,7 +77,7 @@ namespace z1 {
 
 				Filepath path = fs::relative(file.parent_path() / file.stem(), root);
 
-				AssetMetaData meta{};
+				AssetMeta meta{};
 				// using path as guid, since we currently don't have a better way to generate stable guids for files
 				meta.root = "engine";
 				meta.guid = Guid::make(path.generic_string());
@@ -135,7 +92,7 @@ namespace z1 {
 	}
 
 	void AssetManager::remove_asset(Guid const& guid) {
-		AssetMetaData const& meta = get_meta(guid);
+		AssetMeta const& meta = get_meta(guid);
 		if (!meta.guid.is_valid()) {
 			return;
 		}
@@ -159,7 +116,7 @@ namespace z1 {
 		return m_asset_metas.find(guid) != m_asset_metas.end();
 	}
 
-	AssetMetaData AssetManager::get_meta(Guid const& guid) const {
+	AssetMeta AssetManager::get_meta(Guid const& guid) const {
 		auto it = m_asset_metas.find(guid);
 		if (it == m_asset_metas.end()) {
 			CORE_ERROR("no asset found with guid: {0}", guid);
@@ -168,7 +125,7 @@ namespace z1 {
 		return it->second;
 	}
 
-	bool AssetManager::register_asset(AssetMetaData const& meta, Filepath const& root, std::string const& ext) {
+	bool AssetManager::register_asset(AssetMeta const& meta, Filepath const& root, std::string const& ext) {
 		Filepath file = root / meta.path;
 		file += ext;
 

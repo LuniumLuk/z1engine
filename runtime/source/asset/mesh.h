@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/guid.h"
+#include "asset/asset.h"
 #include "render/vertex_array.h"
 #include "glm/glm.hpp"
 
@@ -38,7 +38,7 @@ namespace z1 {
 		};
 	};
 
-	struct API StaticMesh {
+	struct API StaticMesh : Asset<StaticMesh> {
 
 		struct VertexData {
 			glm::vec3 position{ 0.0f };
@@ -105,6 +105,10 @@ namespace z1 {
 			glm::vec3 bound_max;
 		};
 
+		static std::shared_ptr<StaticMesh> create(Filepath const& path, std::shared_ptr<Storage> const& storage);
+		static std::shared_ptr<StaticMesh> load(Guid const& guid);
+		void save() const;
+
 		StaticMesh(std::shared_ptr<Storage> const& storage);
 		StaticMesh(std::vector<Primitive> const& primitives);
 		StaticMesh(std::vector<Primitive> const& primitives, glm::vec3 const& bound_min, glm::vec3 const& bound_max);
@@ -114,7 +118,6 @@ namespace z1 {
 		void draw() const;
 		void draw_instanced(uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) const;
 
-		Guid m_guid{};
 		std::vector<Primitive> m_primitives;
 
 		// axis-aligned bounding box for the whole mesh

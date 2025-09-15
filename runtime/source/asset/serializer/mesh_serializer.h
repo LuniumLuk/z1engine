@@ -3,9 +3,9 @@
 #include "core/io.h"
 #include "asset/serializer/serializer.h"
 #include "asset/serializer/binary_file.h"
-#include "render/mesh.h"
+#include "asset/mesh.h"
 
-namespace z1::io {
+namespace z1 {
 
 	struct StaticMeshSerializer : Serializer<StaticMeshSerializer, StaticMesh::Storage> {
 

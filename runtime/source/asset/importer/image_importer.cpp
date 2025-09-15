@@ -5,7 +5,7 @@
 #include "bakery.h"
 #include "tinyexr/tinyexr.h"
 
-namespace z1::io {
+namespace z1 {
 
 	static bool file_is_ldr_image(Filepath const& path) noexcept {
 		auto ext = path.extension().string();
@@ -37,7 +37,7 @@ namespace z1::io {
 		Filepath import_meta = import_file;
 		import_meta += ".meta.yaml";
 
-		AssetMetaData meta{};
+		AssetMeta meta{};
 		meta.guid = Guid::generate();
 		meta.type = "image";
 		meta.path = settings.path;

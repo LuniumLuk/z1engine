@@ -4,7 +4,7 @@
 #include "scene/scene.h"
 #include "asset/serializer/serializer.h"
 
-namespace z1::io {
+namespace z1 {
 
 	struct SceneSerializer : Serializer<SceneSerializer, Scene> {
 

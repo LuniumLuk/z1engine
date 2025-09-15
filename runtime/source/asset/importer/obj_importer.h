@@ -2,9 +2,9 @@
 
 #include "core/io.h"
 #include "asset/importer/importer.h"
-#include "render/mesh.h"
+#include "asset/mesh.h"
 
-namespace z1::io {
+namespace z1 {
 
 	struct ObjImporterSettings : ImporterSettings {
 

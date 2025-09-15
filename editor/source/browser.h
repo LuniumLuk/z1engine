@@ -150,7 +150,7 @@ struct ContentBrowser {
 		ImGui::End();
 	}
 
-	std::function<void(AssetMetaData* meta)> m_on_asset_opened;
+	std::function<void(AssetMeta* meta)> m_on_asset_opened;
 	AssetNode* m_selected_in_hierachy = nullptr;
 	AssetNode* m_selected_in_folder = nullptr;
 };

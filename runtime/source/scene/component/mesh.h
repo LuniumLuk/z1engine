@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/core.h"
-#include "render/mesh.h"
+#include "asset/mesh.h"
 
 namespace z1 {
 

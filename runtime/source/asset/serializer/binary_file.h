@@ -6,7 +6,7 @@
 
 #define BINARY_FILE_MAGIC 0x5A314246 // 'Z1BF'
 
-namespace z1::io {
+namespace z1 {
 
 #pragma pack(push, 1)
 	struct BinaryFileHeader {

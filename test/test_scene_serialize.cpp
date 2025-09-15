@@ -87,7 +87,7 @@ int main() {
 		}
 	}
 
-	io::SceneSerializer::serialize_scene("../../content/scene/sample.scene.yaml", scene);
+	SceneSerializer::serialize_scene("../../content/scene/sample.scene.yaml", scene);
 
 	return 0;
 }

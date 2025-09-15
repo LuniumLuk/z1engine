@@ -4,10 +4,10 @@
 #include "core/io.h"
 #include "asset/asset_manager.h"
 
-namespace z1::io {
+namespace z1 {
 
 	struct ImportResult {
-		std::vector<AssetMetaData> assets;
+		std::vector<AssetMeta> assets;
 		std::vector<Filepath> files;
 		std::vector<std::string> warnings;
 		std::vector<std::string> errors;

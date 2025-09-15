@@ -18,46 +18,46 @@ int main() {
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
 	{
-		io::ImageImporterSettings settings{};
+		ImageImporterSettings settings{};
 		settings.file = "../../asset/texture/sheet/roguelikeSheet_transparent.png";
 		settings.path = "texture/T_roguelikeSheet";
 		settings.sampler_mode = SamplerMode::Nearest;
-		io::ImageImporter().import(settings);
+		ImageImporter().import(settings);
 	}
 
 	{
-		io::ImageImporterSettings settings{};
+		ImageImporterSettings settings{};
 		settings.file = "../../asset/texture/awesomeface.png";
 		settings.path = "texture/T_awesomeface";
-		io::ImageImporter().import(settings);
+		ImageImporter().import(settings);
 	}
 
 	{
-		io::ImageImporterSettings settings{};
+		ImageImporterSettings settings{};
 		settings.file = "../../asset/texture/tira-checker.jpg";
 		settings.path = "texture/T_tira-checker";
-		io::ImageImporter().import(settings);
+		ImageImporter().import(settings);
 	}
 
 	{
-		io::GltfImporterSettings settings{};
+		GltfImporterSettings settings{};
 		settings.file = "../../asset/mesh/DamagedHelmet.glb";
 		settings.path = "DamagedHelmet";
-		io::GltfImporter().import(settings);
+		GltfImporter().import(settings);
 	}
 
 	{
-		io::ObjImporterSettings settings{};
+		ObjImporterSettings settings{};
 		settings.file = "../../asset/mesh/bunny.obj";
 		settings.path = "SM_bunny";
-		io::ObjImporter().import(settings);
+		ObjImporter().import(settings);
 	}
 
 	{
-		io::ObjImporterSettings settings{};
+		ObjImporterSettings settings{};
 		settings.file = "../../asset/fireplace_room/fireplace_room.obj";
 		settings.path = "SM_fireplace_room";
-		io::ObjImporter().import(settings);
+		ObjImporter().import(settings);
 	}
 
 	return 0;

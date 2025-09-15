@@ -8,7 +8,7 @@
 #include "scene/component/sprite.h"
 #include "util/yaml.h"
 
-namespace z1::io {
+namespace z1 {
 
 	bool SceneSerializer::serialize(Filepath const& file, std::shared_ptr<Scene> const& scene) {
 

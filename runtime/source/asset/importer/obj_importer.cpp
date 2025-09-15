@@ -3,7 +3,7 @@
 
 #include "tinyobjloader/tiny_obj_loader.h"
 
-namespace z1::io {
+namespace z1 {
 
 	bool ObjImporter::can_import(Filepath const& path) noexcept {
 		auto ext = path.extension().string();
@@ -137,7 +137,7 @@ namespace z1::io {
 		Filepath import_meta = import_file;
 		import_meta += ".meta.yaml";
 
-		AssetMetaData meta{};
+		AssetMeta meta{};
 		meta.guid = Guid::generate();
 		meta.type = "static mesh";
 		meta.path = settings.path;
@@ -148,7 +148,7 @@ namespace z1::io {
 
 		auto mesh_storage = import_obj_as_mesh_storage(settings.file);
 
-		if (mesh_storage && io::StaticMeshSerializer::serialize(import_file, mesh_storage)) {
+		if (mesh_storage && StaticMeshSerializer::serialize(import_file, mesh_storage)) {
 			meta.save(import_meta);
 			ret.assets.push_back(meta);
 			ret.files.push_back(import_file);

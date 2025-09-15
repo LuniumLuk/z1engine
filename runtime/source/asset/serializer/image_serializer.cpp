@@ -6,7 +6,7 @@
 #include "bakery.h"
 #include "tinyexr/tinyexr.h"
 
-namespace z1::io {
+namespace z1 {
 
 	static bool file_is_ldr_image(Filepath const& path) noexcept {
 		auto ext = path.extension().string();

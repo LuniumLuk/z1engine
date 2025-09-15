@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "render/mesh.h"
+#include "asset/mesh.h"
 
 namespace z1 {
 
@@ -122,6 +122,86 @@ namespace z1 {
 			prim.m_vertex_array->draw_instanced(prim.m_primitive_type, num, instance_buffer, start, divisor);
 			prim.m_vertex_array->unbind();
 		}
+	}
+
+	std::shared_ptr<StaticMesh> StaticMesh::create(Filepath const& path, std::shared_ptr<Storage> const& storage) {
+		BinaryFile bf{};
+
+		auto vdata_size = storage->vertices.size() * sizeof(StaticMesh::VertexData);
+		auto idata_size = storage->indices.size() * sizeof(uint32_t);
+
+		bf.reserve(vdata_size + idata_size);
+		bf.set_data(storage->vertices.data(), vdata_size, 0);
+		bf.set_data(storage->indices.data(), idata_size, vdata_size);
+
+		YAML::Emitter yaml;
+		yaml << YAML::BeginMap;
+		yaml << YAML::Key << "guid" << YAML::Value << storage->guid.value;
+		yaml << YAML::Key << "bound_min" << YAML::Value << storage->bound_min;
+		yaml << YAML::Key << "bound_max" << YAML::Value << storage->bound_max;
+		yaml << YAML::Key << "vertex_count" << YAML::Value << storage->vertices.size();
+		yaml << YAML::Key << "index_count" << YAML::Value << storage->indices.size();
+		yaml << YAML::Key << "primitives" << YAML::Value << YAML::BeginSeq;
+
+		for (auto const& prim : storage->primitives) {
+			yaml << YAML::BeginMap;
+			yaml << YAML::Key << "index_start" << YAML::Value << prim.index_start;
+			yaml << YAML::Key << "index_count" << YAML::Value << prim.index_count;
+			yaml << YAML::Key << "vertex_count" << YAML::Value << prim.vertex_count;
+			yaml << YAML::Key << "bound_min" << YAML::Value << prim.bound_min;
+			yaml << YAML::Key << "bound_max" << YAML::Value << prim.bound_max;
+			yaml << YAML::Key << "guid" << YAML::Value << prim.material.value;
+			yaml << YAML::Key << "has_indices" << YAML::Value << prim.has_indices;
+			yaml << YAML::Key << "has_normal" << YAML::Value << prim.has_normal;
+			yaml << YAML::Key << "has_tangent" << YAML::Value << prim.has_tangent;
+			yaml << YAML::EndMap;
+		}
+
+		yaml << YAML::EndMap;
+
+		auto material = std::make_shared<StaticMesh>(storage);
+		material->m_meta.guid = Guid::generate();
+		material->m_meta.type = "static mesh";
+		material->m_meta.path = path;
+		material->m_meta.root = "content";
+		auto const& root = FileSystem::s_content_root;
+		if (!g_runtime_context.m_asset_manager->register_asset(material->m_meta, root)) {
+			return nullptr;
+		}
+		material->save();
+
+		bf.set_yaml(yaml.c_str());
+		if (!bf.save(path)) {
+			CORE_ERROR("failed to save static mesh storage: {0}", path.generic_string());
+			return nullptr;
+		}
+
+		return material;
+	}
+
+	std::shared_ptr<StaticMesh> StaticMesh::load(Guid const& guid) {
+
+	}
+
+	void StaticMesh::save() const {
+		auto const& root = FileSystem::s_content_root;
+		Filepath file = root / m_meta.path;
+		file += ".yaml";
+
+		YAML::Emitter out;
+		out << YAML::BeginMap;
+		out << YAML::Key << "meta" << YAML::Value << m_meta;
+		out << YAML::Key << "pipeline" << YAML::Value;
+		out << YAML::BeginMap;
+		out << YAML::Key << "depth_test" << YAML::Value << m_pipeline_desc.depth_test;
+		out << YAML::Key << "blend" << YAML::Value << m_pipeline_desc.blend;
+		out << YAML::Key << "src_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.src_blend_factor);
+		out << YAML::Key << "dst_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.dst_blend_factor);
+		out << YAML::Key << "cull_mode" << YAML::Value << static_cast<int>(m_pipeline_desc.cull_mode);
+		out << YAML::Key << "shader" << YAML::Value << m_pipeline_desc.shader->m_guid.value;
+		out << YAML::EndMap;
+
+		save_yaml(file, out);
 	}
 
 }

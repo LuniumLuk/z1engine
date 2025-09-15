@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "asset/serializer/binary_file.h"
 
-namespace z1::io {
+namespace z1 {
 
 	bool BinaryFile::load(Filepath const& path) {
 		std::ifstream ifs(path, std::ios::binary);

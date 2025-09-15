@@ -2,6 +2,7 @@
 
 #include "core/core.h"
 #include "core/guid.h"
+#include "asset/asset.h"
 #include "render/pipeline.h"
 #include "render/resource.h"
 #include "render/shader.h"
@@ -9,7 +10,7 @@
 
 namespace z1 {
 
-	struct API Material {
+	struct API Material : Asset<Material> {
 		struct Variable {
 			std::string name;
 			DataType type = DataType::None;
@@ -29,27 +30,31 @@ namespace z1 {
 			Value default_value = {};
 		};
 
-		Material(std::string const& name, std::shared_ptr<Pipeline> const& pipeline);
+		Material(Pipeline::Description const& pipeline_desc);
 
-		std::string m_name;
-		std::shared_ptr<Pipeline> m_pipeline;
+		static std::shared_ptr<Material> create(Filepath const& path, Pipeline::Description const& pipeline_desc);
+		static std::shared_ptr<Material> load(Guid const& guid);
+		void save() const;
+
+		Pipeline::Description m_pipeline_desc;
 		std::unordered_map<std::string, Variable> m_variables;
-
-		Guid m_guid{};
 
 	private:
 		void parse_reflection_line(const std::string& line);
+
+		std::shared_ptr<Pipeline> m_pipeline;
 	};
 
-	struct API MaterialInstance {
+	struct API MaterialInstance : Asset<MaterialInstance> {
 
-		MaterialInstance(std::string const& name, std::shared_ptr<Material> const& material);
+		MaterialInstance(std::shared_ptr<Material> const& material);
 
-		std::string m_name;
+		static std::shared_ptr<MaterialInstance> create(Pipeline::Description const& pipeline_desc);
+		static std::shared_ptr<MaterialInstance> load(Guid const& guid);
+		void save() const;
+
 		std::shared_ptr<Material> m_material;
 		std::unordered_map<std::string, Material::Variable> m_override_variables;
-
-		Guid m_guid{};
 
 	};
 

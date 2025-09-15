@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+#include "core/core.h"
 #include "glm/glm.hpp"
 #include "yaml-cpp/yaml.h"
 
@@ -64,6 +66,21 @@ namespace z1 {
 		out << YAML::Flow;
 		out << YAML::BeginSeq << v.x << v.y << v.z << v.w << YAML::EndSeq;
 		return out;
+	}
+
+	inline bool save_yaml(Filepath const& file, YAML::Emitter& emitter) {
+		try {
+			std::filesystem::create_directories(file.parent_path());
+			std::ofstream fout(file);
+			fout << emitter.c_str();
+			fout.close();
+		}
+		catch (std::exception const& e) {
+			CORE_ERROR("failed to save to {}: {}", file.generic_string(), e.what());
+			return false;
+		}
+
+		return true;
 	}
 
 }

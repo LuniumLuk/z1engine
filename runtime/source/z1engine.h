@@ -29,8 +29,8 @@
 #include "scene/component/sprite.h"
 
 #include "render/graphics_context.h"
-#include "render/mesh.h"
-#include "render/material.h"
+#include "asset/mesh.h"
+#include "asset/material.h"
 #include "render/render_pass.h"
 #include "render/buffer.h"
 #include "render/shader.h"

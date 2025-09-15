@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "util/string_utils.h"
-#include "render/material.h"
+#include "asset/material.h"
 
 namespace z1 {
 
@@ -19,11 +19,11 @@ namespace z1 {
 		return DataType::None; // unknown type
 	}
 
-	Material::Material(std::string const& name, std::shared_ptr<Pipeline> const& pipeline)
-		: m_name(name)
-		, m_pipeline(pipeline) {
+	Material::Material(Pipeline::Description const& pipeline_desc)
+		: m_pipeline_desc(pipeline_desc) {
 
-		auto const& shader = pipeline->m_shader;
+		m_pipeline = Pipeline::build(pipeline_desc);
+		auto const& shader = m_pipeline->m_shader;
 
 		for (auto& uniform : shader->get_uniforms()) {
 			if (uniform.m_location == INVALID_LOCATION) continue;
@@ -175,13 +175,71 @@ namespace z1 {
 		}
 	}
 
-	MaterialInstance::MaterialInstance(std::string const& name, std::shared_ptr<Material> const& material)
-		: m_name(name)
-		, m_material(material)
+	MaterialInstance::MaterialInstance(std::shared_ptr<Material> const& material)
+		: m_material(material)
 		, m_override_variables(material->m_variables) {
 		for (auto& var : m_override_variables) {
 			var.second.default_value.valid = false;
 		}
+	}
+
+	std::shared_ptr<Material> Material::create(Filepath const& path, Pipeline::Description const& pipeline_desc) {
+		auto material = std::make_shared<Material>(pipeline_desc);
+		material->m_meta.guid = Guid::generate();
+		material->m_meta.type = "material";
+		material->m_meta.path = path;
+		material->m_meta.root = "content";
+		auto const& root = FileSystem::s_content_root;
+		if (!g_runtime_context.m_asset_manager->register_asset(material->m_meta, root)) {
+			return nullptr;
+		}
+		material->save();
+	}
+
+	std::shared_ptr<Material> Material::load(Guid const& guid) {
+		auto const& file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
+		if (file.empty()) {
+			CORE_ERROR("failed to load material: {0}, file not found!", guid);
+			return nullptr;
+		}
+
+		YAML::Node node = YAML::LoadFile(file.string());
+		auto meta = node["meta"].as<AssetMeta>();
+		auto pipeline_node = node["pipeline"];
+		Pipeline::Description pipeline_desc{};
+		pipeline_desc.depth_test = pipeline_node["depth_test"].as<bool>();
+		pipeline_desc.blend = pipeline_node["blend"].as<bool>();
+		pipeline_desc.src_blend_factor = static_cast<BlendFactor>(pipeline_node["src_blend_factor"].as<int>());
+		pipeline_desc.dst_blend_factor = static_cast<BlendFactor>(pipeline_node["dst_blend_factor"].as<int>());
+		pipeline_desc.cull_mode = static_cast<CullMode>(pipeline_node["cull_mode"].as<int>());
+		pipeline_desc.shader = g_runtime_context.m_asset_manager->get<Shader>(Guid::make(pipeline_node["shader"].as<std::string>()));
+		if (!pipeline_desc.shader) {
+			CORE_ERROR("failed to load material: {0}, shader not found!", guid);
+			return nullptr;
+		}
+
+		return std::make_shared<Material>(pipeline_desc);
+	}
+
+	void Material::save() const {
+		auto const& root = FileSystem::s_content_root;
+		Filepath file = root / m_meta.path;
+		file += ".yaml";
+
+		YAML::Emitter out;
+		out << YAML::BeginMap;
+		out << YAML::Key << "meta" << YAML::Value << m_meta;
+		out << YAML::Key << "pipeline" << YAML::Value;
+		out << YAML::BeginMap;
+		out << YAML::Key << "depth_test" << YAML::Value << m_pipeline_desc.depth_test;
+		out << YAML::Key << "blend" << YAML::Value << m_pipeline_desc.blend;
+		out << YAML::Key << "src_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.src_blend_factor);
+		out << YAML::Key << "dst_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.dst_blend_factor);
+		out << YAML::Key << "cull_mode" << YAML::Value << static_cast<int>(m_pipeline_desc.cull_mode);
+		out << YAML::Key << "shader" << YAML::Value << m_pipeline_desc.shader->m_guid.value;
+		out << YAML::EndMap;
+
+		save_yaml(file, out);
 	}
 
 }

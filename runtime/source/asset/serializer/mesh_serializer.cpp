@@ -4,7 +4,7 @@
 #include "asset/asset_manager.h"
 #include "util/yaml.h"
 
-namespace z1::io {
+namespace z1 {
 
 	bool StaticMeshSerializer::serialize(Filepath const& path, std::shared_ptr<StaticMesh::Storage> const& storage) {
 		BinaryFile file{};

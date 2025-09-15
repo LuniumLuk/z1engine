@@ -4,7 +4,7 @@
 #include "asset/importer/importer.h"
 #include "render/image.h"
 
-namespace z1::io {
+namespace z1 {
 
 	struct ImageImporterSettings : ImporterSettings {
 		SamplerMode sampler_mode = SamplerMode::Linear;

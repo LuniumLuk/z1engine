@@ -3,7 +3,7 @@
 #include "core/core.h"
 #include "core/io.h"
 
-namespace z1::io {
+namespace z1 {
 
 	template <typename Derived, typename AssetType>
 	struct Serializer {

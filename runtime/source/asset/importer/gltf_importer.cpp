@@ -3,15 +3,15 @@
 #include "asset/serializer/mesh_serializer.h"
 #include "scene/entity.h"
 #include "scene/component/mesh.h"
-#include "render/mesh.h"
-#include "render/material.h"
+#include "asset/mesh.h"
+#include "asset/material.h"
 #include "util/yaml.h"
 
 #include "bakery.h"
 #include "tinygltf/tiny_gltf.h"
 #include "glm/gtc/type_ptr.hpp"
 
-namespace z1::io {
+namespace z1 {
 
 	bool GltfImporter::can_import(Filepath const& path) noexcept {
 		auto ext = path.extension().string();
@@ -249,14 +249,14 @@ namespace z1::io {
 			Filepath import_meta = import_file;
 			import_meta += ".meta.yaml";
 
-			AssetMetaData meta{};
+			AssetMeta meta{};
 			meta.guid = Guid::generate();
 			meta.type = "static mesh";
 			meta.path = settings.path / name;
 
 			g_runtime_context.m_asset_manager->register_asset(meta, root);
 
-			if (io::StaticMeshSerializer::serialize(import_file, mesh_storage)) {
+			if (StaticMeshSerializer::serialize(import_file, mesh_storage)) {
 				meta.save(import_meta);
 				ret.assets.push_back(meta);
 				ret.files.push_back(import_file);
@@ -330,7 +330,7 @@ namespace z1::io {
 			Filepath import_meta = import_file;
 			import_meta += ".meta.yaml";
 
-			AssetMetaData meta{};
+			AssetMeta meta{};
 			meta.guid = Guid::generate();
 			meta.type = "image";
 			meta.path = settings.path / name;

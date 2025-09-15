@@ -3,42 +3,23 @@
 #include "core/core.h"
 #include "core/guid.h"
 #include "render/shader.h"
+#include "asset/asset.h"
 #include "asset/serializer/image_serializer.h"
 #include "asset/serializer/mesh_serializer.h"
 #include "util/yaml.h"
 
 namespace z1 {
 
-	template <typename, typename = void>
-	struct has_m_guid : std::false_type {};
-
-	template <typename T>
-	struct has_m_guid<T, std::void_t<decltype(std::declval<T>().m_guid)>> : std::true_type {};
-
 	template<typename T>
 	struct API AssetLoader {
 		static std::shared_ptr<T> load(Guid const& guid) {
-			CORE_ASSERT(sizeof(T) == 0, "AssetLoader<T> not implemented for this asset type.");
+			return T::load(guid);
 		}
-	};
-
-	struct AssetMetaData {
-		Guid guid;
-		std::string type;
-		Filepath path;
-		YAML::Node extra;
-		// this field is mainly for editor to distinguish
-		// between normal content and engine content
-		// it will not be saved to actual meta file
-		std::string root;
-
-		bool save(Filepath const& path) const;
-		bool load(Filepath const& path);
 	};
 
 	struct AssetNode {
 		std::string name;
-		AssetMetaData* meta = nullptr;
+		AssetMeta* meta = nullptr;
 		AssetNode* parent = nullptr;
 		std::unordered_map<std::string, std::unique_ptr<AssetNode>> children;
 
@@ -65,7 +46,7 @@ namespace z1 {
 		void remove_asset(Guid const& guid);
 
 		bool has_asset(Guid const& guid) const;
-		AssetMetaData get_meta(Guid const& guid) const;
+		AssetMeta get_meta(Guid const& guid) const;
 
 		Guid get_guid_from_path(Filepath const& path) const {
 			auto it = m_path_to_guid_mapping.find(path);
@@ -101,9 +82,6 @@ namespace z1 {
 			}
 
 			auto asset = AssetLoader<T>::load(guid);
-			if constexpr (has_m_guid<T>::value) {
-				asset->m_guid = guid;
-			}
 
 			map[guid] = asset;
 			return asset;
@@ -135,7 +113,7 @@ namespace z1 {
 			return file;
 		}
 
-		bool register_asset(AssetMetaData const& meta, Filepath const& root, std::string const& ext = ".bin");
+		bool register_asset(AssetMeta const& meta, Filepath const& root, std::string const& ext = ".bin");
 		// check if guid is already registered, if not register it and return true
 		bool register_guid(Guid const& guid);
 
@@ -161,25 +139,11 @@ namespace z1 {
 		static Filepath s_content_root;
 		static std::vector<Filepath> s_shader_roots;
 		std::unordered_map<size_t, std::any> m_storages;
-		std::unordered_map<Guid, AssetMetaData> m_asset_metas;
+		std::unordered_map<Guid, AssetMeta> m_asset_metas;
 		std::unordered_set<Guid> m_guid_registry;
 		std::unordered_map<Guid, Filepath> m_guid_to_file_mapping;
 		std::unordered_map<Filepath, Guid> m_path_to_guid_mapping;
 		std::unique_ptr<AssetNode> m_asset_tree_root;
-	};
-
-	template<>
-	struct API AssetLoader<Image2D> {
-		static std::shared_ptr<Image2D> load(Guid const& guid) {
-			return io::load_image2d_asset(guid);
-		}
-	};
-
-	template<>
-	struct API AssetLoader<StaticMesh> {
-		static std::shared_ptr<StaticMesh> load(Guid const& guid) {
-			return io::load_static_mesh_asset(guid);
-		}
 	};
 
 	template<>
