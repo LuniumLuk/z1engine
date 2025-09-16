@@ -24,7 +24,7 @@ struct EditorLayer : Layer {
 				if (meta->root == "engine") return;
 
 				if (meta->type == "scene") {
-					m_active_scene = SceneSerializer::deserialize(FileSystem::s_content_root / (meta->path.string() + ".yaml"));
+					m_active_scene = Scene::deserialize(meta->path);
 					m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 					m_selected_entity = nullptr;
 				}
@@ -67,23 +67,23 @@ struct EditorLayer : Layer {
 						m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 						m_selected_entity = nullptr;
 					}
-					if (ImGui::MenuItem("open...")) {
-						Filepath file = open_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
-						if (!file.empty()) {
-							m_active_scene = SceneSerializer::deserialize(file);
-							m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
-							m_selected_entity = nullptr;
-						}
-					}
-					if (ImGui::MenuItem("save as...")) {
-						Filepath file = save_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
-						if (!file.empty()) {
-							if (file.extension() != ".yaml") {
-								file += ".yaml";
-							}
-							SceneSerializer::serialize(file, m_active_scene);
-						}
-					}
+					//if (ImGui::MenuItem("open...")) {
+					//	Filepath file = open_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
+					//	if (!file.empty()) {
+					//		m_active_scene = Scene::deserialize(file);
+					//		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
+					//		m_selected_entity = nullptr;
+					//	}
+					//}
+					//if (ImGui::MenuItem("save as...")) {
+					//	Filepath file = save_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
+					//	if (!file.empty()) {
+					//		if (file.extension() != ".yaml") {
+					//			file += ".yaml";
+					//		}
+					//		Scene::serialize(file, m_active_scene);
+					//	}
+					//}
 					if (ImGui::MenuItem("exit")) {
 						terminate();
 					}
@@ -120,13 +120,13 @@ struct EditorLayer : Layer {
 			};
 
 		{
-			Pipeline::Description desc{};
-			desc.depth_test = true;
-			desc.blend = true;
-			desc.cull_mode = CullMode::Back;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("sprite_2d");
-			auto pipeline = Pipeline::build(desc);
-			auto material = std::make_shared<Material>("M_Sprite2D", pipeline);
+			//Pipeline::Description desc{};
+			//desc.depth_test = true;
+			//desc.blend = true;
+			//desc.cull_mode = CullMode::Back;
+			//desc.shader = g_runtime_context.m_asset_manager->get<Shader>("sprite_2d");
+			//auto pipeline = Pipeline::build(desc);
+			//auto material = std::make_shared<Material>(pipeline);
 			/*m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
 			m_material_instance->m_override_variables["u_texture"].default_value.resource_id = tex0->get_resource_id();
 			m_material_instance->m_override_variables["u_texture"].default_value.valid = true;*/
@@ -343,17 +343,17 @@ private:
 						ImGui::Text("texture");
 						ImGui::Indent();
 						if (sprite.m_texture) {
-							auto w = sprite.m_texture->get_description().m_width;
-							auto h = sprite.m_texture->get_description().m_height;
-							ImGui::Image(sprite.m_texture->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-							ImGui::Text("guid: %s", sprite.m_texture->m_guid.value.c_str());
+							auto w = sprite.m_texture->m_image->get_description().m_width;
+							auto h = sprite.m_texture->m_image->get_description().m_height;
+							ImGui::Image(sprite.m_texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+							ImGui::Text("guid: %s", sprite.m_texture->m_meta.guid.value.c_str());
 							ImGui::Text("width: %d", w);
 							ImGui::Text("height: %d", h);
-							ImGui::Text("depth: %d", sprite.m_texture->get_description().m_depth);
-							ImGui::Text("format: %s", get_image_format_name(sprite.m_texture->get_description().m_format).c_str());
-							ImGui::Text("sampler Mode: %s", get_sampler_mode_name(sprite.m_texture->get_description().m_sampler_mode).c_str());
-							ImGui::Text("wrap Mode: %s", get_wrap_mode_name(sprite.m_texture->get_description().m_wrap_mode).c_str());
-							ImGui::RadioButton("mipmap", sprite.m_texture->get_description().m_mipmap);
+							ImGui::Text("depth: %d", sprite.m_texture->m_image->get_description().m_depth);
+							ImGui::Text("format: %s", get_image_format_name(sprite.m_texture->m_image->get_description().m_format).c_str());
+							ImGui::Text("sampler Mode: %s", get_sampler_mode_name(sprite.m_texture->m_image->get_description().m_sampler_mode).c_str());
+							ImGui::Text("wrap Mode: %s", get_wrap_mode_name(sprite.m_texture->m_image->get_description().m_wrap_mode).c_str());
+							ImGui::RadioButton("mipmap", sprite.m_texture->m_image->get_description().m_mipmap);
 						}
 						else {
 							ImGui::Text("-");
@@ -375,7 +375,7 @@ private:
 				if (m_selected_entity->has_component<StaticMeshComponent>()) {
 					if (ImGui::CollapsingHeader("static mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& mesh = m_selected_entity->get_component<StaticMeshComponent>();
-						ImGui::Text("guid: %s", mesh.m_mesh->m_guid.value.c_str());
+						ImGui::Text("guid: %s", mesh.m_mesh->m_meta.guid.value.c_str());
 						ImGui::Text("bound min: (%f, %f, %f)", mesh.m_mesh->m_bound_min.x, mesh.m_mesh->m_bound_min.y, mesh.m_mesh->m_bound_min.z);
 						ImGui::Text("bound max: (%f, %f, %f)", mesh.m_mesh->m_bound_max.x, mesh.m_mesh->m_bound_max.y, mesh.m_mesh->m_bound_max.z);
 						ImGui::Text("primitives");
@@ -529,8 +529,8 @@ private:
 
 	void show_material_info(std::shared_ptr<MaterialInstance> const& material) {
 		if (ImGui::Begin("material instance")) {
-			ImGui::Text("name: %s", material->m_name.c_str());
-			ImGui::Text("parent material: %s", material->m_material->m_name.c_str());
+			ImGui::Text("name: %s", material->m_meta.path.generic_string());
+			ImGui::Text("parent material: %s", material->m_material->m_meta.path.generic_string());
 			ImGui::Text("shader name: %s", material->m_material->m_pipeline->m_shader->get_name().c_str());
 
 			ImGui::Text("variables");

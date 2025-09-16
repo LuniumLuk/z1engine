@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "asset/importer/image_importer.h"
+#include "asset/importer/texture_importer.h"
 #include "util/yaml.h"
 
 #include "bakery.h"
@@ -19,14 +19,14 @@ namespace z1 {
 		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
-	bool ImageImporter::can_import(Filepath const& path) noexcept {
+	bool TextureImporter::can_import(Filepath const& path) noexcept {
 		return file_is_ldr_image(path) || file_is_hdr_image(path);
 	}
 
-	ImportResult ImageImporter::import(ImageImporterSettings const& settings) {
+	ImportResult TextureImporter::import(TextureImporterSettings const& settings) {
 		ImportResult ret{};
 		if (!can_import(settings.file)) {
-			CORE_WARN("{0} is not a common image file", settings.file.generic_string());
+			CORE_WARN("{0} is not a common texture file", settings.file.generic_string());
 			return ret;
 		}
 
@@ -34,12 +34,10 @@ namespace z1 {
 
 		Filepath import_file = root / settings.path;
 		import_file += ".bin";
-		Filepath import_meta = import_file;
-		import_meta += ".meta.yaml";
 
 		AssetMeta meta{};
 		meta.guid = Guid::generate();
-		meta.type = "image";
+		meta.type = "texture2d";
 		meta.path = settings.path;
 		meta.extra["sampler_mode"] = (int)settings.sampler_mode;
 		meta.extra["wrap_mode"] = (int)settings.wrap_mode;
@@ -56,7 +54,14 @@ namespace z1 {
 			g_runtime_context.m_file_system->copy_file(settings.file, import_file);
 			meta.extra["hdr"] = true;
 		}
-		meta.save(import_meta);
+
+		YAML::Emitter yaml;
+
+		yaml << YAML::BeginMap;
+		yaml << YAML::Key << "meta" << YAML::Value << meta;
+		yaml << YAML::EndMap;
+
+		save_yaml(import_file.replace_extension(".yaml"), yaml);
 
 		ret.assets.push_back(meta);
 		ret.files.push_back(import_file);

@@ -131,27 +131,11 @@ namespace z1 {
 		}
 
 		auto const& root = FileSystem::s_content_root;
-
-		Filepath import_file = root / settings.path;
-		import_file += ".bin";
-		Filepath import_meta = import_file;
-		import_meta += ".meta.yaml";
-
-		AssetMeta meta{};
-		meta.guid = Guid::generate();
-		meta.type = "static mesh";
-		meta.path = settings.path;
-
-		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
-			return ret;
-		}
-
 		auto mesh_storage = import_obj_as_mesh_storage(settings.file);
-
-		if (mesh_storage && StaticMeshSerializer::serialize(import_file, mesh_storage)) {
-			meta.save(import_meta);
+		auto meta = mesh_storage->import(settings.path);
+		if (meta.guid.is_valid()) {
 			ret.assets.push_back(meta);
-			ret.files.push_back(import_file);
+			ret.files.push_back((root / settings.path).concat(".bin"));
 			ret.success = true;
 		}
 

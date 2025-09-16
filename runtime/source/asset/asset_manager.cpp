@@ -50,7 +50,7 @@ namespace z1 {
 					meta.root = "content";
 				}
 				catch (std::exception const& e) {
-					CORE_ERROR("failed to load meta file: {0}", file.generic_string());
+					CORE_ERROR("failed to load meta file: {0}, {1}", file.generic_string(), e.what());
 					continue;
 				}
 

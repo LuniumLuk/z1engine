@@ -24,4 +24,48 @@ namespace z1 {
 
 	};
 
+	struct API SubTexture2D : Asset<SubTexture2D> {
+		SubTexture2D(std::shared_ptr<Texture2D> texture, glm::vec2 const& min, glm::vec2 const& max)
+			: m_texture(texture) {
+			m_texcoords[0] = min;
+			m_texcoords[1] = glm::vec2(max.x, min.y);
+			m_texcoords[2] = max;
+			m_texcoords[3] = glm::vec2(min.x, max.y);
+		}
+
+		std::array<glm::vec2, 4> get_texcoords() const { return m_texcoords; }
+
+		static std::shared_ptr<SubTexture2D> create(
+			std::shared_ptr<Texture2D> texture,
+			uint32_t x, uint32_t y, uint32_t width, uint32_t height, bool top_left_origion = false) {
+			if (top_left_origion) {
+				y = texture->m_image->get_description().m_height - y - height;
+			}
+			return std::make_shared<SubTexture2D>(texture,
+				glm::vec2(
+					(float)x / texture->m_image->get_description().m_width,
+					(float)y / texture->m_image->get_description().m_height
+				),
+				glm::vec2(
+					(float)(x + width) / texture->m_image->get_description().m_width,
+					(float)(y + height) / texture->m_image->get_description().m_height
+				));
+		}
+
+		static std::shared_ptr<SubTexture2D> create(Filepath const& path, std::shared_ptr<Texture2D> texture, glm::vec2 const& min, glm::vec2 const& max) {
+			UNIMPLEMENTED_FUNCTION();
+			return nullptr;
+		}
+		static std::shared_ptr<SubTexture2D> load(Guid const& guid) {
+			UNIMPLEMENTED_FUNCTION();
+			return nullptr;
+		}
+		void save() const {
+			UNIMPLEMENTED_FUNCTION();
+		}
+
+		std::array<glm::vec2, 4> m_texcoords;
+		std::shared_ptr<Texture2D> m_texture;
+	};
+
 }

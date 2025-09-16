@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "asset/importer/gltf_importer.h"
-#include "asset/serializer/mesh_serializer.h"
 #include "scene/entity.h"
 #include "scene/component/mesh.h"
 #include "asset/mesh.h"
@@ -245,25 +244,11 @@ namespace z1 {
 			auto const& root = FileSystem::s_content_root;
 
 			std::string name = mesh.name.empty() ? ("SM_" + std::to_string(node.mesh)) : mesh.name;
-			Filepath import_file = root / settings.path / (name + ".bin");
-			Filepath import_meta = import_file;
-			import_meta += ".meta.yaml";
-
-			AssetMeta meta{};
-			meta.guid = Guid::generate();
-			meta.type = "static mesh";
-			meta.path = settings.path / name;
-
-			g_runtime_context.m_asset_manager->register_asset(meta, root);
-
-			if (StaticMeshSerializer::serialize(import_file, mesh_storage)) {
-				meta.save(import_meta);
+			auto meta = mesh_storage->import(settings.path / name);
+			if (meta.guid.is_valid()) {
 				ret.assets.push_back(meta);
-				ret.files.push_back(import_file);
+				ret.files.push_back((root / (name + ".bin")));
 			}
-
-			//auto static_mesh = std::make_shared<StaticMesh>(mesh_storage);
-			//entity->add_component<StaticMeshComponent>(static_mesh);
 		}
 	}
 
@@ -327,12 +312,10 @@ namespace z1 {
 
 			std::string name = image.name.empty() ? ("T_" + std::to_string(tex.source)) : image.name;
 			Filepath import_file = root / settings.path / (name + ".bin");
-			Filepath import_meta = import_file;
-			import_meta += ".meta.yaml";
 
 			AssetMeta meta{};
 			meta.guid = Guid::generate();
-			meta.type = "image";
+			meta.type = "texture2d";
 			meta.path = settings.path / name;
 
 			auto const& sampler = model.samplers[tex.sampler];
@@ -361,20 +344,25 @@ namespace z1 {
 			meta.extra["wrap_mode"] = (int)wrap_mode;
 			meta.extra["hdr"] = false;
 
-			g_runtime_context.m_asset_manager->register_asset(meta, root);
-
-			try {
-				std::filesystem::create_directories(import_file.parent_path());
-				bakery::compress_image_data(
-					import_file,
-					data_ptr,
-					image.width,
-					image.height
-				);
-				meta.save(import_meta);
+			if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
+				continue;
 			}
-			catch (std::exception const& e) {
-				CORE_ERROR("failed to compress image {}: {}", name, e.what());
+
+			if (!bakery::compress_image_data(
+				import_file,
+				data_ptr,
+				image.width,
+				image.height)) {
+				continue;
+			}
+
+			YAML::Emitter yaml;
+
+			yaml << YAML::BeginMap;
+			yaml << YAML::Key << "meta" << YAML::Value << meta;
+			yaml << YAML::EndMap;
+
+			if (!save_yaml(import_file.replace_extension(".yaml"), yaml)) {
 				continue;
 			}
 

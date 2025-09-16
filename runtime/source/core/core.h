@@ -66,19 +66,35 @@ namespace z1 {
 
 #include "core/log.h"
 
-#define CORE_TRACE(...)    g_runtime_context.m_logger->get_core_logger()->trace(__VA_ARGS__)
-#define CORE_DEBUG(...)    g_runtime_context.m_logger->get_core_logger()->debug(__VA_ARGS__)
-#define CORE_INFO(...)     g_runtime_context.m_logger->get_core_logger()->info(__VA_ARGS__)
-#define CORE_WARN(...)     g_runtime_context.m_logger->get_core_logger()->warn(__VA_ARGS__)
-#define CORE_ERROR(...)    g_runtime_context.m_logger->get_core_logger()->error(__VA_ARGS__)
-#define CORE_FATAL(...)    g_runtime_context.m_logger->get_core_logger()->critical(__VA_ARGS__)
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
-#define CLIENT_TRACE(...)  g_runtime_context.m_logger->get_client_logger()->trace(__VA_ARGS__)
-#define CLIENT_DEBUG(...)  g_runtime_context.m_logger->get_client_logger()->debug(__VA_ARGS__)
-#define CLIENT_INFO(...)   g_runtime_context.m_logger->get_client_logger()->info(__VA_ARGS__)
-#define CLIENT_WARN(...)   g_runtime_context.m_logger->get_client_logger()->warn(__VA_ARGS__)
-#define CLIENT_ERROR(...)  g_runtime_context.m_logger->get_client_logger()->error(__VA_ARGS__)
-#define CLIENT_FATAL(...)  g_runtime_context.m_logger->get_client_logger()->critical(__VA_ARGS__)
+#define LOG_FILE_LINE
+#ifdef LOG_FILE_LINE
+#    define LOG_PREFIX "[" __FILE__ ":" TOSTRING(__LINE__) "] "
+#else
+#    ifdef LOG_FILE_LINE_FUNC
+#        define LOG_PREFIX "[" __FILE__ ":" TOSTRING(__LINE__) " " __FUNCTION__ "] "
+#    else
+#        define LOG_PREFIX ""
+#    endif
+#endif
+
+#define LOG_ARGS(fmt, ...) fmt, ##__VA_ARGS__
+
+#define CORE_TRACE(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->trace(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CORE_DEBUG(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->debug(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CORE_INFO(fmt, ...)     g_runtime_context.m_logger->get_core_logger()->info(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CORE_WARN(fmt, ...)     g_runtime_context.m_logger->get_core_logger()->warn(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CORE_ERROR(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->error(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CORE_FATAL(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->critical(LOG_ARGS(fmt, ##__VA_ARGS__))
+
+#define CLIENT_TRACE(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->trace(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CLIENT_DEBUG(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->debug(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CLIENT_INFO(fmt, ...)   g_runtime_context.m_logger->get_client_logger()->info(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CLIENT_WARN(fmt, ...)   g_runtime_context.m_logger->get_client_logger()->warn(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CLIENT_ERROR(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->error(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CLIENT_FATAL(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->critical(LOG_ARGS(fmt, ##__VA_ARGS__))
 
 #ifdef ENABLE_ASSERTS
 #    define CORE_ASSERT(x, ...) { if(!(x)) { CORE_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }

@@ -4,8 +4,6 @@
 #include "core/guid.h"
 #include "render/shader.h"
 #include "asset/asset.h"
-#include "asset/serializer/image_serializer.h"
-#include "asset/serializer/mesh_serializer.h"
 #include "util/yaml.h"
 
 namespace z1 {

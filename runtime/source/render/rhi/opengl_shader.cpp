@@ -89,7 +89,7 @@ namespace z1 {
 		glGetShaderiv(m_handle, GL_COMPILE_STATUS, &success);
 		if (!success) {
 			glGetShaderInfoLog(m_handle, 512, nullptr, info_log);
-			CORE_ERROR(info_log);
+			CORE_ERROR("{}", info_log);
 			CORE_ASSERT(false, "failed to compile shader!");
 		}
 	}
@@ -349,7 +349,7 @@ namespace z1 {
 		glGetProgramiv(m_handle, GL_LINK_STATUS, &success);
 		if (!success) {
 			glGetProgramInfoLog(m_handle, 512, NULL, info_log);
-			CORE_ERROR(info_log);
+			CORE_ERROR("{}", info_log);
 			CORE_ASSERT(false, "failed to link shaders!");
 		}
 

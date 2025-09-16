@@ -38,11 +38,11 @@ namespace z1 {
 
 		Pipeline::Description m_pipeline_desc;
 		std::unordered_map<std::string, Variable> m_variables;
+		std::shared_ptr<Pipeline> m_pipeline;
 
 	private:
 		void parse_reflection_line(const std::string& line);
 
-		std::shared_ptr<Pipeline> m_pipeline;
 	};
 
 	struct API MaterialInstance : Asset<MaterialInstance> {

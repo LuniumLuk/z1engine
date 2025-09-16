@@ -9,6 +9,7 @@
 #include "render/shader.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
+#include "asset/asset_manager.h"
 
 namespace z1 {
 
@@ -110,7 +111,7 @@ namespace z1 {
 		g_runtime_context.m_renderer_2d->draw(shared_from_this(), m_main_framebuffer);
 	}
 
-	bool Scene::serialize(Filepath const& file, std::shared_ptr<Scene> const& scene) {
+	bool Scene::serialize(Filepath const& path, std::shared_ptr<Scene> const& scene) {
 
 		// map transform pointer to entity ID for parent reference
 		std::unordered_map<void*, uint32_t> transform_ptr_to_id;
@@ -123,11 +124,14 @@ namespace z1 {
 
 		yaml << YAML::BeginMap;
 
-		// scene is saved as a meta file format
-		yaml << YAML::Key << "guid" << YAML::Value << YAML::Null;
-		yaml << YAML::Key << "type" << YAML::Value << "scene";
-		yaml << YAML::Key << "path" << YAML::Value << YAML::Null;
-		yaml << YAML::Key << "extra" << YAML::Value << YAML::Null;
+		auto const& root = FileSystem::s_content_root;
+
+		AssetMeta meta{};
+		meta.guid.value = path.generic_string();
+		meta.type = "scene";
+		meta.path = path;
+
+		yaml << YAML::Key << "meta" << YAML::Value << meta;
 
 		yaml << YAML::Key << "entities" << YAML::Value;
 		yaml << YAML::BeginSeq;
@@ -187,7 +191,7 @@ namespace z1 {
 				yaml << YAML::BeginMap;
 				yaml << YAML::Key << "color" << YAML::Value << sprite.m_color;
 				if (sprite.m_texture) {
-					yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_guid.value;
+					yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_meta.guid.value;
 				}
 				else {
 					yaml << YAML::Key << "texture" << YAML::Value << YAML::Null;
@@ -208,16 +212,14 @@ namespace z1 {
 		yaml << YAML::EndSeq;
 		yaml << YAML::EndMap;
 
-		std::filesystem::create_directories(file.parent_path());
-		std::ofstream fout(file.string());
-		fout << yaml.c_str();
-		fout.close();
-
-		return true;
+		return save_yaml((root / path).concat(".yaml"), yaml);
 	}
 
-	std::shared_ptr<Scene> Scene::deserialize(Filepath const& file) {
+	std::shared_ptr<Scene> Scene::deserialize(Filepath const& path) {
 		auto scene = std::make_shared<Scene>();
+
+		auto const& root = FileSystem::s_content_root;
+		Filepath file = (root / path).concat(".yaml");
 
 		std::ifstream stream(file.string());
 		if (!stream.is_open()) {
@@ -234,7 +236,7 @@ namespace z1 {
 			return scene;
 		}
 
-		if (!yaml["type"] || yaml["type"].as<std::string>() != "scene") {
+		if (!yaml["meta"] || !yaml["meta"]["type"] || yaml["meta"]["type"].as<std::string>() != "scene") {
 			CORE_ERROR("not a scene file: {}", file.generic_string());
 			return scene;
 		}
@@ -290,7 +292,7 @@ namespace z1 {
 				auto& sprite = entity->add_component<SpriteComponent>();
 				sprite.m_color = sprite_yaml["color"].as<glm::vec4>();
 				if (sprite_yaml["texture"] && !sprite_yaml["texture"].IsNull()) {
-					sprite.m_texture = g_runtime_context.m_asset_manager->get<Image2D>(Guid::make(sprite_yaml["texture"].as<std::string>()));
+					sprite.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(Guid::make(sprite_yaml["texture"].as<std::string>()));
 				}
 				sprite.m_tiling_scale = sprite_yaml["tiling_scale"].as<glm::vec2>();
 				sprite.m_tiling_offset = sprite_yaml["tiling_offset"].as<glm::vec2>();

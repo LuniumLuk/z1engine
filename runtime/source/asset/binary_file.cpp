@@ -42,22 +42,29 @@ namespace z1 {
 	}
 
 	bool BinaryFile::save(Filepath const& file) const {
-		std::ofstream ofs(file, std::ios::binary);
-		if (!ofs) {
-			CORE_ERROR("failed to write to file {0}", file);
-			return false;
+		try {
+			std::filesystem::create_directories(file.parent_path());
+			std::ofstream ofs(file, std::ios::binary);
+			if (!ofs) {
+				CORE_ERROR("failed to write to file {0}", file.generic_string());
+				return false;
+			}
+
+			BinaryFileHeader header;
+			header.yaml_size = static_cast<uint64_t>(m_yaml.size());
+			header.data_size = static_cast<uint64_t>(m_data.size());
+
+			ofs.write(reinterpret_cast<const char*>(&header), sizeof(header));
+			ofs.write(m_yaml.data(), m_yaml.size());
+			ofs.write(reinterpret_cast<const char*>(m_data.data()), m_data.size());
+
+			if (!ofs.good()) {
+				CORE_ERROR("failed to write fully to {}", file);
+				return false;
+			}
 		}
-
-		BinaryFileHeader header;
-		header.yaml_size = static_cast<uint64_t>(m_yaml.size());
-		header.data_size = static_cast<uint64_t>(m_data.size());
-
-		ofs.write(reinterpret_cast<const char*>(&header), sizeof(header));
-		ofs.write(m_yaml.data(), m_yaml.size());
-		ofs.write(reinterpret_cast<const char*>(m_data.data()), m_data.size());
-
-		if (!ofs.good()) {
-			CORE_ERROR("failed to write fully to {}", file);
+		catch (std::exception const& e) {
+			CORE_ERROR("failed to save to {}: {}", file.generic_string(), e.what());
 			return false;
 		}
 

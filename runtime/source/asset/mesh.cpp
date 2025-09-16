@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "asset/mesh.h"
+#include "asset/asset_manager.h"
 #include "asset/binary_file.h"
 
 namespace z1 {
@@ -125,72 +126,68 @@ namespace z1 {
 		}
 	}
 
-	std::shared_ptr<StaticMesh> StaticMesh::create(Filepath const& path, std::shared_ptr<Storage> const& storage) {
+	AssetMeta StaticMesh::Storage::import(Filepath const& path) const {
 		BinaryFile bf{};
 
-		auto vdata_size = storage->vertices.size() * sizeof(StaticMesh::VertexData);
-		auto idata_size = storage->indices.size() * sizeof(uint32_t);
+		auto vdata_size = vertices.size() * sizeof(StaticMesh::VertexData);
+		auto idata_size = indices.size() * sizeof(uint32_t);
 
 		bf.reserve(vdata_size + idata_size);
-		bf.set_data(storage->vertices.data(), vdata_size, 0);
-		bf.set_data(storage->indices.data(), idata_size, vdata_size);
+		bf.set_data(vertices.data(), vdata_size, 0);
+		bf.set_data(indices.data(), idata_size, vdata_size);
 
 		YAML::Emitter yaml;
 		yaml << YAML::BeginMap;
-		yaml << YAML::Key << "guid" << YAML::Value << storage->guid.value;
-		yaml << YAML::Key << "bound_min" << YAML::Value << storage->bound_min;
-		yaml << YAML::Key << "bound_max" << YAML::Value << storage->bound_max;
-		yaml << YAML::Key << "vertex_count" << YAML::Value << storage->vertices.size();
-		yaml << YAML::Key << "index_count" << YAML::Value << storage->indices.size();
+		yaml << YAML::Key << "bound_min" << YAML::Value << bound_min;
+		yaml << YAML::Key << "bound_max" << YAML::Value << bound_max;
+		yaml << YAML::Key << "vertex_count" << YAML::Value << vertices.size();
+		yaml << YAML::Key << "index_count" << YAML::Value << indices.size();
 		yaml << YAML::Key << "primitives" << YAML::Value << YAML::BeginSeq;
 
-		for (auto const& prim : storage->primitives) {
+		for (auto const& prim : primitives) {
 			yaml << YAML::BeginMap;
 			yaml << YAML::Key << "index_start" << YAML::Value << prim.index_start;
 			yaml << YAML::Key << "index_count" << YAML::Value << prim.index_count;
 			yaml << YAML::Key << "vertex_count" << YAML::Value << prim.vertex_count;
 			yaml << YAML::Key << "bound_min" << YAML::Value << prim.bound_min;
 			yaml << YAML::Key << "bound_max" << YAML::Value << prim.bound_max;
-			yaml << YAML::Key << "guid" << YAML::Value << prim.material.value;
+			yaml << YAML::Key << "material" << YAML::Value << prim.material.value;
 			yaml << YAML::Key << "has_indices" << YAML::Value << prim.has_indices;
 			yaml << YAML::Key << "has_normal" << YAML::Value << prim.has_normal;
 			yaml << YAML::Key << "has_tangent" << YAML::Value << prim.has_tangent;
 			yaml << YAML::EndMap;
 		}
 
+		yaml << YAML::EndSeq;
+
+		AssetMeta meta{};
+		meta.guid = Guid::generate();
+		meta.type = "static mesh";
+		meta.path = path;
+
+		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;
 
-		auto mesh = std::make_shared<StaticMesh>(storage);
-		mesh->m_meta.guid = Guid::generate();
-		mesh->m_meta.type = "static mesh";
-		mesh->m_meta.path = path;
-		mesh->m_meta.root = "content";
-
-		yaml << YAML::Key << "meta" << YAML::Value << mesh->m_meta;
-
 		auto const& root = FileSystem::s_content_root;
-		Filepath file = root / mesh->m_meta.path;
+		Filepath file = root / meta.path;
 
-		if (!g_runtime_context.m_asset_manager->register_asset(mesh->m_meta, root)) {
-			return nullptr;
+		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
+			return meta;
 		}
 
 		bf.set_yaml(yaml.c_str());
 		if (!bf.save(file.concat(".bin"))) {
 			CORE_ERROR("failed to save static mesh storage: {0}", path.generic_string());
-			return nullptr;
+			return {};
 		}
 
-		save_yaml(file.concat(".yaml"), yaml);
+		save_yaml(file.replace_extension(".yaml"), yaml);
 
-		g_runtime_context.m_asset_manager->set<StaticMesh>(mesh->m_meta.guid, mesh);
-
-		return mesh;
+		return {};
 	}
 
 	std::shared_ptr<StaticMesh> StaticMesh::load(Guid const& guid) {
 		PROFILE_FUNCTION();
-		auto meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 
 		BinaryFile bf{};
@@ -203,7 +200,6 @@ namespace z1 {
 		YAML::Node node = YAML::Load(bf.get_yaml());
 		auto storage = std::make_shared<StaticMesh::Storage>();
 
-		storage->guid.value = node["guid"].as<std::string>();
 		storage->bound_min = node["bound_min"].as<glm::vec3>();
 		storage->bound_max = node["bound_max"].as<glm::vec3>();
 		auto vertex_count = node["vertex_count"].as<size_t>();
@@ -216,7 +212,7 @@ namespace z1 {
 			prim_storage.vertex_count = prim_node["vertex_count"].as<uint32_t>();
 			prim_storage.bound_min = prim_node["bound_min"].as<glm::vec3>();
 			prim_storage.bound_max = prim_node["bound_max"].as<glm::vec3>();
-			prim_storage.material.value = prim_node["guid"].as<std::string>();
+			prim_storage.material.value = prim_node["material"].as<std::string>();
 			prim_storage.has_indices = prim_node["has_indices"].as<bool>();
 			prim_storage.has_normal = prim_node["has_normal"].as<bool>();
 			prim_storage.has_tangent = prim_node["has_tangent"].as<bool>();
@@ -243,7 +239,9 @@ namespace z1 {
 		}
 		std::memcpy(storage->indices.data(), idata_slice.ptr, idata_slice.size);
 
-		return std::make_shared<StaticMesh>(storage);
+		auto mesh = std::make_shared<StaticMesh>(storage);
+		mesh->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		return mesh;
 	}
 
 }

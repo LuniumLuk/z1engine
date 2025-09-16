@@ -47,7 +47,7 @@ namespace z1 {
 		m_render_pass = RenderPass::build();
 
 		uint32_t white = 0xffffffff;
-		m_default_texture = Image2D::create(&white, sizeof(white), 1, 1, ImageFormat::RGBA8);
+		m_default_image = Image2D::create(&white, sizeof(white), 1, 1, ImageFormat::RGBA8);
 	}
 
 	Renderer2D::~Renderer2D() {
@@ -75,7 +75,7 @@ namespace z1 {
 			Renderer2D::Quad quad{};
 			quad.m_transform = transform.get_world_transform();
 			quad.m_color = sprite.m_color;
-			quad.m_texture = sprite.m_texture;
+			quad.m_texture = sprite.m_texture ? sprite.m_texture->m_image : nullptr;
 			quad.m_tiling_scale = sprite.m_tiling_scale;
 			quad.m_tiling_offset = sprite.m_tiling_offset;
 			quad.m_texcoords = sprite.m_texcoords;
@@ -100,7 +100,7 @@ namespace z1 {
 
 		std::sort(m_quads.begin(), m_quads.end(), [](QuadData const& a, QuadData const& b) {
 			if (a.m_model[3][2] == b.m_model[3][2]) {
-				return a.m_texture < b.m_texture;
+				return a.m_image < b.m_image;
 			}
 			else {
 				return a.m_model[3][2] < b.m_model[3][2];
@@ -133,8 +133,8 @@ namespace z1 {
 				m_batches[curr_batch].m_vertex_offset = vertex_offset;
 			}
 
-			if (m_batches[curr_batch].m_textures.find(quad.m_texture) != m_batches[curr_batch].m_textures.end()) {
-				texture_id = (float)m_batches[curr_batch].m_textures[quad.m_texture];
+			if (m_batches[curr_batch].m_textures.find(quad.m_image) != m_batches[curr_batch].m_textures.end()) {
+				texture_id = (float)m_batches[curr_batch].m_textures[quad.m_image];
 			}
 			else {
 				if (m_batches[curr_batch].m_textures.size() == 32) {
@@ -147,7 +147,7 @@ namespace z1 {
 				}
 
 				texture_id = (float)m_batches[curr_batch].m_textures.size();
-				m_batches[curr_batch].m_textures[quad.m_texture] = (uint32_t)texture_id;
+				m_batches[curr_batch].m_textures[quad.m_image] = (uint32_t)texture_id;
 			}
 
 			for (int i = 0; i < 4; ++i) {
@@ -211,7 +211,7 @@ namespace z1 {
 			* glm::rotate(glm::mat4(1.0f), glm::radians(rotation), { 0.0f, 0.0f, 1.0f })
 			* glm::scale(glm::mat4(1.0f), { size.x, size.y, 1.0f });
 
-		m_quads.push_back({ model, color, m_default_texture });
+		m_quads.push_back({ model, color, m_default_image });
 	}
 
 	void Renderer2D::draw_quad(
@@ -219,14 +219,14 @@ namespace z1 {
 		glm::vec2 const& size,
 		float rotation,
 		glm::vec4 const& color,
-		std::shared_ptr<Image2D> const& texture,
+		std::shared_ptr<Texture2D> const& texture,
 		glm::vec2 const& tiling_scale,
 		glm::vec2 const& tiling_offset) {
 		glm::mat4 model = glm::translate(glm::mat4(1.0f), position)
 			* glm::rotate(glm::mat4(1.0f), glm::radians(rotation), { 0.0f, 0.0f, 1.0f })
 			* glm::scale(glm::mat4(1.0f), { size.x, size.y, 1.0f });
 
-		m_quads.push_back({ model, color, texture ? texture : m_default_texture, { tiling_scale.x, tiling_scale.y, tiling_offset.x, tiling_offset.y } });
+		m_quads.push_back({ model, color, texture ? texture->m_image : m_default_image, { tiling_scale.x, tiling_scale.y, tiling_offset.x, tiling_offset.y } });
 	}
 
 	void Renderer2D::draw_quad(
@@ -234,7 +234,7 @@ namespace z1 {
 		glm::vec2 const& size,
 		float rotation,
 		glm::vec4 const& color,
-		std::shared_ptr<SubImage2D> const& texture) {
+		std::shared_ptr<SubTexture2D> const& texture) {
 
 		glm::mat4 model = glm::translate(glm::mat4(1.0f), position)
 			* glm::rotate(glm::mat4(1.0f), glm::radians(rotation), { 0.0f, 0.0f, 1.0f })
@@ -244,11 +244,11 @@ namespace z1 {
 		quad.m_model = model;
 		quad.m_color = color;
 		if (texture) {
-			quad.m_texture = texture->m_image;
+			quad.m_image = texture->m_texture->m_image;
 			quad.m_texcoords = texture->m_texcoords;
 		}
 		else {
-			quad.m_texture = m_default_texture;
+			quad.m_image = m_default_image;
 		}
 
 		m_quads.push_back(quad);
@@ -256,7 +256,7 @@ namespace z1 {
 
 	void Renderer2D::draw_quads(std::vector<Quad> const& quads) {
 		for (auto const& quad : quads) {
-			m_quads.push_back({ quad.m_transform, quad.m_color, quad.m_texture ? quad.m_texture : m_default_texture, { quad.m_tiling_scale.x, quad.m_tiling_scale.y, quad.m_tiling_offset.x, quad.m_tiling_offset.y }, quad.m_texcoords });
+			m_quads.push_back({ quad.m_transform, quad.m_color, quad.m_texture ? quad.m_texture : m_default_image, { quad.m_tiling_scale.x, quad.m_tiling_scale.y, quad.m_tiling_offset.x, quad.m_tiling_offset.y }, quad.m_texcoords });
 		}
 	}
 

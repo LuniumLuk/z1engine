@@ -4,7 +4,6 @@
 #include "core/io.h"
 #include "core/guid.h"
 #include "util/yaml.h"
-#include "asset/asset_manager.h"
 
 namespace z1 {
 
@@ -96,7 +95,12 @@ namespace z1 {
 		out << YAML::Key << "guid" << YAML::Value << v.guid.value;
 		out << YAML::Key << "type" << YAML::Value << v.type;
 		out << YAML::Key << "path" << YAML::Value << v.path.generic_string();
-		out << YAML::Key << "extra" << YAML::Value << v.extra;
+		if (v.extra.IsNull()) {
+			out << YAML::Key << "extra" << YAML::Value << YAML::Null;
+		}
+		else {
+			out << YAML::Key << "extra" << YAML::Value << v.extra;
+		}
 		out << YAML::EndMap;
 		return out;
 	}

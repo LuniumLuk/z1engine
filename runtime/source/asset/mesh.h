@@ -97,15 +97,15 @@ namespace z1 {
 		};
 
 		struct Storage {
-			Guid guid;
 			std::vector<VertexData> vertices;
 			std::vector<uint32_t> indices;
 			std::vector<Primitive::Storage> primitives;
 			glm::vec3 bound_min;
 			glm::vec3 bound_max;
+
+			AssetMeta import(Filepath const& path) const;
 		};
 
-		static std::shared_ptr<StaticMesh> create(Filepath const& path, std::shared_ptr<Storage> const& storage);
 		static std::shared_ptr<StaticMesh> load(Guid const& guid);
 
 		StaticMesh(std::shared_ptr<Storage> const& storage);

@@ -1,4 +1,4 @@
-#include "render/image.h"
+#include "asset/texture.h"
 #include "render/pipeline.h"
 #include "render/buffer.h"
 #include "render/vertex_array.h"
@@ -44,7 +44,7 @@ namespace z1 {
 			glm::vec2 const& size,
 			float rotation,
 			glm::vec4 const& color,
-			std::shared_ptr<Image2D> const& texture,
+			std::shared_ptr<Texture2D> const& texture,
 			glm::vec2 const& tiling_scale = glm::vec2(1.0f),
 			glm::vec2 const& tiling_offset = glm::vec2(0.0f));
 
@@ -53,7 +53,7 @@ namespace z1 {
 			glm::vec2 const& size,
 			float rotation,
 			glm::vec4 const& color,
-			std::shared_ptr<SubImage2D> const& texture);
+			std::shared_ptr<SubTexture2D> const& texture);
 
 		void draw_quads(std::vector<Quad> const& quads);
 
@@ -70,7 +70,7 @@ namespace z1 {
 		struct QuadData {
 			glm::mat4 m_model;
 			glm::vec4 m_color;
-			std::shared_ptr<Image2D> m_texture;
+			std::shared_ptr<Image2D> m_image;
 			glm::vec4 m_tiling_factor = { 1.0f, 1.0f, 0.0f, 0.0f };
 			std::array<glm::vec2, 4> m_texcoords = { {
 				{ 0.0f, 0.0f },
@@ -101,7 +101,7 @@ namespace z1 {
 
 		std::shared_ptr<VertexBuffer> m_vertex_buffer;
 		std::shared_ptr<VertexArray> m_vertex_array;
-		std::shared_ptr<Image2D> m_default_texture;
+		std::shared_ptr<Image2D> m_default_image;
 		std::shared_ptr<Pipeline> m_pipeline;
 	};
 

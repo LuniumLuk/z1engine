@@ -18,25 +18,25 @@ int main() {
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
 	{
-		ImageImporterSettings settings{};
+		TextureImporterSettings settings{};
 		settings.file = "../../asset/texture/sheet/roguelikeSheet_transparent.png";
 		settings.path = "texture/T_roguelikeSheet";
 		settings.sampler_mode = SamplerMode::Nearest;
-		ImageImporter().import(settings);
+		TextureImporter().import(settings);
 	}
 
 	{
-		ImageImporterSettings settings{};
+		TextureImporterSettings settings{};
 		settings.file = "../../asset/texture/awesomeface.png";
 		settings.path = "texture/T_awesomeface";
-		ImageImporter().import(settings);
+		TextureImporter().import(settings);
 	}
 
 	{
-		ImageImporterSettings settings{};
+		TextureImporterSettings settings{};
 		settings.file = "../../asset/texture/tira-checker.jpg";
 		settings.path = "texture/T_tira-checker";
-		ImageImporter().import(settings);
+		TextureImporter().import(settings);
 	}
 
 	{

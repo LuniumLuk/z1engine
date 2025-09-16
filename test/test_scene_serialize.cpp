@@ -30,9 +30,9 @@ int main() {
 	ortho_cc.m_intrinsic.size = 4.0f; // frustum size
 	scene->set_main_camera(ortho_cam);
 
-	auto tex0 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_awesomeface");
-	auto tex1 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_tira-checker");
-	auto tex2 = g_runtime_context.m_asset_manager->get<Image2D>("texture/T_roguelikeSheet");
+	auto tex0 = g_runtime_context.m_asset_manager->get<Texture2D>("texture/T_awesomeface");
+	auto tex1 = g_runtime_context.m_asset_manager->get<Texture2D>("texture/T_tira-checker");
+	auto tex2 = g_runtime_context.m_asset_manager->get<Texture2D>("texture/T_roguelikeSheet");
 
 	{
 		auto ent = scene->create_entity("Square_0");
@@ -70,7 +70,7 @@ int main() {
 	uint32_t stride = 1;
 	for (uint32_t i = 0; i < quad_rows; ++i) {
 		for (uint32_t j = 0; j < quad_cols; ++j) {
-			auto tile = SubImage2D::create(tex2, i * (tile_size + stride), j * (tile_size + stride), tile_size, tile_size, true);
+			auto tile = SubTexture2D::create(tex2, i * (tile_size + stride), j * (tile_size + stride), tile_size, tile_size, true);
 			auto ent = scene->create_entity("SubImage2D_" + std::to_string(i * quad_rows + j));
 			ent->add_component<SpriteComponent>(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), tile);
 			ent->get_component<TransformComponent>().m_location = glm::vec3(-(float)i * quad_stride - 0.2f, -(float)j * quad_stride - 0.2f, 1.0f);
@@ -87,7 +87,7 @@ int main() {
 		}
 	}
 
-	SceneSerializer::serialize_scene("../../content/scene/sample.scene.yaml", scene);
+	Scene::serialize("scene/sample", scene);
 
 	return 0;
 }

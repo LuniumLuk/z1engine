@@ -1,6 +1,6 @@
 #include "pch.h"
-
 #include "asset/material.h"
+#include "asset/asset_manager.h"
 #include "util/string_utils.h"
 
 namespace z1 {
@@ -184,16 +184,16 @@ namespace z1 {
 	}
 
 	std::shared_ptr<Material> Material::create(Filepath const& path, Pipeline::Description const& pipeline_desc) {
-		auto material = std::make_shared<Material>(pipeline_desc);
-		material->m_meta.guid = Guid::generate();
-		material->m_meta.type = "material";
-		material->m_meta.path = path;
-		material->m_meta.root = "content";
+		auto mat = std::make_shared<Material>(pipeline_desc);
+		mat->m_meta.guid = Guid::generate();
+		mat->m_meta.type = "material";
+		mat->m_meta.path = path;
 		auto const& root = FileSystem::s_content_root;
-		if (!g_runtime_context.m_asset_manager->register_asset(material->m_meta, root)) {
+		if (!g_runtime_context.m_asset_manager->register_asset(mat->m_meta, root)) {
 			return nullptr;
 		}
-		material->save();
+		mat->save();
+		return mat;
 	}
 
 	std::shared_ptr<Material> Material::load(Guid const& guid) {
@@ -204,7 +204,6 @@ namespace z1 {
 		}
 
 		YAML::Node node = YAML::LoadFile(file.string());
-		auto meta = node["meta"].as<AssetMeta>();
 		auto pipeline_node = node["pipeline"];
 		Pipeline::Description pipeline_desc{};
 		pipeline_desc.depth_test = pipeline_node["depth_test"].as<bool>();
@@ -218,7 +217,9 @@ namespace z1 {
 			return nullptr;
 		}
 
-		return std::make_shared<Material>(pipeline_desc);
+		auto mat = std::make_shared<Material>(pipeline_desc);
+		mat->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		return mat;
 	}
 
 	void Material::save() const {
@@ -244,24 +245,24 @@ namespace z1 {
 
 	std::shared_ptr<MaterialInstance> MaterialInstance::create(Filepath const& path, std::shared_ptr<Material> const& material) {
 		auto mi = std::make_shared<MaterialInstance>(material);
-		material->m_meta.guid = Guid::generate();
-		material->m_meta.type = "material instance";
-		material->m_meta.path = path;
-		material->m_meta.root = "content";
+		mi->m_meta.guid = Guid::generate();
+		mi->m_meta.type = "material instance";
+		mi->m_meta.path = path;
 		auto const& root = FileSystem::s_content_root;
 		if (!g_runtime_context.m_asset_manager->register_asset(material->m_meta, root)) {
 			return nullptr;
 		}
-		material->save();
+		mi->save();
+		return mi;
 	}
 
 	std::shared_ptr<MaterialInstance> MaterialInstance::load(Guid const& guid) {
-		CORE_ERROR("MaterialInstance::load(Guid const&) not implemented yet!");
+		UNIMPLEMENTED_FUNCTION();
 		return nullptr;
 	}
 
 	void MaterialInstance::save() const {
-		CORE_ERROR("MaterialInstance::save() not implemented yet!");
+		UNIMPLEMENTED_FUNCTION();
 	}
 
 }

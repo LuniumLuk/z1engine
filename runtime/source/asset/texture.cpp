@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "asset/texture.h"
+#include "asset/asset_manager.h"
 
 #include "bakery.h"
 #include "tinyexr/tinyexr.h"
@@ -87,7 +88,9 @@ namespace z1 {
 
 	std::shared_ptr<Texture2D> Texture2D::load(Guid const& guid) {
 		auto image = load_image(guid);
-		return std::make_shared<Texture2D>(image, image->get_description().m_sampler_mode, image->get_description().m_wrap_mode);
+		auto texture = std::make_shared<Texture2D>(image, image->get_description().m_sampler_mode, image->get_description().m_wrap_mode);
+		texture->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		return texture;
 	}
 
 }
