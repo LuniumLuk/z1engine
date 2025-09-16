@@ -28,6 +28,9 @@ namespace z1 {
 
 		std::shared_ptr<Entity> get_main_camera() const;
 
+		static bool serialize(Filepath const& path, std::shared_ptr<Scene> const& asset);
+		static std::shared_ptr<Scene> deserialize(Filepath const& path);
+
 		entt::registry m_registry;
 		std::shared_ptr<Framebuffer> m_main_framebuffer;
 		std::vector<std::shared_ptr<Entity>> m_entities;

@@ -107,7 +107,6 @@ namespace z1 {
 
 		static std::shared_ptr<StaticMesh> create(Filepath const& path, std::shared_ptr<Storage> const& storage);
 		static std::shared_ptr<StaticMesh> load(Guid const& guid);
-		void save() const;
 
 		StaticMesh(std::shared_ptr<Storage> const& storage);
 		StaticMesh(std::vector<Primitive> const& primitives);

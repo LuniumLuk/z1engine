@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "util/string_utils.h"
 #include "asset/material.h"
+#include "util/string_utils.h"
 
 namespace z1 {
 
@@ -240,6 +240,28 @@ namespace z1 {
 		out << YAML::EndMap;
 
 		save_yaml(file, out);
+	}
+
+	std::shared_ptr<MaterialInstance> MaterialInstance::create(Filepath const& path, std::shared_ptr<Material> const& material) {
+		auto mi = std::make_shared<MaterialInstance>(material);
+		material->m_meta.guid = Guid::generate();
+		material->m_meta.type = "material instance";
+		material->m_meta.path = path;
+		material->m_meta.root = "content";
+		auto const& root = FileSystem::s_content_root;
+		if (!g_runtime_context.m_asset_manager->register_asset(material->m_meta, root)) {
+			return nullptr;
+		}
+		material->save();
+	}
+
+	std::shared_ptr<MaterialInstance> MaterialInstance::load(Guid const& guid) {
+		CORE_ERROR("MaterialInstance::load(Guid const&) not implemented yet!");
+		return nullptr;
+	}
+
+	void MaterialInstance::save() const {
+		CORE_ERROR("MaterialInstance::save() not implemented yet!");
 	}
 
 }

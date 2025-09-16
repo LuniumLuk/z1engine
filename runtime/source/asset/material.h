@@ -49,7 +49,7 @@ namespace z1 {
 
 		MaterialInstance(std::shared_ptr<Material> const& material);
 
-		static std::shared_ptr<MaterialInstance> create(Pipeline::Description const& pipeline_desc);
+		static std::shared_ptr<MaterialInstance> create(Filepath const& path, std::shared_ptr<Material> const& material);
 		static std::shared_ptr<MaterialInstance> load(Guid const& guid);
 		void save() const;
 

@@ -87,6 +87,12 @@ namespace z1 {
 			return asset;
 		}
 
+		template<typename T>
+		void set(Guid const& guid, std::shared_ptr<T> const& asset) {
+			auto& map = storage<T>();
+			map[guid] = asset;
+		}
+
 		Filepath get_file_from_guid(Guid const& guid) const {
 			if (m_guid_to_file_mapping.find(guid) != m_guid_to_file_mapping.end()) {
 				return m_guid_to_file_mapping.at(guid);

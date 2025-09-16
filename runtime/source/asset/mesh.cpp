@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "asset/mesh.h"
+#include "asset/binary_file.h"
 
 namespace z1 {
 
@@ -159,49 +160,90 @@ namespace z1 {
 
 		yaml << YAML::EndMap;
 
-		auto material = std::make_shared<StaticMesh>(storage);
-		material->m_meta.guid = Guid::generate();
-		material->m_meta.type = "static mesh";
-		material->m_meta.path = path;
-		material->m_meta.root = "content";
+		auto mesh = std::make_shared<StaticMesh>(storage);
+		mesh->m_meta.guid = Guid::generate();
+		mesh->m_meta.type = "static mesh";
+		mesh->m_meta.path = path;
+		mesh->m_meta.root = "content";
+
+		yaml << YAML::Key << "meta" << YAML::Value << mesh->m_meta;
+
 		auto const& root = FileSystem::s_content_root;
-		if (!g_runtime_context.m_asset_manager->register_asset(material->m_meta, root)) {
+		Filepath file = root / mesh->m_meta.path;
+
+		if (!g_runtime_context.m_asset_manager->register_asset(mesh->m_meta, root)) {
 			return nullptr;
 		}
-		material->save();
 
 		bf.set_yaml(yaml.c_str());
-		if (!bf.save(path)) {
+		if (!bf.save(file.concat(".bin"))) {
 			CORE_ERROR("failed to save static mesh storage: {0}", path.generic_string());
 			return nullptr;
 		}
 
-		return material;
+		save_yaml(file.concat(".yaml"), yaml);
+
+		g_runtime_context.m_asset_manager->set<StaticMesh>(mesh->m_meta.guid, mesh);
+
+		return mesh;
 	}
 
 	std::shared_ptr<StaticMesh> StaticMesh::load(Guid const& guid) {
+		PROFILE_FUNCTION();
+		auto meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 
-	}
+		BinaryFile bf{};
 
-	void StaticMesh::save() const {
-		auto const& root = FileSystem::s_content_root;
-		Filepath file = root / m_meta.path;
-		file += ".yaml";
+		if (!bf.load(file.replace_extension(".bin"))) {
+			CORE_ERROR("failed to load static mesh storage: {0}", file.generic_string());
+			return nullptr;
+		}
 
-		YAML::Emitter out;
-		out << YAML::BeginMap;
-		out << YAML::Key << "meta" << YAML::Value << m_meta;
-		out << YAML::Key << "pipeline" << YAML::Value;
-		out << YAML::BeginMap;
-		out << YAML::Key << "depth_test" << YAML::Value << m_pipeline_desc.depth_test;
-		out << YAML::Key << "blend" << YAML::Value << m_pipeline_desc.blend;
-		out << YAML::Key << "src_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.src_blend_factor);
-		out << YAML::Key << "dst_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.dst_blend_factor);
-		out << YAML::Key << "cull_mode" << YAML::Value << static_cast<int>(m_pipeline_desc.cull_mode);
-		out << YAML::Key << "shader" << YAML::Value << m_pipeline_desc.shader->m_guid.value;
-		out << YAML::EndMap;
+		YAML::Node node = YAML::Load(bf.get_yaml());
+		auto storage = std::make_shared<StaticMesh::Storage>();
 
-		save_yaml(file, out);
+		storage->guid.value = node["guid"].as<std::string>();
+		storage->bound_min = node["bound_min"].as<glm::vec3>();
+		storage->bound_max = node["bound_max"].as<glm::vec3>();
+		auto vertex_count = node["vertex_count"].as<size_t>();
+		auto index_count = node["index_count"].as<size_t>();
+
+		for (auto const& prim_node : node["primitives"]) {
+			StaticMesh::Primitive::Storage prim_storage{};
+			prim_storage.index_start = prim_node["index_start"].as<uint32_t>();
+			prim_storage.index_count = prim_node["index_count"].as<uint32_t>();
+			prim_storage.vertex_count = prim_node["vertex_count"].as<uint32_t>();
+			prim_storage.bound_min = prim_node["bound_min"].as<glm::vec3>();
+			prim_storage.bound_max = prim_node["bound_max"].as<glm::vec3>();
+			prim_storage.material.value = prim_node["guid"].as<std::string>();
+			prim_storage.has_indices = prim_node["has_indices"].as<bool>();
+			prim_storage.has_normal = prim_node["has_normal"].as<bool>();
+			prim_storage.has_tangent = prim_node["has_tangent"].as<bool>();
+			storage->primitives.push_back(prim_storage);
+		}
+
+		storage->vertices.resize(vertex_count);
+		storage->indices.resize(index_count);
+
+		auto vdata_size = vertex_count * sizeof(StaticMesh::VertexData);
+		auto idata_size = index_count * sizeof(uint32_t);
+
+		auto vdata_slice = bf.get_data_slice(0, vdata_size);
+		if (vdata_slice.size != vdata_size) {
+			CORE_ERROR("corrupted static mesh storage: {0}", file.generic_string());
+			return nullptr;
+		}
+		std::memcpy(storage->vertices.data(), vdata_slice.ptr, vdata_slice.size);
+
+		auto idata_slice = bf.get_data_slice(vdata_size, idata_size);
+		if (idata_slice.size != idata_size) {
+			CORE_ERROR("corrupted static mesh storage: {0}", file.generic_string());
+			return nullptr;
+		}
+		std::memcpy(storage->indices.data(), idata_slice.ptr, idata_slice.size);
+
+		return std::make_shared<StaticMesh>(storage);
 	}
 
 }

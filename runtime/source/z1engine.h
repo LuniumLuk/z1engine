@@ -46,7 +46,7 @@
 #include "util/thread_pool.h"
 
 #include "asset/serializer/serializer.h"
-#include "asset/serializer/binary_file.h"
+#include "asset/binary_file.h"
 #include "asset/serializer/scene_serializer.h"
 #include "asset/serializer/mesh_serializer.h"
 #include "asset/serializer/image_serializer.h"

@@ -115,8 +115,6 @@ namespace z1 {
 		virtual void* get_native_handle() const = 0;
 		Description const& get_description() const { return m_description; }
 
-		Guid m_guid{};
-
 	protected:
 		Description m_description{};
 	};

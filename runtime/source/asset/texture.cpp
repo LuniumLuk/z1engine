@@ -1,7 +1,5 @@
 #include "pch.h"
-#include "asset/serializer/image_serializer.h"
-#include "asset/asset_manager.h"
-#include "util/yaml.h"
+#include "asset/texture.h"
 
 #include "bakery.h"
 #include "tinyexr/tinyexr.h"
@@ -26,7 +24,7 @@ namespace z1 {
 		return std::find(exts.begin(), exts.end(), ext) != exts.end();
 	}
 
-	std::shared_ptr<Image2D> load_image2d_asset(Guid const& guid) {
+	static std::shared_ptr<Image2D> load_image(Guid const& guid) {
 		PROFILE_FUNCTION();
 		auto meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
@@ -85,6 +83,11 @@ namespace z1 {
 		}
 
 		return nullptr;
+	}
+
+	std::shared_ptr<Texture2D> Texture2D::load(Guid const& guid) {
+		auto image = load_image(guid);
+		return std::make_shared<Texture2D>(image, image->get_description().m_sampler_mode, image->get_description().m_wrap_mode);
 	}
 
 }

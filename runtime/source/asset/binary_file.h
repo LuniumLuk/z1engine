@@ -26,8 +26,8 @@ namespace z1 {
 			bool valid() const noexcept { return ptr != nullptr && size > 0; }
 		};
 
-		bool load(Filepath const& path);
-		bool save(Filepath const& path) const;
+		bool load(Filepath const& file);
+		bool save(Filepath const& file) const;
 
 		void set_yaml(std::string const& yaml);
 		std::string const& get_yaml() const;

@@ -15,6 +15,38 @@ namespace z1 {
 		// used by the editor to tell apart "engine" assets
 		// from normal project assets. Not saved to disk.
 		std::string root;
+
+		YAML::Node extra; // extra fields for each asset type
+	};
+
+	template <typename...>
+	using void_t = void; // pre-C++17 compatibility
+
+	// detect create()
+	template <typename T, typename = void, typename... Args>
+	struct has_create : std::false_type {};
+
+	template <typename T, typename... Args>
+	struct has_create<T, void_t<decltype(T::create(std::declval<Args>()...))>, Args...>
+		: std::true_type {
+	};
+
+	// detect load()
+	template <typename T, typename = void>
+	struct has_load : std::false_type {};
+
+	template <typename T>
+	struct has_load<T, void_t<decltype(T::load(std::declval<Guid const&>()))>>
+		: std::true_type {
+	};
+
+	// detect save()
+	template <typename T, typename = void>
+	struct has_save : std::false_type {};
+
+	template <typename T>
+	struct has_save<T, void_t<decltype(std::declval<T const*>()->save())>>
+		: std::true_type {
 	};
 
 	template <typename Derived>
@@ -39,17 +71,22 @@ namespace z1 {
 		//
 		// the following wrappers are CRTP helper functions to call the derived class methods
 
-		template<typename... Args>
+		// enable only if Derived::create exists
+		template<typename... Args, typename = std::enable_if_t<has_create<Derived, void, Args...>::value>>
 		static std::shared_ptr<Derived> create(Args&&... args) {
 			return Derived::create(std::forward<Args>(args)...);
 		}
 
+		// enable only if Derived::load exists
+		template<typename D = Derived, typename = std::enable_if_t<has_load<D>::value>>
 		static std::shared_ptr<Derived> load(Guid const& guid) {
 			return Derived::load(guid);
 		}
 
+		// enable only if Derived::save exists
+		template<typename D = Derived, typename = std::enable_if_t<has_save<D>::value>>
 		void save() const {
-			Derived::save();
+			static_cast<Derived const*>(this)->save();
 		}
 
 	};
@@ -59,6 +96,7 @@ namespace z1 {
 		out << YAML::Key << "guid" << YAML::Value << v.guid.value;
 		out << YAML::Key << "type" << YAML::Value << v.type;
 		out << YAML::Key << "path" << YAML::Value << v.path.generic_string();
+		out << YAML::Key << "extra" << YAML::Value << v.extra;
 		out << YAML::EndMap;
 		return out;
 	}
@@ -76,6 +114,7 @@ namespace YAML {
 			rhs.guid.value = node["guid"].as<std::string>();
 			rhs.type = node["type"].as<std::string>();
 			rhs.path = node["path"].as<std::string>();
+			rhs.extra = node["extra"];
 			return true;
 		}
 	};

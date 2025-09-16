@@ -1,50 +1,50 @@
 #include "pch.h"
-#include "asset/serializer/binary_file.h"
+#include "asset/binary_file.h"
 
 namespace z1 {
 
-	bool BinaryFile::load(Filepath const& path) {
-		std::ifstream ifs(path, std::ios::binary);
+	bool BinaryFile::load(Filepath const& file) {
+		std::ifstream ifs(file, std::ios::binary);
 		if (!ifs) {
-			CORE_ERROR("failed to read from file {0}", path);
+			CORE_ERROR("failed to read from file {0}", file);
 			return false;
 		}
 
 		BinaryFileHeader header;
 		if (!ifs.read(reinterpret_cast<char*>(&header), sizeof(header))) {
-			CORE_ERROR("failed to read header from {0}", path);
+			CORE_ERROR("failed to read header from {0}", file);
 			return false;
 		}
 
 		if (header.magic != BINARY_FILE_MAGIC) {
-			CORE_ERROR("invalid magic number in {0}", path);
+			CORE_ERROR("invalid magic number in {0}", file);
 			return false;
 		}
 
 		if (header.version != 1) {
-			CORE_ERROR("unsupported version {} in {}", header.version, path);
+			CORE_ERROR("unsupported version {} in {}", header.version, file);
 			return false;
 		}
 
 		m_yaml.resize(header.yaml_size);
 		if (!ifs.read(m_yaml.data(), header.yaml_size)) {
-			CORE_ERROR("failed to read yaml section from {}", path);
+			CORE_ERROR("failed to read yaml section from {}", file);
 			return false;
 		}
 
 		m_data.resize(header.data_size);
 		if (!ifs.read(reinterpret_cast<char*>(m_data.data()), header.data_size)) {
-			CORE_ERROR("failed to read data section from {}", path);
+			CORE_ERROR("failed to read data section from {}", file);
 			return false;
 		}
 
 		return true;
 	}
 
-	bool BinaryFile::save(Filepath const& path) const {
-		std::ofstream ofs(path, std::ios::binary);
+	bool BinaryFile::save(Filepath const& file) const {
+		std::ofstream ofs(file, std::ios::binary);
 		if (!ofs) {
-			CORE_ERROR("failed to write to file {0}", path);
+			CORE_ERROR("failed to write to file {0}", file);
 			return false;
 		}
 
@@ -57,7 +57,7 @@ namespace z1 {
 		ofs.write(reinterpret_cast<const char*>(m_data.data()), m_data.size());
 
 		if (!ofs.good()) {
-			CORE_ERROR("failed to write fully to {}", path);
+			CORE_ERROR("failed to write fully to {}", file);
 			return false;
 		}
 
