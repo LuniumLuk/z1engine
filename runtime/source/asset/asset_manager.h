@@ -155,7 +155,9 @@ namespace z1 {
 		static std::shared_ptr<Shader> load(Guid const& guid) {
 			auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 			if (!file.empty()) {
-				return Shader::create(file);
+				auto shader = Shader::create(file);
+				shader->m_guid = guid;
+				return shader;
 			}
 			CORE_ERROR("failed to load shader: {0}", guid.value);
 			return nullptr;

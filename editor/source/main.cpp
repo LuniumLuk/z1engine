@@ -21,12 +21,14 @@ struct EditorLayer : Layer {
 		m_browser->m_on_asset_opened =
 			[&](AssetMeta* meta) {
 				if (!meta) return;
-				if (meta->root == "engine") return;
 
 				if (meta->type == "scene") {
 					m_active_scene = Scene::deserialize(meta->path);
 					m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 					m_selected_entity = nullptr;
+				}
+				else if (meta->type == "shader") {
+					m_selected_shader = g_runtime_context.m_asset_manager->get<Shader>(meta->guid);
 				}
 			};
 
@@ -241,7 +243,7 @@ struct EditorLayer : Layer {
 		show_scene_graph();
 		show_properties();
 		m_browser->draw();
-		//show_shader_info(m_material->m_pipeline->m_shader);
+		show_shader_info(m_selected_shader);
 		//show_material_info(m_material_instance);
 
 		if (ImGui::Begin("debug")) {
@@ -266,6 +268,7 @@ private:
 	std::unique_ptr<ContentBrowser> m_browser;
 	bool m_picked_from_viewport = false;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
+	std::shared_ptr<Shader> m_selected_shader = nullptr;
 
 	std::shared_ptr<PickingSystem> m_picking;
 
@@ -458,6 +461,12 @@ private:
 
 	void show_shader_info(std::shared_ptr<Shader> const& shader) {
 		if (ImGui::Begin("shader info")) {
+			if (!shader) {
+				ImGui::Text("no shader selected");
+				ImGui::End();
+				return;
+			}
+
 			ImGui::Text("basic info");
 			if (ImGui::BeginTable("basic info", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
 				ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(shader->get_name().c_str());
