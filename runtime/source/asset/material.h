@@ -3,6 +3,7 @@
 #include "core/core.h"
 #include "core/guid.h"
 #include "asset/asset.h"
+#include "asset/texture.h"
 #include "render/pipeline.h"
 #include "render/resource.h"
 #include "render/shader.h"
@@ -20,11 +21,43 @@ namespace z1 {
 
 			struct Value {
 				union {
-					uint32_t resource_id;    // store Image2D and ImageCube
-					int ivec[4];             // store int, ivec2, ivec3, ivec4
-					float vec[4] = { 0.0f }; // store float, vec2, vec3, vec4
+					std::shared_ptr<Texture2D> tex2D;  // store Texture2D
+					int ivec[4];                       // store int, ivec2, ivec3, ivec4
+					float vec[4] = { 0.0f };           // store float, vec2, vec3, vec4
 				};
 				bool valid = false;
+				DataType type = DataType::None;
+
+				Value() : tex2D(nullptr), valid(false), type(DataType::None) {}
+				Value(Value const& other) : valid(other.valid), type(other.type) {
+					switch (other.type) {
+					case DataType::Sampler2D:
+						tex2D = other.tex2D;
+						break;
+					default:
+						std::memcpy(vec, other.vec, 4 * sizeof(float));
+					}
+				}
+				Value& operator=(Value const& other) {
+					if (this != &other) {
+						valid = other.valid;
+						type = other.type;
+						switch (other.type) {
+						case DataType::Sampler2D:
+							tex2D = other.tex2D;
+							break;
+						default:
+							std::memcpy(vec, other.vec, 4 * sizeof(float));
+						}
+					}
+					return *this;
+				}
+
+				~Value() {
+					if (type == DataType::Sampler2D) {
+						tex2D.reset();
+					}
+				}
 			};
 
 			Value default_value = {};

@@ -27,8 +27,8 @@ struct EditorLayer : Layer {
 					m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
 					m_selected_entity = nullptr;
 				}
-				else if (meta->type == "shader") {
-					m_selected_shader = g_runtime_context.m_asset_manager->get<Shader>(meta->guid);
+				else {
+					m_selected_asset = meta;
 				}
 			};
 
@@ -134,7 +134,7 @@ struct EditorLayer : Layer {
 			m_material_instance->m_override_variables["u_texture"].default_value.valid = true;*/
 		}
 
-		// picking system doesn��t need to be that precise
+		// picking system does not need to be that precise
 		// so we use default resolution here (512x512)
 		m_picking = std::make_shared<PickingSystem>();
 	}
@@ -243,8 +243,7 @@ struct EditorLayer : Layer {
 		show_scene_graph();
 		show_properties();
 		m_browser->draw();
-		show_shader_info(m_selected_shader);
-		//show_material_info(m_material_instance);
+		show_asset_info();
 
 		if (ImGui::Begin("debug")) {
 			if (ImGui::RadioButton("v sync", g_runtime_context.m_window->is_v_sync_enabled())) {
@@ -268,7 +267,7 @@ private:
 	std::unique_ptr<ContentBrowser> m_browser;
 	bool m_picked_from_viewport = false;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
-	std::shared_ptr<Shader> m_selected_shader = nullptr;
+	AssetMeta* m_selected_asset = nullptr;
 
 	std::shared_ptr<PickingSystem> m_picking;
 
@@ -459,118 +458,147 @@ private:
 		ImGui::End();
 	}
 
-	void show_shader_info(std::shared_ptr<Shader> const& shader) {
-		if (ImGui::Begin("shader info")) {
-			if (!shader) {
-				ImGui::Text("no shader selected");
+	void show_asset_info() {
+		if (ImGui::Begin("asset viewer")) {
+			if (!m_selected_asset) {
+				ImGui::Text("no asset selected");
 				ImGui::End();
 				return;
 			}
 
-			ImGui::Text("basic info");
-			if (ImGui::BeginTable("basic info", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-				ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(shader->get_name().c_str());
-				ImGui::TableNextColumn(); ImGui::Text("path"); ImGui::TableNextColumn(); ImGui::Text(shader->get_path().c_str());
-				ImGui::TableNextColumn(); ImGui::Text("guid"); ImGui::TableNextColumn(); ImGui::Text(shader->m_guid.value.c_str());
-				ImGui::EndTable();
-			}
-			ImGui::Text("shader attributes");
-			if (ImGui::BeginTable("shader attributes", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-				ImGui::TableSetupColumn("name");
-				ImGui::TableSetupColumn("type");
-				ImGui::TableSetupColumn("location");
-				ImGui::TableSetupColumn("count");
-				ImGui::TableHeadersRow();
+			ImGui::Text("guid: %s", m_selected_asset->guid.value.c_str());
+			ImGui::Text("type: %s", m_selected_asset->type.c_str());
+			ImGui::Text("path: %s", m_selected_asset->path.generic_string().c_str());
+			ImGui::Separator();
 
-				for (auto& attrib : shader->get_attributes()) {
-					ImGui::TableNextColumn(); ImGui::Text(attrib.m_name.c_str());
-					ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(attrib.m_type)).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_location).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_count).c_str());
+			if (m_selected_asset->type == "shader") {
+				auto shader = g_runtime_context.m_asset_manager->get<Shader>(m_selected_asset->guid);
+				ImGui::Text("basic info");
+				if (ImGui::BeginTable("basic info", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+					ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(shader->get_name().c_str());
+					ImGui::TableNextColumn(); ImGui::Text("path"); ImGui::TableNextColumn(); ImGui::Text(shader->get_path().c_str());
+					ImGui::TableNextColumn(); ImGui::Text("guid"); ImGui::TableNextColumn(); ImGui::Text(shader->m_guid.value.c_str());
+					ImGui::EndTable();
 				}
-				ImGui::EndTable();
-			}
-			ImGui::Text("shader uniforms");
-			if (ImGui::BeginTable("shader uniforms", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-				ImGui::TableSetupColumn("name");
-				ImGui::TableSetupColumn("type");
-				ImGui::TableSetupColumn("location");
-				ImGui::TableSetupColumn("count");
-				ImGui::TableHeadersRow();
+				ImGui::Text("shader attributes");
+				if (ImGui::BeginTable("shader attributes", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+					ImGui::TableSetupColumn("name");
+					ImGui::TableSetupColumn("type");
+					ImGui::TableSetupColumn("location");
+					ImGui::TableSetupColumn("count");
+					ImGui::TableHeadersRow();
 
-				ImGui::TableNextRow();
-				for (auto& uniform : shader->get_uniforms()) {
-					if (uniform.m_location == INVALID_LOCATION) continue;
-					ImGui::TableNextColumn(); ImGui::Text(uniform.m_name.c_str());
-					ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(uniform.m_type)).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_location).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_count).c_str());
-				}
-				ImGui::EndTable();
-			}
-			ImGui::Text("shader uniform blocks");
-			for (auto& block : shader->get_uniform_blocks()) {
-				if (ImGui::BeginTable("shader uniform blocks", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-					ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(block.m_name.c_str());
-					ImGui::TableNextColumn(); ImGui::Text("size"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_size).c_str());
-					ImGui::TableNextColumn(); ImGui::Text("binding"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_binding).c_str());
-
-					ImGui::TableNextColumn(); ImGui::Text("variables"); ImGui::TableNextColumn();
-					if (ImGui::BeginTable("variables", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-						ImGui::TableSetupColumn("name");
-						ImGui::TableSetupColumn("type");
-						ImGui::TableSetupColumn("count");
-						ImGui::TableHeadersRow();
-
-						for (auto& variable : block.m_variables) {
-							ImGui::TableNextColumn(); ImGui::Text(variable.m_name.c_str());
-							ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(variable.m_type)).c_str());
-							ImGui::TableNextColumn(); ImGui::Text(std::to_string(variable.m_count).c_str());
-						}
-						ImGui::EndTable();
+					for (auto& attrib : shader->get_attributes()) {
+						ImGui::TableNextColumn(); ImGui::Text(attrib.m_name.c_str());
+						ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(attrib.m_type)).c_str());
+						ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_location).c_str());
+						ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_count).c_str());
 					}
 					ImGui::EndTable();
 				}
+				ImGui::Text("shader uniforms");
+				if (ImGui::BeginTable("shader uniforms", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+					ImGui::TableSetupColumn("name");
+					ImGui::TableSetupColumn("type");
+					ImGui::TableSetupColumn("location");
+					ImGui::TableSetupColumn("count");
+					ImGui::TableHeadersRow();
+
+					ImGui::TableNextRow();
+					for (auto& uniform : shader->get_uniforms()) {
+						if (uniform.m_location == INVALID_LOCATION) continue;
+						ImGui::TableNextColumn(); ImGui::Text(uniform.m_name.c_str());
+						ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(uniform.m_type)).c_str());
+						ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_location).c_str());
+						ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_count).c_str());
+					}
+					ImGui::EndTable();
+				}
+				ImGui::Text("shader uniform blocks");
+				for (auto& block : shader->get_uniform_blocks()) {
+					if (ImGui::BeginTable("shader uniform blocks", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+						ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(block.m_name.c_str());
+						ImGui::TableNextColumn(); ImGui::Text("size"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_size).c_str());
+						ImGui::TableNextColumn(); ImGui::Text("binding"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_binding).c_str());
+
+						ImGui::TableNextColumn(); ImGui::Text("variables"); ImGui::TableNextColumn();
+						if (ImGui::BeginTable("variables", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+							ImGui::TableSetupColumn("name");
+							ImGui::TableSetupColumn("type");
+							ImGui::TableSetupColumn("count");
+							ImGui::TableHeadersRow();
+
+							for (auto& variable : block.m_variables) {
+								ImGui::TableNextColumn(); ImGui::Text(variable.m_name.c_str());
+								ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(variable.m_type)).c_str());
+								ImGui::TableNextColumn(); ImGui::Text(std::to_string(variable.m_count).c_str());
+							}
+							ImGui::EndTable();
+						}
+						ImGui::EndTable();
+					}
+				}
 			}
-		}
-		ImGui::End();
-	}
+			else if (m_selected_asset->type == "material") {
+				auto mat = g_runtime_context.m_asset_manager->get<Material>(m_selected_asset->guid);
+				ImGui::Text("shader name: %s", mat->m_pipeline->m_shader->get_name().c_str());
 
-	void show_material_info(std::shared_ptr<MaterialInstance> const& material) {
-		if (ImGui::Begin("material instance")) {
-			ImGui::Text("name: %s", material->m_meta.path.generic_string());
-			ImGui::Text("parent material: %s", material->m_material->m_meta.path.generic_string());
-			ImGui::Text("shader name: %s", material->m_material->m_pipeline->m_shader->get_name().c_str());
+				ImGui::Text("variables");
+				for (auto& [name, var] : mat->m_variables) {
+					if (!var.visible) continue;
 
-			ImGui::Text("variables");
-			for (auto& [name, var] : material->m_override_variables) {
-				if (!var.visible) continue;
-
-				ImGui::Checkbox(name.c_str(), &var.default_value.valid);
-				ImGui::SameLine();
-				if (!var.default_value.valid) {
 					ImGui::BeginDisabled();
-				}
-				switch (var.type) {
-				case DataType::Float: ImGui::InputFloat(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float2: ImGui::InputFloat2(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float3: ImGui::InputFloat3(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float4: ImGui::InputFloat4(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Int: ImGui::InputInt(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int2: ImGui::InputInt2(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int4: ImGui::InputInt4(("##" + name).c_str(), var.default_value.ivec); break;
-				}
+					switch (var.type) {
+					case DataType::Float: ImGui::InputFloat(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float2: ImGui::InputFloat2(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float3: ImGui::InputFloat3(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float4: ImGui::InputFloat4(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Int: ImGui::InputInt(("##" + name).c_str(), var.default_value.ivec); break;
+					case DataType::Int2: ImGui::InputInt2(("##" + name).c_str(), var.default_value.ivec); break;
+					case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
+					case DataType::Int4: ImGui::InputInt4(("##" + name).c_str(), var.default_value.ivec); break;
+					case DataType::Sampler2D: ImGui::Text(name.c_str()); break;
+					case DataType::SamplerCube: ImGui::Text(name.c_str()); break;
+					}
 
-				if (var.type == DataType::Sampler2D && var.default_value.resource_id != INVALID_INDEX) {
-					auto image = g_runtime_context.m_resource_manager->get<Image2D>(var.default_value.resource_id);
-					auto w = image->get_description().m_width;
-					auto h = image->get_description().m_height;
-					ImGui::Image(image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-				}
-
-				if (!var.default_value.valid) {
 					ImGui::EndDisabled();
+				}
+			}
+			else if (m_selected_asset->type == "material instance") {
+				auto mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(m_selected_asset->guid);
+				ImGui::Text("parent material: %s", mi->m_material->m_meta.path.generic_string().c_str());
+				ImGui::Text("shader name: %s", mi->m_material->m_pipeline->m_shader->get_name().c_str());
+
+				ImGui::Text("override variables");
+				for (auto& [name, var] : mi->m_override_variables) {
+					if (!var.visible) continue;
+
+					ImGui::Checkbox(name.c_str(), &var.default_value.valid);
+					ImGui::SameLine();
+					if (!var.default_value.valid) {
+						ImGui::BeginDisabled();
+					}
+					switch (var.type) {
+					case DataType::Float: ImGui::InputFloat(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float2: ImGui::InputFloat2(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float3: ImGui::InputFloat3(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float4: ImGui::InputFloat4(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Int: ImGui::InputInt(("##" + name).c_str(), var.default_value.ivec); break;
+					case DataType::Int2: ImGui::InputInt2(("##" + name).c_str(), var.default_value.ivec); break;
+					case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
+					case DataType::Int4: ImGui::InputInt4(("##" + name).c_str(), var.default_value.ivec); break;
+					}
+
+					if (var.type == DataType::Sampler2D && var.default_value.tex2D) {
+						auto texture = var.default_value.tex2D;
+						auto w = texture->m_image->get_description().m_width;
+						auto h = texture->m_image->get_description().m_height;
+						ImGui::Image(texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+					}
+
+					if (!var.default_value.valid) {
+						ImGui::EndDisabled();
+					}
 				}
 			}
 		}

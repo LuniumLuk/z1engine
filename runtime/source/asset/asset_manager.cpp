@@ -12,7 +12,7 @@ namespace z1 {
 		CORE_INFO("current working directory: {0}", cwd.generic_string());
 
 		CORE_INFO("content root: {0}", FileSystem::s_content_root.generic_string());
-		CORE_INFO("engine shader root: {0}", FileSystem::s_engine_shader_root.generic_string());
+		CORE_INFO("engine root: {0}", FileSystem::s_engine_root.generic_string());
 
 		scan_content();
 	}
@@ -61,10 +61,10 @@ namespace z1 {
 		}
 
 		{
-			auto const& root = FileSystem::s_engine_shader_root;
+			auto const& root = FileSystem::s_engine_root;
 
 			if (!fs::exists(root)) {
-				CORE_WARN("missing engine shader root: {0}", root.generic_string());
+				CORE_WARN("missing engine root: {0}", root.generic_string());
 			}
 
 			for (auto& entry : fs::recursive_directory_iterator(root)) {
@@ -72,19 +72,29 @@ namespace z1 {
 					continue;
 
 				auto const& file = entry.path();
-				if (file.extension() != ".glsl")
-					continue; // skip non-shader files
 
 				Filepath path = fs::relative(file.parent_path() / file.stem(), root);
 
-				AssetMeta meta{};
-				// using path as guid, since we currently don't have a better way to generate stable guids for files
-				meta.root = "engine";
-				meta.guid = Guid::make(path.generic_string());
-				meta.type = "shader";
-				meta.path = path.generic_string();
+				AssetMeta meta;
+				if (file.extension() == ".glsl") {
+					meta.guid = Guid::make(path.generic_string());
+					meta.type = "shader";
+					meta.path = path.generic_string();
+					meta.root = "engine";
+				}
+				else {
+					try {
+						YAML::Node node = YAML::LoadFile(file.string());
+						meta = node["meta"].as<AssetMeta>();
+						meta.root = "engine";
+					}
+					catch (std::exception const& e) {
+						CORE_ERROR("failed to load meta file: {0}, {1}", file.generic_string(), e.what());
+						continue;
+					}
+				}
 
-				if (!register_asset(meta, root, ".glsl")) {
+				if (!register_asset(meta, root)) {
 					continue;
 				}
 			}
@@ -125,9 +135,8 @@ namespace z1 {
 		return it->second;
 	}
 
-	bool AssetManager::register_asset(AssetMeta const& meta, Filepath const& root, std::string const& ext) {
+	bool AssetManager::register_asset(AssetMeta const& meta, Filepath const& root) {
 		Filepath file = root / meta.path;
-		file += ext;
 
 		if (!register_guid(meta.guid)) {
 			CORE_ERROR("duplicate guid found: {0}, file: {1}", meta.guid, file.generic_string());

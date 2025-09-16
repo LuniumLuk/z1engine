@@ -371,67 +371,10 @@ namespace z1 {
 		}
 	}
 
-	ImportResult GltfImporter::import(GltfImporterSettings const& settings) {
-		ImportResult ret{};
+	static void import_materials(GltfImporterSettings const& settings, tinygltf::Model& model, ImportResult& ret) {
+		for (auto& mat : model.materials) {
 
-		if (!can_import(settings.file)) {
-			CORE_WARN("{0} is not a common gltf file", settings.file.generic_string());
-			return ret;
 		}
-
-		tinygltf::Model model{};
-		tinygltf::TinyGLTF loader{};
-		std::string err;
-		std::string warn;
-
-		bool result = loader.LoadBinaryFromFile(&model, &err, &warn, settings.file.string());
-
-		if (!err.empty()) {
-			CORE_ERROR("failed to load static mesh: {0}", settings.file.generic_string());
-			CORE_ERROR("TinyGLTF: {0}", err);
-			return ret;
-		}
-		if (!warn.empty()) {
-			CORE_WARN("TinyGLTF: {0}", warn);
-		}
-		if (!result) {
-			CORE_ERROR("failed to load static mesh: {0}", settings.file.generic_string());
-			return ret;
-		}
-
-		import_textures(settings, model, ret);
-
-		// load default scene.
-		auto const& default_scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
-
-		// nodes will be loaded as 'Entity'
-		// meshes will be loaded as 'StaticMesh'
-		// primitives will be loaded as 'StaticMesh::Primitive'
-		for (auto i : default_scene.nodes) {
-			auto const& node = model.nodes[i];
-			load_node(settings, node, model, ret);
-		}
-
-		ret.success = true;
-		return ret;
-
-		//loadAnimations(model);
-		//loadSkins(model);
-
-		//for (auto& node : mNodes) {
-		//	if (node->skinIndex > -1) {
-		//		node->skin = &mSkins[node->skinIndex];
-		//	}
-		//	if (node->mesh) {
-		//		node->update(mTransform);
-		//	}
-		//}
-
-		//mExtensions = model.extensionsUsed;
-	}
-
-	//void Model::loadMaterials(tinygltf::Model& model) {
-	//	for (auto& mat : model.materials) {
 	//		Material material{};
 	//		material.doubleSided = mat.doubleSided;
 	//		if (mat.normalTexture.extensions.find("KHR_texture_transform") != mat.normalTexture.extensions.end()) {
@@ -488,175 +431,8 @@ namespace z1 {
 	//			material.occlusionTexture = &mTextures[mat.additionalValues["occlusionTexture"].TextureIndex()];
 	//			material.texCoordSets.occlusion = mat.additionalValues["occlusionTexture"].TextureTexCoord();
 	//		}
-	//		if (mat.additionalValues.find("alphaMode") != mat.additionalValues.end()) {
-	//			tinygltf::Parameter param = mat.additionalValues["alphaMode"];
-	//			if (param.string_value == "BLEND") {
-	//				material.alphaMode = Material::AlphaMode::Blend;
-	//			}
-	//			if (param.string_value == "MASK") {
-	//				material.alphaCutoff = 0.5f;
-	//				material.alphaMode = Material::AlphaMode::Mask;
-	//			}
-	//		}
-	//		if (mat.additionalValues.find("alphaCutoff") != mat.additionalValues.end()) {
-	//			material.alphaCutoff = static_cast<float>(mat.additionalValues["alphaCutoff"].Factor());
-	//		}
-	//		if (mat.additionalValues.find("emissiveFactor") != mat.additionalValues.end()) {
-	//			material.emissiveFactor = glm::vec4(glm::make_vec3(mat.additionalValues["emissiveFactor"].ColorFactor().data()), 1.0);
-	//		}
 
-	//		if (mat.extensions.find("KHR_materials_pbrSpecularGlossiness") != mat.extensions.end()) {
-	//			std::cerr << "Currently not support [KHR_materials_pbrSpecularGlossiness] extension\n";
-	//			auto ext = mat.extensions.find("KHR_materials_pbrSpecularGlossiness");
-	//			if (ext->second.Has("specularGlossinessTexture")) {
-	//				auto const& index = ext->second.Get("specularGlossinessTexture").Get("index");
-	//				material.pbrSpecularGlossiness.specularGlossinessTexture = &mTextures[index.Get<int>()];
-	//				auto const& texCoordSet = ext->second.Get("specularGlossinessTexture").Get("texCoord");
-	//				material.texCoordSets.specularGlossiness = texCoordSet.Get<int>();
-	//			}
-	//			if (ext->second.Has("diffuseTexture")) {
-	//				auto const& index = ext->second.Get("diffuseTexture").Get("index");
-	//				material.pbrSpecularGlossiness.diffuseTexture = &mTextures[index.Get<int>()];
-	//			}
-	//			if (ext->second.Has("diffuseFactor")) {
-	//				auto const& factor = ext->second.Get("diffuseFactor");
-	//				for (uint32_t i = 0; i < factor.ArrayLen(); i++) {
-	//					auto const& val = factor.Get(i);
-	//					material.pbrSpecularGlossiness.diffuseFactor[i] = val.IsNumber() ? (float)val.Get<double>() : (float)val.Get<int>();
-	//				}
-	//			}
-	//			if (ext->second.Has("specularFactor")) {
-	//				auto const& factor = ext->second.Get("specularFactor");
-	//				for (uint32_t i = 0; i < factor.ArrayLen(); i++) {
-	//					auto const& val = factor.Get(i);
-	//					material.pbrSpecularGlossiness.specularFactor[i] = val.IsNumber() ? (float)val.Get<double>() : (float)val.Get<int>();
-	//				}
-	//			}
-	//		}
 
-	//		if (mat.extensions.find("KHR_materials_transmission") != mat.extensions.end()) {
-	//			auto ext = mat.extensions.find("KHR_materials_transmission");
-	//			if (ext->second.Has("transmissionTexture")) {
-	//				auto const& index = ext->second.Get("transmissionTexture").Get("index");
-	//				material.transmission.transmissionTexture = &mTextures[index.Get<int>()];
-	//			}
-	//			if (ext->second.Has("transmissionFactor")) {
-	//				auto const& factor = ext->second.Get("transmissionFactor");
-	//				material.transmission.transmissionFactor = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//		}
-
-	//		if (mat.extensions.find("KHR_materials_ior") != mat.extensions.end()) {
-	//			auto ext = mat.extensions.find("KHR_materials_ior");
-	//			if (ext->second.Has("ior")) {
-	//				auto const& factor = ext->second.Get("ior");
-	//				material.indexOfRefraction.ior = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//		}
-
-	//		if (mat.extensions.find("KHR_materials_specular") != mat.extensions.end()) {
-	//			auto ext = mat.extensions.find("KHR_materials_specular");
-	//			if (ext->second.Has("specularFactor")) {
-	//				auto const& factor = ext->second.Get("specularFactor");
-	//				material.specular.specularFactor = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//			if (ext->second.Has("specularTexture")) {
-	//				auto const& index = ext->second.Get("specularTexture").Get("index");
-	//				material.specular.specularTexture = &mTextures[index.Get<int>()];
-	//			}
-	//			if (ext->second.Has("specularMask")) {
-	//				auto const& factor = ext->second.Get("specularFactor");
-	//				material.specular.specularMask = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//			if (ext->second.Has("specularColorFactor")) {
-	//				std::cerr << "Currently not support [specularColorFactor] in KHR_materials_specular\n";
-	//			}
-	//			if (ext->second.Has("specularColorTexture")) {
-	//				std::cerr << "Currently not support [specularColorTexture] in KHR_materials_specular\n";
-	//			}
-	//		}
-
-	//		if (mat.extensions.find("KHR_materials_volume") != mat.extensions.end()) {
-	//			auto ext = mat.extensions.find("KHR_materials_volume");
-	//			if (ext->second.Has("thicknessFactor")) {
-	//				auto const& factor = ext->second.Get("thicknessFactor");
-	//				material.volume.thicknessFactor = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//			if (ext->second.Has("thicknessTexture")) {
-	//				auto const& index = ext->second.Get("thicknessTexture").Get("index");
-	//				material.volume.thicknessTexture = &mTextures[index.Get<int>()];
-	//			}
-	//			if (ext->second.Has("attenuationDistance")) {
-	//				auto const& factor = ext->second.Get("attenuationDistance");
-	//				material.volume.attenuationDistance = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//			if (ext->second.Has("attenuationColor")) {
-	//				auto const& factor = ext->second.Get("attenuationColor");
-	//				for (uint32_t i = 0; i < factor.ArrayLen(); i++) {
-	//					auto const& val = factor.Get(i);
-	//					material.volume.attenuationColor[i] = val.IsNumber() ? (float)val.Get<double>() : (float)val.Get<int>();
-	//				}
-	//			}
-	//		}
-
-	//		if (mat.extensions.find("DD_disney") != mat.extensions.end()) {
-	//			auto ext = mat.extensions.find("DD_disney");
-	//			if (ext->second.Has("subsurface")) {
-	//				auto const& factor = ext->second.Get("subsurface");
-	//				material.disneyBRDF.subsurface = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//			if (ext->second.Has("subsurfaceColor")) {
-	//				auto const& factor = ext->second.Get("subsurfaceColor");
-	//				for (uint32_t i = 0; i < factor.ArrayLen(); i++) {
-	//					auto const& val = factor.Get(i);
-	//					material.disneyBRDF.subsurfaceColor[i] = val.IsNumber() ? (float)val.Get<double>() : (float)val.Get<int>();
-	//				}
-	//			}
-	//		}
-
-	//		if (mat.extensions.find("DD_detail_normal") != mat.extensions.end()) {
-	//			auto ext = mat.extensions.find("DD_detail_normal");
-	//			if (ext->second.Has("detailNormalTexture")) {
-	//				auto const& index = ext->second.Get("detailNormalTexture").Get("index");
-	//				material.detailNormal.detailNormalTexture = &mTextures[index.Get<int>()];
-	//			}
-	//			if (ext->second.Has("detailNormalScale")) {
-	//				auto const& factor = ext->second.Get("detailNormalScale");
-	//				material.detailNormal.detailNormalScale = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//			if (ext->second.Has("detailNormalWeight")) {
-	//				auto const& factor = ext->second.Get("detailNormalWeight");
-	//				material.detailNormal.detailNormalWeight = static_cast<float>(factor.GetNumberAsDouble());
-	//			}
-	//		}
-
-	//		if (mat.extensions.find("DD_cavity") != mat.extensions.end()) {
-	//			auto ext = mat.extensions.find("DD_cavity");
-	//			if (ext->second.Has("cavityTexture")) {
-	//				auto const& index = ext->second.Get("cavityTexture").Get("index");
-	//				material.cavity.cavityTexture = &mTextures[index.Get<int>()];
-	//			}
-	//		}
-
-	//		if (mat.extensions.find("DD_mask") != mat.extensions.end()) {
-	//			auto ext = mat.extensions.find("DD_mask");
-	//			if (ext->second.Has("mask01")) {
-	//				auto const& index = ext->second.Get("mask01").Get("index");
-	//				material.mask.mask01 = &mTextures[index.Get<int>()];
-	//			}
-	//			if (ext->second.Has("mask02")) {
-	//				auto const& index = ext->second.Get("mask02").Get("index");
-	//				material.mask.mask02 = &mTextures[index.Get<int>()];
-	//			}
-	//			if (ext->second.Has("mask03")) {
-	//				auto const& index = ext->second.Get("mask03").Get("index");
-	//				material.mask.mask03 = &mTextures[index.Get<int>()];
-	//			}
-	//			if (ext->second.Has("mask04")) {
-	//				auto const& index = ext->second.Get("mask04").Get("index");
-	//				material.mask.mask04 = &mTextures[index.Get<int>()];
-	//			}
-	//		}
 
 	//		material.index = mMaterials.size();
 	//		mMaterials.push_back(material);
@@ -665,7 +441,66 @@ namespace z1 {
 	//	auto material = Material{};
 	//	material.index = mMaterials.size();
 	//	mMaterials.push_back(material);
-	//}
+	}
 
+	ImportResult GltfImporter::import(GltfImporterSettings const& settings) {
+		ImportResult ret{};
+
+		if (!can_import(settings.file)) {
+			CORE_WARN("{0} is not a common gltf file", settings.file.generic_string());
+			return ret;
+		}
+
+		tinygltf::Model model{};
+		tinygltf::TinyGLTF loader{};
+		std::string err;
+		std::string warn;
+
+		bool result = loader.LoadBinaryFromFile(&model, &err, &warn, settings.file.string());
+
+		if (!err.empty()) {
+			CORE_ERROR("failed to load static mesh: {0}", settings.file.generic_string());
+			CORE_ERROR("TinyGLTF: {0}", err);
+			return ret;
+		}
+		if (!warn.empty()) {
+			CORE_WARN("TinyGLTF: {0}", warn);
+		}
+		if (!result) {
+			CORE_ERROR("failed to load static mesh: {0}", settings.file.generic_string());
+			return ret;
+		}
+
+		import_textures(settings, model, ret);
+		import_materials(settings, model, ret);
+
+		// load default scene.
+		auto const& default_scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
+
+		// nodes will be loaded as 'Entity'
+		// meshes will be loaded as 'StaticMesh'
+		// primitives will be loaded as 'StaticMesh::Primitive'
+		for (auto i : default_scene.nodes) {
+			auto const& node = model.nodes[i];
+			load_node(settings, node, model, ret);
+		}
+
+		ret.success = true;
+		return ret;
+
+		//loadAnimations(model);
+		//loadSkins(model);
+
+		//for (auto& node : mNodes) {
+		//	if (node->skinIndex > -1) {
+		//		node->skin = &mSkins[node->skinIndex];
+		//	}
+		//	if (node->mesh) {
+		//		node->update(mTransform);
+		//	}
+		//}
+
+		//mExtensions = model.extensionsUsed;
+	}
 
 }

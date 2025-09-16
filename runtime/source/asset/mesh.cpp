@@ -192,7 +192,7 @@ namespace z1 {
 
 		BinaryFile bf{};
 
-		if (!bf.load(file.replace_extension(".bin"))) {
+		if (!bf.load(file.concat(".bin"))) {
 			CORE_ERROR("failed to load static mesh storage: {0}", file.generic_string());
 			return nullptr;
 		}

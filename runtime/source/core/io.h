@@ -23,7 +23,7 @@ namespace z1 {
 
 		static Filepath s_content_root;
 		static Filepath s_cache_root;
-		static Filepath s_engine_shader_root;
+		static Filepath s_engine_root;
 
 	};
 

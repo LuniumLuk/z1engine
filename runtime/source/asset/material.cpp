@@ -16,6 +16,8 @@ namespace z1 {
 		if (type_str == "vec4") return DataType::Float4;
 		if (type_str == "mat3") return DataType::Mat3;
 		if (type_str == "mat4") return DataType::Mat4;
+		if (type_str == "sampler2D") return DataType::Sampler2D;
+		if (type_str == "samplerCube") return DataType::SamplerCube;
 		return DataType::None; // unknown type
 	}
 
@@ -34,13 +36,14 @@ namespace z1 {
 			v.type = uniform.m_type;
 			v.location = uniform.m_location;
 			v.count = uniform.m_count;
+			v.default_value.type = v.type;
 			if (v.type == DataType::Mat3 || v.type == DataType::Mat4) {
 				// matrices are not supposed to be set as material variables
 				// they should be managed by engine internally
 				v.visible = false;
 			}
-			if (v.type == DataType::Sampler2D || v.type == DataType::SamplerCube) {
-				v.default_value.resource_id = INVALID_LOCATION;
+			if (v.type == DataType::Sampler2D) {
+				v.default_value.tex2D = nullptr;
 			}
 			m_variables[v.name] = v;
 		}
@@ -171,6 +174,10 @@ namespace z1 {
 			// mat3 and mat4 are not supposed to be set as material variables
 			// they should be managed by engine internally
 			var.visible = false;
+		case DataType::Sampler2D:
+			var.default_value.tex2D = nullptr;
+			break;
+		case DataType::SamplerCube:
 			break;
 		}
 	}
@@ -197,13 +204,13 @@ namespace z1 {
 	}
 
 	std::shared_ptr<Material> Material::load(Guid const& guid) {
-		auto const& file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
+		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 		if (file.empty()) {
 			CORE_ERROR("failed to load material: {0}, file not found!", guid);
 			return nullptr;
 		}
 
-		YAML::Node node = YAML::LoadFile(file.string());
+		YAML::Node node = YAML::LoadFile((file.concat(".yaml")).string());
 		auto pipeline_node = node["pipeline"];
 		Pipeline::Description pipeline_desc{};
 		pipeline_desc.depth_test = pipeline_node["depth_test"].as<bool>();
@@ -249,7 +256,7 @@ namespace z1 {
 		mi->m_meta.type = "material instance";
 		mi->m_meta.path = path;
 		auto const& root = FileSystem::s_content_root;
-		if (!g_runtime_context.m_asset_manager->register_asset(material->m_meta, root)) {
+		if (!g_runtime_context.m_asset_manager->register_asset(mi->m_meta, root)) {
 			return nullptr;
 		}
 		mi->save();
@@ -257,12 +264,141 @@ namespace z1 {
 	}
 
 	std::shared_ptr<MaterialInstance> MaterialInstance::load(Guid const& guid) {
-		UNIMPLEMENTED_FUNCTION();
-		return nullptr;
+		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
+		if (file.empty()) {
+			CORE_ERROR("failed to load material: {0}, file not found!", guid);
+			return nullptr;
+		}
+
+		YAML::Node node = YAML::LoadFile((file.concat(".yaml")).string());
+		auto material_guid = Guid::make(node["material"].as<std::string>());
+		auto material = g_runtime_context.m_asset_manager->get<Material>(material_guid);
+		if (!material) {
+			CORE_ERROR("failed to load material instance: {0}, material not found!", guid);
+			return nullptr;
+		}
+
+		auto mi = std::make_shared<MaterialInstance>(material);
+		for (auto const& var_node : node["overrides"]) {
+			std::string name = var_node["name"].as<std::string>();
+			if (mi->m_override_variables.find(name) == mi->m_override_variables.end()) {
+				CORE_WARN("material instance: {0} has unknown override variable: {1}", guid, name);
+				continue;
+			}
+			auto& var = mi->m_override_variables[name];
+			var.type = static_cast<DataType>(var_node["type"].as<int>());
+			if (var.type != material->m_variables[name].type) {
+				CORE_WARN("material instance: {0} has inconsistent type {1} with material variable {2}!", guid, get_data_type_name(var.type), get_data_type_name(material->m_variables[name].type));
+				continue;
+			}
+			switch (var.type) {
+			case DataType::Int4:
+				var.default_value.ivec[3] = var_node["value"][3].as<int>();
+				/* fallthrough */
+			case DataType::Int3:
+				var.default_value.ivec[2] = var_node["value"][2].as<int>();
+				/* fallthrough */
+			case DataType::Int2:
+				var.default_value.ivec[1] = var_node["value"][1].as<int>();
+				/* fallthrough */
+			case DataType::Int:
+				var.default_value.ivec[0] = var_node["value"][0].as<int>();
+				var.default_value.valid = true;
+				break;
+			case DataType::Float4:
+				var.default_value.vec[3] = var_node["value"][3].as<float>();
+				/* fallthrough */
+			case DataType::Float3:
+				var.default_value.vec[2] = var_node["value"][2].as<float>();
+				/* fallthrough */
+			case DataType::Float2:
+				var.default_value.vec[1] = var_node["value"][1].as<float>();
+				/* fallthrough */
+			case DataType::Float:
+				var.default_value.vec[0] = var_node["value"][0].as<float>();
+				var.default_value.valid = true;
+				break;
+			case DataType::Sampler2D:
+				if (var_node["value"] && !var_node["value"].IsNull()) {
+					auto tex_guid = Guid::make(var_node["value"].as<std::string>());
+					var.default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
+					if (!var.default_value.tex2D) {
+						CORE_WARN("material instance: {0} failed to load texture2D: {1} for variable: {2}", guid, tex_guid.value, name);
+					}
+					else {
+						var.default_value.valid = true;
+					}
+				}
+				break;
+			case DataType::SamplerCube:
+				break;
+			default:
+				CORE_WARN("unsupported override variable type: {0}", get_data_type_name(var.type));
+				break;
+			}
+		}
+
+		return mi;
 	}
 
 	void MaterialInstance::save() const {
-		UNIMPLEMENTED_FUNCTION();
+		auto const& root = FileSystem::s_content_root;
+		Filepath file = root / m_meta.path;
+		file += ".yaml";
+
+		YAML::Emitter out;
+		out << YAML::BeginMap;
+		out << YAML::Key << "meta" << YAML::Value << m_meta;
+		out << YAML::Key << "material" << YAML::Value << m_material->m_meta.guid.value;
+		out << YAML::Key << "overrides" << YAML::Value;
+		out << YAML::BeginSeq;
+		for (auto const& [name, var] : m_override_variables) {
+			if (!var.default_value.valid) continue;
+			out << YAML::BeginMap;
+			out << YAML::Key << "name" << YAML::Value << name;
+			out << YAML::Key << "type" << YAML::Value << static_cast<int>(var.type);
+			switch (var.type) {
+			case DataType::Int:
+			case DataType::Int2:
+			case DataType::Int3:
+			case DataType::Int4:
+				out << YAML::Key << "value" << YAML::Value;
+				out << YAML::Flow << YAML::BeginSeq;
+				for (size_t i = 0; i < get_data_type_element_count(var.type); ++i) {
+					out << var.default_value.ivec[i];
+				}
+				out << YAML::EndSeq;
+				break;
+			case DataType::Float:
+			case DataType::Float2:
+			case DataType::Float3:
+			case DataType::Float4:
+				out << YAML::Key << "value" << YAML::Value;
+				out << YAML::Flow << YAML::BeginSeq;
+				for (size_t i = 0; i < get_data_type_element_count(var.type); ++i) {
+					out << var.default_value.vec[i];
+				}
+				out << YAML::EndSeq;
+				break;
+			case DataType::Sampler2D:
+				if (var.default_value.tex2D) {
+					out << YAML::Key << "value" << YAML::Value << var.default_value.tex2D->m_meta.guid.value;
+				}
+				else {
+					out << YAML::Key << "value" << YAML::Value << YAML::Null;
+				}
+				break;
+			case DataType::SamplerCube:
+				break;
+			default:
+				CORE_WARN("unsupported override variable type: {0}", get_data_type_name(var.type));
+				break;
+			}
+			out << YAML::EndMap;
+		}
+		out << YAML::EndSeq;
+
+		save_yaml(file, out);
 	}
 
 }

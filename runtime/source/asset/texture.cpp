@@ -29,6 +29,7 @@ namespace z1 {
 		PROFILE_FUNCTION();
 		auto meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
+		file += ".bin";
 
 		SamplerMode sampler_mode = SamplerMode::Linear;
 		if (meta.extra["sampler_mode"]) {

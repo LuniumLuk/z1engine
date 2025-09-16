@@ -117,7 +117,7 @@ namespace z1 {
 			return file;
 		}
 
-		bool register_asset(AssetMeta const& meta, Filepath const& root, std::string const& ext = ".bin");
+		bool register_asset(AssetMeta const& meta, Filepath const& root);
 		// check if guid is already registered, if not register it and return true
 		bool register_guid(Guid const& guid);
 
@@ -155,7 +155,7 @@ namespace z1 {
 		static std::shared_ptr<Shader> load(Guid const& guid) {
 			auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 			if (!file.empty()) {
-				auto shader = Shader::create(file);
+				auto shader = Shader::create(file.concat(".glsl"));
 				shader->m_guid = guid;
 				return shader;
 			}
