@@ -16,13 +16,13 @@ int main() {
 
 	auto mesh = z1::g_runtime_context.m_asset_manager->get<StaticMesh>("DamagedHelmet/mesh_helmet_LP_13930damagedHelmet");
 
-	std::cout << mesh->m_guid.value << std::endl;
+	std::cout << mesh->m_meta.guid.value << std::endl;
 	std::cout << mesh->m_primitives.size() << std::endl;
 
-	auto image = z1::g_runtime_context.m_asset_manager->get<Image2D>("DamagedHelmet/T_0");
+	auto tex = z1::g_runtime_context.m_asset_manager->get<Texture2D>("DamagedHelmet/T_0");
 
-	std::cout << image->m_guid.value << std::endl;
-	std::cout << image->get_description().m_width << "x" << image->get_description().m_height << std::endl;
+	std::cout << tex->m_meta.guid.value << std::endl;
+	std::cout << tex->m_image->get_description().m_width << "x" << tex->m_image->get_description().m_height << std::endl;
 
 	return 0;
 }

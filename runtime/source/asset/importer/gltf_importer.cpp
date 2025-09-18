@@ -104,7 +104,8 @@ namespace z1 {
 		GltfImporterSettings const& settings,
 		tinygltf::Node const& node,
 		tinygltf::Model const& model,
-		ImportResult& ret) {
+		ImportResult& ret,
+		std::vector<Guid> const& loaded_materials) {
 
 		auto const& name = node.name;
 		/*auto entity = scene->create_entity(name);
@@ -114,7 +115,7 @@ namespace z1 {
 
 		if (node.children.size() > 0) {
 			for (auto i : node.children) {
-				load_node(settings, model.nodes[i], model, ret);
+				load_node(settings, model.nodes[i], model, ret, loaded_materials);
 			}
 		}
 
@@ -238,6 +239,10 @@ namespace z1 {
 					}
 				}
 
+				if (primitive.material >= 0) {
+					prim_storage.material = loaded_materials[primitive.material];
+				}
+
 				mesh_storage->primitives.push_back(prim_storage);
 			}
 
@@ -279,7 +284,11 @@ namespace z1 {
 		return true;
 	}
 
-	static void import_textures(GltfImporterSettings const& settings, tinygltf::Model& model, ImportResult& ret) {
+	static void import_textures(
+		GltfImporterSettings const& settings,
+		tinygltf::Model& model,
+		ImportResult& ret,
+		std::vector<Guid>& loaded_textures) {
 		for (auto const& tex : model.textures) {
 			if (tex.source < 0 || tex.source >= model.images.size()) {
 				continue;
@@ -368,15 +377,39 @@ namespace z1 {
 
 			ret.assets.push_back(meta);
 			ret.files.push_back(import_file);
+			loaded_textures.push_back(meta.guid);
 		}
 	}
 
-	static void import_materials(GltfImporterSettings const& settings, tinygltf::Model& model, ImportResult& ret) {
+	static void import_materials(
+		GltfImporterSettings const& settings,
+		tinygltf::Model& model,
+		ImportResult& ret,
+		std::vector<Guid> const& loaded_textures,
+		std::vector<Guid>& loaded_materials) {
+		int index = 0;
 		for (auto& mat : model.materials) {
+			std::string name = mat.name.empty() ? ("MI_" + std::to_string(index)) : mat.name;
 
+			// TODO:
+			// mat.doubleSided;
+
+			// base material for material instance
+			auto base = g_runtime_context.m_asset_manager->get<Material>(Guid::make("material/M_unlit"));
+			auto mi = MaterialInstance::create(settings.path / name, base);
+
+			if (mat.values.find("baseColorTexture") != mat.values.end()) {
+				auto guid = loaded_textures[mat.values["baseColorTexture"].TextureIndex()];
+				mi->m_override_variables["s_base_color"].default_value.valid = true;
+				mi->m_override_variables["s_base_color"].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+				// TODO:
+				// mat.values["baseColorTexture"].TextureTexCoord();
+			}
+
+			mi->save();
+			loaded_materials.push_back(mi->m_meta.guid);
+			index += 1;
 		}
-	//		Material material{};
-	//		material.doubleSided = mat.doubleSided;
 	//		if (mat.normalTexture.extensions.find("KHR_texture_transform") != mat.normalTexture.extensions.end()) {
 	//			std::cout << "Found KHR_texture_transform\n";
 	//			auto ext = mat.normalTexture.extensions.find("KHR_texture_transform");
@@ -471,8 +504,10 @@ namespace z1 {
 			return ret;
 		}
 
-		import_textures(settings, model, ret);
-		import_materials(settings, model, ret);
+		std::vector<Guid> loaded_textures;
+		import_textures(settings, model, ret, loaded_textures);
+		std::vector<Guid> loaded_materials;
+		import_materials(settings, model, ret, loaded_textures, loaded_materials);
 
 		// load default scene.
 		auto const& default_scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
@@ -482,7 +517,7 @@ namespace z1 {
 		// primitives will be loaded as 'StaticMesh::Primitive'
 		for (auto i : default_scene.nodes) {
 			auto const& node = model.nodes[i];
-			load_node(settings, node, model, ret);
+			load_node(settings, node, model, ret, loaded_materials);
 		}
 
 		ret.success = true;

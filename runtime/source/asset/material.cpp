@@ -190,6 +190,23 @@ namespace z1 {
 		}
 	}
 
+	void MaterialInstance::bind(PerFrameConst const& per_frame) const {
+		m_material->m_pipeline->bind();
+		auto const& shader = m_material->m_pipeline->m_shader;
+		shader->set_uniform("u_projview", &per_frame.projview);
+		shader->set_uniform("u_model", &per_frame.model);
+		if (shader->has_uniform("u_cam_position"))
+			shader->set_uniform("u_cam_position", &per_frame.cam_position);
+		if (shader->has_uniform("u_sun_direction"))
+			shader->set_uniform("u_sun_direction", &per_frame.sun_direction);
+		if (shader->has_uniform("u_sun_intensity"))
+			shader->set_uniform("u_sun_intensity", &per_frame.sun_intensity);
+	}
+
+	void MaterialInstance::unbind() const {
+		m_material->m_pipeline->unbind();
+	}
+
 	std::shared_ptr<Material> Material::create(Filepath const& path, Pipeline::Description const& pipeline_desc) {
 		auto mat = std::make_shared<Material>(pipeline_desc);
 		mat->m_meta.guid = Guid::generate();
@@ -244,7 +261,7 @@ namespace z1 {
 		out << YAML::Key << "src_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.src_blend_factor);
 		out << YAML::Key << "dst_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.dst_blend_factor);
 		out << YAML::Key << "cull_mode" << YAML::Value << static_cast<int>(m_pipeline_desc.cull_mode);
-		out << YAML::Key << "shader" << YAML::Value << m_pipeline_desc.shader->m_guid.value;
+		out << YAML::Key << "shader" << YAML::Value << m_pipeline_desc.shader->m_guid;
 		out << YAML::EndMap;
 
 		save_yaml(file, out);
@@ -349,7 +366,7 @@ namespace z1 {
 		YAML::Emitter out;
 		out << YAML::BeginMap;
 		out << YAML::Key << "meta" << YAML::Value << m_meta;
-		out << YAML::Key << "material" << YAML::Value << m_material->m_meta.guid.value;
+		out << YAML::Key << "material" << YAML::Value << m_material->m_meta.guid;
 		out << YAML::Key << "overrides" << YAML::Value;
 		out << YAML::BeginSeq;
 		for (auto const& [name, var] : m_override_variables) {
@@ -382,7 +399,7 @@ namespace z1 {
 				break;
 			case DataType::Sampler2D:
 				if (var.default_value.tex2D) {
-					out << YAML::Key << "value" << YAML::Value << var.default_value.tex2D->m_meta.guid.value;
+					out << YAML::Key << "value" << YAML::Value << var.default_value.tex2D->m_meta.guid;
 				}
 				else {
 					out << YAML::Key << "value" << YAML::Value << YAML::Null;

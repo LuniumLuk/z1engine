@@ -17,7 +17,7 @@ int main() {
 	Filepath cwd = std::filesystem::current_path();
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
-	auto mi = MaterialInstance::create("material/MI_unlit_sample", g_runtime_context.m_asset_manager->get<Material>("material/M_unlit"));
+	auto mi = MaterialInstance::create("material/MI_unlit_sample", g_runtime_context.m_asset_manager->get<Material>(Guid::make("material/M_unlit")));
 	mi->m_override_variables["s_base_color"].default_value.valid = true;
 	auto guid = g_runtime_context.m_asset_manager->get_guid_from_path("texture/T_awesomeface");
 	mi->m_override_variables["s_base_color"].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);

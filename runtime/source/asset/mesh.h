@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asset/asset.h"
+#include "asset/material.h"
 #include "render/vertex_array.h"
 #include "glm/glm.hpp"
 
@@ -74,7 +75,7 @@ namespace z1 {
 				uint32_t vertex_count;
 				glm::vec3 bound_min;
 				glm::vec3 bound_max;
-				Guid material; // guid
+				Guid material;
 				bool has_indices;
 				bool has_normal;
 				bool has_tangent;
@@ -84,12 +85,13 @@ namespace z1 {
 			std::shared_ptr<VertexArray> m_vertex_array;
 			glm::vec3 m_bound_min;
 			glm::vec3 m_bound_max;
+			Guid m_material;
 
-			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array, glm::vec3 const& bound_min, glm::vec3 const& bound_max)
-				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(bound_min), m_bound_max(bound_max) {}
+			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array, glm::vec3 const& bound_min, glm::vec3 const& bound_max, Guid material)
+				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(bound_min), m_bound_max(bound_max), m_material(material) {}
 
 			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array)
-				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(0.0f), m_bound_max(0.0f) {}
+				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(0.0f), m_bound_max(0.0f), m_material() {}
 
 			size_t get_triangle_count() const;
 
@@ -115,7 +117,15 @@ namespace z1 {
 		StaticMesh(std::vector<VertexData> const& vertices, std::vector<uint32_t> const& indices, PrimitiveType type);
 
 		void draw() const;
-		void draw_instanced(uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) const;
+		void draw_instanced(
+			uint32_t num,
+			std::shared_ptr<VertexBuffer> const& instance_buffer,
+			uint32_t start,
+			uint32_t divisor) const;
+
+		void draw(
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material = nullptr) const;
 
 		std::vector<Primitive> m_primitives;
 

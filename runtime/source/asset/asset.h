@@ -92,7 +92,7 @@ namespace z1 {
 
 	inline YAML::Emitter& operator<<(YAML::Emitter& out, AssetMeta const& v) {
 		out << YAML::BeginMap;
-		out << YAML::Key << "guid" << YAML::Value << v.guid.value;
+		out << YAML::Key << "guid" << YAML::Value << v.guid;
 		out << YAML::Key << "type" << YAML::Value << v.type;
 		out << YAML::Key << "path" << YAML::Value << v.path.generic_string();
 		if (v.extra.IsNull()) {

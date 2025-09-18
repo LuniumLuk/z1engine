@@ -11,6 +11,14 @@
 
 namespace z1 {
 
+	struct API PerFrameConst {
+		glm::mat4 projview;
+		glm::mat4 model;
+		glm::vec3 cam_position;
+		glm::vec3 sun_direction;
+		glm::vec3 sun_intensity;
+	};
+
 	struct API Material : Asset<Material> {
 		struct Variable {
 			std::string name;
@@ -81,6 +89,9 @@ namespace z1 {
 	struct API MaterialInstance : Asset<MaterialInstance> {
 
 		MaterialInstance(std::shared_ptr<Material> const& material);
+
+		void bind(PerFrameConst const& per_frame) const;
+		void unbind() const;
 
 		static std::shared_ptr<MaterialInstance> create(Filepath const& path, std::shared_ptr<Material> const& material);
 		static std::shared_ptr<MaterialInstance> load(Guid const& guid);

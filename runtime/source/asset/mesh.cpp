@@ -53,6 +53,7 @@ namespace z1 {
 				VertexArray::create({ vertex_buffer }, index_buffer),
 				prim_storage.bound_min,
 				prim_storage.bound_max,
+				prim_storage.material,
 			};
 			m_primitives.push_back(prim);
 		}
@@ -85,7 +86,7 @@ namespace z1 {
 				prim_max = glm::max(prim_max, v.position);
 			}
 		}
-		Primitive prim{ type, VertexArray::create({ vertex_buffer }), prim_min, prim_max };
+		Primitive prim{ type, VertexArray::create({ vertex_buffer }), prim_min, prim_max, {}, };
 		m_primitives.push_back(prim);
 		m_bound_min = prim_min;
 		m_bound_max = prim_max;
@@ -104,10 +105,32 @@ namespace z1 {
 				prim_max = glm::max(prim_max, v.position);
 			}
 		}
-		Primitive prim{ type,  VertexArray::create({ vertex_buffer }, index_buffer), prim_min, prim_max };
+		Primitive prim{ type,  VertexArray::create({ vertex_buffer }, index_buffer), prim_min, prim_max, {}, };
 		m_primitives.push_back(prim);
 		m_bound_min = prim_min;
 		m_bound_max = prim_max;
+	}
+
+	void StaticMesh::draw(
+		PerFrameConst const& per_frame,
+		std::shared_ptr<MaterialInstance> const& default_material) const {
+		for (auto const& prim : m_primitives) {
+			std::shared_ptr<MaterialInstance> mi = nullptr;
+			if (prim.m_material.is_valid()) {
+				mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
+			}
+			else if (default_material) {
+				mi = default_material;
+			}
+
+			if (mi)
+				mi->bind(per_frame);
+			prim.m_vertex_array->bind();
+			prim.m_vertex_array->draw(prim.m_primitive_type);
+			prim.m_vertex_array->unbind();
+			if (mi)
+				mi->unbind();
+		}
 	}
 
 	void StaticMesh::draw() const {
@@ -118,7 +141,11 @@ namespace z1 {
 		}
 	}
 
-	void StaticMesh::draw_instanced(uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) const {
+	void StaticMesh::draw_instanced(
+		uint32_t num,
+		std::shared_ptr<VertexBuffer> const& instance_buffer,
+		uint32_t start,
+		uint32_t divisor) const {
 		for (auto const& prim : m_primitives) {
 			prim.m_vertex_array->bind();
 			prim.m_vertex_array->draw_instanced(prim.m_primitive_type, num, instance_buffer, start, divisor);
@@ -151,7 +178,7 @@ namespace z1 {
 			yaml << YAML::Key << "vertex_count" << YAML::Value << prim.vertex_count;
 			yaml << YAML::Key << "bound_min" << YAML::Value << prim.bound_min;
 			yaml << YAML::Key << "bound_max" << YAML::Value << prim.bound_max;
-			yaml << YAML::Key << "material" << YAML::Value << prim.material.value;
+			yaml << YAML::Key << "material" << YAML::Value << prim.material;
 			yaml << YAML::Key << "has_indices" << YAML::Value << prim.has_indices;
 			yaml << YAML::Key << "has_normal" << YAML::Value << prim.has_normal;
 			yaml << YAML::Key << "has_tangent" << YAML::Value << prim.has_tangent;
@@ -212,7 +239,7 @@ namespace z1 {
 			prim_storage.vertex_count = prim_node["vertex_count"].as<uint32_t>();
 			prim_storage.bound_min = prim_node["bound_min"].as<glm::vec3>();
 			prim_storage.bound_max = prim_node["bound_max"].as<glm::vec3>();
-			prim_storage.material.value = prim_node["material"].as<std::string>();
+			prim_storage.material = prim_node["material"].as<Guid>();
 			prim_storage.has_indices = prim_node["has_indices"].as<bool>();
 			prim_storage.has_normal = prim_node["has_normal"].as<bool>();
 			prim_storage.has_tangent = prim_node["has_tangent"].as<bool>();

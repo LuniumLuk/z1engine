@@ -180,7 +180,7 @@ namespace z1 {
 				auto const& mesh = entity->get_component<StaticMeshComponent>();
 				yaml << YAML::Key << "static_mesh" << YAML::Value;
 				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "guid" << YAML::Value << mesh.m_mesh->m_meta.guid.value;
+				yaml << YAML::Key << "guid" << YAML::Value << mesh.m_mesh->m_meta.guid;
 				yaml << YAML::EndMap;
 			}
 
@@ -191,7 +191,7 @@ namespace z1 {
 				yaml << YAML::BeginMap;
 				yaml << YAML::Key << "color" << YAML::Value << sprite.m_color;
 				if (sprite.m_texture) {
-					yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_meta.guid.value;
+					yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_meta.guid;
 				}
 				else {
 					yaml << YAML::Key << "texture" << YAML::Value << YAML::Null;

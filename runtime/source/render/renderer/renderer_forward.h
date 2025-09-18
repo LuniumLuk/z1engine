@@ -1,6 +1,7 @@
 #include "render/render_pass.h"
 #include "render/framebuffer.h"
 #include "render/pipeline.h"
+#include "asset/material.h"
 
 namespace z1 {
 
@@ -13,8 +14,7 @@ namespace z1 {
 
 	private:
 		std::shared_ptr<RenderPass> m_render_pass;
-		// TODO: temporary, later will be replaced by material system
-		std::shared_ptr<Pipeline> m_pipeline;
+		std::shared_ptr<MaterialInstance> m_default_material;
 
 	};
 

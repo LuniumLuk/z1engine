@@ -9,7 +9,7 @@ struct OurApp : Application {
 int main() {
 	// override content root and shader root for test environment
 	FileSystem::s_content_root = "../../content";
-	FileSystem::s_engine_root = "../../engine/shader";
+	FileSystem::s_engine_root = "../../engine";
 
 	OurApp app;
 	app.init();

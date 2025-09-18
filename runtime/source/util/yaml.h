@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include "core/core.h"
+#include "core/guid.h"
 #include "glm/glm.hpp"
 #include "yaml-cpp/yaml.h"
 
@@ -46,6 +47,19 @@ namespace YAML {
 		}
 	};
 
+	template<>
+	struct convert<z1::Guid> {
+		static bool decode(Node const& node, z1::Guid& rhs) {
+			if (node.IsNull()) {
+				rhs.value = "";
+			}
+			else {
+				rhs.value = node.as<std::string>();
+			}
+			return true;
+		}
+	};
+
 } // namespace YAML
 
 namespace z1 {
@@ -65,6 +79,16 @@ namespace z1 {
 	inline YAML::Emitter& operator<<(YAML::Emitter& out, glm::vec4 const& v) {
 		out << YAML::Flow;
 		out << YAML::BeginSeq << v.x << v.y << v.z << v.w << YAML::EndSeq;
+		return out;
+	}
+
+	inline YAML::Emitter& operator<<(YAML::Emitter& out, Guid const& v) {
+		if (v.is_valid()) {
+			out << v.value;
+		}
+		else {
+			out << YAML::Null;
+		}
 		return out;
 	}
 

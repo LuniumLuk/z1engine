@@ -9,7 +9,7 @@ struct OurApp : Application {
 int main() {
 	// override content root and shader root for test environment
 	FileSystem::s_content_root = "../../content";
-	FileSystem::s_engine_root = "../../engine/shader";
+	FileSystem::s_engine_root = "../../engine";
 
 	OurApp app;
 	app.init();
@@ -58,6 +58,13 @@ int main() {
 		auto ent = scene->create_entity("Mesh_1");
 		ent->add_component<StaticMeshComponent>(
 			g_runtime_context.m_asset_manager->get<StaticMesh>("SM_fireplace_room")
+		);
+	}
+
+	{
+		auto ent = scene->create_entity("Mesh_2");
+		ent->add_component<StaticMeshComponent>(
+			g_runtime_context.m_asset_manager->get<StaticMesh>("DamagedHelmet/mesh_helmet_LP_13930damagedHelmet")
 		);
 	}
 

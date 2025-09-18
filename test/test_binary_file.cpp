@@ -1,7 +1,7 @@
 #include "z1engine.h"
 #include "yaml-cpp/yaml.h"
 
-using namespace z1::io;
+using namespace z1;
 
 int main() {
 

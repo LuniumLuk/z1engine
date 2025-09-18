@@ -12,14 +12,7 @@
 namespace z1 {
 
 	RendererForward::RendererForward() {
-		// TODO: temporary, later will be replaced by material system
-		Pipeline::Description desc{};
-		desc.depth_test = true;
-		desc.blend = true;
-		desc.cull_mode = CullMode::Back;
-		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/mesh_viewer");
-		m_pipeline = Pipeline::build(desc);
-
+		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(Guid::make("material/MI_mesh_viewer"));
 		m_render_pass = RenderPass::build();
 	}
 
@@ -55,23 +48,20 @@ namespace z1 {
 		/*
 			main render pass
 		*/
-
-		m_pipeline->bind();
-		m_pipeline->m_shader->set_uniform("u_projview", &projview);
-		m_pipeline->m_shader->set_uniform("u_cam_position", &cam_pos);
-
 		glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
 		glm::vec3 sun_intensity = { .5f, .5f, .5f };
-		m_pipeline->m_shader->set_uniform("u_sun_direction", &sun_dir);
-		m_pipeline->m_shader->set_uniform("u_sun_intensity", &sun_intensity);
+		PerFrameConst per_frame{};
+		per_frame.projview = projview;
+		per_frame.cam_position = cam_pos;
+		per_frame.sun_direction = sun_dir;
+		per_frame.sun_intensity = sun_intensity;
 
 		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 		for (auto [entity, transform, mesh] : view.each()) {
-			m_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
-			mesh.m_mesh->draw();
+			per_frame.model = transform.get_world_transform();
+			mesh.m_mesh->draw(per_frame, m_default_material);
 		}
 
-		m_pipeline->unbind();
 		m_render_pass->unbind();
 	}
 
