@@ -1,0 +1,12 @@
+meta:
+  guid: material/M_mesh_viewer
+  type: material
+  path: material/M_mesh_viewer
+  extra: ~
+pipeline:
+  depth_test: true
+  blend: false
+  src_blend_factor: 6
+  dst_blend_factor: 7
+  cull_mode: 2
+  shader: shader/mesh_viewer

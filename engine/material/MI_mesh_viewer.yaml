@@ -1,0 +1,7 @@
+meta:
+  guid: material/MI_mesh_viewer
+  type: material instance
+  path: material/MI_mesh_viewer
+  extra: ~
+material: material/M_mesh_viewer
+overrides: []
