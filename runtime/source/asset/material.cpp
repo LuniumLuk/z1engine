@@ -201,6 +201,39 @@ namespace z1 {
 			shader->set_uniform("u_sun_direction", &per_frame.sun_direction);
 		if (shader->has_uniform("u_sun_intensity"))
 			shader->set_uniform("u_sun_intensity", &per_frame.sun_intensity);
+		for (auto const& [name, var] : m_override_variables) {
+			if (!var.visible || var.location == INVALID_LOCATION) continue;
+
+			auto* value = &var.default_value;
+			if (!var.default_value.valid) {
+				value = &m_material->m_variables[name].default_value;
+			}
+
+			switch (var.type) {
+			case DataType::Int:
+			case DataType::Int2:
+			case DataType::Int3:
+			case DataType::Int4:
+				shader->set_uniform(name, value->ivec);
+				break;
+			case DataType::Float:
+			case DataType::Float2:
+			case DataType::Float3:
+			case DataType::Float4:
+				shader->set_uniform(name, value->vec);
+				break;
+			case DataType::Sampler2D:
+				if (value->tex2D) {
+					auto texture_binding = g_runtime_context.m_resource_manager->bind_resource(value->tex2D->m_image->get_resource_id());
+					value->tex2D->m_image->bind(texture_binding);
+					shader->set_uniform(name, &texture_binding);
+				}
+				break;
+			default:
+				CORE_WARN("unsupported material variable type: {0}", get_data_type_name(var.type));
+				break;
+			}
+		}
 	}
 
 	void MaterialInstance::unbind() const {

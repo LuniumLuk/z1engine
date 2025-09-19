@@ -284,6 +284,19 @@ namespace z1 {
 		return true;
 	}
 
+	static void flip_vertically(tinygltf::Image& image) {
+		// flip vertically
+		int row_size = image.width * image.component;
+		std::vector<uint8_t> temp_row(row_size);
+		for (int y = 0; y < image.height / 2; ++y) {
+			auto top = &image.image[y * row_size];
+			auto bottom = &image.image[(image.height - 1 - y) * row_size];
+			std::memcpy(temp_row.data(), top, row_size);
+			std::memcpy(top, bottom, row_size);
+			std::memcpy(bottom, temp_row.data(), row_size);
+		}
+	}
+
 	static void import_textures(
 		GltfImporterSettings const& settings,
 		tinygltf::Model& model,
@@ -298,6 +311,8 @@ namespace z1 {
 			if (image.image.empty()) {
 				continue;
 			}
+
+			flip_vertically(image);
 
 			uint8_t const* data_ptr = nullptr;
 			std::vector<uint8_t> rgba_data;
