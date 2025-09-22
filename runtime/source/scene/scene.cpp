@@ -30,21 +30,34 @@ namespace z1 {
 		// thus, we just mark all entities as destroyed, and clear the registry
 		// the entities' dtor will avoid using the weak_ptr to the scene
 		for (auto& entity : m_entities) {
-			if (entity) {
-				entity->m_is_destroyed = true;
-			}
+			if (entity) entity->m_is_destroyed = true;
 		}
+		for (auto& entity : m_transient_entities) {
+			if (entity) entity->m_is_destroyed = true;
+		}
+
 		m_registry.clear();
 	}
 
-	std::shared_ptr<Entity> Scene::create_entity(std::string const& name) {
+	std::shared_ptr<Entity> Scene::create_entity_impl(std::string const& name) {
 		entt::entity handle = m_registry.create();
 		CORE_INFO("creating entity {} ({})", name, static_cast<uint32_t>(handle));
 		auto entity = std::make_shared<Entity>(handle, shared_from_this());
 		entity->add_component<TagComponent>(name, static_cast<uint32_t>(m_entities.size()));
 		entity->add_component<TransformComponent>();
 		entity->add_component<Scene::EntityPtr>(entity);
+		return entity;
+	}
+
+	std::shared_ptr<Entity> Scene::create_entity(std::string const& name) {
+		auto entity = create_entity_impl(name);
 		m_entities.push_back(entity);
+		return entity;
+	}
+
+	std::shared_ptr<Entity> Scene::create_transient_entity(std::string const& name) {
+		auto entity = create_entity_impl(name);
+		m_transient_entities.push_back(entity);
 		return entity;
 	}
 
@@ -59,6 +72,7 @@ namespace z1 {
 
 	void Scene::set_main_camera(std::shared_ptr<Entity> const& camera) {
 		CORE_ASSERT(camera->has_component<CameraComponent>(), "Entity has no CameraComponent!");
+		m_main_camera = camera;
 		if (camera->get_component<CameraComponent>().m_is_primary) {
 			return;
 		}
@@ -75,14 +89,7 @@ namespace z1 {
 	}
 
 	std::shared_ptr<Entity> Scene::get_main_camera() const {
-		auto view = m_registry.view<CameraComponent>();
-		for (auto& entity : view) {
-			auto& camera = view.get<CameraComponent>(entity);
-			if (camera.m_is_primary) {
-				return cast_to_entity(entity);
-			}
-		}
-		return nullptr;
+		return m_main_camera;
 	}
 
 	void Scene::on_update(float delta_time) {
@@ -275,6 +282,12 @@ namespace z1 {
 				camera.m_aspect = camera_yaml["aspect"].as<float>();
 				camera.m_use_fixed_aspect = camera_yaml["use_fixed_aspect"].as<bool>();
 				camera.m_is_primary = camera_yaml["is_primary"].as<bool>();
+				if (camera.m_is_primary) {
+					if (scene->m_main_camera) {
+						CORE_WARN("scene has multiple primary cameras, overriding previous primary camera");
+					}
+					scene->m_main_camera = entity;
+				}
 			}
 
 			// StaticMeshComponent

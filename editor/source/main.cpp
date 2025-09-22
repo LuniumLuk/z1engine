@@ -15,17 +15,14 @@ namespace fs = std::filesystem;
 struct EditorLayer : Layer {
 	EditorLayer() {
 		m_gui = std::make_shared<EditorGUI>();
-		m_active_scene = std::make_shared<Scene>();
-		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
+		load_scene();
 		m_browser = std::make_unique<ContentBrowser>();
 		m_browser->m_on_asset_opened =
 			[&](AssetMeta* meta) {
 				if (!meta) return;
 
 				if (meta->type == "scene") {
-					m_active_scene = Scene::deserialize(meta->path);
-					m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
-					m_selected_entity = nullptr;
+					load_scene(Scene::deserialize(meta->path));
 				}
 				else {
 					m_selected_asset = meta;
@@ -65,9 +62,7 @@ struct EditorLayer : Layer {
 			[&]() {
 				if (ImGui::BeginMenu("file")) {
 					if (ImGui::MenuItem("new")) {
-						m_active_scene = std::make_shared<Scene>();
-						m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
-						m_selected_entity = nullptr;
+						load_scene();
 					}
 					//if (ImGui::MenuItem("open...")) {
 					//	Filepath file = open_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
@@ -120,19 +115,6 @@ struct EditorLayer : Layer {
 					}
 				}
 			};
-
-		{
-			//Pipeline::Description desc{};
-			//desc.depth_test = true;
-			//desc.blend = true;
-			//desc.cull_mode = CullMode::Back;
-			//desc.shader = g_runtime_context.m_asset_manager->get<Shader>("sprite_2d");
-			//auto pipeline = Pipeline::build(desc);
-			//auto material = std::make_shared<Material>(pipeline);
-			/*m_material_instance = std::make_shared<MaterialInstance>("MI_Sprite2D", m_material);
-			m_material_instance->m_override_variables["u_texture"].default_value.resource_id = tex0->get_resource_id();
-			m_material_instance->m_override_variables["u_texture"].default_value.valid = true;*/
-		}
 
 		// picking system does not need to be that precise
 		// so we use default resolution here (512x512)
@@ -206,6 +188,18 @@ struct EditorLayer : Layer {
 			}
 		}
 		return true;
+	}
+
+	void load_scene(std::shared_ptr<Scene> const& scene = nullptr) {
+		m_active_scene = scene ? scene : std::make_shared<Scene>();
+		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
+		m_selected_entity = nullptr;
+
+		// setup editor viewport camera
+		auto camera = m_active_scene->create_transient_entity("[Editor] Viewport Camera");
+		camera->add_component<CameraComponent>();
+		camera->attach_script<HoveringCameraCtrlScript>(m_gui);
+		m_active_scene->set_main_camera(camera);
 	}
 
 	void on_imgui_render() override {
