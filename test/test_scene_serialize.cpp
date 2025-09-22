@@ -51,7 +51,7 @@ int main() {
 		ent->add_component<StaticMeshComponent>(
 			g_runtime_context.m_asset_manager->get<StaticMesh>("SM_bunny")
 		);
-		ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -5.0f);
+		ent->get_component<TransformComponent>().m_location = glm::vec3(0.5f, 0.5f, -5.0f);
 	}
 
 	{
@@ -59,6 +59,7 @@ int main() {
 		ent->add_component<StaticMeshComponent>(
 			g_runtime_context.m_asset_manager->get<StaticMesh>("SM_fireplace_room")
 		);
+		ent->get_component<TransformComponent>().m_location = glm::vec3(1.0f, -2.0f, -4.0f);
 	}
 
 	{
@@ -66,6 +67,8 @@ int main() {
 		ent->add_component<StaticMeshComponent>(
 			g_runtime_context.m_asset_manager->get<StaticMesh>("DamagedHelmet/mesh_helmet_LP_13930damagedHelmet")
 		);
+		ent->get_component<TransformComponent>().m_location = glm::vec3(-1.5f, 0.0f, -1.0f);
+		ent->get_component<TransformComponent>().m_rotation = glm::vec3(90.0f, 0.0f, 0.0f);
 	}
 
 	uint32_t quad_rows = 4;

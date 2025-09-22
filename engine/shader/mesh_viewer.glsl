@@ -10,8 +10,8 @@
 @reflections: {
     u_projview [invisible]              // mat4, set by the engine
     u_model [invisible]                 // mat4, set by the engine
-    u_sun_direction = vec3 0.0 0.0 -1.0 // Direction of the sun
-    u_sun_intensity = vec3 1.0 1.0 1.0  // Intensity of the sun light
+    u_sun_direction [invisible]         // vec3, set by the engine
+    u_sun_intensity [invisible]         // vec3, set by the engine
     u_cam_position [invisible]          // vec3, set by the engine
 }
 @stage: vert {

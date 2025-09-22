@@ -199,6 +199,7 @@ struct EditorLayer : Layer {
 		auto camera = m_active_scene->create_transient_entity("[Editor] Viewport Camera");
 		camera->add_component<CameraComponent>();
 		camera->attach_script<HoveringCameraCtrlScript>(m_gui);
+		camera->get_component<TransformComponent>().m_location = { 0.0f, 0.0f, 5.0f };
 		m_active_scene->set_main_camera(camera);
 	}
 
