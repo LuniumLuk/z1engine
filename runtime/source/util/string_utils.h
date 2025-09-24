@@ -60,6 +60,43 @@ namespace z1 {
 		return result;
 	}
 
+	inline std::string process_includes(const std::string& input, const std::string& search_dir) {
+		std::string result;
+		std::istringstream input_stream(input);
+		std::string line;
+		std::regex include_regex(R"(^\s*#include\s*<([^>]+)>\s*$)");
+
+		while (std::getline(input_stream, line)) {
+			std::smatch match;
+			if (std::regex_match(line, match, include_regex)) {
+				// found an #include directive
+				std::string filename = match[1].str();
+				std::ifstream file(search_dir + filename);
+
+				if (file.is_open()) {
+					// read the entire file content
+					std::stringstream file_stream;
+					file_stream << file.rdbuf();
+					file.close();
+
+					// replace the #include line with file content
+					result += file_stream.str() + "\n";
+				}
+				else {
+					CORE_ERROR("failed to open included file: {0}", search_dir + filename);
+					// if the file cannot be opened, keep the #include line as-is
+					result += line + "\n";
+				}
+			}
+			else {
+				// not an #include line, add it as-is
+				result += line + "\n";
+			}
+		}
+
+		return result;
+	}
+
 	inline std::vector<std::string> split(const std::string& s, char delimiter) {
 		std::vector<std::string> tokens;
 		std::string token;

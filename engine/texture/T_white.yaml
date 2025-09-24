@@ -1,0 +1,8 @@
+meta:
+  guid: texture/T_white
+  type: texture2d
+  path: texture/T_white
+  extra:
+    sampler_mode: 0
+    wrap_mode: 0
+    hdr: false

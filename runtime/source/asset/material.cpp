@@ -5,8 +5,6 @@
 
 namespace z1 {
 
-	std::shared_ptr<Texture2D> Material::s_default_texture = Texture2D::create_plain_color({ 1.0f, 0.0f, 1.0f, 1.0f });
-
 	static DataType data_type_from_str(const std::string& type_str) {
 		if (type_str == "int") return DataType::Int;
 		if (type_str == "ivec2") return DataType::Int2;
@@ -45,13 +43,14 @@ namespace z1 {
 				v.visible = false;
 			}
 			if (v.type == DataType::Sampler2D) {
-				v.default_value.tex2D = s_default_texture;
+				v.default_value.tex2D = nullptr;
 			}
 			m_variables[v.name] = v;
 		}
 
 		// parse reflections from shader file
-		auto code = g_runtime_context.m_file_system->read_file(shader->get_path());
+		Filepath path = shader->get_path();
+		auto code = g_runtime_context.m_file_system->read_file(path);
 		size_t pos = 0;
 
 		const char* reflection_token = "@reflections:";
@@ -66,6 +65,7 @@ namespace z1 {
 			reflections = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
 		}
 
+		reflections = process_includes(reflections, path.parent_path().generic_string() + "/");
 		reflections = remove_comments(reflections);
 
 		for (auto const& line : split(reflections, '\n')) {
@@ -127,7 +127,7 @@ namespace z1 {
 
 			// read parameters
 			while (iss >> token) {
-				if (!is_number(token)) {
+				if (var.type != DataType::Sampler2D && var.type != DataType::SamplerCube && !is_number(token)) {
 					CORE_WARN("reflected variable: {0} has non-number param: {1}", name, token);
 					return;
 				}
@@ -149,25 +149,25 @@ namespace z1 {
 		switch (var.type) {
 		case DataType::Int4:
 			var.default_value.ivec[3] = std::stoi(params[3]);
-			/* fallthrough */
+			[[fallthrough]];
 		case DataType::Int3:
 			var.default_value.ivec[2] = std::stoi(params[2]);
-			/* fallthrough */
+			[[fallthrough]];
 		case DataType::Int2:
 			var.default_value.ivec[1] = std::stoi(params[1]);
-			/* fallthrough */
+			[[fallthrough]];
 		case DataType::Int:
 			var.default_value.ivec[0] = std::stoi(params[0]);
 			break;
 		case DataType::Float4:
 			var.default_value.vec[3] = std::stof(params[3]);
-			/* fallthrough */
+			[[fallthrough]];
 		case DataType::Float3:
 			var.default_value.vec[2] = std::stof(params[2]);
-			/* fallthrough */
+			[[fallthrough]];
 		case DataType::Float2:
 			var.default_value.vec[1] = std::stof(params[1]);
-			/* fallthrough */
+			[[fallthrough]];
 		case DataType::Float:
 			var.default_value.vec[0] = std::stof(params[0]);
 			break;
@@ -176,8 +176,9 @@ namespace z1 {
 			// mat3 and mat4 are not supposed to be set as material variables
 			// they should be managed by engine internally
 			var.visible = false;
+			break;
 		case DataType::Sampler2D:
-			var.default_value.tex2D = nullptr;
+			var.default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(Guid::make(params[0]));
 			break;
 		case DataType::SamplerCube:
 			break;

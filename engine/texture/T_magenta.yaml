@@ -1,0 +1,8 @@
+meta:
+  guid: texture/T_magenta
+  type: texture2d
+  path: texture/T_magenta
+  extra:
+    sampler_mode: 0
+    wrap_mode: 0
+    hdr: false

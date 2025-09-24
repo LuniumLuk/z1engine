@@ -82,7 +82,7 @@ namespace z1 {
 					meta.path = path.generic_string();
 					meta.root = "engine";
 				}
-				else {
+				else if (file.extension() == ".yaml") {
 					try {
 						YAML::Node node = YAML::LoadFile(file.string());
 						meta = node["meta"].as<AssetMeta>();
@@ -92,6 +92,9 @@ namespace z1 {
 						CORE_ERROR("failed to load meta file: {0}, {1}", file.generic_string(), e.what());
 						continue;
 					}
+				}
+				else {
+					continue;
 				}
 
 				if (!register_asset(meta, root)) {

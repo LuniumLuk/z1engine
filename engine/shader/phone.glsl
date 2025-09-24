@@ -6,7 +6,7 @@
 @reflections: {
     #include <common/reflections.glsl>
 
-    s_base_color = sampler2D
+    s_base_color = sampler2D texture/T_white
 }
 @stage: vert {
     #include <common/vert.glsl>

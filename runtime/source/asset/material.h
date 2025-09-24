@@ -71,8 +71,6 @@ namespace z1 {
 			Value default_value = {};
 		};
 
-		static std::shared_ptr<Texture2D> s_default_texture;
-
 		Material(Pipeline::Description const& pipeline_desc);
 
 		static std::shared_ptr<Material> create(Filepath const& path, Pipeline::Description const& pipeline_desc);

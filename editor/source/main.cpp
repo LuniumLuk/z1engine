@@ -557,6 +557,14 @@ private:
 					}
 
 					ImGui::EndDisabled();
+
+					if (var.type == DataType::Sampler2D && var.default_value.tex2D) {
+						ImGui::SameLine();
+						auto const& texture = var.default_value.tex2D;
+						auto w = texture->m_image->get_description().m_width;
+						auto h = texture->m_image->get_description().m_height;
+						ImGui::Image(texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+					}
 				}
 			}
 			else if (m_selected_asset->type == "material instance") {
@@ -584,15 +592,15 @@ private:
 					case DataType::Int4: ImGui::InputInt4(("##" + name).c_str(), var.default_value.ivec); break;
 					}
 
+					if (!var.default_value.valid) {
+						ImGui::EndDisabled();
+					}
+
 					if (var.type == DataType::Sampler2D && var.default_value.tex2D) {
-						auto texture = var.default_value.tex2D;
+						auto const& texture = var.default_value.tex2D;
 						auto w = texture->m_image->get_description().m_width;
 						auto h = texture->m_image->get_description().m_height;
 						ImGui::Image(texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-					}
-
-					if (!var.default_value.valid) {
-						ImGui::EndDisabled();
 					}
 				}
 			}
