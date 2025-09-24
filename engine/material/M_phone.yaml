@@ -1,7 +1,7 @@
 meta:
-  guid: material/M_mesh_viewer
+  guid: material/M_phone
   type: material
-  path: material/M_mesh_viewer
+  path: material/M_phone
   extra: ~
 pipeline:
   depth_test: true
@@ -9,4 +9,4 @@ pipeline:
   src_blend_factor: 6
   dst_blend_factor: 7
   cull_mode: 2
-  shader: shader/mesh_viewer
+  shader: shader/phone

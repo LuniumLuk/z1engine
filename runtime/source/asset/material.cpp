@@ -5,6 +5,8 @@
 
 namespace z1 {
 
+	std::shared_ptr<Texture2D> Material::s_default_texture = Texture2D::create_plain_color({ 1.0f, 0.0f, 1.0f, 1.0f });
+
 	static DataType data_type_from_str(const std::string& type_str) {
 		if (type_str == "int") return DataType::Int;
 		if (type_str == "ivec2") return DataType::Int2;
@@ -43,7 +45,7 @@ namespace z1 {
 				v.visible = false;
 			}
 			if (v.type == DataType::Sampler2D) {
-				v.default_value.tex2D = nullptr;
+				v.default_value.tex2D = s_default_texture;
 			}
 			m_variables[v.name] = v;
 		}

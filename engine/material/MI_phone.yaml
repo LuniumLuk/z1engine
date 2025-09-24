@@ -1,0 +1,7 @@
+meta:
+  guid: material/MI_phone
+  type: material instance
+  path: material/MI_phone
+  extra: ~
+material: material/M_phone
+overrides: []

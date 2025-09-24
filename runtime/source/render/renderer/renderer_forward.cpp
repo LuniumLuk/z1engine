@@ -12,7 +12,7 @@
 namespace z1 {
 
 	RendererForward::RendererForward() {
-		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(Guid::make("material/MI_mesh_viewer"));
+		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(Guid::make("material/MI_phone"));
 		m_render_pass = RenderPass::build();
 	}
 

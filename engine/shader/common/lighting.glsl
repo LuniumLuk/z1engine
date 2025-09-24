@@ -1,3 +1,9 @@
+vec4 lambert_shading(vec3 normal, vec4 color) {
+    vec3 sun_dir = normalize(u_sun_direction);
+    float NoL = max(dot(normal, sun_dir), 0.0);
+    return vec4(color.rgb * NoL, color.a);
+}
+
 vec4 phone_shading(vec3 normal, vec3 world_pos, vec4 color) {
     // Ambient lighting
     float ambient_strength = 0.1;

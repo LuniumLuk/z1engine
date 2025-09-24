@@ -13,8 +13,10 @@
 }
 @stage: frag {
     #include <common/frag_attrs.glsl>
+    #include <common/lighting.glsl>
 
     void main() {
-        frag_color = v_color * texture(s_base_color, v_texcoord0);
+        vec4 color = v_color * texture(s_base_color, v_texcoord0);
+        frag_color = phone_shading(normalize(v_normal), v_world_position, color);
     }
 }

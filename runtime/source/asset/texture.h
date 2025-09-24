@@ -16,6 +16,7 @@ namespace z1 {
 		}
 
 		static std::shared_ptr<Texture2D> load(Guid const& guid);
+		static std::shared_ptr<Texture2D> create_plain_color(glm::vec4 const& color);
 
 		SamplerMode m_sampler_mode = SamplerMode::Linear;
 		WrapMode m_wrap_mode = WrapMode::Repeat;

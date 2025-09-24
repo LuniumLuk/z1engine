@@ -94,4 +94,24 @@ namespace z1 {
 		return texture;
 	}
 
+	std::shared_ptr<Texture2D> Texture2D::create_plain_color(glm::vec4 const& color) {
+		PROFILE_FUNCTION();
+		unsigned char data[4] = {
+			(unsigned char)(color.r * 255.0f),
+			(unsigned char)(color.g * 255.0f),
+			(unsigned char)(color.b * 255.0f),
+			(unsigned char)(color.a * 255.0f)
+		};
+		auto image = Image2D::create(
+			data, 4 * sizeof(unsigned char),
+			1, 1,
+			ImageFormat::RGBA8,
+			SamplerMode::Nearest, WrapMode::Repeat);
+		auto texture = std::make_shared<Texture2D>(
+			image,
+			image->get_description().m_sampler_mode,
+			image->get_description().m_wrap_mode);
+		return texture;
+	}
+
 }
