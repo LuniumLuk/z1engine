@@ -98,11 +98,14 @@ namespace z1 {
 
 #ifdef ENABLE_ASSERTS
 #    define CORE_ASSERT(x, ...) { if(!(x)) { CORE_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }
-#    define CLIENT_ASSERT(x, ...) { if(!(x)) { CLIENT_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }
+#    define ASSERT(x, ...) { if(!(x)) { CLIENT_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }
 #else
 #    define CORE_ASSERT(x, ...)
 #    define ASSERT(x, ...)
 #endif
+
+#define CORE_ENSURE(x, ...) { if(!(x)) { CORE_ERROR("ensure failed: {0}!", __VA_ARGS__); } }
+#define ENSURE(x, ...) { if(!(x)) { CLIENT_ERROR("ensure failed: {0}!", __VA_ARGS__); } }
 
 #define UNIMPLEMENTED_FUNCTION() CORE_WARN("{0} not implemented yet!", __FUNCSIG__)
 

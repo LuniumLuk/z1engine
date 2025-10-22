@@ -16,7 +16,8 @@ layout(location = 0) out vec3 v_world_position;
 layout(location = 1) out vec3 v_normal;
 layout(location = 2) out vec2 v_texcoord0;
 layout(location = 3) out vec2 v_texcoord1;
-layout(location = 4) out vec4 v_color;
+layout(location = 4) out vec4 v_tangent;
+layout(location = 5) out vec4 v_color;
 
 void main() {
 	vec3 world_position = (u_model * vec4(a_position, 1.0)).xyz;
@@ -25,5 +26,6 @@ void main() {
 	v_normal = mat3(transpose(inverse(u_model))) * a_normal;
 	v_texcoord0 = a_texcoord0;
 	v_texcoord1 = a_texcoord1;
+	v_tangent = a_tangent;
 	v_color = a_color;
 }
