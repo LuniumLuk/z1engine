@@ -43,9 +43,9 @@
 
 		// Base material inputs
 		vec4 base_color = texture(s_base_color, v_texcoord0) * v_color * u_base_color_factor;
-		vec2 mr = texture(s_metallic_roughness, v_texcoord0).rg;
-		float roughness = clamp(mr.g * u_roughness_factor, 0.04, 1.0);
-		float metallic  = mr.r * u_metallic_factor;
+		vec2 rm = texture(s_metallic_roughness, v_texcoord0).gb;
+		float roughness = clamp(rm.x * u_roughness_factor, 0.04, 1.0);
+		float metallic  = rm.y * u_metallic_factor;
 
 		// Light color
 		vec3 light_color = u_sun_intensity;
