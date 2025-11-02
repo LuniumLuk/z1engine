@@ -240,6 +240,18 @@ namespace z1 {
 	}
 
 	void MaterialInstance::unbind() const {
+		for (auto const& [name, var] : m_override_variables) {
+			if (!var.visible || var.location == INVALID_LOCATION) continue;
+
+			auto* value = &var.default_value;
+			if (!var.default_value.valid) {
+				value = &m_material->m_variables[name].default_value;
+			}
+
+			if (var.type == DataType::Sampler2D && value->tex2D) {
+				g_runtime_context.m_resource_manager->unbind_resource(value->tex2D->m_image->get_resource_id());
+			}
+		}
 		m_material->m_pipeline->unbind();
 	}
 
