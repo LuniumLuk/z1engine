@@ -81,7 +81,7 @@ namespace z1 {
 
 	bool Application::on_window_close(WindowCloseEvent& event) {
 		terminate();
-		return true;
+		return false;
 	}
 
 	bool Application::on_window_resize(WindowResizeEvent& event) {

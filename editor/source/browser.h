@@ -79,6 +79,13 @@ struct ContentBrowser {
 				m_selected_in_folder = child.get();
 			}
 
+			// start drag source
+			if (ImGui::BeginDragDropSource()) {
+				ImGui::SetDragDropPayload("ASSET_ITEM", &child->meta, sizeof(AssetMeta*));
+				ImGui::Text("%s", child->name.c_str());
+				ImGui::EndDragDropSource();
+			}
+
 			// handle double-click
 			if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
 				if (child->is_folder()) {
@@ -120,33 +127,32 @@ struct ContentBrowser {
 	}
 
 	void draw() {
-		ImGui::Begin("browser");
-
-		if (ImGui::BeginTable("content browser table", 2, ImGuiTableFlags_Resizable)) {
-			// Left column: hierarchy
-			ImGui::TableNextColumn();
-			ImGui::BeginChild("hierarchy panel");
-			{
-				AssetNode* root = g_runtime_context.m_asset_manager->get_asset_tree_root();
-				if (root) {
-					draw_asset_node(root);
+		if (ImGui::Begin("browser")) {
+			if (ImGui::BeginTable("content browser table", 2, ImGuiTableFlags_Resizable)) {
+				// Left column: hierarchy
+				ImGui::TableNextColumn();
+				ImGui::BeginChild("hierarchy panel");
+				{
+					AssetNode* root = g_runtime_context.m_asset_manager->get_asset_tree_root();
+					if (root) {
+						draw_asset_node(root);
+					}
 				}
-			}
-			ImGui::EndChild();
+				ImGui::EndChild();
 
-			// Right column: folder view
-			ImGui::TableNextColumn();
-			ImGui::BeginChild("folder view panel");
-			{
-				if (m_selected_in_hierachy) {
-					draw_folder_view(m_selected_in_hierachy);
+				// Right column: folder view
+				ImGui::TableNextColumn();
+				ImGui::BeginChild("folder view panel");
+				{
+					if (m_selected_in_hierachy) {
+						draw_folder_view(m_selected_in_hierachy);
+					}
 				}
-			}
-			ImGui::EndChild();
+				ImGui::EndChild();
 
-			ImGui::EndTable();
+				ImGui::EndTable();
+			}
 		}
-
 		ImGui::End();
 	}
 

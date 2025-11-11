@@ -146,7 +146,7 @@ struct EditorLayer : Layer {
 		default:
 			break;
 		}
-		return true;
+		return false;
 	}
 
 	bool on_mouse_pressed(MouseButtonPressedEvent& event) {
@@ -176,7 +176,7 @@ struct EditorLayer : Layer {
 				std::cout << "picking object (ms): " << ms << "\n";
 			}
 		}
-		return true;
+		return false;
 	}
 
 	void load_scene(std::shared_ptr<Scene> const& scene = nullptr) {
@@ -233,11 +233,6 @@ struct EditorLayer : Layer {
 		}
 		ImGui::End();
 
-		show_scene_graph();
-		show_properties();
-		m_browser->draw();
-		show_asset_info();
-
 		if (ImGui::Begin("debug")) {
 			if (ImGui::RadioButton("v sync", g_runtime_context.m_window->is_v_sync_enabled())) {
 				g_runtime_context.m_window->set_v_sync(!g_runtime_context.m_window->is_v_sync_enabled());
@@ -245,13 +240,16 @@ struct EditorLayer : Layer {
 
 			ImGui::Text(std::string("viewport_pixel_scale_x: " + std::to_string(m_gui->m_viewport_pixel_scale_x)).c_str());
 
-			if (ImGui::Button("save imgui ini")) {
-				fs::path ini_path = "imgui.ini";
-				fs::path default_path = "editor/default.ini";
-				fs::copy_file(ini_path, default_path, fs::copy_options::overwrite_existing);
+			if (ImGui::Button("save default.ini")) {
+				ImGui::SaveIniSettingsToDisk("editor/default.ini");
 			}
 		}
 		ImGui::End();
+
+		show_asset_info();
+		show_scene_graph();
+		show_properties();
+		m_browser->draw();
 	}
 
 private:
@@ -337,6 +335,22 @@ private:
 						ImGui::ColorEdit4("color", &sprite.m_color[0]);
 						ImGui::Text("texture");
 						ImGui::Indent();
+						// accept drop payload
+						auto payload = ImGui::GetDragDropPayload();
+						if (payload && payload->IsDataType("ASSET_ITEM")) {
+							ImGui::Text("drop here");
+							if (ImGui::BeginDragDropTarget()) {
+								if (ImGui::AcceptDragDropPayload("ASSET_ITEM")) {
+									AssetMeta* meta = *(AssetMeta**)payload->Data;
+									if (meta->type == "texture2d") {
+										sprite.m_texture = Texture2D::load(meta->guid);
+									}
+								}
+								ImGui::EndDragDropTarget();
+							}
+						}
+
+
 						if (sprite.m_texture) {
 							auto w = sprite.m_texture->m_image->get_description().m_width;
 							auto h = sprite.m_texture->m_image->get_description().m_height;
