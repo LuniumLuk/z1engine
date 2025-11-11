@@ -113,133 +113,38 @@ namespace z1 {
 				}
 			}
 		}
-
-		g_runtime_context.m_renderer_forward->draw(shared_from_this(), m_main_framebuffer);
-		g_runtime_context.m_renderer_2d->draw(shared_from_this(), m_main_framebuffer);
 	}
 
-	bool Scene::serialize(Filepath const& path, std::shared_ptr<Scene> const& scene) {
-
-		// map transform pointer to entity ID for parent reference
-		std::unordered_map<void*, uint32_t> transform_ptr_to_id;
-		transform_ptr_to_id[nullptr] = INVALID_INDEX;
-		for (auto const& entity : scene->m_entities) {
-			transform_ptr_to_id[&entity->get_component<TransformComponent>()] = entity->get_component<TagComponent>().m_id;
-		}
-
-		YAML::Emitter yaml;
-
-		yaml << YAML::BeginMap;
-
-		auto const& root = FileSystem::s_content_root;
-
-		AssetMeta meta{};
-		meta.guid.value = path.generic_string();
-		meta.type = "scene";
-		meta.path = path;
-
-		yaml << YAML::Key << "meta" << YAML::Value << meta;
-
-		yaml << YAML::Key << "entities" << YAML::Value;
-		yaml << YAML::BeginSeq;
-
-		for (auto const& entity : scene->m_entities) {
-
-			yaml << YAML::BeginMap;
-
-			// TagComponent
-			auto const& tag = entity->get_component<TagComponent>();
-			yaml << YAML::Key << "name" << YAML::Value << tag.m_tag;
-			yaml << YAML::Key << "id" << YAML::Value << tag.m_id;
-
-			// TransformComponent
-			auto const& transform = entity->get_component<TransformComponent>();
-			yaml << YAML::Key << "transform" << YAML::Value;
-			yaml << YAML::BeginMap;
-			yaml << YAML::Key << "location" << YAML::Value << transform.m_location;
-			yaml << YAML::Key << "rotation" << YAML::Value << transform.m_rotation;
-			yaml << YAML::Key << "scale" << YAML::Value << transform.m_scale;
-			if (transform.m_parent) {
-				yaml << YAML::Key << "parent" << YAML::Value << transform_ptr_to_id[transform.m_parent];
-			}
-			else {
-				yaml << YAML::Key << "parent" << YAML::Value << YAML::Null;
-			}
-			yaml << YAML::EndMap;
-
-			// CameraComponent
-			if (entity->has_component<CameraComponent>()) {
-				auto const& camera = entity->get_component<CameraComponent>();
-				yaml << YAML::Key << "camera" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "is_perspective" << YAML::Value << camera.m_is_perspective;
-				yaml << YAML::Key << "intrinsic" << YAML::Value << camera.m_intrinsic.fov;
-				yaml << YAML::Key << "near" << YAML::Value << camera.m_near;
-				yaml << YAML::Key << "far" << YAML::Value << camera.m_far;
-				yaml << YAML::Key << "aspect" << YAML::Value << camera.m_aspect;
-				yaml << YAML::Key << "use_fixed_aspect" << YAML::Value << camera.m_use_fixed_aspect;
-				yaml << YAML::Key << "is_primary" << YAML::Value << camera.m_is_primary;
-				yaml << YAML::EndMap;
-			}
-
-			// StaticMeshComponent
-			if (entity->has_component<StaticMeshComponent>()) {
-				auto const& mesh = entity->get_component<StaticMeshComponent>();
-				yaml << YAML::Key << "static_mesh" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "guid" << YAML::Value << mesh.m_mesh->m_meta.guid;
-				yaml << YAML::EndMap;
-			}
-
-			// SpriteComponent
-			if (entity->has_component<SpriteComponent>()) {
-				auto const& sprite = entity->get_component<SpriteComponent>();
-				yaml << YAML::Key << "sprite" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "color" << YAML::Value << sprite.m_color;
-				if (sprite.m_texture) {
-					yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_meta.guid;
-				}
-				else {
-					yaml << YAML::Key << "texture" << YAML::Value << YAML::Null;
-				}
-				yaml << YAML::Key << "tiling_scale" << YAML::Value << sprite.m_tiling_scale;
-				yaml << YAML::Key << "tiling_offset" << YAML::Value << sprite.m_tiling_offset;
-				yaml << YAML::Key << "texcoords" << YAML::Value;
-				yaml << YAML::BeginSeq;
-				for (auto const& uv : sprite.m_texcoords) {
-					yaml << uv;
-				}
-				yaml << YAML::EndSeq;
-				yaml << YAML::EndMap;
-			}
-
-			yaml << YAML::EndMap;
-		}
-		yaml << YAML::EndSeq;
-		yaml << YAML::EndMap;
-
-		return save_yaml((root / path).concat(".yaml"), yaml);
-	}
-
-	std::shared_ptr<Scene> Scene::deserialize(Filepath const& path) {
+	std::shared_ptr<Scene> Scene::create(Filepath const& path) {
 		auto scene = std::make_shared<Scene>();
 
-		auto const& root = FileSystem::s_content_root;
-		Filepath file = (root / path).concat(".yaml");
+		scene->m_meta.guid = Guid::generate();
+		scene->m_meta.type = "scene";
+		scene->m_meta.path = path;
 
-		std::ifstream stream(file.string());
-		if (!stream.is_open()) {
-			CORE_ERROR("Failed to open file: {}", file.generic_string());
-			return scene;
+		auto const& root = FileSystem::s_content_root;
+		if (g_runtime_context.m_asset_manager->register_asset(scene->m_meta, root)) {
+			CORE_INFO("created new scene: {}", path.generic_string());
 		}
+		else {
+			scene.reset();
+			CORE_ERROR("failed to create scene: {}", path.generic_string());
+		}
+
+		return scene;
+	}
+
+	std::shared_ptr<Scene> Scene::load(Guid const& guid) {
+		auto scene = std::make_shared<Scene>();
+		scene->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
 
 		YAML::Node yaml;
+		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 		try {
-			yaml = YAML::Load(stream);
+			yaml = YAML::LoadFile((file.concat(".yaml")).string());
 		}
 		catch (YAML::ParserException& e) {
-			CORE_ERROR("failed to parse yaml: {}", e.what());
+			CORE_ERROR("failed to load scene file: {0}, {1}", file.generic_string(), e.what());
 			return scene;
 		}
 
@@ -327,6 +232,103 @@ namespace z1 {
 		}
 
 		return scene;
+	}
+
+	void Scene::save() const {
+		// map transform pointer to entity ID for parent reference
+		std::unordered_map<void*, uint32_t> transform_ptr_to_id;
+		transform_ptr_to_id[nullptr] = INVALID_INDEX;
+		for (auto const& entity : m_entities) {
+			transform_ptr_to_id[&entity->get_component<TransformComponent>()] = entity->get_component<TagComponent>().m_id;
+		}
+
+		YAML::Emitter yaml;
+
+		yaml << YAML::BeginMap;
+
+		yaml << YAML::Key << "meta" << YAML::Value << m_meta;
+
+		yaml << YAML::Key << "entities" << YAML::Value;
+		yaml << YAML::BeginSeq;
+
+		for (auto const& entity : m_entities) {
+
+			yaml << YAML::BeginMap;
+
+			// TagComponent
+			auto const& tag = entity->get_component<TagComponent>();
+			yaml << YAML::Key << "name" << YAML::Value << tag.m_tag;
+			yaml << YAML::Key << "id" << YAML::Value << tag.m_id;
+
+			// TransformComponent
+			auto const& transform = entity->get_component<TransformComponent>();
+			yaml << YAML::Key << "transform" << YAML::Value;
+			yaml << YAML::BeginMap;
+			yaml << YAML::Key << "location" << YAML::Value << transform.m_location;
+			yaml << YAML::Key << "rotation" << YAML::Value << transform.m_rotation;
+			yaml << YAML::Key << "scale" << YAML::Value << transform.m_scale;
+			if (transform.m_parent) {
+				yaml << YAML::Key << "parent" << YAML::Value << transform_ptr_to_id[transform.m_parent];
+			}
+			else {
+				yaml << YAML::Key << "parent" << YAML::Value << YAML::Null;
+			}
+			yaml << YAML::EndMap;
+
+			// CameraComponent
+			if (entity->has_component<CameraComponent>()) {
+				auto const& camera = entity->get_component<CameraComponent>();
+				yaml << YAML::Key << "camera" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "is_perspective" << YAML::Value << camera.m_is_perspective;
+				yaml << YAML::Key << "intrinsic" << YAML::Value << camera.m_intrinsic.fov;
+				yaml << YAML::Key << "near" << YAML::Value << camera.m_near;
+				yaml << YAML::Key << "far" << YAML::Value << camera.m_far;
+				yaml << YAML::Key << "aspect" << YAML::Value << camera.m_aspect;
+				yaml << YAML::Key << "use_fixed_aspect" << YAML::Value << camera.m_use_fixed_aspect;
+				yaml << YAML::Key << "is_primary" << YAML::Value << camera.m_is_primary;
+				yaml << YAML::EndMap;
+			}
+
+			// StaticMeshComponent
+			if (entity->has_component<StaticMeshComponent>()) {
+				auto const& mesh = entity->get_component<StaticMeshComponent>();
+				yaml << YAML::Key << "static_mesh" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "guid" << YAML::Value << mesh.m_mesh->m_meta.guid;
+				yaml << YAML::EndMap;
+			}
+
+			// SpriteComponent
+			if (entity->has_component<SpriteComponent>()) {
+				auto const& sprite = entity->get_component<SpriteComponent>();
+				yaml << YAML::Key << "sprite" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "color" << YAML::Value << sprite.m_color;
+				if (sprite.m_texture) {
+					yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_meta.guid;
+				}
+				else {
+					yaml << YAML::Key << "texture" << YAML::Value << YAML::Null;
+				}
+				yaml << YAML::Key << "tiling_scale" << YAML::Value << sprite.m_tiling_scale;
+				yaml << YAML::Key << "tiling_offset" << YAML::Value << sprite.m_tiling_offset;
+				yaml << YAML::Key << "texcoords" << YAML::Value;
+				yaml << YAML::BeginSeq;
+				for (auto const& uv : sprite.m_texcoords) {
+					yaml << uv;
+				}
+				yaml << YAML::EndSeq;
+				yaml << YAML::EndMap;
+			}
+
+			yaml << YAML::EndMap;
+		}
+		yaml << YAML::EndSeq;
+		yaml << YAML::EndMap;
+
+		auto const& root = FileSystem::s_content_root;
+		save_yaml((root / m_meta.path).concat(".yaml"), yaml);
 	}
 
 }

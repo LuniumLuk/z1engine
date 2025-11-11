@@ -199,7 +199,7 @@ namespace z1 {
 		Filepath file = root / meta.path;
 
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
-			return meta;
+			return {};
 		}
 
 		bf.set_yaml(yaml.c_str());
@@ -210,7 +210,7 @@ namespace z1 {
 
 		save_yaml(file.replace_extension(".yaml"), yaml);
 
-		return {};
+		return meta;
 	}
 
 	std::shared_ptr<StaticMesh> StaticMesh::load(Guid const& guid) {

@@ -18,7 +18,7 @@ int main() {
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
 	// generate and serialize sample scene
-	auto scene = std::make_shared<Scene>();
+	auto scene = Scene::create("scene/sample");
 	auto persp_cam = scene->create_entity("Persp Camera");
 	persp_cam->add_component<CameraComponent>();
 
@@ -97,7 +97,7 @@ int main() {
 		}
 	}
 
-	Scene::serialize("scene/sample", scene);
+	scene->save();
 
 	return 0;
 }

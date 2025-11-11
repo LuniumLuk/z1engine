@@ -15,14 +15,13 @@ namespace fs = std::filesystem;
 struct EditorLayer : Layer {
 	EditorLayer() {
 		m_gui = std::make_shared<EditorGUI>();
-		load_scene();
 		m_browser = std::make_unique<ContentBrowser>();
 		m_browser->m_on_asset_opened =
 			[&](AssetMeta* meta) {
 				if (!meta) return;
 
 				if (meta->type == "scene") {
-					load_scene(Scene::deserialize(meta->path));
+					load_scene(Scene::load(meta->guid));
 				}
 				else {
 					m_selected_asset = meta;
@@ -64,23 +63,9 @@ struct EditorLayer : Layer {
 					if (ImGui::MenuItem("new")) {
 						load_scene();
 					}
-					//if (ImGui::MenuItem("open...")) {
-					//	Filepath file = open_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
-					//	if (!file.empty()) {
-					//		m_active_scene = Scene::deserialize(file);
-					//		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
-					//		m_selected_entity = nullptr;
-					//	}
-					//}
-					//if (ImGui::MenuItem("save as...")) {
-					//	Filepath file = save_file_dialog("yaml (*.yaml)\0*.yaml\0all files\0*.*\0");
-					//	if (!file.empty()) {
-					//		if (file.extension() != ".yaml") {
-					//			file += ".yaml";
-					//		}
-					//		Scene::serialize(file, m_active_scene);
-					//	}
-					//}
+					if (ImGui::MenuItem("save")) {
+						m_active_scene->save();
+					}
 					if (ImGui::MenuItem("exit")) {
 						terminate();
 					}
@@ -119,6 +104,8 @@ struct EditorLayer : Layer {
 		// picking system does not need to be that precise
 		// so we use default resolution here (512x512)
 		m_picking = std::make_shared<PickingSystem>();
+
+		load_scene();
 	}
 
 	~EditorLayer() {
@@ -138,6 +125,8 @@ struct EditorLayer : Layer {
 			m_fps_counter = 0;
 		}
 		m_active_scene->on_update(delta_time);
+		g_runtime_context.m_renderer_forward->draw(m_active_scene, m_gui->get_viewport_framebuffer());
+		g_runtime_context.m_renderer_2d->draw(m_active_scene, m_gui->get_viewport_framebuffer());
 	}
 
 	void on_event(Event& event) override {
@@ -191,8 +180,17 @@ struct EditorLayer : Layer {
 	}
 
 	void load_scene(std::shared_ptr<Scene> const& scene = nullptr) {
-		m_active_scene = scene ? scene : std::make_shared<Scene>();
-		m_active_scene->m_main_framebuffer = m_gui->get_viewport_framebuffer();
+		if (scene) {
+			m_active_scene = scene;
+		}
+		else {
+			auto folder = m_browser->get_curr_dir();
+			m_active_scene = Scene::create(folder / "new_scene");
+			if (!m_active_scene) {
+				return;
+			}
+		}
+
 		m_selected_entity = nullptr;
 
 		// setup editor viewport camera

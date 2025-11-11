@@ -11,7 +11,7 @@ struct ContentBrowser {
 		if (!node || !node->is_folder())
 			return;
 
-		if (node->is_root()) {
+		if (!node->parent) {
 			for (auto& [_, child] : node->children) {
 				draw_asset_node(child.get());
 			}
@@ -148,6 +148,25 @@ struct ContentBrowser {
 		}
 
 		ImGui::End();
+	}
+
+	Filepath get_curr_dir() const {
+		if (m_selected_in_hierachy) {
+			// build path from root to selected folder
+			std::vector<std::string> parts;
+			AssetNode* node = m_selected_in_hierachy;
+			while (node && !node->is_root()) {
+				parts.push_back(node->name);
+				node = node->parent;
+			}
+			std::reverse(parts.begin(), parts.end());
+			Filepath path = "";
+			for (auto& part : parts) {
+				path /= part;
+			}
+			return path;
+		}
+		return "";
 	}
 
 	std::function<void(AssetMeta* meta)> m_on_asset_opened;

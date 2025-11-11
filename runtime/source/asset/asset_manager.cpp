@@ -152,7 +152,7 @@ namespace z1 {
 
 		AssetNode* node = m_asset_tree_root.get();
 		auto asset_name = meta.path.filename();
-		auto editor_path = meta.root / meta.path;
+		auto editor_path = root / meta.path;
 		for (auto const& part : editor_path) {
 			auto name = part.string();
 			bool is_folder = (name != asset_name.string());

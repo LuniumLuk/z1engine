@@ -21,7 +21,7 @@ namespace z1 {
 		AssetNode* parent = nullptr;
 		std::unordered_map<std::string, std::unique_ptr<AssetNode>> children;
 
-		bool is_root() const { return parent == nullptr; }
+		bool is_root() const { return parent && parent->parent == nullptr; }
 		bool is_folder() const { return meta == nullptr; }
 		bool has_subfolder() const {
 			for (auto const& [_, child] : children) {

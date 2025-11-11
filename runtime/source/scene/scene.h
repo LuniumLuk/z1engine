@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/core.h"
+#include "asset/asset.h"
 #include "scene/component/base.h"
 #include "scene/component/camera.h"
 #include "render/framebuffer.h"
@@ -14,7 +15,7 @@ namespace z1 {
 	// Asset from "asset/asset.h", but since Asset itself is a complex type that
 	// depends on many other systems (like asset management, serialization, etc.),
 	// we avoid this dependency here to keep the scene system modular and independent.
-	struct API Scene : std::enable_shared_from_this<Scene> {
+	struct API Scene : Asset<Scene>, std::enable_shared_from_this<Scene> {
 		Scene();
 		~Scene();
 
@@ -34,19 +35,23 @@ namespace z1 {
 		std::shared_ptr<Entity> cast_to_entity(entt::entity handle) const;
 
 		size_t get_entity_count() const {
-			auto view = m_registry.view<TransformComponent>();
-			return view.size();
+			//auto view = m_registry.view<TransformComponent>();
+			//return view.size();
+			return m_entities.size() + m_transient_entities.size();
 		}
 
 		void set_main_camera(std::shared_ptr<Entity> const& camera);
 
 		std::shared_ptr<Entity> get_main_camera() const;
 
-		static bool serialize(Filepath const& path, std::shared_ptr<Scene> const& asset);
-		static std::shared_ptr<Scene> deserialize(Filepath const& path);
+		//static bool serialize(Filepath const& path, std::shared_ptr<Scene> const& asset);
+		//static std::shared_ptr<Scene> deserialize(Filepath const& path);
+
+		static std::shared_ptr<Scene> create(Filepath const& path);
+		static std::shared_ptr<Scene> load(Guid const& guid);
+		void save() const;
 
 		entt::registry m_registry;
-		std::shared_ptr<Framebuffer> m_main_framebuffer;
 		std::vector<std::shared_ptr<Entity>> m_entities;
 		std::vector<std::shared_ptr<Entity>> m_transient_entities;
 
