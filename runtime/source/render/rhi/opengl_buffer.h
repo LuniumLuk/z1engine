@@ -46,8 +46,6 @@ namespace z1 {
 		void bind(uint32_t binding) const override;
 		void unbind(uint32_t binding) const override;
 
-		void bind() const override;
-		void unbind() const override;
 		void write(void const* data, size_t size, size_t offset) override;
 
 		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }

@@ -196,14 +196,15 @@ namespace z1 {
 	void MaterialInstance::bind(PerFrameConst const& per_frame) const {
 		m_material->m_pipeline->bind();
 		auto const& shader = m_material->m_pipeline->m_shader;
-		shader->set_uniform("u_projview", &per_frame.projview);
+		shader->set_uniform_block_binding("Global", per_frame.global_binding);
+		//shader->set_uniform("u_projview", &per_frame.projview);
 		shader->set_uniform("u_model", &per_frame.model);
-		if (shader->has_uniform("u_cam_position"))
-			shader->set_uniform("u_cam_position", &per_frame.cam_position);
-		if (shader->has_uniform("u_sun_direction"))
-			shader->set_uniform("u_sun_direction", &per_frame.sun_direction);
-		if (shader->has_uniform("u_sun_intensity"))
-			shader->set_uniform("u_sun_intensity", &per_frame.sun_intensity);
+		//if (shader->has_uniform("u_cam_position"))
+		//	shader->set_uniform("u_cam_position", &per_frame.cam_position);
+		//if (shader->has_uniform("u_sun_direction"))
+		//	shader->set_uniform("u_sun_direction", &per_frame.sun_direction);
+		//if (shader->has_uniform("u_sun_intensity"))
+		//	shader->set_uniform("u_sun_intensity", &per_frame.sun_intensity);
 		for (auto const& [name, var] : m_override_variables) {
 			if (!var.visible || var.location == INVALID_LOCATION) continue;
 

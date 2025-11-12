@@ -212,13 +212,13 @@ namespace z1 {
 		glBindBufferBase(GL_UNIFORM_BUFFER, binding, 0);
 	}
 
-	void OpenGLUniformBuffer::bind() const {
-		glBindBuffer(GL_UNIFORM_BUFFER, m_handle);
-	}
+	//void OpenGLUniformBuffer::bind() const {
+	//	glBindBuffer(GL_UNIFORM_BUFFER, m_handle);
+	//}
 
-	void OpenGLUniformBuffer::unbind() const {
-		glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	}
+	//void OpenGLUniformBuffer::unbind() const {
+	//	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	//}
 
 	void OpenGLUniformBuffer::write(void const* data, size_t size, size_t offset) {
 		PROFILE_FUNCTION();

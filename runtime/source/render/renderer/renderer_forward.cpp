@@ -14,6 +14,7 @@ namespace z1 {
 	RendererForward::RendererForward() {
 		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(Guid::make("material/MI_phone"));
 		m_render_pass = RenderPass::build();
+		m_global_buffer = UniformBuffer::create(nullptr, sizeof(GlobalConstants), BufferUsage::Dynamic);
 	}
 
 	RendererForward::~RendererForward() {
@@ -51,10 +52,20 @@ namespace z1 {
 		glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
 		glm::vec3 sun_intensity = { .5f, .5f, .5f };
 		PerFrameConst per_frame{};
-		per_frame.projview = projview;
-		per_frame.cam_position = cam_pos;
-		per_frame.sun_direction = sun_dir;
-		per_frame.sun_intensity = sun_intensity;
+		//per_frame.projview = projview;
+		//per_frame.cam_position = cam_pos;
+		//per_frame.sun_direction = sun_dir;
+		//per_frame.sun_intensity = sun_intensity;
+
+		m_global_data.projview = projview;
+		m_global_data.cam_position = glm::vec4(cam_pos, 0);
+		m_global_data.sun_direction = glm::vec4(sun_dir, 0);
+		m_global_data.sun_intensity = glm::vec4(sun_intensity, 0);
+
+		m_global_buffer->write(&m_global_data, sizeof(GlobalConstants));
+		auto global_binding = g_runtime_context.m_resource_manager->bind_resource(m_global_buffer->get_resource_id());
+		m_global_buffer->bind(global_binding);
+		per_frame.global_binding = global_binding;
 
 		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 		for (auto [entity, transform, mesh] : view.each()) {
@@ -62,6 +73,7 @@ namespace z1 {
 			mesh.m_mesh->draw(per_frame, m_default_material);
 		}
 
+		g_runtime_context.m_resource_manager->unbind_resource(m_global_buffer->get_resource_id());
 		m_render_pass->unbind();
 	}
 

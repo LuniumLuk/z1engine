@@ -12,11 +12,12 @@
 namespace z1 {
 
 	struct API PerFrameConst {
-		glm::mat4 projview;
+		//glm::mat4 projview;
 		glm::mat4 model;
-		glm::vec3 cam_position;
-		glm::vec3 sun_direction;
-		glm::vec3 sun_intensity;
+		//glm::vec3 cam_position;
+		//glm::vec3 sun_direction;
+		//glm::vec3 sun_intensity;
+		uint32_t global_binding;
 	};
 
 	struct API Material : Asset<Material> {

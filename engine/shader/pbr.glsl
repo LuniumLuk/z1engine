@@ -37,8 +37,8 @@
 		vec3 normal_map = texture(s_normal, v_texcoord0).rgb * 2.0 - 1.0;
 
 		vec3 N = get_normal_from_map(v_world_position, normalize(v_normal), normalize(v_tangent), normal_map);
-		vec3 V = normalize(u_cam_position - v_world_position);
-		vec3 L = normalize(u_sun_direction);
+		vec3 V = normalize(u_cam_position.xyz - v_world_position);
+		vec3 L = normalize(u_sun_direction.xyz);
 		vec3 H = normalize(V + L);
 
 		// Base material inputs
@@ -48,7 +48,7 @@
 		float metallic  = rm.y * u_metallic_factor;
 
 		// Light color
-		vec3 light_color = u_sun_intensity;
+		vec3 light_color = u_sun_intensity.xyz;
 
 		// Fresnel reflectance at normal incidence
 		vec3 F0 = mix(vec3(0.04), base_color.rgb, metallic);
@@ -72,7 +72,7 @@
 		vec3 color = (kD * base_color.rgb / PI + specular) * radiance;
 
 		// Simple ambient term
-		vec3 ambient = 0.03 * base_color.rgb * u_sun_intensity;
+		vec3 ambient = 0.03 * base_color.rgb * u_sun_intensity.xyz;
 
 		// Emissive term
 		vec3 emissive = texture(s_emissive, v_texcoord0).rgb;

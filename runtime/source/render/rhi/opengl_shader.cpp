@@ -40,6 +40,7 @@ namespace z1 {
 
 	OpenGLShaderModule::OpenGLShaderModule(Stage stage, std::string const& src) {
 		PROFILE_FUNCTION();
+		std::cout << src;
 		m_handle = glCreateShader(shader_stage_to_opengl_type(stage));
 		const char* src_data = src.data();
 		glShaderSource(m_handle, 1, &src_data, nullptr);

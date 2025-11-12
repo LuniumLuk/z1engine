@@ -66,8 +66,8 @@ namespace z1 {
 
 		virtual ~UniformBuffer() = default;
 
-		virtual void bind() const = 0;
-		virtual void unbind() const = 0;
+		virtual void bind(uint32_t binding) const = 0;
+		virtual void unbind(uint32_t binding) const = 0;
 		virtual void write(void const* data, size_t size = WHOLE_SIZE, size_t offset = 0) = 0;
 
 		virtual void* get_native_handle() const = 0;
