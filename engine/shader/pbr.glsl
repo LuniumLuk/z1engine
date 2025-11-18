@@ -15,14 +15,14 @@
 	#include <common/reflections.glsl>
 
 	s_base_color         = sampler2D texture/T_white
-	s_metallic_roughness = sampler2D texture/T_black
-	s_normal             = sampler2D texture/T_black
+	s_metallic_roughness = sampler2D texture/T_white
+	s_normal             = sampler2D texture/T_normal
 	s_emissive           = sampler2D texture/T_black
-	s_occlusion          = sampler2D texture/T_black
+	s_occlusion          = sampler2D texture/T_white
 
 	u_base_color_factor  = vec4 1.0 1.0 1.0 1.0
-	u_roughness_factor   = float 1.0
-	u_metallic_factor    = float 1.0
+	u_roughness_factor   = float 0.5
+	u_metallic_factor    = float 0.5
 }
 @stage: vert {
 	#include <common/vert.glsl>
@@ -69,7 +69,8 @@
 		float NdotL = max(dot(N, L), 0.0);
 		vec3 radiance = light_color * NdotL;
 
-		vec3 color = (kD * base_color.rgb / PI + specular) * radiance;
+		vec3 L_diffuse = (kD * base_color.rgb / PI) * radiance;
+		vec3 L_specular = specular * radiance;
 
 		// Simple ambient term
 		vec3 ambient = 0.03 * base_color.rgb * u_sun_intensity.xyz;
@@ -79,9 +80,8 @@
 
 		// Occlusion term
 		float ao = texture(s_occlusion, v_texcoord0).r;
-		ambient *= ao;
 
-		vec3 result = ambient + color + emissive;
+		vec3 result = (ambient + L_diffuse) * ao + L_specular + emissive;
 		frag_color = vec4(result, base_color.a);
 	}
 }

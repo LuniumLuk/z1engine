@@ -1,4 +1,6 @@
 #include "z1engine.h"
+#include "bakery.h"
+#include "stb/stb_image_write.h"
 
 using namespace z1;
 
@@ -8,7 +10,7 @@ struct OurApp : Application {
 
 int main() {
 	// override content root and shader root for test environment
-	FileSystem::s_content_root = "../../content";
+	FileSystem::s_content_root = "../../engine";
 	FileSystem::s_engine_root = "../../engine";
 
 	OurApp app;
@@ -17,11 +19,20 @@ int main() {
 	Filepath cwd = std::filesystem::current_path();
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
-	auto mi = MaterialInstance::create("material/MI_unlit_sample", g_runtime_context.m_asset_manager->get<Material>(Guid::make("material/M_unlit")));
-	mi->m_override_variables["s_base_color"].default_value.valid = true;
-	auto guid = g_runtime_context.m_asset_manager->get_guid_from_path("texture/T_awesomeface");
-	mi->m_override_variables["s_base_color"].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
-	mi->save();
+	std::string filename = "../../temp.png";
+
+	const unsigned char data[] = { 127, 127, 255, 255 };
+	stbi_write_png(filename.c_str(), 1, 1, 4, data, 0);
+
+	{
+		TextureImporterSettings settings{};
+		settings.file = "../../temp.png";
+		settings.path = "texture/T_normal";
+		settings.sampler_mode = SamplerMode::Nearest;
+		TextureImporter().import(settings);
+	}
+
+	std::filesystem::remove(filename);
 
 	return 0;
 }

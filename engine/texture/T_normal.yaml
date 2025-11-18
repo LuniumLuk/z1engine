@@ -1,0 +1,8 @@
+meta:
+  guid: texture/T_normal
+  type: texture2d
+  path: texture/T_normal
+  extra:
+    sampler_mode: 1
+    wrap_mode: 0
+    hdr: false

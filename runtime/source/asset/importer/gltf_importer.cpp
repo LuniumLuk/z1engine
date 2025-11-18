@@ -447,9 +447,17 @@ namespace z1 {
 				mi->m_override_variables["u_roughness_factor"].default_value.valid = true;
 				mi->m_override_variables["u_roughness_factor"].default_value.vec[0] = static_cast<float>(mat.values["roughnessFactor"].Factor());
 			}
+			else if (mi->m_override_variables.find("s_metallic_roughness") != mi->m_override_variables.end()) {
+				mi->m_override_variables["u_roughness_factor"].default_value.valid = true;
+				mi->m_override_variables["u_roughness_factor"].default_value.vec[0] = 1.0f;
+			}
 			if (mat.values.find("metallicFactor") != mat.values.end()) {
 				mi->m_override_variables["u_metallic_factor"].default_value.valid = true;
 				mi->m_override_variables["u_metallic_factor"].default_value.vec[0] = static_cast<float>(mat.values["metallicFactor"].Factor());
+			}
+			else if (mi->m_override_variables.find("s_metallic_roughness") != mi->m_override_variables.end()) {
+				mi->m_override_variables["u_metallic_factor"].default_value.valid = true;
+				mi->m_override_variables["u_metallic_factor"].default_value.vec[0] = 1.0f;
 			}
 
 			mi->save();
