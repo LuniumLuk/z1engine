@@ -26,14 +26,16 @@ namespace z1 {
 		}
 	};
 
-	struct API TagComponent {
+	REFLECTED_STRUCT(TagComponent) {
 		std::string m_tag;
 		uint32_t m_id = 0;
 		TagComponent() = default;
 		TagComponent(std::string const& tag, uint32_t id) : m_tag(tag), m_id(id) {}
 	};
 
-	struct API TransformComponent {
+	REFLECTED_FIELD(TagComponent, m_tag, FF_Default)
+
+	REFLECTED_STRUCT(TransformComponent) {
 		glm::vec3 m_location{ 0.0f, 0.0f, 0.0f };
 		glm::vec3 m_rotation{ 0.0f, 0.0f, 0.0f }; // in degrees (pitch, yaw, roll)
 		glm::vec3 m_scale{ 1.0f, 1.0f, 1.0f };
@@ -107,6 +109,10 @@ namespace z1 {
 			}
 		}
 	};
+
+	REFLECTED_FIELD(TransformComponent, m_location, FF_Default)
+	REFLECTED_FIELD(TransformComponent, m_rotation, FF_Default)
+	REFLECTED_FIELD(TransformComponent, m_scale,    FF_ReadOnly)
 
 	struct Entity;
 

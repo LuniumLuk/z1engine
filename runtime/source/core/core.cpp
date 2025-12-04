@@ -19,7 +19,7 @@ namespace z1 {
 
 	void RuntimeContext::init() {
 		m_timer = std::make_shared<Timer>();
-		m_logger = std::make_shared<Logger>();
+		init_logger();
 		m_file_system = std::make_shared<FileSystem>();
 
 		m_window = std::make_shared<Window>();
@@ -38,6 +38,12 @@ namespace z1 {
 
 		m_renderer_2d = std::make_shared<Renderer2D>();
 		m_renderer_forward = std::make_shared<RendererForward>();
+	}
+
+	void RuntimeContext::init_logger() {
+		if (!m_logger) {
+			m_logger = std::make_shared<Logger>();
+		}
 	}
 
 	void RuntimeContext::shutdown() {

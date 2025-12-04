@@ -309,30 +309,79 @@ private:
 		}
 	}
 
-	void show_properties() {
-		static char name_buffer[256] = {};
+	void show_type_fields(void* instance, const std::string& name)
+	{
 
+		auto const info = TypeRegistry::instance().get(name);
+		if (!info) return;
+
+		ImGui::Indent();
+		for (auto& [_, field] : info->fields)
+		{
+			bool const visible = (field.flag & FF_Visible) != 0;
+			bool const editable = (field.flag & FF_Editable) != 0;
+			if (!visible && !editable)
+				continue;
+
+			if (!editable)
+				ImGui::BeginDisabled();
+
+			if (*field.type == typeid(bool)) {
+				bool& value = field.get<bool>(instance);
+				ImGui::Checkbox(field.name.c_str(), &value);
+			}
+			else if (*field.type == typeid(float)) {
+				float& value = field.get<float>(instance);
+				ImGui::DragFloat(field.name.c_str(), &value);
+			}
+			else if (*field.type == typeid(int)) {
+				int& value = field.get<int>(instance);
+				ImGui::DragInt(field.name.c_str(), &value);
+			}
+			else if (*field.type == typeid(glm::vec2)) {
+				glm::vec2& value = field.get<glm::vec2>(instance);
+				ImGui::DragFloat2(field.name.c_str(), &value[0], 0.01f);
+			}
+			else if (*field.type == typeid(glm::vec3)) {
+				glm::vec3& value = field.get<glm::vec3>(instance);
+				ImGui::DragFloat3(field.name.c_str(), &value[0], 0.01f);
+			}
+			else if (*field.type == typeid(glm::vec4)) {
+				glm::vec3& value = field.get<glm::vec3>(instance);
+				ImGui::ColorEdit4(field.name.c_str(), &value[0]);
+			}
+			else if (*field.type == typeid(std::string)) {
+				std::string& value = field.get<std::string>(instance);
+				static char str_buffer[256] = {};
+				strcpy_s(str_buffer, value.c_str());
+				if (ImGui::InputText(field.name.c_str(), str_buffer, IM_ARRAYSIZE(str_buffer))) {
+					value = std::string(str_buffer);
+				}
+			}
+
+			if (!editable)
+				ImGui::EndDisabled();
+		}
+		ImGui::Unindent();
+	}
+
+#define SHOW_COMPONENT(ComponentType)                                               \
+	if (ImGui::CollapsingHeader(#ComponentType, ImGuiTreeNodeFlags_DefaultOpen)) {  \
+		auto& comp = m_selected_entity->get_component<ComponentType>();             \
+		show_type_fields(&comp, #ComponentType);                                    \
+	}
+
+	void show_properties() {
 		if (ImGui::Begin("properties")) {
 			if (m_selected_entity) {
-				auto& tag = m_selected_entity->get_component<TagComponent>();
-				strcpy_s(name_buffer, tag.m_tag.c_str());
-				if (ImGui::InputText("##tag", name_buffer, IM_ARRAYSIZE(name_buffer))) {
-					tag.m_tag = std::string(name_buffer);
-				}
-
-				if (ImGui::CollapsingHeader("transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-					auto& transform = m_selected_entity->get_component<TransformComponent>();
-					ImGui::Indent();
-					ImGui::DragFloat3("location", &transform.m_location[0], 0.01f);
-					ImGui::DragFloat3("rotation", &transform.m_rotation[0], 0.1f);
-					ImGui::DragFloat3("scale", &transform.m_scale[0], 0.01f);
-					ImGui::Unindent();
-				}
+				SHOW_COMPONENT(TagComponent)
+				SHOW_COMPONENT(TransformComponent)
 
 				if (m_selected_entity->has_component<SpriteComponent>()) {
-					if (ImGui::CollapsingHeader("sprite", ImGuiTreeNodeFlags_DefaultOpen)) {
+					if (ImGui::CollapsingHeader("SpriteComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& sprite = m_selected_entity->get_component<SpriteComponent>();
-						ImGui::ColorEdit4("color", &sprite.m_color[0]);
+						show_type_fields(&sprite, "SpriteComponent");
+
 						ImGui::Text("texture");
 						ImGui::Indent();
 						// accept drop payload
@@ -369,8 +418,6 @@ private:
 						}
 						ImGui::Unindent();
 
-						ImGui::DragFloat2("tiling scale", &sprite.m_tiling_scale[0], 0.01f);
-						ImGui::DragFloat2("tiling offset", &sprite.m_tiling_offset[0], 0.01f);
 						ImGui::Text("texcoords");
 						ImGui::Indent();
 						for (int i = 0; i < 4; ++i) {
@@ -382,7 +429,7 @@ private:
 				}
 
 				if (m_selected_entity->has_component<StaticMeshComponent>()) {
-					if (ImGui::CollapsingHeader("static mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
+					if (ImGui::CollapsingHeader("StaticMeshComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& mesh = m_selected_entity->get_component<StaticMeshComponent>();
 						ImGui::Text("guid: %s", mesh.m_mesh->m_meta.guid.value.c_str());
 						ImGui::Text("bound min: (%f, %f, %f)", mesh.m_mesh->m_bound_min.x, mesh.m_mesh->m_bound_min.y, mesh.m_mesh->m_bound_min.z);
@@ -399,19 +446,16 @@ private:
 				}
 
 				if (m_selected_entity->has_component<CameraComponent>()) {
-					if (ImGui::CollapsingHeader("camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+					if (ImGui::CollapsingHeader("CameraComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& camera = m_selected_entity->get_component<CameraComponent>();
-						ImGui::Checkbox("is perspective", &camera.m_is_perspective);
+						show_type_fields(&camera, "CameraComponent");
+
 						if (camera.m_is_perspective) {
 							ImGui::InputFloat("field of view", &camera.m_intrinsic.fov, 0.01f);
 						}
 						else {
 							ImGui::InputFloat("frustum size", &camera.m_intrinsic.size, 0.01f);
 						}
-						ImGui::InputFloat("near", &camera.m_near, 0.01f);
-						ImGui::InputFloat("far", &camera.m_far, 0.01f);
-						ImGui::InputFloat("aspect ratio", &camera.m_aspect, 0.01f);
-						ImGui::Checkbox("use fixed aspect", &camera.m_use_fixed_aspect);
 						if (ImGui::RadioButton("is primary", camera.m_is_primary)) {
 							if (!camera.m_is_primary) {
 								m_active_scene->set_main_camera(m_selected_entity);
@@ -421,7 +465,7 @@ private:
 				}
 
 				if (m_selected_entity->has_component<ScriptComponent>()) {
-					if (ImGui::CollapsingHeader("script", ImGuiTreeNodeFlags_DefaultOpen)) {
+					if (ImGui::CollapsingHeader("ScriptComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& script = m_selected_entity->get_component<ScriptComponent>();
 						bool new_script_added = false;
 						if (ImGui::BeginCombo("add", "select script...")) {

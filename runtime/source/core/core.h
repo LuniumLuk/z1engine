@@ -43,6 +43,7 @@ namespace z1 {
 	struct API RuntimeContext {
 
 		void init();
+		void init_logger();
 		void shutdown();
 
 		std::shared_ptr<Window> m_window;
@@ -151,3 +152,33 @@ namespace z1 {
 #   define PROFILE_FLOW_END(id)
 #   define PROFILE_FUNCTION()
 #endif
+
+#include "core/reflection.h"
+
+#define REFLECTED_STRUCT(TYPE)                                         \
+	struct _REFLECT_REGISTER_##TYPE {                                  \
+		_REFLECT_REGISTER_##TYPE() {                                   \
+			TypeRegistry::instance().register_type(#TYPE);             \
+		}                                                              \
+	};                                                                 \
+	static _REFLECT_REGISTER_##TYPE _REFLECT_REGISTER_INSTANCE_##TYPE; \
+	struct API TYPE
+
+#define FIELD_FLAG_DEFAULT 0
+#define FIELD_FLAG_EDITABLE 1 << 0
+#define FIELD_FLAG_SERIALIZABLE 1 << 1
+#define FIELD_FLAG_ALL (FIELD_EDITABLE | FIELD_SERIALIZABLE)
+
+#define REFLECTED_FIELD(TYPE, FIELD, FLAG)                             \
+	struct _REFLECT_REGISTER_##TYPE_##FIELD {                          \
+		_REFLECT_REGISTER_##TYPE_##FIELD() {                           \
+			TypeRegistry::instance().register_field(#TYPE, {           \
+				#FIELD,                                                \
+				offsetof(TYPE, FIELD),                                 \
+				sizeof(((TYPE*)0)->FIELD),                             \
+				&typeid(((TYPE*)0)->FIELD),                            \
+				FLAG                                                   \
+			});                                                        \
+		}                                                              \
+	};                                                                 \
+	static _REFLECT_REGISTER_##TYPE_##FIELD _REFLECT_REGISTER_INSTANCE_##TYPE_##FIELD;

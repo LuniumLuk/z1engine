@@ -5,7 +5,7 @@
 
 namespace z1 {
 
-	struct API StaticMeshComponent {
+	REFLECTED_STRUCT(StaticMeshComponent) {
 		std::shared_ptr<StaticMesh> m_mesh;
 
 		StaticMeshComponent(std::shared_ptr<StaticMesh> const& mesh) noexcept

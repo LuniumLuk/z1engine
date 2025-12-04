@@ -6,7 +6,7 @@
 
 namespace z1 {
 
-	struct API SpriteComponent {
+	REFLECTED_STRUCT(SpriteComponent) {
 		glm::vec4 m_color{ 1.0f, 1.0f, 1.0f, 1.0f };
 		std::shared_ptr<Texture2D> m_texture = nullptr;
 		glm::vec2 m_tiling_scale = glm::vec2(1.0f);
@@ -32,5 +32,10 @@ namespace z1 {
 			, m_texcoords(texture->m_texcoords) {
 		}
 	};
+
+	REFLECTED_FIELD(SpriteComponent, m_color,         FF_Default)
+	REFLECTED_FIELD(SpriteComponent, m_tiling_scale,  FF_Default)
+	REFLECTED_FIELD(SpriteComponent, m_tiling_offset, FF_Default)
+	REFLECTED_FIELD(SpriteComponent, m_texcoords,     FF_Default)
 
 }

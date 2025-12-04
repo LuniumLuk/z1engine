@@ -10,7 +10,7 @@
 
 namespace z1 {
 
-	struct API CameraComponent : Requires<TransformComponent> {
+	REFLECTED_STRUCT(CameraComponent) : Requires<TransformComponent> {
 		CameraComponent() = default;
 
 		glm::mat4 get_proj() const {
@@ -73,5 +73,12 @@ namespace z1 {
 		bool m_use_fixed_aspect = false; // if true, the aspect ratio will not change when the window size changes
 		bool m_is_primary = false;       // if true, this camera will be used as the primary camera for rendering
 	};
+
+	REFLECTED_FIELD(CameraComponent, m_is_perspective,   FF_Default)
+	REFLECTED_FIELD(CameraComponent, m_near,             FF_Default)
+	REFLECTED_FIELD(CameraComponent, m_far,              FF_Default)
+	REFLECTED_FIELD(CameraComponent, m_aspect,           FF_ReadOnly)
+	REFLECTED_FIELD(CameraComponent, m_use_fixed_aspect, FF_Default)
+	REFLECTED_FIELD(CameraComponent, m_is_primary,       FF_ReadOnly)
 
 }
