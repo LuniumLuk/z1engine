@@ -228,9 +228,7 @@ namespace z1 {
 				break;
 			case DataType::Sampler2D:
 				if (value->tex2D) {
-					auto texture_binding = g_runtime_context.m_resource_manager->bind_resource(value->tex2D->m_image->get_resource_id());
-					value->tex2D->m_image->bind(texture_binding);
-					shader->set_uniform(name, &texture_binding);
+					value->tex2D->m_image->bind(shader, name);
 				}
 				break;
 			default:
@@ -250,7 +248,7 @@ namespace z1 {
 			}
 
 			if (var.type == DataType::Sampler2D && value->tex2D) {
-				g_runtime_context.m_resource_manager->unbind_resource(value->tex2D->m_image->get_resource_id());
+				value->tex2D->m_image->unbind();
 			}
 		}
 		m_material->m_pipeline->unbind();

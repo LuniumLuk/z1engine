@@ -63,9 +63,8 @@ namespace z1 {
 		m_global_data.sun_intensity = glm::vec4(sun_intensity, 0);
 
 		m_global_buffer->write(&m_global_data, sizeof(GlobalConstants));
-		auto global_binding = g_runtime_context.m_resource_manager->bind_resource(m_global_buffer->get_resource_id());
-		m_global_buffer->bind(global_binding);
-		per_frame.global_binding = global_binding;
+		m_global_buffer->bind();
+		per_frame.global_binding = m_global_buffer->get_binding();
 
 		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 		for (auto [entity, transform, mesh] : view.each()) {
@@ -73,7 +72,7 @@ namespace z1 {
 			mesh.m_mesh->draw(per_frame, m_default_material);
 		}
 
-		g_runtime_context.m_resource_manager->unbind_resource(m_global_buffer->get_resource_id());
+		m_global_buffer->unbind();
 		m_render_pass->unbind();
 	}
 

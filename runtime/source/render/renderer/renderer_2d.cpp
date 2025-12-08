@@ -180,9 +180,10 @@ namespace z1 {
 
 			std::vector<int> bindings(32);
 			for (auto const& [texture, index] : batch.m_textures) {
-				auto texture_binding = g_runtime_context.m_resource_manager->bind_resource(texture->get_resource_id());
-				texture->bind(texture_binding);
-				bindings[index] = texture_binding;
+				if (!texture->is_bound()) {
+					texture->bind();
+				}
+				bindings[index] = texture->get_binding();
 			}
 			m_pipeline->m_shader->set_uniform("u_texture[0]", bindings.data());
 
@@ -191,7 +192,9 @@ namespace z1 {
 			m_vertex_array->unbind();
 
 			for (auto const& [texture, index] : batch.m_textures) {
-				g_runtime_context.m_resource_manager->unbind_resource(texture->get_resource_id());
+				if (texture->is_bound()) {
+					texture->unbind();
+				}
 			}
 		}
 	}

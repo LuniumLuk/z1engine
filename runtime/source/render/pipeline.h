@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/core.h"
+#include "render/resource.h"
 #include "render/render_pass.h"
 #include "render/shader.h"
 
@@ -26,7 +27,7 @@ namespace z1 {
 		FrontAndBack,
 	};
 
-	struct API Pipeline {
+	struct API Pipeline : RenderResource {
 
 		struct Description {
 			// depth
@@ -44,7 +45,8 @@ namespace z1 {
 			std::shared_ptr<Shader> shader = nullptr;
 		};
 
-		Pipeline() = default;
+		Pipeline() : RenderResource(ResourceType::Pipeline) {}
+
 		static std::shared_ptr<Pipeline> build(Description const& description);
 
 		virtual void bind() const = 0;

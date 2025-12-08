@@ -7,8 +7,11 @@
 namespace z1 {
 
 #define RESOURCE_TYPES \
-	X(Image) \
-	X(UniformBuffer) \
+	X(Image)           \
+	X(Buffer)          \
+	X(Framebuffer)     \
+	X(Pipeline)        \
+	X(VertexArray)     \
 
 #define X(name) name,
 	enum struct API ResourceType {
@@ -25,78 +28,25 @@ namespace z1 {
 	}
 #undef X
 
-	// resources are objects that occupy shader resource slots when bound.
-	// this system uses a resource manager to automatically manage binding points.
-	// 
-	// example: binding a Image2D resource
-	//   1. retrieve the actual binding point:
-	//      auto binding = g_runtime_context.m_resource_manager.bind_resource(img->get_resource_id());
-	//   2. assign the binding to the shader:
-	//      shader->set_uniform_binding("u_texture", binding);
-	// 
-	// this approach allows binding/unbinding resources in any order while minimizing
-	// actual RHI binding calls, as the system efficiently reuses binding points.
-	struct API Resource {
-		friend struct ResourceManager;
+	struct API RenderResource {
 
-		Resource(ResourceType type);
-		virtual ~Resource();
+		RenderResource(ResourceType type);
+		virtual ~RenderResource();
 
-		/*
-		* Bind this resource to a binding point, but directly call this method is deprecate
-		* because the binding point is managed by the renderer, thus might be overwritten
-		*/
-		virtual void bind(uint32_t binding) const = 0;
-		virtual void unbind(uint32_t binding) const = 0;
-
-		ResourceType get_resource_type() const { return m_type; }
-		uint32_t get_resource_id() const { return m_id; }
-		uint32_t get_binding() const { return m_binding; }
-		uint32_t get_ref_count() const { return m_ref_count; }
-		bool is_bound() const { return m_binding != INVALID_BINDING; }
+		std::string const& get_name() const { return m_name; }
+		ResourceType get_type() const { return m_type; }
+		std::string get_type_name() const { return get_resource_name(m_type); }
+		uint32_t get_id() const { return m_id; }
 
 	private:
+		static uint32_t generate_id() {
+			static uint32_t s_id_counter = 0;
+			return s_id_counter++;
+		}
+
+		std::string m_name;
 		ResourceType m_type;
 		uint32_t m_id;
-		uint32_t m_binding = INVALID_BINDING;
-		uint32_t m_ref_count = 0;
-	};
-
-	struct ResourceManager {
-
-		ResourceManager();
-		~ResourceManager();
-
-		Resource* get(uint32_t id) { return m_resources[id]; }
-
-		template<typename T>
-		T* get(uint32_t id) { return static_cast<T*>(m_resources[id]); }
-
-		/*
-		* Request for a resource to be bind
-		* if success, a valid binding point will be returned
-		*/
-		uint32_t bind_resource(uint32_t id);
-		/*
-		* unbind a resource
-		* if texture already unbind, nothing will happen
-		* else the texture's reference count will be decreased, texture will be unbind when reference count is 0
-		*/
-		void unbind_resource(uint32_t id);
-
-		uint32_t register_resource(Resource* resource) {
-			m_resources.push_back(resource);
-			return static_cast<uint32_t>(m_resources.size()) - 1;
-		}
-
-		void unregister_resource(uint32_t id) {
-			m_resources[id] = nullptr;
-		}
-
-		std::vector<Resource*> m_resources;
-		std::stack<uint32_t> m_valid_image_bindings;
-		std::stack<uint32_t> m_valid_uniform_buffer_bindings;
-
 	};
 
 }

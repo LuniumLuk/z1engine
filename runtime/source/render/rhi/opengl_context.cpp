@@ -28,6 +28,16 @@ namespace z1 {
 		m_max_image_binding_count = static_cast<uint32_t>(val);
 		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &val);
 		m_max_uniform_buffer_binding_count = static_cast<uint32_t>(val);
+
+		m_free_image_bindings = {};
+		for (uint32_t i = m_max_image_binding_count - 1; i != uint32_t(-1); --i) {
+			m_free_image_bindings.push(i);
+		}
+
+		m_free_uniform_buffer_bindings = {};
+		for (uint32_t i = m_max_uniform_buffer_binding_count - 1; i != uint32_t(-1); --i) {
+			m_free_uniform_buffer_bindings.push(i);
+		}
 	}
 
 	void OpenGLContext::swap_buffers() {

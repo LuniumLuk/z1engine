@@ -95,7 +95,9 @@ namespace z1 {
 #undef X
 #undef DATA_TYPE_LIST
 
-	struct API Image : Resource {
+	struct Shader;
+
+	struct API Image : RenderResource {
 		struct Description {
 			uint32_t m_width = 0;
 			uint32_t m_height = 0;
@@ -106,7 +108,7 @@ namespace z1 {
 			bool m_mipmap = true;
 		};
 
-		Image() : Resource(ResourceType::Image) {}
+		Image() : RenderResource(ResourceType::Image) {}
 
 		virtual ~Image() = default;
 
@@ -115,8 +117,24 @@ namespace z1 {
 		virtual void* get_native_handle() const = 0;
 		Description const& get_description() const { return m_description; }
 
+		// Automatically bind to a binding point managed globally
+		void bind() const;
+		// Helper function to bind to a specific shader uniform
+		void bind(std::shared_ptr<Shader> const& shader, std::string const& name) const;
+		// Automatically unbind from the binding point managed globally
+		void unbind() const;
+
+		bool is_bound() const { return m_binding != INVALID_BINDING; }
+		// Get the current binding point
+		uint32_t get_binding() const { return m_binding; }
+
+
 	protected:
+		virtual void bind(uint32_t binding) const = 0;
+		virtual void unbind(uint32_t binding) const = 0;
+
 		Description m_description{};
+		mutable uint32_t m_binding = INVALID_BINDING;
 	};
 
 	struct API Image2D : Image {

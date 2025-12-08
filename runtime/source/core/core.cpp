@@ -30,7 +30,6 @@ namespace z1 {
 		m_graphics_context = GraphicsContext::create();
 		m_graphics_context->init();
 
-		m_resource_manager = std::make_shared<ResourceManager>();
 		m_asset_manager = std::make_shared<AssetManager>();
 
 		m_imgui_layer = std::make_shared<ImGuiLayer>();
@@ -56,7 +55,6 @@ namespace z1 {
 		m_imgui_layer.reset();
 
 		m_asset_manager.reset();
-		m_resource_manager.reset();
 
 		m_graphics_context.reset();
 

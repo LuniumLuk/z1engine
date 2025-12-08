@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render/resource.h"
 #include "render/buffer.h"
 
 namespace z1 {
@@ -18,7 +19,9 @@ namespace z1 {
 		Patches,
 	};
 
-	struct API VertexArray {
+	struct API VertexArray : RenderResource {
+		VertexArray() : RenderResource(ResourceType::VertexArray) {}
+
 		virtual ~VertexArray() = default;
 
 		virtual void bind() const = 0;

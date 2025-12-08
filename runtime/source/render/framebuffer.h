@@ -2,11 +2,12 @@
 
 #include "core/core.h"
 #include "core/window.h"
+#include "render/resource.h"
 #include "render/image.h"
 
 namespace z1 {
 
-	struct API Framebuffer {
+	struct API Framebuffer : RenderResource {
 
 		struct Attachment {
 			ImageFormat format;
@@ -18,6 +19,8 @@ namespace z1 {
 			uint32_t width;
 			uint32_t height;
 		};
+
+		Framebuffer() : RenderResource(ResourceType::Framebuffer) {}
 
 		virtual ~Framebuffer() = default;
 

@@ -54,7 +54,6 @@ namespace z1 {
 		std::shared_ptr<FileSystem> m_file_system;
 		std::shared_ptr<GraphicsContext> m_graphics_context;
 		std::shared_ptr<InputSystem> m_input_system;
-		std::shared_ptr<ResourceManager> m_resource_manager;
 		std::shared_ptr<AssetManager> m_asset_manager;
 		std::shared_ptr<Renderer2D> m_renderer_2d;
 		std::shared_ptr<RendererForward> m_renderer_forward;

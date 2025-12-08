@@ -204,35 +204,6 @@ struct EditorLayer : Layer {
 	void on_imgui_render() override {
 		m_gui->draw();
 
-		if (ImGui::Begin("resource info")) {
-			ImGui::Text("resources");
-			if (ImGui::BeginTable("resources", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-				ImGui::TableSetupColumn("id");
-				ImGui::TableSetupColumn("type");
-				ImGui::TableSetupColumn("binding");
-				ImGui::TableSetupColumn("ref count");
-				ImGui::TableSetupColumn("info");
-				ImGui::TableHeadersRow();
-
-				ImGui::TableNextRow();
-				for (auto const& resource : g_runtime_context.m_resource_manager->m_resources) {
-					if (!resource) continue;
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(resource->get_resource_id()).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(get_resource_name(resource->get_resource_type()).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(resource->get_binding() == INVALID_BINDING ? "none" : std::to_string(resource->get_binding()).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(resource->get_ref_count()).c_str());
-					switch (resource->get_resource_type()) {
-					case ResourceType::Image:
-						ImGui::TableNextColumn(); ImGui::Text(get_image_info(g_runtime_context.m_resource_manager->get<Image>(resource->get_resource_id())).c_str()); break;
-					case ResourceType::UniformBuffer:
-						ImGui::TableNextColumn(); ImGui::Text(get_uniform_buffer_info(g_runtime_context.m_resource_manager->get<UniformBuffer>(resource->get_resource_id())).c_str()); break;
-					}
-				}
-				ImGui::EndTable();
-			}
-		}
-		ImGui::End();
-
 		if (ImGui::Begin("debug")) {
 			if (ImGui::RadioButton("v sync", g_runtime_context.m_window->is_v_sync_enabled())) {
 				g_runtime_context.m_window->set_v_sync(!g_runtime_context.m_window->is_v_sync_enabled());
