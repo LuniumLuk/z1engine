@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/shader.h"
 #include "render/framebuffer.h"
+#include "render/graphics_context.h"
 #include "scene/scene.h"
 #include "scene/entity.h"
 #include "scene/component/camera.h"
@@ -13,7 +14,6 @@ namespace z1 {
 
 	RendererForward::RendererForward() {
 		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(Guid::make("material/MI_phone"));
-		m_render_pass = RenderPass::build();
 		m_global_buffer = UniformBuffer::create(nullptr, sizeof(GlobalConstants), BufferUsage::Dynamic);
 	}
 
@@ -24,56 +24,54 @@ namespace z1 {
 	void RendererForward::draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer) {
 		PROFILE_FUNCTION();
 
-		RenderPass::BeginInfo info{};
-		info.framebuffer = framebuffer;
-		info.clear_color = true;
-		info.clear_depth = true;
-		info.clear_color_value = { 0.1f, 0.1f, 0.1f, 1.0f };
-		info.clear_depth_value = 1.0f;
-		m_render_pass->bind(info);
+		// Main render pass
+		std::shared_ptr<RenderPass> main_pass;
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::Clear;
+		desc.color_attachments[0].clear_value = { 0.1f, 0.1f, 0.1f, 1.0f };
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
+		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
 
-		auto const& main_cam = scene->get_main_camera();
-		if (!main_cam) {
-			m_render_pass->unbind();
-			return;
-		}
+		main_pass = std::make_shared<RenderPass>(desc);
+		main_pass->execute = [this, scene](GraphicsContext& ctx) {
+			auto const& main_cam = scene->get_main_camera();
+			if (!main_cam) {
+				return;
+			}
 
-		auto& camera_comp = main_cam->get_component<CameraComponent>();
-		if (!camera_comp.m_use_fixed_aspect) {
-			camera_comp.m_aspect = (float)Framebuffer::get_width(framebuffer) / (float)Framebuffer::get_height(framebuffer);
-		}
+			auto& camera_comp = main_cam->get_component<CameraComponent>();
+			if (!camera_comp.m_use_fixed_aspect) {
+				camera_comp.m_aspect = (float)ctx.m_current_framebuffer->get_width() / (float)ctx.m_current_framebuffer->get_height();
+			}
 
-		auto projview = camera_comp.get_proj() * camera_comp.get_view();
-		auto cam_pos = camera_comp.get_position();
+			auto projview = camera_comp.get_proj() * camera_comp.get_view();
+			auto cam_pos = camera_comp.get_position();
 
-		/*
-			main render pass
-		*/
-		glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
-		glm::vec3 sun_intensity = { .5f, .5f, .5f };
-		PerFrameConst per_frame{};
-		//per_frame.projview = projview;
-		//per_frame.cam_position = cam_pos;
-		//per_frame.sun_direction = sun_dir;
-		//per_frame.sun_intensity = sun_intensity;
+			glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
+			glm::vec3 sun_intensity = { .5f, .5f, .5f };
+			PerFrameConst per_frame{};
 
-		m_global_data.projview = projview;
-		m_global_data.cam_position = glm::vec4(cam_pos, 0);
-		m_global_data.sun_direction = glm::vec4(sun_dir, 0);
-		m_global_data.sun_intensity = glm::vec4(sun_intensity, 0);
+			m_global_data.projview = projview;
+			m_global_data.cam_position = glm::vec4(cam_pos, 0);
+			m_global_data.sun_direction = glm::vec4(sun_dir, 0);
+			m_global_data.sun_intensity = glm::vec4(sun_intensity, 0);
 
-		m_global_buffer->write(&m_global_data, sizeof(GlobalConstants));
-		m_global_buffer->bind();
-		per_frame.global_binding = m_global_buffer->get_binding();
+			m_global_buffer->write(&m_global_data, sizeof(GlobalConstants));
+			m_global_buffer->bind();
+			per_frame.global_binding = m_global_buffer->get_binding();
 
-		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
-		for (auto [entity, transform, mesh] : view.each()) {
-			per_frame.model = transform.get_world_transform();
-			mesh.m_mesh->draw(per_frame, m_default_material);
-		}
+			auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
+			for (auto [entity, transform, mesh] : view.each()) {
+				per_frame.model = transform.get_world_transform();
+				mesh.m_mesh->draw(per_frame, m_default_material);
+			}
 
-		m_global_buffer->unbind();
-		m_render_pass->unbind();
+			m_global_buffer->unbind();
+		};
+
+		g_runtime_context.m_graphics_context->bind_framebuffer(framebuffer);
+		g_runtime_context.m_graphics_context->exec_render_pass(main_pass);
 	}
 
 }

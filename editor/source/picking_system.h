@@ -16,7 +16,6 @@ private:
 	std::shared_ptr<Framebuffer> m_framebuffer;
 	std::shared_ptr<Pipeline> m_pipeline;
 	std::shared_ptr<Pipeline> m_sprite_pipeline;
-	std::shared_ptr<RenderPass> m_render_pass;
 	std::shared_ptr<VertexArray> m_quad_vao;
 
 };

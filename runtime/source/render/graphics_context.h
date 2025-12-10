@@ -4,6 +4,10 @@
 
 namespace z1 {
 
+	struct Framebuffer;
+	struct Pipeline;
+	struct RenderPass;
+
 	struct API GraphicsContext {
 		virtual void init() = 0;
 		virtual void begin_frame() = 0;
@@ -13,6 +17,14 @@ namespace z1 {
 
 		static std::shared_ptr<GraphicsContext> GraphicsContext::create();
 
+		virtual void bind_framebuffer(std::shared_ptr<Framebuffer> const& framebuffer) = 0;
+		virtual void bind_pipeline(std::shared_ptr<Pipeline> const& pipeline) = 0;
+
+		virtual void exec_render_pass(std::shared_ptr<RenderPass> const& render_pass) = 0;
+
+		virtual void set_viewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
+		virtual void set_scissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
+
 		uint32_t m_max_image_binding_count = 0;
 		uint32_t m_max_uniform_buffer_binding_count = 0;
 
@@ -21,6 +33,10 @@ namespace z1 {
 
 		uint32_t acquire_uniform_buffer_binding();
 		void release_uniform_buffer_binding(uint32_t binding);
+
+		std::shared_ptr<Framebuffer> m_swapchain_framebuffer = nullptr;
+		std::shared_ptr<Framebuffer> m_current_framebuffer = nullptr;
+		std::shared_ptr<Pipeline> m_current_pipeline = nullptr;
 
 	protected:
 		std::stack<uint32_t> m_free_image_bindings;

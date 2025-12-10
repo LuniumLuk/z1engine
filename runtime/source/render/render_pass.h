@@ -2,43 +2,41 @@
 
 #include "core/core.h"
 #include "glm/glm.hpp"
-#include <stack>
 
 namespace z1 {
-	struct Framebuffer;
+	struct GraphicsContext;
+
+	enum struct LoadOp { Load, Clear, DontCare };
+	enum struct StoreOp { Store, DontCare };
+
+	struct RenderTargetDesc {
+		LoadOp load_op = LoadOp::Load;
+		StoreOp store_op = StoreOp::Store;
+		glm::vec4 clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+	};
+
+	struct DepthStencilDesc {
+		LoadOp depth_load_op = LoadOp::Load;
+		StoreOp depth_store_op = StoreOp::Store;
+		float clear_depth_value = 1.0f;
+		LoadOp stencil_load_op = LoadOp::Load;
+		StoreOp stencil_store_op = StoreOp::Store;
+		uint32_t clear_stencil_value = 0;
+	};
 
 	struct API RenderPass {
-		struct BeginInfo {
-			// clear
-			bool clear_color = false;
-			bool clear_depth = false;
-			glm::vec4 clear_color_value = { 0.0f, 0.0f, 0.0f, 0.0f };
-			float clear_depth_value = 1.0f;
-
-			// viewport
-			bool dynamic_viewport = false;
-			uint32_t viewport_x = 0;
-			uint32_t viewport_y = 0;
-			uint32_t viewport_width = UINT32_MAX;
-			uint32_t viewport_height = UINT32_MAX;
-
-			// scissor
-			bool scissor = false;
-			bool dynamic_scissor = false;
-			uint32_t scissor_x = 0;
-			uint32_t scissor_y = 0;
-			uint32_t scissor_width = UINT32_MAX;
-			uint32_t scissor_height = UINT32_MAX;
-
-			// framebuffer
-			std::shared_ptr<Framebuffer> framebuffer = nullptr;
+		struct Description {
+			std::vector<RenderTargetDesc> color_attachments;
+			DepthStencilDesc depth_stencil_attachment;
+			bool dynamic_viewport = true;
+			bool dynamic_scissor = true;
 		};
 
-		RenderPass() = default;
-		static std::shared_ptr<RenderPass> build();
+		RenderPass(Description const& desc) : desc(desc) {}
 
-		virtual void bind(BeginInfo const& info) = 0;
-		virtual void unbind() = 0;
+		Description desc;
+		std::function<void(GraphicsContext&)> execute;
+
 	};
 
 }

@@ -33,6 +33,7 @@ namespace z1 {
 		RenderResource(ResourceType type);
 		virtual ~RenderResource();
 
+		void set_name(std::string const& name) { m_name = name; }
 		std::string const& get_name() const { return m_name; }
 		ResourceType get_type() const { return m_type; }
 		std::string get_type_name() const { return get_resource_name(m_type); }

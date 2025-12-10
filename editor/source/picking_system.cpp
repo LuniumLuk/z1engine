@@ -25,8 +25,6 @@ PickingSystem::PickingSystem(uint32_t w, uint32_t h) {
 		m_sprite_pipeline = Pipeline::build(desc);
 	}
 
-	m_render_pass = RenderPass::build();
-
 	std::vector<glm::vec3> quad_vertices = {
 		{-0.5f, -0.5f, 0.0f},
 		{ 0.5f, -0.5f, 0.0f},
@@ -44,52 +42,55 @@ PickingSystem::PickingSystem(uint32_t w, uint32_t h) {
 }
 
 void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
-	RenderPass::BeginInfo info{};
-	info.framebuffer = m_framebuffer;
-	info.clear_color = true;
-	info.clear_depth = true;
-	info.clear_color_value = { 0.0f, 0.0f, 0.0f, 0.0f };
-	info.clear_depth_value = 1.0f;
-	m_render_pass->bind(info);
 
-	auto const& main_cam = scene->get_main_camera();
-	if (!main_cam) {
-		m_render_pass->unbind();
-		return;
-	}
+	RenderPass::Description desc{};
+	desc.color_attachments.resize(1);
+	desc.color_attachments[0].load_op = LoadOp::Clear;
+	desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+	desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
+	desc.depth_stencil_attachment.clear_depth_value = 1.0f;
+	auto render_pass = std::make_shared<RenderPass>(desc);
 
-	auto& camera_comp = main_cam->get_component<CameraComponent>();
-	glm::mat4 cam_projview = camera_comp.get_proj() * camera_comp.get_view();
-
-	m_pipeline->bind();
-	m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);
-	{
-		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const, TagComponent const>();
-		for (auto [entity, transform, mesh, tag] : view.each()) {
-			float object_id = static_cast<float>(tag.m_id) + 1.0f;
-			m_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
-			m_pipeline->m_shader->set_uniform("u_object_id", &object_id);
-			mesh.m_mesh->draw();
+	render_pass->execute = [this, scene](GraphicsContext& ctx) {
+		auto const& main_cam = scene->get_main_camera();
+		if (!main_cam) {
+			return;
 		}
-	}
-	m_pipeline->unbind();
 
-	m_sprite_pipeline->bind();
-	m_sprite_pipeline->m_shader->set_uniform("u_projview", &cam_projview);
-	m_quad_vao->bind();
-	{
-		auto view = scene->m_registry.view<TransformComponent const, SpriteComponent const, TagComponent const>();
-		for (auto [entity, transform, sprite, tag] : view.each()) {
-			float object_id = static_cast<float>(tag.m_id) + 1.0f;
-			m_sprite_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
-			m_sprite_pipeline->m_shader->set_uniform("u_object_id", &object_id);
-			m_quad_vao->draw(PrimitiveType::Triangles);
+		auto& camera_comp = main_cam->get_component<CameraComponent>();
+		glm::mat4 cam_projview = camera_comp.get_proj() * camera_comp.get_view();
+
+		m_pipeline->bind();
+		m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);
+		{
+			auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const, TagComponent const>();
+			for (auto [entity, transform, mesh, tag] : view.each()) {
+				float object_id = static_cast<float>(tag.m_id) + 1.0f;
+				m_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
+				m_pipeline->m_shader->set_uniform("u_object_id", &object_id);
+				mesh.m_mesh->draw();
+			}
 		}
-	}
-	m_quad_vao->unbind();
-	m_sprite_pipeline->unbind();
+		m_pipeline->unbind();
 
-	m_render_pass->unbind();
+		m_sprite_pipeline->bind();
+		m_sprite_pipeline->m_shader->set_uniform("u_projview", &cam_projview);
+		m_quad_vao->bind();
+		{
+			auto view = scene->m_registry.view<TransformComponent const, SpriteComponent const, TagComponent const>();
+			for (auto [entity, transform, sprite, tag] : view.each()) {
+				float object_id = static_cast<float>(tag.m_id) + 1.0f;
+				m_sprite_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
+				m_sprite_pipeline->m_shader->set_uniform("u_object_id", &object_id);
+				m_quad_vao->draw(PrimitiveType::Triangles);
+			}
+		}
+		m_quad_vao->unbind();
+		m_sprite_pipeline->unbind();
+		};
+
+	g_runtime_context.m_graphics_context->bind_framebuffer(m_framebuffer);
+	g_runtime_context.m_graphics_context->exec_render_pass(render_pass);
 }
 
 uint32_t PickingSystem::unpack_rgba8_to_uint32(glm::u8vec4 const& rgba) const {
@@ -103,8 +104,8 @@ uint32_t PickingSystem::unpack_rgba8_to_uint32(glm::u8vec4 const& rgba) const {
 uint32_t PickingSystem::query(float x, float y) const {
 	glm::u8vec4 rgba{};
 	m_framebuffer->read_pixel(0,
-		static_cast<uint32_t>(x * Framebuffer::get_width(m_framebuffer)),
-		static_cast<uint32_t>(y * Framebuffer::get_height(m_framebuffer)),
+		static_cast<uint32_t>(x * m_framebuffer->get_width()),
+		static_cast<uint32_t>(y * m_framebuffer->get_height()),
 		&rgba[0]);
 	auto object_id = unpack_rgba8_to_uint32(rgba);
 	if (object_id) {

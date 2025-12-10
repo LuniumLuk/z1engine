@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/shader.h"
 #include "render/framebuffer.h"
+#include "render/graphics_context.h"
 #include "render/renderer/renderer_2d.h"
 #include "scene/scene.h"
 #include "scene/entity.h"
@@ -44,8 +45,6 @@ namespace z1 {
 		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/sprite_2d_batched");
 		m_pipeline = Pipeline::build(desc);
 
-		m_render_pass = RenderPass::build();
-
 		uint32_t white = 0xffffffff;
 		m_default_image = Image2D::create(&white, sizeof(white), 1, 1, ImageFormat::RGBA8);
 	}
@@ -56,18 +55,6 @@ namespace z1 {
 
 	void Renderer2D::draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer) {
 		PROFILE_FUNCTION();
-
-		auto const& main_cam = scene->get_main_camera();
-		if (!main_cam) {
-			return;
-		}
-
-		auto& camera_comp = main_cam->get_component<CameraComponent>();
-		if (!camera_comp.m_use_fixed_aspect) {
-			camera_comp.m_aspect = (float)Framebuffer::get_width(framebuffer) / (float)Framebuffer::get_height(framebuffer);
-		}
-
-		auto projview = camera_comp.get_proj() * camera_comp.get_view();
 
 		std::vector<Renderer2D::Quad> quads;
 		auto view = scene->m_registry.view<TransformComponent const, SpriteComponent const>();
@@ -85,10 +72,37 @@ namespace z1 {
 		draw_quads(quads);
 		prepare_draw(framebuffer);
 
-		m_pipeline->bind();
-		m_pipeline->m_shader->set_uniform("u_projview", &projview);
-		batch_draw();
-		m_pipeline->unbind();
+		// Main render pass
+		std::shared_ptr<RenderPass> main_pass;
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::Load;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
+
+		main_pass = std::make_shared<RenderPass>(desc);
+		main_pass->execute = [this, scene](GraphicsContext& ctx) {
+			ctx.set_viewport(0, 0, ctx.m_current_framebuffer->get_width(), ctx.m_current_framebuffer->get_height());
+
+			auto const& main_cam = scene->get_main_camera();
+			if (!main_cam) {
+				return;
+			}
+
+			auto& camera_comp = main_cam->get_component<CameraComponent>();
+			if (!camera_comp.m_use_fixed_aspect) {
+				camera_comp.m_aspect = (float)ctx.m_current_framebuffer->get_width() / (float)ctx.m_current_framebuffer->get_height();
+			}
+
+			auto projview = camera_comp.get_proj() * camera_comp.get_view();
+
+			m_pipeline->bind();
+			m_pipeline->m_shader->set_uniform("u_projview", &projview);
+			batch_draw();
+			m_pipeline->unbind();
+			};
+
+		g_runtime_context.m_graphics_context->bind_framebuffer(framebuffer);
+		g_runtime_context.m_graphics_context->exec_render_pass(main_pass);
 
 		after_draw();
 	}
@@ -164,13 +178,6 @@ namespace z1 {
 		}
 		m_batches[curr_batch].m_index_num = index_offset - m_batches[curr_batch].m_index_offset;
 		m_batches[curr_batch].m_vertex_num = vertex_offset - m_batches[curr_batch].m_vertex_offset;
-
-		RenderPass::BeginInfo info{};
-		info.clear_color = false;
-		info.clear_depth = false;
-		info.framebuffer = framebuffer;
-
-		m_render_pass->bind(info);
 	}
 
 	void Renderer2D::batch_draw() {
@@ -201,7 +208,6 @@ namespace z1 {
 
 	void Renderer2D::after_draw() {
 		PROFILE_FUNCTION();
-		m_render_pass->unbind();
 		m_quads.clear();
 	}
 

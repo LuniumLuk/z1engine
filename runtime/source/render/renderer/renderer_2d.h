@@ -65,8 +65,6 @@ namespace z1 {
 		void batch_draw();
 		void after_draw();
 
-		std::shared_ptr<RenderPass> m_render_pass;
-
 		struct QuadData {
 			glm::mat4 m_model;
 			glm::vec4 m_color;

@@ -16,8 +16,8 @@ namespace z1 {
 		};
 
 		struct Description {
-			uint32_t width;
-			uint32_t height;
+			uint32_t width = 0;
+			uint32_t height = 0;
 		};
 
 		Framebuffer() : RenderResource(ResourceType::Framebuffer) {}
@@ -42,16 +42,12 @@ namespace z1 {
 			uint32_t width, uint32_t height,
 			std::initializer_list<Attachment> attachments);
 
-		static inline uint32_t get_width(std::shared_ptr<Framebuffer> const& framebuffer) noexcept {
-			return framebuffer ? framebuffer->get_description().width : g_runtime_context.m_window->get_width();
-		}
-
-		static inline uint32_t get_height(std::shared_ptr<Framebuffer> const& framebuffer) noexcept {
-			return framebuffer ? framebuffer->get_description().height : g_runtime_context.m_window->get_height();
-		}
+		virtual uint32_t get_width() const { return m_description.width; }
+		virtual uint32_t get_height() const { return m_description.height; }
 
 	protected:
-		Description m_description;
+		Description m_description = {};
+		std::vector<Attachment> m_attachments;
 	};
 
 }

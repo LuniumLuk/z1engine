@@ -14,10 +14,9 @@ namespace z1 {
 
 		void draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer);
 
-		void load_or_create_global_settnigs();
+		//void load_or_create_global_settnigs();
 
 	private:
-		std::shared_ptr<RenderPass> m_render_pass;
 		std::shared_ptr<MaterialInstance> m_default_material;
 		GlobalConstants m_global_data;
 		std::shared_ptr<UniformBuffer> m_global_buffer;

@@ -150,5 +150,16 @@ namespace z1 {
 		return nullptr;
 	}
 
+	void OpenGLSwapChainFramebuffer::bind() const {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	uint32_t OpenGLSwapChainFramebuffer::get_width() const {
+		return g_runtime_context.m_window->get_width();
+	}
+
+	uint32_t OpenGLSwapChainFramebuffer::get_height() const {
+		return g_runtime_context.m_window->get_height();
+	}
 
 }

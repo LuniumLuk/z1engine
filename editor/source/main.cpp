@@ -127,6 +127,8 @@ struct EditorLayer : Layer {
 		m_active_scene->on_update(delta_time);
 		g_runtime_context.m_renderer_forward->draw(m_active_scene, m_gui->get_viewport_framebuffer());
 		g_runtime_context.m_renderer_2d->draw(m_active_scene, m_gui->get_viewport_framebuffer());
+
+		g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 	}
 
 	void on_event(Event& event) override {
@@ -280,8 +282,31 @@ private:
 		}
 	}
 
-	void show_type_fields(void* instance, const std::string& name)
-	{
+	void accept_payload(std::string const& data_type, std::function<void(void*)> callback) {
+		auto payload = ImGui::GetDragDropPayload();
+		if (payload && payload->IsDataType("ASSET_ITEM")) {
+
+			ImVec2 min = ImGui::GetItemRectMin(); // top-left of last item
+			ImVec2 max = ImGui::GetItemRectMax(); // bottom-right of last item
+
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+			// Border thickness and color
+			float thickness = 2.0f;
+			ImU32 color = IM_COL32(255, 0, 0, 255); // red
+
+			draw_list->AddRect(min, max, color, 0.0f, 0, thickness);
+
+			if (ImGui::BeginDragDropTarget()) {
+				if (ImGui::AcceptDragDropPayload("ASSET_ITEM")) {
+					callback(payload->Data);
+				}
+				ImGui::EndDragDropTarget();
+			}
+		}
+	}
+
+	void show_type_fields(void* instance, const std::string& name) {
 
 		auto const info = TypeRegistry::instance().get(name);
 		if (!info) return;
@@ -355,26 +380,27 @@ private:
 
 						ImGui::Text("texture");
 						ImGui::Indent();
-						// accept drop payload
-						auto payload = ImGui::GetDragDropPayload();
-						if (payload && payload->IsDataType("ASSET_ITEM")) {
-							ImGui::Text("drop here");
-							if (ImGui::BeginDragDropTarget()) {
-								if (ImGui::AcceptDragDropPayload("ASSET_ITEM")) {
-									AssetMeta* meta = *(AssetMeta**)payload->Data;
-									if (meta->type == "texture2d") {
-										sprite.m_texture = Texture2D::load(meta->guid);
-									}
-								}
-								ImGui::EndDragDropTarget();
-							}
-						}
-
 
 						if (sprite.m_texture) {
 							auto w = sprite.m_texture->m_image->get_description().m_width;
 							auto h = sprite.m_texture->m_image->get_description().m_height;
 							ImGui::Image(sprite.m_texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+						}
+						else {
+							ImGui::Text("No Texture");
+						}
+						accept_payload("ASSET_ITEM",
+							[&](void* data) {
+								AssetMeta* meta = *(AssetMeta**)data;
+								if (meta->type == "texture2d") {
+									sprite.m_texture = Texture2D::load(meta->guid);
+								}
+							}
+						);
+
+						if (sprite.m_texture) {
+							auto w = sprite.m_texture->m_image->get_description().m_width;
+							auto h = sprite.m_texture->m_image->get_description().m_height;
 							ImGui::Text("guid: %s", sprite.m_texture->m_meta.guid.value.c_str());
 							ImGui::Text("width: %d", w);
 							ImGui::Text("height: %d", h);
@@ -383,9 +409,6 @@ private:
 							ImGui::Text("sampler Mode: %s", get_sampler_mode_name(sprite.m_texture->m_image->get_description().m_sampler_mode).c_str());
 							ImGui::Text("wrap Mode: %s", get_wrap_mode_name(sprite.m_texture->m_image->get_description().m_wrap_mode).c_str());
 							ImGui::RadioButton("mipmap", sprite.m_texture->m_image->get_description().m_mipmap);
-						}
-						else {
-							ImGui::Text("-");
 						}
 						ImGui::Unindent();
 
@@ -628,6 +651,14 @@ private:
 						auto w = texture->m_image->get_description().m_width;
 						auto h = texture->m_image->get_description().m_height;
 						ImGui::Image(texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+						accept_payload("ASSET_ITEM",
+							[&](void* data) {
+								AssetMeta* meta = *(AssetMeta**)data;
+								if (meta->type == "texture2d") {
+									var.default_value.tex2D = Texture2D::load(meta->guid);
+								}
+							}
+						);
 					}
 				}
 			}
