@@ -36,14 +36,22 @@ namespace z1 {
 		virtual void* get_native_handle() const = 0;
 		virtual void* get_attachment_native_handle(uint32_t attachment) const = 0;
 
+		virtual std::shared_ptr<Image> get_attachment_image(uint32_t attachment) const = 0;
+
 		Description const& get_description() const { return m_description; }
 
 		static std::shared_ptr<Framebuffer> create(
 			uint32_t width, uint32_t height,
 			std::initializer_list<Attachment> attachments);
 
+		static std::shared_ptr<Framebuffer> create(
+			uint32_t width, uint32_t height,
+			std::vector<Attachment> attachments);
+
 		virtual uint32_t get_width() const { return m_description.width; }
 		virtual uint32_t get_height() const { return m_description.height; }
+
+		std::vector<Attachment> const& get_attachments() const { return m_attachments; }
 
 	protected:
 		Description m_description = {};

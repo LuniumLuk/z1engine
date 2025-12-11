@@ -20,7 +20,7 @@ namespace z1 {
 
 	OpenGLFramebuffer::OpenGLFramebuffer(
 		uint32_t width, uint32_t height,
-		std::initializer_list<Attachment> attachments) {
+		std::vector<Attachment> attachments) {
 
 		m_attachments = attachments;
 
@@ -42,20 +42,19 @@ namespace z1 {
 
 		m_attachment_ids.clear();
 		for (auto const& attachment : m_attachments) {
-			Image::Description desc{};
-			desc.m_width = m_description.width;
-			desc.m_height = m_description.height;
-			desc.m_depth = 1;
-			desc.m_format = attachment.format;
-			desc.m_sampler_mode = attachment.sampler_mode;
-			desc.m_wrap_mode = attachment.wrap_mode;
-			desc.m_mipmap = false;
-
-			auto image = new OpenGLImage2D(nullptr, 0, desc);
+			auto image = Image2D::create(
+				nullptr, 0,
+				m_description.width,
+				m_description.height,
+				attachment.format,
+				attachment.sampler_mode,
+				attachment.wrap_mode);
 			auto attachment_id = image_format_to_attachment_type(attachment.format, binding);
 
-			glBindTexture(GL_TEXTURE_2D, image->m_handle);
-			glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, image->m_handle, 0);
+			GLuint native_handle = (GLuint)reinterpret_cast<uintptr_t>(image->get_native_handle());
+
+			glBindTexture(GL_TEXTURE_2D, native_handle);
+			glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, native_handle, 0);
 			glBindTexture(GL_TEXTURE_2D, 0);
 
 			m_attachment_ids.push_back(attachment_id);
@@ -87,9 +86,6 @@ namespace z1 {
 	void OpenGLFramebuffer::destroy() {
 		if (m_handle == 0) return;
 		glDeleteFramebuffers(1, &m_handle);
-		for (auto image : m_attachment_images) {
-			delete image;
-		}
 		m_attachment_images.clear();
 		m_depth_stencil_attachment_index = INVALID_INDEX;
 	}
@@ -138,8 +134,17 @@ namespace z1 {
 			return;
 		}
 
+		GLuint native_handle = (GLuint)reinterpret_cast<uintptr_t>(m_attachment_images[index]->get_native_handle());
 		glActiveTexture(GL_TEXTURE0 + binding);
-		glBindTexture(GL_TEXTURE_2D, m_attachment_images[index]->m_handle);
+		glBindTexture(GL_TEXTURE_2D, native_handle);
+	}
+
+	std::shared_ptr<Image> OpenGLFramebuffer::get_attachment_image(uint32_t attachment) const {
+		if (attachment < m_attachment_images.size()) {
+			return m_attachment_images[attachment];
+		}
+		CORE_WARN("attachment required is out of range!");
+		return nullptr;
 	}
 
 	void* OpenGLFramebuffer::get_attachment_native_handle(uint32_t attachment) const {

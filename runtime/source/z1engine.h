@@ -30,6 +30,9 @@
 
 #include "render/graphics_context.h"
 #include "render/render_pass.h"
+#include "render/render_graph.h"
+#include "render/resource.h"
+#include "render/pipeline.h"
 #include "render/buffer.h"
 #include "render/shader.h"
 #include "render/image.h"

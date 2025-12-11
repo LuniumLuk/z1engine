@@ -8,6 +8,7 @@
 #include "core/input.h"
 #include "render/resource.h"
 #include "render/graphics_context.h"
+#include "render/render_graph.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
 #include "asset/asset_manager.h"
@@ -50,6 +51,8 @@ namespace z1 {
 
 		m_renderer_forward.reset();
 		m_renderer_2d.reset();
+
+		RenderGraph::clear_cache();
 
 		m_layer_stack.reset();
 		m_imgui_layer.reset();
