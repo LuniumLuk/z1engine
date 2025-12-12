@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/shader.h"
 #include "render/framebuffer.h"
+#include "render/render_graph.h"
 #include "render/graphics_context.h"
 #include "scene/scene.h"
 #include "scene/entity.h"
@@ -24,8 +25,8 @@ namespace z1 {
 	void RendererForward::draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer) {
 		PROFILE_FUNCTION();
 
-		// Main render pass
-		std::shared_ptr<RenderPass> main_pass;
+		auto rg = RenderGraph();
+
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
@@ -33,45 +34,45 @@ namespace z1 {
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
 		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
 
-		main_pass = std::make_shared<RenderPass>(desc);
-		main_pass->execute = [this, scene](GraphicsContext& ctx) {
-			auto const& main_cam = scene->get_main_camera();
-			if (!main_cam) {
-				return;
-			}
+		rg.add_pass("main")
+			.set_output(framebuffer)
+			.set_pass_desc(desc)
+			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto const& cam = scene->get_main_camera();
 
-			auto& camera_comp = main_cam->get_component<CameraComponent>();
-			if (!camera_comp.m_use_fixed_aspect) {
-				camera_comp.m_aspect = (float)ctx.m_current_framebuffer->get_width() / (float)ctx.m_current_framebuffer->get_height();
-			}
+				auto& camera_comp = cam->get_component<CameraComponent>();
+				if (!camera_comp.m_use_fixed_aspect) {
+					camera_comp.m_aspect = node.get_aspect();
+				}
 
-			auto projview = camera_comp.get_proj() * camera_comp.get_view();
-			auto cam_pos = camera_comp.get_position();
+				auto projview = camera_comp.get_proj() * camera_comp.get_view();
+				auto cam_pos = camera_comp.get_position();
 
-			glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
-			glm::vec3 sun_intensity = { .5f, .5f, .5f };
-			PerFrameConst per_frame{};
+				glm::vec3 sun_dir = { 0.577f, 0.577f, 0.577f };
+				glm::vec3 sun_intensity = { .5f, .5f, .5f };
+				PerFrameConst per_frame{};
 
-			m_global_data.projview = projview;
-			m_global_data.cam_position = glm::vec4(cam_pos, 0);
-			m_global_data.sun_direction = glm::vec4(sun_dir, 0);
-			m_global_data.sun_intensity = glm::vec4(sun_intensity, 0);
+				m_global_data.projview = projview;
+				m_global_data.cam_position = glm::vec4(cam_pos, 0);
+				m_global_data.sun_direction = glm::vec4(sun_dir, 0);
+				m_global_data.sun_intensity = glm::vec4(sun_intensity, 0);
 
-			m_global_buffer->write(&m_global_data, sizeof(GlobalConstants));
-			m_global_buffer->bind();
-			per_frame.global_binding = m_global_buffer->get_binding();
+				m_global_buffer->write(&m_global_data, sizeof(GlobalConstants));
+				m_global_buffer->bind();
+				per_frame.global_binding = m_global_buffer->get_binding();
 
-			auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
-			for (auto [entity, transform, mesh] : view.each()) {
-				per_frame.model = transform.get_world_transform();
-				mesh.m_mesh->draw(per_frame, m_default_material);
-			}
+				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
+				for (auto [entity, transform, mesh] : view.each()) {
+					per_frame.model = transform.get_world_transform();
+					mesh.m_mesh->draw(per_frame, m_default_material);
+				}
 
-			m_global_buffer->unbind();
-		};
+				m_global_buffer->unbind();
+				});
 
-		g_runtime_context.m_graphics_context->bind_framebuffer(framebuffer);
-		g_runtime_context.m_graphics_context->exec_render_pass(main_pass);
+		rg.compile();
+		rg.execute();
+
 	}
 
 }

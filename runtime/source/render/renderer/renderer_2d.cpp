@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/shader.h"
 #include "render/framebuffer.h"
+#include "render/render_graph.h"
 #include "render/graphics_context.h"
 #include "render/renderer/renderer_2d.h"
 #include "scene/scene.h"
@@ -72,37 +73,34 @@ namespace z1 {
 		draw_quads(quads);
 		prepare_draw(framebuffer);
 
-		// Main render pass
-		std::shared_ptr<RenderPass> main_pass;
+		auto& rg = RenderGraph();
+
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Load;
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
 
-		main_pass = std::make_shared<RenderPass>(desc);
-		main_pass->execute = [this, scene](GraphicsContext& ctx) {
-			ctx.set_viewport(0, 0, ctx.m_current_framebuffer->get_width(), ctx.m_current_framebuffer->get_height());
+		rg.add_pass("main")
+			.set_output(framebuffer)
+			.set_pass_desc(desc)
+			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto const& cam = scene->get_main_camera();
 
-			auto const& main_cam = scene->get_main_camera();
-			if (!main_cam) {
-				return;
-			}
+				auto& camera_comp = cam->get_component<CameraComponent>();
+				if (!camera_comp.m_use_fixed_aspect) {
+					camera_comp.m_aspect = node.get_aspect();
+				}
 
-			auto& camera_comp = main_cam->get_component<CameraComponent>();
-			if (!camera_comp.m_use_fixed_aspect) {
-				camera_comp.m_aspect = (float)ctx.m_current_framebuffer->get_width() / (float)ctx.m_current_framebuffer->get_height();
-			}
+				auto projview = camera_comp.get_proj() * camera_comp.get_view();
 
-			auto projview = camera_comp.get_proj() * camera_comp.get_view();
+				m_pipeline->bind();
+				m_pipeline->m_shader->set_uniform("u_projview", &projview);
+				batch_draw();
+				m_pipeline->unbind();
+				});
 
-			m_pipeline->bind();
-			m_pipeline->m_shader->set_uniform("u_projview", &projview);
-			batch_draw();
-			m_pipeline->unbind();
-			};
-
-		g_runtime_context.m_graphics_context->bind_framebuffer(framebuffer);
-		g_runtime_context.m_graphics_context->exec_render_pass(main_pass);
+		rg.compile();
+		rg.execute();
 
 		after_draw();
 	}

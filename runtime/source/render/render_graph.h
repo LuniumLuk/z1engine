@@ -23,6 +23,7 @@ namespace z1 {
 			SamplerMode sampler_mode = SamplerMode::Linear,
 			WrapMode wrap_mode = WrapMode::Repeat);
 		RenderGraphNode& set_output(std::shared_ptr<Framebuffer> const& framebuffer);
+		RenderGraphNode& set_pass_desc(RenderPass::Description const& desc);
 
 		RenderGraphNode& execute(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func);
 
@@ -33,6 +34,10 @@ namespace z1 {
 		void unbind_input_index(uint32_t index);
 		void unbind_input_name(std::string const& name);
 
+		float get_aspect() const {
+			return (float)m_width / (float)m_height;
+		}
+
 	private:
 		friend struct RenderGraph;
 
@@ -40,6 +45,7 @@ namespace z1 {
 		std::vector<std::string> m_inputs;
 		std::unordered_map<std::string, Framebuffer::Attachment> m_output_spec;
 		std::shared_ptr<Framebuffer> m_output;
+		RenderPass::Description m_pass_desc;
 
 		uint32_t m_width = 0;
 		uint32_t m_height = 0;
@@ -49,6 +55,7 @@ namespace z1 {
 		std::unordered_set<int> m_depends;
 		std::unordered_map<std::string, std::pair<RenderGraphNode*, int>> m_inputs_by_name;
 		std::unordered_map<int, std::pair<RenderGraphNode*, int>> m_inputs_by_index;
+		std::shared_ptr<RenderPass> m_render_pass;
 
 		std::function<void(RenderGraphNode&, GraphicsContext&)> m_exec_func;
 	};

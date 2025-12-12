@@ -8,6 +8,7 @@
 #include "camera_ctrl.h"
 #include "picking_system.h"
 #include "browser.h"
+#include "stb/stb_image_write.h"
 
 using namespace z1;
 namespace fs = std::filesystem;
@@ -28,7 +29,7 @@ struct EditorLayer : Layer {
 				}
 			};
 
-		m_gui->m_draw_viewport_overlay_func = 
+		m_gui->m_draw_viewport_overlay_func =
 			[&]() {
 				ImVec2 window_pos = ImVec2(
 					ImGui::GetWindowPos().x + ImGui::GetWindowSize().x,
@@ -128,58 +129,6 @@ struct EditorLayer : Layer {
 		g_runtime_context.m_renderer_forward->draw(m_active_scene, m_gui->get_viewport_framebuffer());
 		g_runtime_context.m_renderer_2d->draw(m_active_scene, m_gui->get_viewport_framebuffer());
 
-		auto rg = RenderGraph();
-		auto const& fb = m_gui->get_viewport_framebuffer();
-
-		rg.add_pass("shadow-gen")
-			.set_resolution(1024, 1024)
-			.add_output("shadow-map", ImageFormat::Depth)
-			.execute([](RenderGraphNode& node, GraphicsContext& ctx)
-				{
-					// ... do draw shadow map
-				});
-
-		rg.add_pass("gbuffer-gen")
-			.set_resolution_as(fb)
-			.add_output("gbuffer-a", ImageFormat::RGBA8)
-			.add_output("gbuffer-b", ImageFormat::RGBA8)
-			.add_output("gbuffer-c", ImageFormat::RGBA32F)
-			.execute([](RenderGraphNode& node, GraphicsContext& ctx)
-				{
-					// ... do draw gbuffer
-				});
-
-		rg.add_pass("deferred-lighting")
-			.set_resolution_as(fb)
-			.add_input("gbuffer-a")
-			.add_input("gbuffer-b")
-			.add_input("gbuffer-c")
-			.add_input("shadow-map")
-			.add_output("lit-scene", ImageFormat::RGBA8)
-			.execute([](RenderGraphNode& node, GraphicsContext& ctx)
-				{
-					// ... do deferred lighting
-
-					uint32_t binding0 = node.bind_input_name("gbuffer-a");
-					uint32_t binding1 = node.bind_input_index(1);
-
-					// use the gbuffer-a image ...
-
-					node.unbind_input_name("gbuffer-a");
-					node.unbind_input_index(1);
-				});
-
-		rg.add_pass("post-processing")
-			.add_input("lit-scene")
-			.set_output(fb)
-			.execute([](RenderGraphNode& node, GraphicsContext& ctx)
-				{
-					// ... do post processing
-				});
-
-		//rg.compile();
-		//rg.execute();
-
 		g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 	}
 
@@ -267,6 +216,37 @@ struct EditorLayer : Layer {
 
 			if (ImGui::Button("save default.ini")) {
 				ImGui::SaveIniSettingsToDisk("editor/default.ini");
+			}
+
+			if (ImGui::Button("save screenshot")) {
+				auto& fb = m_gui->get_viewport_framebuffer();
+				uint32_t width = fb->get_width();
+				uint32_t height = fb->get_height();
+
+				// Allocate buffer for RGBA8 pixels
+				std::vector<unsigned char> pixels(width * height * 4);
+
+				fb->read_pixels(0, 0, 0, width, height, pixels.data());
+
+				// *** OPTIONAL: flip vertically for correct orientation ***
+				std::vector<unsigned char> flipped(width * height * 4);
+				for (uint32_t y = 0; y < height; ++y) {
+					std::memcpy(
+						&flipped[y * width * 4],
+						&pixels[(height - 1 - y) * width * 4],
+						width * 4
+					);
+				}
+
+				std::string filename = "screenshot.png";
+
+				// Save using stb_image_write (PNG)
+				if (!stbi_write_png(filename.c_str(), width, height, 4, flipped.data(), width * 4)) {
+					std::cerr << "Failed to write image!" << std::endl;
+				}
+				else {
+					std::cout << "Saved: " << filename << std::endl;
+				}
 			}
 		}
 		ImGui::End();

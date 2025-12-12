@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "render/render_graph.h"
+#include "render/graphics_context.h"
 
 namespace z1 {
 
@@ -42,6 +43,11 @@ namespace z1 {
 		return *this;
 	}
 
+	RenderGraphNode& RenderGraphNode::set_pass_desc(RenderPass::Description const& desc) {
+		m_pass_desc = desc;
+		return *this;
+	}
+
 	RenderGraphNode& RenderGraphNode::execute(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func) {
 		m_exec_func = func;
 		return *this;
@@ -50,14 +56,12 @@ namespace z1 {
 	uint32_t RenderGraphNode::bind_input_index(uint32_t index) {
 		auto image = get_input_image_index(index);
 		image->bind();
-		// CORE_INFO("RenderGraph: {} binds at {}", m_inputs[index], image->get_binding());
 		return image->get_binding();
 	}
 
 	uint32_t RenderGraphNode::bind_input_name(std::string const& name) {
 		auto image = get_input_image_name(name);
 		image->bind();
-		// CORE_INFO("RenderGraph: {} binds at {}", name, image->get_binding());
 		return image->get_binding();
 	}
 
@@ -74,13 +78,11 @@ namespace z1 {
 	void RenderGraphNode::unbind_input_index(uint32_t index) {
 		auto image = get_input_image_index(index);
 		image->unbind();
-		// CORE_INFO("RenderGraph: {} unbinds", m_inputs[index]);
 	}
 
 	void RenderGraphNode::unbind_input_name(std::string const& name) {
 		auto image = get_input_image_name(name);
 		image->unbind();
-		// CORE_INFO("RenderGraph: {} unbinds", name);
 	}
 
 
@@ -152,6 +154,10 @@ namespace z1 {
 	}
 
 	void RenderGraph::compile() {
+		if (m_compiled) {
+			CORE_WARN("RenderGraph: already compiled");
+			return;
+		}
 
 		// pass #1: build DAG graph of nodes
 		int idx = 0;
@@ -237,18 +243,33 @@ namespace z1 {
 			node.m_output = Framebuffer::create(node.m_width, node.m_height, attachments);
 			s_cached_framebuffers[node.m_name] = node.m_output;
 		}
+
+		// pass #4: build render passes and update w/h
+		for (auto& node : m_nodes) {
+			node.m_render_pass = std::make_shared<RenderPass>(node.m_pass_desc);
+			node.m_width = node.m_output->get_width();
+			node.m_height = node.m_output->get_height();
+		}
+
+		m_compiled = true;
 	}
 
 	void RenderGraph::execute() {
+		if (!m_compiled) {
+			CORE_WARN("RenderGraph: not compiled yet");
+			return;
+		}
+
+		auto& ctx = g_runtime_context.m_graphics_context;
+
 		for (auto i : m_exec_order) {
 			auto& node = m_nodes[i];
 
-			// CORE_INFO("RenderGraph: exec node: {} at {}x{}",
-			// 	node.m_name, node.m_output->get_width(), node.m_output->get_height());
-
-			node.m_output->bind();
-			node.m_exec_func(node, *g_runtime_context.m_graphics_context);
-			node.m_output->unbind();
+			ctx->bind_framebuffer(node.m_output);
+			node.m_render_pass->execute = [&](GraphicsContext& ctx) {
+				node.m_exec_func(node, ctx);
+				};
+			ctx->exec_render_pass(node.m_render_pass);
 		}
 	}
 
