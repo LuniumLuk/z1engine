@@ -16,6 +16,10 @@ namespace z1 {
 		std::string root;
 
 		YAML::Node extra; // extra fields for each asset type
+
+		std::string name() const {
+			return path.filename().string();
+		}
 	};
 
 	template <typename...>

@@ -127,7 +127,7 @@ struct EditorLayer : Layer {
 		}
 		m_active_scene->on_update(delta_time);
 		g_runtime_context.m_renderer_forward->draw(m_active_scene, m_gui->get_viewport_framebuffer());
-		g_runtime_context.m_renderer_2d->draw(m_active_scene, m_gui->get_viewport_framebuffer());
+		//g_runtime_context.m_renderer_2d->draw(m_active_scene, m_gui->get_viewport_framebuffer());
 
 		g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 	}
@@ -692,6 +692,21 @@ private:
 							}
 						);
 					}
+				}
+			}
+			else if (m_selected_asset->type == "texture2d") {
+				auto tex = g_runtime_context.m_asset_manager->get<Texture2D>(m_selected_asset->guid);
+				auto region = ImGui::GetContentRegionAvail();
+				auto w = tex->m_image->get_description().m_width;
+				auto h = tex->m_image->get_description().m_height;
+				ImGui::Image(tex->m_image->get_native_handle(), ImVec2(region.x, region.x * h / w), ImVec2(0, 1), ImVec2(1, 0));
+			}
+			else if (m_selected_asset->type == "static mesh") {
+				if (ImGui::Button("add to scene")) {
+					auto ent = m_active_scene->create_entity(m_selected_asset->name());
+					ent->add_component<StaticMeshComponent>(
+						g_runtime_context.m_asset_manager->get<StaticMesh>(m_selected_asset->guid)
+					);
 				}
 			}
 		}

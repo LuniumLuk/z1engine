@@ -19,6 +19,8 @@ int main() {
 
 	// generate and serialize sample scene
 	auto scene = Scene::create("scene/sample");
+
+#if 0
 	auto persp_cam = scene->create_entity("Persp Camera");
 	persp_cam->add_component<CameraComponent>();
 
@@ -45,6 +47,7 @@ int main() {
 		ent->get_component<TransformComponent>().m_location = glm::vec3(0.0f, 0.0f, -9.5f);
 		ent->get_component<TransformComponent>().m_scale = glm::vec3(10.0f, 10.0f, 1.0f);
 	}
+#endif
 
 	{
 		auto ent = scene->create_entity("Mesh_0");
@@ -71,6 +74,7 @@ int main() {
 		ent->get_component<TransformComponent>().m_rotation = glm::vec3(90.0f, 0.0f, 0.0f);
 	}
 
+#if 0
 	uint32_t quad_rows = 4;
 	uint32_t quad_cols = 4;
 	float quad_stride = 0.15f;
@@ -96,6 +100,7 @@ int main() {
 			ent->get_component<TransformComponent>().m_scale = glm::vec3(quad_size, quad_size, 1.0f);
 		}
 	}
+#endif
 
 	scene->save();
 
