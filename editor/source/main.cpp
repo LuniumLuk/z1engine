@@ -254,6 +254,7 @@ struct EditorLayer : Layer {
 		show_asset_info();
 		show_scene_graph();
 		show_properties();
+		show_settings();
 		m_browser->draw();
 	}
 
@@ -344,7 +345,7 @@ private:
 		if (!info) return;
 
 		ImGui::Indent();
-		for (auto& [_, field] : info->fields)
+		for (auto& field : info->fields)
 		{
 			bool const visible = (field.flag & FF_Visible) != 0;
 			bool const editable = (field.flag & FF_Editable) != 0;
@@ -396,7 +397,7 @@ private:
 #define SHOW_COMPONENT(ComponentType)                                               \
 	if (ImGui::CollapsingHeader(#ComponentType, ImGuiTreeNodeFlags_DefaultOpen)) {  \
 		auto& comp = m_selected_entity->get_component<ComponentType>();             \
-		show_type_fields(&comp, #ComponentType);                                    \
+		show_type_fields(&comp, TYPE_NAME(ComponentType));                          \
 	}
 
 	void show_properties() {
@@ -709,6 +710,13 @@ private:
 					);
 				}
 			}
+		}
+		ImGui::End();
+	}
+
+	void show_settings() {
+		if (ImGui::Begin("settings")) {
+			show_type_fields(g_runtime_context.m_global.get(), TYPE_NAME(GlobalSettings));
 		}
 		ImGui::End();
 	}

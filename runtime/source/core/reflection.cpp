@@ -22,8 +22,13 @@ namespace z1 {
 		}
 
 		auto& type_info = m_types[name];
-		if (type_info.fields.find(field.name) == type_info.fields.end()) {
-			type_info.fields[field.name] = field;
+		if (type_info.field_names.find(field.name) == type_info.field_names.end()) {
+			type_info.field_names.insert(field.name);
+			type_info.fields.push_back(field);
+			std::sort(type_info.fields.begin(), type_info.fields.end(),
+				[](FieldInfo const& lhs, FieldInfo const& rhs) {
+					return lhs.offset < rhs.offset;
+				});
 			CORE_INFO("registered field '{}' in type '{}'", field.name, name);
 		}
 	}

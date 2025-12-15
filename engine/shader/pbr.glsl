@@ -42,8 +42,11 @@
 		vec3 H = normalize(V + L);
 
 		// Base material inputs
-		vec4 base_color = texture(s_base_color, v_texcoord0) * v_color * u_base_color_factor;
+		vec4 base_color = texture(s_base_color, v_texcoord0);
+		base_color.rgb = pow(base_color.rgb, vec3(2.2));
+		base_color = base_color * v_color * u_base_color_factor;
 		vec2 rm = texture(s_metallic_roughness, v_texcoord0).gb;
+		rm = pow(rm, vec2(2.2));
 		float roughness = clamp(rm.x * u_roughness_factor, 0.04, 1.0);
 		float metallic  = rm.y * u_metallic_factor;
 
@@ -77,6 +80,7 @@
 
 		// Emissive term
 		vec3 emissive = texture(s_emissive, v_texcoord0).rgb;
+		emissive = pow(emissive, vec3(2.2));
 
 		// Occlusion term
 		float ao = texture(s_occlusion, v_texcoord0).r;

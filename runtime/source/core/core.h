@@ -39,6 +39,7 @@ namespace z1 {
 	struct AssetManager;
 	struct Renderer2D;
 	struct RendererForward;
+	struct GlobalSettings;
 
 	struct API RuntimeContext {
 
@@ -57,6 +58,7 @@ namespace z1 {
 		std::shared_ptr<AssetManager> m_asset_manager;
 		std::shared_ptr<Renderer2D> m_renderer_2d;
 		std::shared_ptr<RendererForward> m_renderer_forward;
+		std::shared_ptr<GlobalSettings> m_global;
 
 	};
 
@@ -181,3 +183,5 @@ namespace z1 {
 		}                                                              \
 	};                                                                 \
 	static _REFLECT_REGISTER_##TYPE_##FIELD _REFLECT_REGISTER_INSTANCE_##TYPE_##FIELD;
+
+#define TYPE_NAME(type) #type

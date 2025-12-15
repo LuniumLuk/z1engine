@@ -37,7 +37,8 @@ namespace z1 {
 	struct TypeInfo
 	{
 		std::string name;
-		std::unordered_map<std::string, FieldInfo> fields;
+		std::unordered_set<std::string> field_names;
+		std::vector<FieldInfo> fields;
 	};
 
 	struct TypeRegistry

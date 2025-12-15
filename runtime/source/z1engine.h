@@ -28,6 +28,7 @@
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
 
+#include "render/global.h"
 #include "render/graphics_context.h"
 #include "render/render_pass.h"
 #include "render/render_graph.h"

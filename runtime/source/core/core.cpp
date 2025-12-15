@@ -6,6 +6,7 @@
 #include "core/log.h"
 #include "core/io.h"
 #include "core/input.h"
+#include "render/global.h"
 #include "render/resource.h"
 #include "render/graphics_context.h"
 #include "render/render_graph.h"
@@ -38,6 +39,8 @@ namespace z1 {
 
 		m_renderer_2d = std::make_shared<Renderer2D>();
 		m_renderer_forward = std::make_shared<RendererForward>();
+
+		m_global = std::make_shared<GlobalSettings>();
 	}
 
 	void RuntimeContext::init_logger() {
@@ -49,6 +52,7 @@ namespace z1 {
 	void RuntimeContext::shutdown() {
 		m_window->clear_event_callbacks();
 
+		m_global.reset();
 		m_renderer_forward.reset();
 		m_renderer_2d.reset();
 

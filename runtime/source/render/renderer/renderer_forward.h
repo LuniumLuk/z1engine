@@ -1,4 +1,3 @@
-#include "render/global.h"
 #include "render/buffer.h"
 #include "render/render_pass.h"
 #include "render/framebuffer.h"
@@ -18,8 +17,8 @@ namespace z1 {
 
 	private:
 		std::shared_ptr<MaterialInstance> m_default_material;
-		GlobalConstants m_global_data = {};
-		std::shared_ptr<UniformBuffer> m_global_buffer;
+		std::shared_ptr<VertexArray> m_quad;
+		std::shared_ptr<Pipeline> m_pipeline_postprocess;
 
 	};
 
