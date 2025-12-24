@@ -82,21 +82,22 @@ namespace z1 {
 #    endif
 #endif
 
-#define LOG_ARGS(fmt, ...) fmt, ##__VA_ARGS__
+#define LOG_ARGS(fmt, ...)                   fmt, ##__VA_ARGS__
+#define LOG_ARGS_PREFIX(fmt, ...) LOG_PREFIX fmt, ##__VA_ARGS__
 
 #define CORE_TRACE(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->trace(LOG_ARGS(fmt, ##__VA_ARGS__))
 #define CORE_DEBUG(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->debug(LOG_ARGS(fmt, ##__VA_ARGS__))
 #define CORE_INFO(fmt, ...)     g_runtime_context.m_logger->get_core_logger()->info(LOG_ARGS(fmt, ##__VA_ARGS__))
-#define CORE_WARN(fmt, ...)     g_runtime_context.m_logger->get_core_logger()->warn(LOG_ARGS(fmt, ##__VA_ARGS__))
-#define CORE_ERROR(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->error(LOG_ARGS(fmt, ##__VA_ARGS__))
-#define CORE_FATAL(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->critical(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CORE_WARN(fmt, ...)     g_runtime_context.m_logger->get_core_logger()->warn(LOG_ARGS_PREFIX(fmt, ##__VA_ARGS__))
+#define CORE_ERROR(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->error(LOG_ARGS_PREFIX(fmt, ##__VA_ARGS__))
+#define CORE_FATAL(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->critical(LOG_ARGS_PREFIX(fmt, ##__VA_ARGS__))
 
 #define CLIENT_TRACE(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->trace(LOG_ARGS(fmt, ##__VA_ARGS__))
 #define CLIENT_DEBUG(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->debug(LOG_ARGS(fmt, ##__VA_ARGS__))
 #define CLIENT_INFO(fmt, ...)   g_runtime_context.m_logger->get_client_logger()->info(LOG_ARGS(fmt, ##__VA_ARGS__))
-#define CLIENT_WARN(fmt, ...)   g_runtime_context.m_logger->get_client_logger()->warn(LOG_ARGS(fmt, ##__VA_ARGS__))
-#define CLIENT_ERROR(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->error(LOG_ARGS(fmt, ##__VA_ARGS__))
-#define CLIENT_FATAL(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->critical(LOG_ARGS(fmt, ##__VA_ARGS__))
+#define CLIENT_WARN(fmt, ...)   g_runtime_context.m_logger->get_client_logger()->warn(LOG_ARGS_PREFIX(fmt, ##__VA_ARGS__))
+#define CLIENT_ERROR(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->error(LOG_ARGS_PREFIX(fmt, ##__VA_ARGS__))
+#define CLIENT_FATAL(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->critical(LOG_ARGS_PREFIX(fmt, ##__VA_ARGS__))
 
 #ifdef ENABLE_ASSERTS
 #    define CORE_ASSERT(x, ...) { if(!(x)) { CORE_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }
@@ -156,32 +157,31 @@ namespace z1 {
 
 #include "core/reflection.h"
 
-#define REFLECTED_STRUCT(TYPE)                                         \
-	struct _REFLECT_REGISTER_##TYPE {                                  \
-		_REFLECT_REGISTER_##TYPE() {                                   \
-			TypeRegistry::instance().register_type(#TYPE);             \
+#define CONCAT_IMPL(a, b) a##b
+#define CONCAT(a, b) CONCAT_IMPL(a, b)
+#define CONCAT3(a, b, c) CONCAT(CONCAT(a, b), c)
+
+#define REFLECTED_STRUCT(type)                                         \
+	struct _REFLECT_REGISTER_##type {                                  \
+		_REFLECT_REGISTER_##type() {                                   \
+			TypeRegistry::instance().register_type(#type);             \
 		}                                                              \
 	};                                                                 \
-	static _REFLECT_REGISTER_##TYPE _REFLECT_REGISTER_INSTANCE_##TYPE; \
-	struct API TYPE
+	static _REFLECT_REGISTER_##type _REFLECT_REGISTER_INSTANCE_##type; \
+	struct API type
 
-#define FIELD_FLAG_DEFAULT 0
-#define FIELD_FLAG_EDITABLE 1 << 0
-#define FIELD_FLAG_SERIALIZABLE 1 << 1
-#define FIELD_FLAG_ALL (FIELD_EDITABLE | FIELD_SERIALIZABLE)
-
-#define REFLECTED_FIELD(TYPE, FIELD, FLAG)                             \
-	struct _REFLECT_REGISTER_##TYPE_##FIELD {                          \
-		_REFLECT_REGISTER_##TYPE_##FIELD() {                           \
-			TypeRegistry::instance().register_field(#TYPE, {           \
-				#FIELD,                                                \
-				offsetof(TYPE, FIELD),                                 \
-				sizeof(((TYPE*)0)->FIELD),                             \
-				&typeid(((TYPE*)0)->FIELD),                            \
-				FLAG                                                   \
+#define REFLECTED_FIELD(type, field, flag)                             \
+	struct CONCAT3(_REFLECT_REGISTER_, type, _##field) {               \
+		CONCAT3(_REFLECT_REGISTER_, type, _##field)() {                \
+			TypeRegistry::instance().register_field(#type, {           \
+				#field,                                                \
+				offsetof(type, field),                                 \
+				sizeof(((type*)0)->field),                             \
+				&typeid(((type*)0)->field),                            \
+				flag                                                   \
 			});                                                        \
 		}                                                              \
 	};                                                                 \
-	static _REFLECT_REGISTER_##TYPE_##FIELD _REFLECT_REGISTER_INSTANCE_##TYPE_##FIELD;
+	static CONCAT3(_REFLECT_REGISTER_, type, _##field) CONCAT3(_REFLECT_REGISTER_INSTANCE_, type, _##field);
 
 #define TYPE_NAME(type) #type

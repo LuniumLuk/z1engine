@@ -13,12 +13,14 @@ namespace z1 {
 
 		void draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer);
 
-		//void load_or_create_global_settings();
-
 	private:
 		std::shared_ptr<MaterialInstance> m_default_material;
 		std::shared_ptr<VertexArray> m_quad;
 		std::shared_ptr<Pipeline> m_pipeline_postprocess;
+		std::shared_ptr<Pipeline> m_pipeline_velocity;
+		std::shared_ptr<Pipeline> m_pipeline_taa;
+		std::shared_ptr<Pipeline> m_pipeline_copy;
+		std::shared_ptr<Framebuffer> m_history_color;
 
 	};
 

@@ -20,6 +20,7 @@ namespace z1 {
 		m_data.pp_exposure = pp_exposure;
 		m_data.pp_gamma = pp_gamma;
 		m_data.pp_tint = pp_tint;
+		m_data.sun_ambient = sun_ambient_color * sun_ambient_intensity;
 
 		m_global_buffer->write(&m_data);
 	}

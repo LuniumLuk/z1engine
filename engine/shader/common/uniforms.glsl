@@ -16,6 +16,7 @@ layout (std140) uniform Global {
 	mat4  u_prev_projview;
 	vec4  u_sun_direction;
 	vec4  u_sun_intensity;
+	vec4  u_sun_ambient;
 	vec4  u_cam_position;
 	float u_taa_enabled;
 	float u_taa_blend;

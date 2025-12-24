@@ -38,6 +38,10 @@ namespace z1 {
 			return (float)m_width / (float)m_height;
 		}
 
+		std::shared_ptr<Framebuffer> const& get_output() const {
+			return m_output;
+		}
+
 	private:
 		friend struct RenderGraph;
 

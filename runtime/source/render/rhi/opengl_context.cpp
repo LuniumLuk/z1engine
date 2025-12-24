@@ -26,6 +26,11 @@ namespace z1 {
 		CORE_DEBUG("    renderer: {0}", (char*)glGetString(GL_RENDERER));
 		CORE_DEBUG("    version: {0}", (char*)glGetString(GL_VERSION));
 
+		if (glDebugMessageCallback) {
+			glEnable(GL_DEBUG_OUTPUT);
+			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		}
+
 		GLint val;
 		glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &val);
 		m_max_image_binding_count = static_cast<uint32_t>(val);
@@ -105,6 +110,66 @@ namespace z1 {
 	void OpenGLContext::set_scissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(x, y, width, height);
+	}
+
+	void OpenGLContext::push_debug_group(std::string const& name) {
+		glPushDebugGroup(
+			GL_DEBUG_SOURCE_APPLICATION,
+			0,
+			-1,
+			name.c_str()
+		);
+	}
+
+	void OpenGLContext::pop_debug_group() {
+		glPopDebugGroup();
+	}
+
+	void OpenGLContext::blit_attachment(
+		std::shared_ptr<Framebuffer> const& src,
+		std::shared_ptr<Framebuffer> const& dst,
+		uint32_t src_attachment,
+		uint32_t dst_attachment,
+		uint32_t src_x, uint32_t src_y,
+		uint32_t dst_x, uint32_t dst_y,
+		uint32_t width, uint32_t height) {
+
+		GLuint src_handle = (GLuint)reinterpret_cast<uintptr_t>(src->get_native_handle());
+		GLuint dst_handle = (GLuint)reinterpret_cast<uintptr_t>(dst->get_native_handle());
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, src_handle);
+		glReadBuffer(GL_COLOR_ATTACHMENT0 + src_attachment);
+
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_handle);
+		glDrawBuffer(GL_COLOR_ATTACHMENT0 + dst_attachment);
+
+		glBlitFramebuffer(
+			src_x, src_y, width, height,
+			dst_x, dst_y, width, height,
+			GL_COLOR_BUFFER_BIT,
+			GL_NEAREST
+		);
+	}
+
+	void OpenGLContext::blit_depth_stencil(
+		std::shared_ptr<Framebuffer> const& src,
+		std::shared_ptr<Framebuffer> const& dst,
+		uint32_t src_x, uint32_t src_y,
+		uint32_t dst_x, uint32_t dst_y,
+		uint32_t width, uint32_t height) {
+
+		GLuint src_handle = (GLuint)reinterpret_cast<uintptr_t>(src->get_native_handle());
+		GLuint dst_handle = (GLuint)reinterpret_cast<uintptr_t>(dst->get_native_handle());
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, src_handle);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_handle);
+
+		glBlitFramebuffer(
+			src_x, src_y, width, height,
+			dst_x, dst_y, width, height,
+			GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,
+			GL_NEAREST
+		);
 	}
 
 }

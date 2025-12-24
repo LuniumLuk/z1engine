@@ -52,6 +52,7 @@ namespace z1 {
 	std::shared_ptr<Entity> Scene::create_entity(std::string const& name) {
 		auto entity = create_entity_impl(name);
 		m_entities.push_back(entity);
+		m_is_dirty = true;
 		return entity;
 	}
 
@@ -86,6 +87,7 @@ namespace z1 {
 		}
 
 		camera->get_component<CameraComponent>().m_is_primary = true;
+		m_is_dirty = true;
 	}
 
 	std::shared_ptr<Entity> Scene::get_main_camera() const {
@@ -121,6 +123,7 @@ namespace z1 {
 		scene->m_meta.guid = Guid::generate();
 		scene->m_meta.type = "scene";
 		scene->m_meta.path = path;
+		scene->m_is_dirty = true;
 
 		auto const& root = FileSystem::s_content_root;
 		if (g_runtime_context.m_asset_manager->register_asset(scene->m_meta, root)) {
@@ -137,6 +140,7 @@ namespace z1 {
 	std::shared_ptr<Scene> Scene::load(Guid const& guid) {
 		auto scene = std::make_shared<Scene>();
 		scene->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		scene->m_is_dirty = false;
 
 		YAML::Node yaml;
 		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
@@ -329,6 +333,8 @@ namespace z1 {
 
 		auto const& root = FileSystem::s_content_root;
 		save_yaml((root / m_meta.path).concat(".yaml"), yaml);
+
+		m_is_dirty = false;
 	}
 
 }

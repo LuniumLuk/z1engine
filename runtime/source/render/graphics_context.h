@@ -25,6 +25,9 @@ namespace z1 {
 		virtual void set_viewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
 		virtual void set_scissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
 
+		virtual void push_debug_group(std::string const& name) {}
+		virtual void pop_debug_group() {}
+
 		uint32_t m_max_image_binding_count = 0;
 		uint32_t m_max_uniform_buffer_binding_count = 0;
 
@@ -33,6 +36,22 @@ namespace z1 {
 
 		uint32_t acquire_uniform_buffer_binding();
 		void release_uniform_buffer_binding(uint32_t binding);
+
+		virtual void blit_attachment(
+			std::shared_ptr<Framebuffer> const& src,
+			std::shared_ptr<Framebuffer> const& dst,
+			uint32_t src_attachment = 0,
+			uint32_t dst_attachment = 0,
+			uint32_t src_x = 0, uint32_t src_y = 0,
+			uint32_t dst_x = 0, uint32_t dst_y = 0,
+			uint32_t width = NUM_MAX, uint32_t height = NUM_MAX) = 0;
+
+		virtual void blit_depth_stencil(
+			std::shared_ptr<Framebuffer> const& src,
+			std::shared_ptr<Framebuffer> const& dst,
+			uint32_t src_x = 0, uint32_t src_y = 0,
+			uint32_t dst_x = 0, uint32_t dst_y = 0,
+			uint32_t width = NUM_MAX, uint32_t height = NUM_MAX) = 0;
 
 		std::shared_ptr<Framebuffer> m_swapchain_framebuffer = nullptr;
 		std::shared_ptr<Framebuffer> m_current_framebuffer = nullptr;

@@ -50,6 +50,7 @@ namespace z1 {
 
 		virtual uint32_t get_width() const { return m_description.width; }
 		virtual uint32_t get_height() const { return m_description.height; }
+		float get_aspect() const { return static_cast<float>(get_width()) / static_cast<float>(get_height()); }
 
 		std::vector<Attachment> const& get_attachments() const { return m_attachments; }
 

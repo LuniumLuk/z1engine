@@ -6,8 +6,7 @@ vec4 lambert_shading(vec3 normal, vec4 color) {
 
 vec4 phone_shading(vec3 normal, vec3 world_pos, vec4 color) {
 	// Ambient lighting
-	float ambient_strength = 0.1;
-	vec3 ambient = ambient_strength * u_sun_intensity.xyz;
+	vec3 ambient = color.rgb * u_sun_ambient.rgb;
 
 	// Diffuse lighting
 	vec3 sun_dir = normalize(u_sun_direction.xyz);

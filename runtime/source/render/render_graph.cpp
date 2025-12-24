@@ -265,11 +265,15 @@ namespace z1 {
 		for (auto i : m_exec_order) {
 			auto& node = m_nodes[i];
 
+			ctx->push_debug_group(node.m_name);
+
 			ctx->bind_framebuffer(node.m_output);
 			node.m_render_pass->execute = [&](GraphicsContext& ctx) {
 				node.m_exec_func(node, ctx);
 				};
 			ctx->exec_render_pass(node.m_render_pass);
+
+			ctx->pop_debug_group();
 		}
 	}
 

@@ -76,7 +76,7 @@
 		vec3 L_specular = specular * radiance;
 
 		// Simple ambient term
-		vec3 ambient = 0.03 * base_color.rgb * u_sun_intensity.xyz;
+		vec3 ambient = base_color.rgb * u_sun_ambient.rgb;
 
 		// Emissive term
 		vec3 emissive = texture(s_emissive, v_texcoord0).rgb;

@@ -55,7 +55,8 @@ namespace z1 {
 	template <typename Derived>
 	struct API Asset {
 
-		AssetMeta m_meta;
+		AssetMeta m_meta = {};
+		mutable bool m_is_dirty = false;
 
 		// an asset can come from:
 		// 1. imported from raw source files (gltf, obj, png, jpg ...)
