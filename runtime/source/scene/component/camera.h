@@ -75,8 +75,8 @@ namespace z1 {
 	};
 
 	REFLECTED_FIELD(CameraComponent, m_is_perspective,   FF_Default)
-	REFLECTED_FIELD(CameraComponent, m_near,             FF_Default)
-	REFLECTED_FIELD(CameraComponent, m_far,              FF_Default)
+	REFLECTED_FIELD(CameraComponent, m_near,             FF_Default, "[slider]")
+	REFLECTED_FIELD(CameraComponent, m_far,              FF_Default, "[slider]")
 	REFLECTED_FIELD(CameraComponent, m_aspect,           FF_ReadOnly)
 	REFLECTED_FIELD(CameraComponent, m_use_fixed_aspect, FF_Default)
 	REFLECTED_FIELD(CameraComponent, m_is_primary,       FF_ReadOnly)

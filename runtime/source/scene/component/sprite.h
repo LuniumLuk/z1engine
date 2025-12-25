@@ -33,9 +33,9 @@ namespace z1 {
 		}
 	};
 
-	REFLECTED_FIELD(SpriteComponent, m_color,         FF_Default)
-	REFLECTED_FIELD(SpriteComponent, m_tiling_scale,  FF_Default)
-	REFLECTED_FIELD(SpriteComponent, m_tiling_offset, FF_Default)
+	REFLECTED_FIELD(SpriteComponent, m_color,         FF_Default, "[color]")
+	REFLECTED_FIELD(SpriteComponent, m_tiling_scale,  FF_Default, "[drag]min=0.0")
+	REFLECTED_FIELD(SpriteComponent, m_tiling_offset, FF_Default, "[drag]")
 	REFLECTED_FIELD(SpriteComponent, m_texcoords,     FF_Default)
 
 }

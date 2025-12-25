@@ -15,7 +15,7 @@
 
 namespace z1 {
 
-	static float Halton(int index, int base) {
+	static float halton(int index, int base) {
 		float f = 1.0f;
 		float r = 0.0f;
 		while (index > 0)
@@ -98,7 +98,7 @@ namespace z1 {
 			m_history_color = Framebuffer::create(
 				width,
 				height,
-				{ { ImageFormat::RGBA32F } });
+				{ { ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder } });
 			history_uninitialized = true;
 		}
 
@@ -121,8 +121,8 @@ namespace z1 {
 		auto proj_jittered = camera_comp.get_proj();
 		if (g->taa_enabled) {
 			// jittered projection matrix for TAA
-			float jx = Halton(s_frame_index + 1, 2) - 0.5f;
-			float jy = Halton(s_frame_index + 1, 3) - 0.5f;
+			float jx = halton(s_frame_index + 1, 2) - 0.5f;
+			float jy = halton(s_frame_index + 1, 3) - 0.5f;
 
 			float ndc_x = 2.0f * jx / width;
 			float ndc_y = -2.0f * jy / height;
@@ -138,7 +138,7 @@ namespace z1 {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
-		desc.color_attachments[0].clear_value = { 0.1f, 0.1f, 0.1f, 1.0f };
+		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
 		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
 
@@ -150,7 +150,7 @@ namespace z1 {
 		rg.add_pass("main")
 			.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.add_output("scene-color", ImageFormat::RGBA32F)
+			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("scene-depth", ImageFormat::Depth)
 			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
@@ -182,7 +182,7 @@ namespace z1 {
 		rg.add_pass("velocity")
 			.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.add_output("velocity", ImageFormat::RGBA32F)
+			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
 			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
 			auto const& cam = scene->get_main_camera();
@@ -209,7 +209,7 @@ namespace z1 {
 		rg.add_pass("taa")
 			.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.add_output("taa", ImageFormat::RGBA32F)
+			.add_output("taa", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_input("scene-color")
 			.add_input("velocity")
 			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {

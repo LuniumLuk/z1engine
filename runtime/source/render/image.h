@@ -135,6 +135,7 @@ namespace z1 {
 
 		Description m_description{};
 		mutable uint32_t m_binding = INVALID_BINDING;
+		mutable uint32_t m_ref_count = 0;
 	};
 
 	struct API Image2D : Image {

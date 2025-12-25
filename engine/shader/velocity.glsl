@@ -32,6 +32,13 @@
 
 		// Velocity in UV space
 		vec2 velocity = curr_uv - prev_uv;
+
+		// Handle NaN values
+		velocity = vec2(
+			isnan(velocity.x) ? 0.0 : velocity.x,
+			isnan(velocity.y) ? 0.0 : velocity.y
+		);
+
 		frag_color = vec4(velocity, 0.0, 1.0);
 	}
 }

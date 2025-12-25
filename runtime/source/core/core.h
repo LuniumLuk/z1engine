@@ -170,7 +170,7 @@ namespace z1 {
 	static _REFLECT_REGISTER_##type _REFLECT_REGISTER_INSTANCE_##type; \
 	struct API type
 
-#define REFLECTED_FIELD(type, field, flag)                             \
+#define REFLECTED_FIELD(type, field, ...)                              \
 	struct CONCAT3(_REFLECT_REGISTER_, type, _##field) {               \
 		CONCAT3(_REFLECT_REGISTER_, type, _##field)() {                \
 			TypeRegistry::instance().register_field(#type, {           \
@@ -178,7 +178,7 @@ namespace z1 {
 				offsetof(type, field),                                 \
 				sizeof(((type*)0)->field),                             \
 				&typeid(((type*)0)->field),                            \
-				flag                                                   \
+				__VA_ARGS__                                            \
 			});                                                        \
 		}                                                              \
 	};                                                                 \

@@ -8,12 +8,12 @@
 namespace z1 {
 
 	void Image::bind() const {
-		if (m_binding != INVALID_BINDING) {
-			CORE_WARN("image is already bound to binding point {0}", m_binding);
-			return;
+		CORE_ASSERT(m_binding == INVALID_BINDING || m_ref_count > 0, "image is already bound but ref count is 0!");
+		if (m_ref_count == 0) {
+			m_binding = g_runtime_context.m_graphics_context->acquire_image_binding();
+			bind(m_binding);
 		}
-		m_binding = g_runtime_context.m_graphics_context->acquire_image_binding();
-		bind(m_binding);
+		++m_ref_count;
 	}
 
 	void Image::bind(std::shared_ptr<Shader> const& shader, std::string const& name) const {
@@ -22,13 +22,13 @@ namespace z1 {
 	}
 
 	void Image::unbind() const {
-		if (m_binding == INVALID_BINDING) {
-			CORE_WARN("image is not bound to any binding point");
-			return;
+		CORE_ASSERT(m_binding != INVALID_BINDING || m_ref_count == 0, "image is not bound but ref count > 0!");
+		--m_ref_count;
+		if (m_ref_count == 0) {
+			unbind(m_binding);
+			g_runtime_context.m_graphics_context->release_image_binding(m_binding);
+			m_binding = INVALID_BINDING;
 		}
-		unbind(m_binding);
-		g_runtime_context.m_graphics_context->release_image_binding(m_binding);
-		m_binding = INVALID_BINDING;
 	}
 
 	std::shared_ptr<Image2D> Image2D::create(

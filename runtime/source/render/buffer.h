@@ -96,6 +96,7 @@ namespace z1 {
 
 		size_t m_size = 0;
 		mutable uint32_t m_binding = INVALID_BINDING;
+		mutable uint32_t m_ref_count = 0;
 	};
 
 }

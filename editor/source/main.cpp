@@ -339,6 +339,37 @@ private:
 		}
 	}
 
+#define SHOW_FLOAT_FIELD(num, value)                                      \
+	float min = field.get_widget_value<float>("min", -1e6f);              \
+	float max = field.get_widget_value<float>("max",  1e6f);              \
+	float step = field.get_widget_value<float>("step", 0.01f);            \
+	if (field.is_widget_type("slider")) {                                 \
+		ImGui::SliderFloat##num(field.name.c_str(), value, min, max);     \
+	}                                                                     \
+	else if (field.is_widget_type("drag")) {                              \
+		ImGui::DragFloat##num(field.name.c_str(), value, step, min, max); \
+	}                                                                     \
+	else {                                                                \
+		ImGui::InputFloat##num(field.name.c_str(), value);                \
+	}
+
+#define SHOW_FLOAT_FIELD_WITH_COLOR(num, value)                           \
+	float min = field.get_widget_value<float>("min", -1e6f);              \
+	float max = field.get_widget_value<float>("max",  1e6f);              \
+	float step = field.get_widget_value<float>("step", 0.01f);            \
+	if (field.is_widget_type("color")) {                                  \
+		ImGui::ColorEdit##num(field.name.c_str(), value);                 \
+	}                                                                     \
+	else if (field.is_widget_type("slider")) {                            \
+		ImGui::SliderFloat##num(field.name.c_str(), value, min, max);     \
+	}                                                                     \
+	else if (field.is_widget_type("drag")) {                              \
+		ImGui::DragFloat##num(field.name.c_str(), value, step, min, max); \
+	}                                                                     \
+	else {                                                                \
+		ImGui::InputFloat##num(field.name.c_str(), value);                \
+	}
+
 	void show_type_fields(void* instance, const std::string& name) {
 
 		auto const info = TypeRegistry::instance().get(name);
@@ -357,27 +388,45 @@ private:
 
 			if (*field.type == typeid(bool)) {
 				bool& value = field.get<bool>(instance);
-				ImGui::Checkbox(field.name.c_str(), &value);
+				if (field.is_widget_type("radio")) {
+					if (ImGui::RadioButton(field.name.c_str(), value)) {
+						value = !value;
+					}
+				}
+				else {
+					ImGui::Checkbox(field.name.c_str(), &value);
+				}
 			}
 			else if (*field.type == typeid(float)) {
 				float& value = field.get<float>(instance);
-				ImGui::DragFloat(field.name.c_str(), &value);
+				SHOW_FLOAT_FIELD(, &value)
 			}
 			else if (*field.type == typeid(int)) {
 				int& value = field.get<int>(instance);
-				ImGui::DragInt(field.name.c_str(), &value);
+				int min = field.get_widget_value<int>("min", -10000);
+				int max = field.get_widget_value<int>("max",  10000);
+				int step = field.get_widget_value<int>("step", 1);
+				if (field.is_widget_type("slider")) {
+					ImGui::SliderInt(field.name.c_str(), &value, min, max);
+				}
+				else if (field.is_widget_type("drag")) {
+					ImGui::DragInt(field.name.c_str(), &value, (float)step, min, max);
+				}
+				else {
+					ImGui::InputInt(field.name.c_str(), &value, step);
+				}
 			}
 			else if (*field.type == typeid(glm::vec2)) {
 				glm::vec2& value = field.get<glm::vec2>(instance);
-				ImGui::DragFloat2(field.name.c_str(), &value[0], 0.01f);
+				SHOW_FLOAT_FIELD(2, &value[0])
 			}
 			else if (*field.type == typeid(glm::vec3)) {
 				glm::vec3& value = field.get<glm::vec3>(instance);
-				ImGui::DragFloat3(field.name.c_str(), &value[0], 0.01f);
+				SHOW_FLOAT_FIELD_WITH_COLOR(3, &value[0])
 			}
 			else if (*field.type == typeid(glm::vec4)) {
-				glm::vec3& value = field.get<glm::vec3>(instance);
-				ImGui::ColorEdit4(field.name.c_str(), &value[0]);
+				glm::vec4& value = field.get<glm::vec4>(instance);
+				SHOW_FLOAT_FIELD_WITH_COLOR(4, &value[0])
 			}
 			else if (*field.type == typeid(std::string)) {
 				std::string& value = field.get<std::string>(instance);

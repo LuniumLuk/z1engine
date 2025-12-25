@@ -87,5 +87,12 @@
 
 		vec3 result = (ambient + L_diffuse) * ao + L_specular + emissive;
 		frag_color = vec4(result, base_color.a);
+
+		frag_color = vec4(
+			isnan(frag_color.x) ? 0.0 : frag_color.x,
+			isnan(frag_color.y) ? 0.0 : frag_color.y,
+			isnan(frag_color.z) ? 0.0 : frag_color.z,
+			isnan(frag_color.w) ? 0.0 : frag_color.w
+		);
 	}
 }

@@ -19,6 +19,8 @@
 		// Reproject UV into previous frame
 		vec2 prev_uv = v_uv - velocity.xy;
 
+		prev_uv = clamp(prev_uv, vec2(0.0), vec2(1.0));
+
 		// Sample current and history
 		vec3 current = texture(u_current_color, v_uv).rgb;
 

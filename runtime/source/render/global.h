@@ -18,7 +18,7 @@ namespace z1 {
 		glm::vec4 sun_color             = { 1.f, 1.f, 1.f, 1.f };
 		float     sun_intensity         = 6.0f;
 		glm::vec4 sun_ambient_color     = { 1.f, 1.f, 1.f, 1.f };
-		float     sun_ambient_intensity = .1f;
+		float     sun_ambient_intensity = 0.0f;
 		glm::vec3 cam_position          = {};
 		// TAA
 		bool      taa_enabled           = true;
@@ -53,15 +53,15 @@ namespace z1 {
 
 	};
 
-	REFLECTED_FIELD(GlobalSettings, sun_direction,         FF_Default)
-	REFLECTED_FIELD(GlobalSettings, sun_color,             FF_Default)
-	REFLECTED_FIELD(GlobalSettings, sun_intensity,         FF_Default)
-	REFLECTED_FIELD(GlobalSettings, sun_ambient_color,     FF_Default)
-	REFLECTED_FIELD(GlobalSettings, sun_ambient_intensity, FF_Default)
+	REFLECTED_FIELD(GlobalSettings, sun_direction,         FF_Default, "[drag]step=0.01")
+	REFLECTED_FIELD(GlobalSettings, sun_color,             FF_Default, "[color]")
+	REFLECTED_FIELD(GlobalSettings, sun_intensity,         FF_Default, "[drag]min=0.0")
+	REFLECTED_FIELD(GlobalSettings, sun_ambient_color,     FF_Default, "[color]")
+	REFLECTED_FIELD(GlobalSettings, sun_ambient_intensity, FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, taa_enabled,           FF_Default)
-	REFLECTED_FIELD(GlobalSettings, taa_blend,             FF_Default)
-	REFLECTED_FIELD(GlobalSettings, pp_exposure,           FF_Default)
-	REFLECTED_FIELD(GlobalSettings, pp_gamma,              FF_Default)
-	REFLECTED_FIELD(GlobalSettings, pp_tint,               FF_Default)
+	REFLECTED_FIELD(GlobalSettings, taa_blend,             FF_Default, "[slider]min=0.0,max=1.0")
+	REFLECTED_FIELD(GlobalSettings, pp_exposure,           FF_Default, "[drag]min=0.0")
+	REFLECTED_FIELD(GlobalSettings, pp_gamma,              FF_Default, "[drag]min=0.0")
+	REFLECTED_FIELD(GlobalSettings, pp_tint,               FF_Default, "[color]")
 
 }

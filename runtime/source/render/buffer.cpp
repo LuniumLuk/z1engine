@@ -7,12 +7,12 @@
 namespace z1 {
 
 	void UniformBuffer::bind() const {
-		if (m_binding != INVALID_BINDING) {
-			CORE_WARN("image is already bound to binding point {0}", m_binding);
-			return;
+		CORE_ASSERT(m_binding == INVALID_BINDING || m_ref_count > 0, "uniform buffer is already bound but ref count is 0!");
+		if (m_ref_count == 0) {
+			m_binding = g_runtime_context.m_graphics_context->acquire_uniform_buffer_binding();
+			bind(m_binding);
 		}
-		m_binding = g_runtime_context.m_graphics_context->acquire_uniform_buffer_binding();
-		bind(m_binding);
+		++m_ref_count;
 	}
 
 	void UniformBuffer::bind(std::shared_ptr<Shader> const& shader, std::string const& name) const {
@@ -21,13 +21,13 @@ namespace z1 {
 	}
 
 	void UniformBuffer::unbind() const {
-		if (m_binding == INVALID_BINDING) {
-			CORE_WARN("image is not bound to any binding point");
-			return;
+		CORE_ASSERT(m_binding != INVALID_BINDING || m_ref_count == 0, "uniform buffer is not bound but ref count > 0!");
+		--m_ref_count;
+		if (m_ref_count == 0) {
+			unbind(m_binding);
+			g_runtime_context.m_graphics_context->release_uniform_buffer_binding(m_binding);
+			m_binding = INVALID_BINDING;
 		}
-		unbind(m_binding);
-		g_runtime_context.m_graphics_context->release_uniform_buffer_binding(m_binding);
-		m_binding = INVALID_BINDING;
 	}
 
 	VertexBuffer::Layout::Layout(std::initializer_list<Element> const& elements) {

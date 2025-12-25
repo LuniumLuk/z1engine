@@ -54,7 +54,7 @@ std::string save_file_dialog(char const* filter) {
 EditorGUI::EditorGUI() {
 	m_viewport_framebuffer = Framebuffer::create(g_viewport_resolutions[m_current_resolution][0], g_viewport_resolutions[m_current_resolution][1],
 		{
-			{ ImageFormat::RGBA8 },
+			{ ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToBorder },
 			{ ImageFormat::DepthStencil },
 		});
 }
