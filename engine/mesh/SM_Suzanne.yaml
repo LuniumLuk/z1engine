@@ -1,0 +1,19 @@
+bound_min: [-1.36718798, -0.984375, -0.851562023]
+bound_max: [1.36718798, 0.984375, 0.851562023]
+vertex_count: 2901
+index_count: 2901
+primitives:
+  - index_start: 0
+    index_count: 2901
+    vertex_count: 2901
+    bound_min: [-1.36718798, -0.984375, -0.851562023]
+    bound_max: [1.36718798, 0.984375, 0.851562023]
+    material: ~
+    has_indices: false
+    has_normal: false
+    has_tangent: false
+meta:
+  guid: mesh/SM_Suzanne
+  type: static mesh
+  path: mesh/SM_Suzanne
+  extra: ~

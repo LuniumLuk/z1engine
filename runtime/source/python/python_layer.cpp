@@ -8,6 +8,8 @@
 #include "pybind11/embed.h"
 namespace py = pybind11;
 
+#include <conio.h> // Windows specific for _kbhit and _getch
+
 extern void ForceLinkPythonEngine();
 
 namespace z1 {
@@ -64,17 +66,35 @@ namespace z1 {
 			CORE_ERROR("Python Error: {0}", e.what());
 		}
 
-		m_console_thread = std::make_unique<std::thread>([this]()
-			{
-				std::string line;
-				while (m_running) {
-					// This blocks, but it's okay because it's on a background thread
-					if (std::getline(std::cin, line)) {
+		m_console_thread = std::make_unique<std::thread>([this]() {
+			std::string line;
+			while (m_running) {
+				// 1. Check if a key has been pressed
+				if (_kbhit()) {
+					char c = _getch();
+
+					if (c == '\r' || c == '\n') { // Enter key
+						std::cout << std::endl; // Echo newline
 						std::lock_guard<std::mutex> lock(m_console_mutex);
 						m_console_queue.push(line);
+						line.clear();
 					}
+					else if (c == '\b') { // Backspace
+						if (!line.empty()) {
+							line.pop_back();
+							std::cout << "\b \b" << std::flush; // Erase char from console
+						}
+					}
+					else {
+						line += c;
+						std::cout << c << std::flush; // Echo the character
+					}
+				} else {
+					// 2. No key pressed, sleep briefly to save CPU, then check m_running
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
 				}
-			});
+			}
+		});
 	}
 
 	void PythonLayer::on_detach() {
