@@ -199,7 +199,8 @@ workspace "z1engine"
 		}
 
 		postbuildcommands {
-			"{COPYFILE} \"%{wks.location}3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
+			"{COPYFILE} \"%{wks.location}3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\"",
+			"{COPYFILE} \"%{wks.location}3rdparty/python314/python314.zip\" \"%{cfg.targetdir}\"",
 		}
 
 		filter "system:windows"
