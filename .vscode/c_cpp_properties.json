@@ -13,7 +13,8 @@
 				"${workspaceFolder}/3rdparty/imguizmo",
 				"${workspaceFolder}/3rdparty/glm",
 				"${workspaceFolder}/3rdparty/entt",
-				"${workspaceFolder}/3rdparty/yaml-cpp/include"
+				"${workspaceFolder}/3rdparty/yaml-cpp/include",
+				"${workspaceFolder}/3rdparty/python314/include"
 			],
 			"defines": [
 				"PLATFORM_WINDOWS",

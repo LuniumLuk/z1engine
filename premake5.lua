@@ -31,9 +31,14 @@ workspace "z1engine"
 				"3rdparty/glm",
 				"3rdparty/entt",
 				"3rdparty/yaml-cpp/include",
+				"3rdparty/python314/include",
 				"bakery/source"
 			}
-			links { "runtime" }
+			libdirs { "3rdparty/python314/lib" }
+			links { "runtime", "python314" }
+			postbuildcommands {
+				"{COPYFILE} \"%{wks.location}3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
+			}
 			filter "system:windows"
 				systemversion "latest"
 				defines "PLATFORM_WINDOWS"
@@ -100,8 +105,10 @@ workspace "z1engine"
 			"3rdparty/glm",
 			"3rdparty/entt",
 			"3rdparty/yaml-cpp/include",
+			"3rdparty/python314/include",
 		}
 
+		libdirs { "3rdparty/python314/lib" }
 		links
 		{
 			"glfw",
@@ -111,6 +118,7 @@ workspace "z1engine"
 			"bakery",
 			"yaml-cpp",
 			"opengl32.lib",
+			"python314",
 		}
 
 		linkoptions { "/IGNORE:4006" }
@@ -181,11 +189,17 @@ workspace "z1engine"
 			"3rdparty/glm",
 			"3rdparty/entt",
 			"3rdparty/yaml-cpp/include",
+			"3rdparty/python314/include",
 		}
 
+		libdirs { "3rdparty/python314/lib" }
 		links
 		{
-			"runtime"
+			"runtime", "python314"
+		}
+
+		postbuildcommands {
+			"{COPYFILE} \"%{wks.location}3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
 		}
 
 		filter "system:windows"
