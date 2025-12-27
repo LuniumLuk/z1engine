@@ -30,6 +30,7 @@ namespace z1 {
 	struct Timer;
 	struct Logger;
 	struct ImGuiLayer;
+	struct PythonLayer;
 	struct LayerStack;
 	struct InstrumentationTimer;
 	struct FileSystem;
@@ -51,6 +52,7 @@ namespace z1 {
 		std::shared_ptr<Timer> m_timer;
 		std::shared_ptr<Logger> m_logger;
 		std::shared_ptr<ImGuiLayer> m_imgui_layer;
+		std::shared_ptr<PythonLayer> m_python_layer;
 		std::shared_ptr<LayerStack> m_layer_stack;
 		std::shared_ptr<FileSystem> m_file_system;
 		std::shared_ptr<GraphicsContext> m_graphics_context;
@@ -82,8 +84,8 @@ namespace z1 {
 #    endif
 #endif
 
-#define LOG_ARGS(fmt, ...)                   fmt, ##__VA_ARGS__
-#define LOG_ARGS_PREFIX(fmt, ...) LOG_PREFIX fmt, ##__VA_ARGS__
+#define LOG_ARGS(fmt, ...)                                  fmt, ##__VA_ARGS__
+#define LOG_ARGS_PREFIX(fmt, ...) std::string(LOG_PREFIX) + fmt, ##__VA_ARGS__
 
 #define CORE_TRACE(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->trace(LOG_ARGS(fmt, ##__VA_ARGS__))
 #define CORE_DEBUG(fmt, ...)    g_runtime_context.m_logger->get_core_logger()->debug(LOG_ARGS(fmt, ##__VA_ARGS__))

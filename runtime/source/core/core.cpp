@@ -14,6 +14,7 @@
 #include "render/renderer/renderer_forward.h"
 #include "asset/asset_manager.h"
 #include "3rdparty/imgui_layer.h"
+#include "python/python_layer.h"
 
 namespace z1 {
 
@@ -35,6 +36,7 @@ namespace z1 {
 		m_asset_manager = std::make_shared<AssetManager>();
 
 		m_imgui_layer = std::make_shared<ImGuiLayer>();
+		m_python_layer = std::make_shared<PythonLayer>();
 		m_layer_stack = std::make_shared<LayerStack>();
 
 		m_renderer_2d = std::make_shared<Renderer2D>();
@@ -59,6 +61,7 @@ namespace z1 {
 		RenderGraph::clear_cache();
 
 		m_layer_stack.reset();
+		m_python_layer.reset();
 		m_imgui_layer.reset();
 
 		m_asset_manager.reset();
