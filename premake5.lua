@@ -1,7 +1,17 @@
+newoption {
+	trigger     = "vs2026",
+	description = "Use Visual Studio 2026 toolset"
+}
+
 workspace "z1engine"
 	architecture "x64"
 	startproject "editor"
 	configurations { "Debug", "Release", "Profile" }
+
+	filter { "action:vs2022", "options:vs2026" }
+		toolset "v145"
+
+	filter {}
 
 	configurations
 	{
