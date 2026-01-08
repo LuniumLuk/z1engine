@@ -48,7 +48,8 @@ namespace z1 {
 				m_description.height,
 				attachment.format,
 				attachment.sampler_mode,
-				attachment.wrap_mode);
+				attachment.wrap_mode,
+				false);
 			auto attachment_id = image_format_to_attachment_type(attachment.format, binding);
 
 			GLuint native_handle = (GLuint)reinterpret_cast<uintptr_t>(image->get_native_handle());

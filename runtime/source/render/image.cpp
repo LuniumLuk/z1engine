@@ -38,7 +38,8 @@ namespace z1 {
 		uint32_t height,
 		ImageFormat format,
 		SamplerMode sampler_mode,
-		WrapMode wrap_mode) {
+		WrapMode wrap_mode,
+		bool mipmap) {
 		PROFILE_FUNCTION();
 
 		Description desc{};
@@ -48,6 +49,7 @@ namespace z1 {
 		desc.m_format = format;
 		desc.m_sampler_mode = sampler_mode;
 		desc.m_wrap_mode = wrap_mode;
+		desc.m_mipmap = mipmap;
 
 		return std::shared_ptr<Image2D>(new OpenGLImage2D(data, size, desc));
 	}
@@ -59,7 +61,8 @@ namespace z1 {
 		uint32_t height,
 		ImageFormat format,
 		SamplerMode sampler_mode,
-		WrapMode wrap_mode) {
+		WrapMode wrap_mode,
+		bool mipmap) {
 		PROFILE_FUNCTION();
 
 		Description desc{};
@@ -69,6 +72,7 @@ namespace z1 {
 		desc.m_format = format;
 		desc.m_sampler_mode = sampler_mode;
 		desc.m_wrap_mode = wrap_mode;
+		desc.m_mipmap = mipmap;
 
 		return std::shared_ptr<ImageCube>(new OpenGLImageCube(data, size, desc));
 	}

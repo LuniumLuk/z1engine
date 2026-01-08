@@ -146,7 +146,8 @@ namespace z1 {
 			uint32_t height,
 			ImageFormat format = ImageFormat::RGBA8,
 			SamplerMode sampler_mode = SamplerMode::Linear,
-			WrapMode wrap_mode = WrapMode::Repeat);
+			WrapMode wrap_mode = WrapMode::Repeat,
+			bool mipmap = true);
 	};
 
 	struct API ImageCube : Image {
@@ -166,7 +167,8 @@ namespace z1 {
 			uint32_t height,
 			ImageFormat format = ImageFormat::RGBA8,
 			SamplerMode sampler_mode = SamplerMode::Linear,
-			WrapMode wrap_mode = WrapMode::Repeat);
+			WrapMode wrap_mode = WrapMode::Repeat,
+			bool mipmap = true);
 	};
 
 }
