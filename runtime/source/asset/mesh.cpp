@@ -125,9 +125,20 @@ namespace z1 {
 
 			if (mi)
 				mi->bind(per_frame);
+
+				// If renderer produced a shadow map, bind it to the material shader as u_shadow_map
+				auto shadow_img = (g_runtime_context.m_renderer_forward ? g_runtime_context.m_renderer_forward->get_shadow_image() : nullptr);
+				if (shadow_img && mi && mi->m_material && mi->m_material->m_pipeline && mi->m_material->m_pipeline->m_shader) {
+					shadow_img->bind(mi->m_material->m_pipeline->m_shader, "u_shadow_map");
+				}
 			prim.m_vertex_array->bind();
 			prim.m_vertex_array->draw(prim.m_primitive_type);
 			prim.m_vertex_array->unbind();
+
+			if (shadow_img && mi && mi->m_material && mi->m_material->m_pipeline && mi->m_material->m_pipeline->m_shader) {
+				shadow_img->unbind();
+			}
+
 			if (mi)
 				mi->unbind();
 		}

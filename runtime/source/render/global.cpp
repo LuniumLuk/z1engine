@@ -12,6 +12,7 @@ namespace z1 {
 	void GlobalSettings::flush() {
 		m_data.projview = projview;
 		m_data.prev_projview = prev_projview;
+		m_data.sun_projview = sun_projview;
 		m_data.sun_direction = glm::vec4(sun_direction, 0.0f);
 		m_data.sun_intensity = sun_color * sun_intensity;
 		m_data.cam_position = glm::vec4(cam_position, 0.0f);

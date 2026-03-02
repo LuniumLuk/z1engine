@@ -14,6 +14,7 @@ namespace z1 {
 
 		glm::mat4 projview              = {};
 		glm::mat4 prev_projview         = {};
+		glm::mat4 sun_projview          = {};
 		glm::vec3 sun_direction         = { .5f, .5f, .5f };
 		glm::vec4 sun_color             = { 1.f, 1.f, 1.f, 1.f };
 		float     sun_intensity         = 6.0f;
@@ -40,6 +41,7 @@ namespace z1 {
 		struct alignas(16) GlobalConstants {
 			glm::mat4 projview;
 			glm::mat4 prev_projview;
+			glm::mat4 sun_projview;
 			glm::vec4 sun_direction;
 			glm::vec4 sun_intensity;
 			glm::vec4 sun_ambient;

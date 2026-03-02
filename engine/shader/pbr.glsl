@@ -7,6 +7,9 @@
 	uniform sampler2D s_emissive;
 	uniform sampler2D s_occlusion;
 
+	// Shadow map (bound at runtime by renderer if available)
+	uniform sampler2D u_shadow_map;
+
 	uniform vec4 u_base_color_factor;
 	uniform float u_roughness_factor;
 	uniform float u_metallic_factor;
@@ -41,6 +44,20 @@
 		vec3 L = normalize(u_sun_direction.xyz);
 		vec3 H = normalize(V + L);
 
+		// Shadowing: project to light space and compare depth
+		float shadow = 1.0;
+		{
+			vec4 ls = u_sun_projview * vec4(v_world_position, 1.0);
+			vec3 proj = ls.xyz / ls.w;
+			vec2 uv = proj.xy * 0.5 + 0.5;
+			float current_depth = proj.z * 0.5 + 0.5;
+			if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+				float sampled = texture(u_shadow_map, uv).r;
+				float bias = 0.005;
+				shadow = (current_depth - bias > sampled) ? 0.0 : 1.0;
+			}
+		}
+
 		// Base material inputs
 		vec4 base_color = texture(s_base_color, v_texcoord0);
 		base_color.rgb = pow(base_color.rgb, vec3(2.2));
@@ -72,8 +89,8 @@
 		float NdotL = max(dot(N, L), 0.0);
 		vec3 radiance = light_color * NdotL;
 
-		vec3 L_diffuse = (kD * base_color.rgb / PI) * radiance;
-		vec3 L_specular = specular * radiance;
+		vec3 L_diffuse = (kD * base_color.rgb / PI) * radiance * shadow;
+		vec3 L_specular = specular * radiance * shadow;
 
 		// Simple ambient term
 		vec3 ambient = base_color.rgb * u_sun_ambient.rgb;
