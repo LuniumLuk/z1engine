@@ -1,4 +1,6 @@
 #include "z1engine.h"
+#include <vector>
+#include <string>
 
 using namespace z1;
 
@@ -72,6 +74,56 @@ int main() {
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(-1.5f, 0.0f, -1.0f);
 		ent->get_component<TransformComponent>().m_rotation = glm::vec3(90.0f, 0.0f, 0.0f);
+	}
+
+	// Add a set of engine meshes from engine/mesh for a more fruitful test scene
+	{
+		// create a wide ground plane first
+		{
+			auto ground = scene->create_entity("Ground");
+			ground->add_component<StaticMeshComponent>(
+				g_runtime_context.m_asset_manager->get<StaticMesh>(std::string("mesh/SM_Cube"))
+			);
+			auto& gtc = ground->get_component<TransformComponent>();
+			gtc.m_location = glm::vec3(0.0f, -3.4f, -4.5f);
+			gtc.m_scale = glm::vec3(30.0f, 0.2f, 30.0f);
+		}
+
+		std::vector<std::string> engine_meshes = { "SM_Cube", "SM_Sphere", "SM_Cylinder", "SM_Cone", "SM_Suzanne" };
+		const uint32_t cols = 5;
+		const float spacing = 5.0f;
+		const int duplicates = 2; // number of copies for each mesh
+
+		for (size_t i = 0; i < engine_meshes.size(); ++i) {
+			const auto& mname = engine_meshes[i];
+			// cluster center for this mesh type
+			float cx = float((int)i % cols) * spacing - (float(cols - 1) * spacing * 0.5f);
+			float cy = float((int)i / cols) * spacing - 0.5f;
+
+			for (int d = 0; d < duplicates; ++d) {
+				std::string ename = std::string("EngineMesh_") + mname + "_" + std::to_string(d);
+				auto ent = scene->create_entity(ename);
+				ent->add_component<StaticMeshComponent>(
+					g_runtime_context.m_asset_manager->get<StaticMesh>(std::string("mesh/") + mname)
+				);
+
+				auto& tc = ent->get_component<TransformComponent>();
+
+				// spread duplicates in a small pattern around the cluster center
+				float ox = ((d % 2 == 0) ? -0.5f : 0.5f) * (1.0f + d * 0.15f);
+				float oy = ((d / 2 == 0) ? -0.35f : 0.35f) * (1.0f + d * 0.12f);
+				float oz = -4.0f + float((d % 3) - 1) * 0.35f;
+				tc.m_location = glm::vec3(cx + ox, cy + oy, oz);
+
+				// vary scales for visual interest
+				float base_s = 0.7f + float((i + d) % 3) * 0.25f;
+				float s = base_s * (1.0f + d * 0.08f);
+				tc.m_scale = glm::vec3(s, s, s);
+
+				// add dynamic rotations (degrees) so each copy is distinct
+				tc.m_rotation = glm::vec3(10.0f * float(d) + 5.0f * float(i), 30.0f * float(i) + 22.0f * float(d), 8.0f * float(d));
+			}
+		}
 	}
 
 #if 0

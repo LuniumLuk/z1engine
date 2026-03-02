@@ -157,6 +157,15 @@ namespace z1 {
 
 		g->projview = projview_jittered;
 		g->cam_position = cam_pos;
+
+		// compute light projection (simple orthographic)
+		float ortho_size = g->sm_ortho_size;
+		glm::vec3 sun_dir = g->sun_direction;
+		glm::vec3 light_pos = cam_pos + glm::normalize(sun_dir) * ortho_size;
+		glm::mat4 light_view = glm::lookAt(light_pos, cam_pos, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 light_proj = glm::ortho(-ortho_size, ortho_size, -ortho_size, ortho_size, g->sm_near, g->sm_far);
+		g->sun_projview = light_proj * light_view;
+
 		g->flush();
 		g->bind();
 
@@ -165,18 +174,9 @@ namespace z1 {
 			.set_output(m_shadow_framebuffer)
 			.set_pass_desc(desc)
 			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
-				// compute light projection (simple orthographic)
-				glm::vec3 sun_dir = g_runtime_context.m_global->sun_direction;
-				glm::vec3 light_pos = -glm::normalize(sun_dir) * 30.0f;
-				glm::mat4 light_view = glm::lookAt(light_pos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-				float ortho_size = 20.0f;
-				glm::mat4 light_proj = glm::ortho(-ortho_size, ortho_size, -ortho_size, ortho_size, 0.1f, 100.0f);
-				g_runtime_context.m_global->sun_projview = light_proj * light_view;
-				g_runtime_context.m_global->flush();
-
 				m_pipeline_shadow->bind();
 				auto& s = m_pipeline_shadow->m_shader;
-				s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+				s->set_uniform_block_binding("Global", g->get_binding());
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 				for (auto [entity, transform, mesh] : view.each()) {
 					glm::mat4 model = transform.get_world_transform();

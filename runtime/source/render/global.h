@@ -28,6 +28,10 @@ namespace z1 {
 		float     pp_exposure           = 1.0f;
 		float     pp_gamma              = 2.2f;
 		glm::vec4 pp_tint               = { 1.f, 1.f, 1.f, 1.f };
+		// Shadow map
+		float     sm_near               = 1.0f;
+		float     sm_far                = 100.0f;
+		float     sm_ortho_size         = 40.0f;
 
 		void flush();
 		void bind();
@@ -65,5 +69,8 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, pp_exposure,           FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, pp_gamma,              FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, pp_tint,               FF_Default, "[color]")
+	REFLECTED_FIELD(GlobalSettings, sm_near,               FF_Default)
+	REFLECTED_FIELD(GlobalSettings, sm_far,                FF_Default)
+	REFLECTED_FIELD(GlobalSettings, sm_ortho_size,         FF_Default)
 
 }

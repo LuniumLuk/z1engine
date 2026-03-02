@@ -25,3 +25,5 @@ layout (std140) uniform Global {
 	float u_pp_gamma;
 	vec4  u_pp_tint;
 };
+
+uniform sampler2D u_shadow_map;

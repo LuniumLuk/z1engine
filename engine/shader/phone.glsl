@@ -17,6 +17,6 @@
 
 	void main() {
 		vec4 color = v_color * texture(s_base_color, v_texcoord0);
-		frag_color = phone_shading(normalize(v_normal), v_world_position, color);
+		frag_color = phone_shading(normalize(v_normal), v_world_position, color, get_shadow());
 	}
 }

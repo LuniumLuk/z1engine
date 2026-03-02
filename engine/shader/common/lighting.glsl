@@ -4,7 +4,7 @@ vec4 lambert_shading(vec3 normal, vec4 color) {
 	return vec4(color.rgb * NoL, color.a);
 }
 
-vec4 phone_shading(vec3 normal, vec3 world_pos, vec4 color) {
+vec4 phone_shading(vec3 normal, vec3 world_pos, vec4 color, float shadow) {
 	// Ambient lighting
 	vec3 ambient = color.rgb * u_sun_ambient.rgb;
 
@@ -20,7 +20,7 @@ vec4 phone_shading(vec3 normal, vec3 world_pos, vec4 color) {
 	float spec = pow(max(dot(view_dir, refl_dir), 0.0), 32);
 	vec3 specular = specular_strength * spec * u_sun_intensity.xyz;
 
-	vec3 result = (ambient + diffuse + specular) * color.rgb;
+	vec3 result = (ambient + (diffuse + specular) * shadow) * color.rgb;
 	return vec4(result, color.a);
 }
 
@@ -84,4 +84,22 @@ vec3 get_normal_from_map(vec3 world_pos, vec3 normal, vec4 tangent, vec3 normal_
 	mat3 TBN = mat3(T, B, N);
 
 	return normalize(TBN * normal_map);
+}
+
+// ----------------------------------------------------------------------------
+// Shadow mapping
+// ----------------------------------------------------------------------------
+
+float get_shadow() {
+	float shadow = 1.0;
+	vec4 ls = u_sun_projview * vec4(v_world_position, 1.0);
+	vec3 proj = ls.xyz / ls.w;
+	vec2 uv = proj.xy * 0.5 + 0.5;
+	float current_depth = proj.z * 0.5 + 0.5;
+	if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+		float sampled = texture(u_shadow_map, uv).r;
+		float bias = 0.005;
+		shadow = (current_depth - bias > sampled) ? 0.0 : 1.0;
+	}
+	return shadow;
 }

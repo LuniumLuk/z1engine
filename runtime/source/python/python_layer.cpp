@@ -19,11 +19,7 @@ namespace z1 {
 	}
 
 	PythonLayer::~PythonLayer() {
-		m_running = false;
-		if (m_console_thread->joinable()) {
-			m_console_thread->join();
-		}
-		CORE_DEBUG("shutting down PythonLayer ...");
+
 	}
 
 	void PythonLayer::on_attach() {
@@ -100,6 +96,13 @@ namespace z1 {
 	void PythonLayer::on_detach() {
 		// 5. Cleanup manually at the end of the program
 		Py_Finalize();
+
+		// 6. Shutdown console thread
+		m_running = false;
+		if (m_console_thread->joinable()) {
+			m_console_thread->join();
+		}
+		CORE_DEBUG("shutting down PythonLayer ...");
 	}
 
 	void PythonLayer::on_update(float) {
