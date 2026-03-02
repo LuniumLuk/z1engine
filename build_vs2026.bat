@@ -1,5 +1,5 @@
 set VS_PATH="C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\devenv.com"
-call utils\premake\premake5.exe vs2022
+call utils\premake\premake5.exe vs2022 --vs2026
 call %VS_PATH% z1engine.sln /Build "Release|x64"
 if exist "release" (
     echo Deleting existing release folder...
