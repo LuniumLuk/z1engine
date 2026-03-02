@@ -6,6 +6,8 @@
 
 namespace z1 {
 
+	struct Scene;
+
 	struct API RendererForward {
 
 		RendererForward();

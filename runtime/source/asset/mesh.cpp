@@ -2,6 +2,7 @@
 #include "asset/mesh.h"
 #include "asset/asset_manager.h"
 #include "asset/binary_file.h"
+#include "render/renderer/renderer_forward.h"
 
 namespace z1 {
 

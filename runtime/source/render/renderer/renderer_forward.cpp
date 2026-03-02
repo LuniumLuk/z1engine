@@ -83,7 +83,6 @@ namespace z1 {
 		{
 			Pipeline::Description desc{};
 			desc.depth_test = true;
-			desc.depth_write = true;
 			desc.cull_mode = CullMode::Back;
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/shadow");
 			m_pipeline_shadow = Pipeline::build(desc);
