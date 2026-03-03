@@ -186,4 +186,8 @@ namespace z1 {
 	};                                                                 \
 	static CONCAT3(_REFLECT_REGISTER_, type, _##field) CONCAT3(_REFLECT_REGISTER_INSTANCE_, type, _##field);
 
+#define DISABLE_COPY(type) \
+	type(type const&) = delete; \
+	type& operator=(type const&) = delete;
+
 #define TYPE_NAME(type) #type

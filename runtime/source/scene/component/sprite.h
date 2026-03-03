@@ -31,6 +31,9 @@ namespace z1 {
 			, m_texture(texture->m_texture)
 			, m_texcoords(texture->m_texcoords) {
 		}
+
+		DISABLE_COPY(SpriteComponent)
+
 	};
 
 	REFLECTED_FIELD(SpriteComponent, m_color,         FF_Default, "[color]")

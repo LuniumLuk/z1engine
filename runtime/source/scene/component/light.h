@@ -23,6 +23,9 @@ namespace z1 {
 		LightComponent() = default;
 		LightComponent(LightType type, glm::vec3 const& color, float intensity)
 			: m_type((int)type), m_color(color), m_intensity(intensity) {}
+
+		DISABLE_COPY(LightComponent)
+
 	};
 
 	REFLECTED_FIELD(LightComponent, m_type, FF_Default, "[drag]min=0,max=2")

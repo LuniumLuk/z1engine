@@ -31,6 +31,8 @@ namespace z1 {
 		uint32_t m_id = 0;
 		TagComponent() = default;
 		TagComponent(std::string const& tag, uint32_t id) : m_tag(tag), m_id(id) {}
+
+		DISABLE_COPY(TagComponent)
 	};
 
 	REFLECTED_FIELD(TagComponent, m_tag, FF_Default)
@@ -45,6 +47,8 @@ namespace z1 {
 		TransformComponent(glm::vec3 const& location, glm::vec3 const& rotation, glm::vec3 const& scale) noexcept
 			: m_location(location), m_rotation(rotation), m_scale(scale) {
 		}
+
+		DISABLE_COPY(TransformComponent)
 
 		void set_parent(TransformComponent* parent) {
 			m_parent = parent;
@@ -190,8 +194,7 @@ namespace z1 {
 		std::weak_ptr<Entity> m_entity;
 		std::vector<ScriptData> m_scripts;
 
-		ScriptComponent(ScriptComponent const&) = delete;
-		ScriptComponent& operator=(ScriptComponent const&) = delete;
+		DISABLE_COPY(ScriptComponent)
 
 		ScriptComponent(ScriptComponent&&) = default;
 		ScriptComponent& operator=(ScriptComponent&&) = default;

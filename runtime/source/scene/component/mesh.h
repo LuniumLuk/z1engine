@@ -10,6 +10,9 @@ namespace z1 {
 
 		StaticMeshComponent(std::shared_ptr<StaticMesh> const& mesh) noexcept
 			: m_mesh(mesh) {}
+
+		DISABLE_COPY(StaticMeshComponent)
+
 	};
 
 }

@@ -7,6 +7,7 @@
 #include "scene/component/sprite.h"
 #include "scene/component/light.h"
 #include "core/core.h"
+#include "render/global.h"
 #include "render/shader.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
@@ -158,6 +159,45 @@ namespace z1 {
 			return scene;
 		}
 
+		// Global Settings
+		auto global_settings = yaml["global_settings"];
+		if (global_settings) {
+			auto& global = *g_runtime_context.m_global;
+			if (global_settings["sun_direction"]) global.sun_direction = global_settings["sun_direction"].as<glm::vec3>();
+			if (global_settings["sun_color"]) global.sun_color = global_settings["sun_color"].as<glm::vec4>();
+			if (global_settings["sun_intensity"]) global.sun_intensity = global_settings["sun_intensity"].as<float>();
+			if (global_settings["sun_ambient_color"]) global.sun_ambient_color = global_settings["sun_ambient_color"].as<glm::vec4>();
+			if (global_settings["sun_ambient_intensity"]) global.sun_ambient_intensity = global_settings["sun_ambient_intensity"].as<float>();
+			if (global_settings["taa_enabled"]) global.taa_enabled = global_settings["taa_enabled"].as<bool>();
+			if (global_settings["taa_blend"]) global.taa_blend = global_settings["taa_blend"].as<float>();
+			if (global_settings["pp_exposure"]) global.pp_exposure = global_settings["pp_exposure"].as<float>();
+			if (global_settings["pp_gamma"]) global.pp_gamma = global_settings["pp_gamma"].as<float>();
+			if (global_settings["pp_tint"]) global.pp_tint = global_settings["pp_tint"].as<glm::vec4>();
+			if (global_settings["sm_near"]) global.sm_near = global_settings["sm_near"].as<float>();
+			if (global_settings["sm_far"]) global.sm_far = global_settings["sm_far"].as<float>();
+			if (global_settings["sm_ortho_size"]) global.sm_ortho_size = global_settings["sm_ortho_size"].as<float>();
+		}
+
+		// Editor Camera
+		auto editor_camera = yaml["editor_camera"];
+		if (editor_camera) {
+			scene->m_editor_camera_data.is_valid = true;
+
+			auto transform_yaml = editor_camera["transform"];
+			scene->m_editor_camera_data.transform.m_location = transform_yaml["location"].as<glm::vec3>();
+			scene->m_editor_camera_data.transform.m_rotation = transform_yaml["rotation"].as<glm::vec3>();
+			scene->m_editor_camera_data.transform.m_scale = transform_yaml["scale"].as<glm::vec3>();
+
+			auto camera_yaml = editor_camera["camera"];
+			scene->m_editor_camera_data.camera.m_is_perspective = camera_yaml["is_perspective"].as<bool>();
+			scene->m_editor_camera_data.camera.m_intrinsic.fov = camera_yaml["intrinsic"].as<float>();
+			scene->m_editor_camera_data.camera.m_near = camera_yaml["near"].as<float>();
+			scene->m_editor_camera_data.camera.m_far = camera_yaml["far"].as<float>();
+			scene->m_editor_camera_data.camera.m_aspect = camera_yaml["aspect"].as<float>();
+			scene->m_editor_camera_data.camera.m_use_fixed_aspect = camera_yaml["use_fixed_aspect"].as<bool>();
+			scene->m_editor_camera_data.camera.m_is_primary = camera_yaml["is_primary"].as<bool>();
+		}
+
 		auto entities = yaml["entities"];
 		if (!entities) {
 			CORE_WARN("scene has no entities: {}", file.generic_string());
@@ -266,6 +306,59 @@ namespace z1 {
 		yaml << YAML::BeginMap;
 
 		yaml << YAML::Key << "meta" << YAML::Value << m_meta;
+
+		// Global Settings
+		auto& global = *g_runtime_context.m_global;
+		yaml << YAML::Key << "global_settings" << YAML::Value;
+		yaml << YAML::BeginMap;
+		yaml << YAML::Key << "sun_direction" << YAML::Value << global.sun_direction;
+		yaml << YAML::Key << "sun_color" << YAML::Value << global.sun_color;
+		yaml << YAML::Key << "sun_intensity" << YAML::Value << global.sun_intensity;
+		yaml << YAML::Key << "sun_ambient_color" << YAML::Value << global.sun_ambient_color;
+		yaml << YAML::Key << "sun_ambient_intensity" << YAML::Value << global.sun_ambient_intensity;
+		yaml << YAML::Key << "taa_enabled" << YAML::Value << global.taa_enabled;
+		yaml << YAML::Key << "taa_blend" << YAML::Value << global.taa_blend;
+		yaml << YAML::Key << "pp_exposure" << YAML::Value << global.pp_exposure;
+		yaml << YAML::Key << "pp_gamma" << YAML::Value << global.pp_gamma;
+		yaml << YAML::Key << "pp_tint" << YAML::Value << global.pp_tint;
+		yaml << YAML::Key << "sm_near" << YAML::Value << global.sm_near;
+		yaml << YAML::Key << "sm_far" << YAML::Value << global.sm_far;
+		yaml << YAML::Key << "sm_ortho_size" << YAML::Value << global.sm_ortho_size;
+		yaml << YAML::EndMap;
+
+		// Editor Camera
+		for (auto const& entity : m_transient_entities) {
+			if (entity->get_component<TagComponent>().m_tag == "[Editor] Viewport Camera") {
+				auto const& transform = entity->get_component<TransformComponent>();
+				auto const& camera = entity->get_component<CameraComponent>();
+
+				yaml << YAML::Key << "editor_camera" << YAML::Value;
+				yaml << YAML::BeginMap;
+
+				// Transform
+				yaml << YAML::Key << "transform" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "location" << YAML::Value << transform.m_location;
+				yaml << YAML::Key << "rotation" << YAML::Value << transform.m_rotation;
+				yaml << YAML::Key << "scale" << YAML::Value << transform.m_scale;
+				yaml << YAML::EndMap;
+
+				// Camera
+				yaml << YAML::Key << "camera" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "is_perspective" << YAML::Value << camera.m_is_perspective;
+				yaml << YAML::Key << "intrinsic" << YAML::Value << camera.m_intrinsic.fov;
+				yaml << YAML::Key << "near" << YAML::Value << camera.m_near;
+				yaml << YAML::Key << "far" << YAML::Value << camera.m_far;
+				yaml << YAML::Key << "aspect" << YAML::Value << camera.m_aspect;
+				yaml << YAML::Key << "use_fixed_aspect" << YAML::Value << camera.m_use_fixed_aspect;
+				yaml << YAML::Key << "is_primary" << YAML::Value << camera.m_is_primary;
+				yaml << YAML::EndMap;
+
+				yaml << YAML::EndMap;
+				break;
+			}
+		}
 
 		yaml << YAML::Key << "entities" << YAML::Value;
 		yaml << YAML::BeginSeq;

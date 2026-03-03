@@ -10,12 +10,48 @@
 #include "browser.h"
 #include "stb/stb_image_write.h"
 #include "scene/component/light.h"
+#include <yaml-cpp/yaml.h>
 
 using namespace z1;
 namespace fs = std::filesystem;
 
+struct EditorSettings {
+	std::string last_opened_scene_guid;
+	bool show_light_gizmos = true;
+	float light_gizmo_size = 0.1f;
+};
+
+void save_editor_settings(EditorSettings const& settings) {
+	YAML::Emitter yaml;
+	yaml << YAML::BeginMap;
+	yaml << YAML::Key << "last_opened_scene_guid" << YAML::Value << settings.last_opened_scene_guid;
+	yaml << YAML::Key << "show_light_gizmos" << YAML::Value << settings.show_light_gizmos;
+	yaml << YAML::Key << "light_gizmo_size" << YAML::Value << settings.light_gizmo_size;
+	yaml << YAML::EndMap;
+
+	std::ofstream fout("editor_settings.yaml");
+	fout << yaml.c_str();
+}
+
+EditorSettings load_editor_settings() {
+	EditorSettings settings;
+	if (!fs::exists("editor_settings.yaml")) return settings;
+
+	try {
+		YAML::Node yaml = YAML::LoadFile("editor_settings.yaml");
+		if (yaml["last_opened_scene_guid"]) settings.last_opened_scene_guid = yaml["last_opened_scene_guid"].as<std::string>();
+		if (yaml["show_light_gizmos"]) settings.show_light_gizmos = yaml["show_light_gizmos"].as<bool>();
+		if (yaml["light_gizmo_size"]) settings.light_gizmo_size = yaml["light_gizmo_size"].as<float>();
+	}
+	catch (...) {
+		std::cout << "failed to load editor settings" << std::endl;
+	}
+	return settings;
+}
+
 struct EditorLayer : Layer {
 	EditorLayer() {
+		m_settings = load_editor_settings();
 		m_gui = std::make_shared<EditorGUI>();
 		m_browser = std::make_unique<ContentBrowser>();
 		m_browser->m_on_asset_opened =
@@ -89,7 +125,7 @@ struct EditorLayer : Layer {
 				ImGuizmo::SetRect(image_min.x, image_min.y, present_size.x, present_size.y);
 
 				// Visualize lights using ImGuizmo::DrawCubes
-				if (m_show_light_gizmos) {
+				if (m_settings.show_light_gizmos) {
 					std::vector<glm::mat4> light_matrices;
 					auto light_view = m_active_scene->m_registry.view<TransformComponent const, LightComponent const>();
 					for (auto [entity, transform, light] : light_view.each()) {
@@ -98,7 +134,7 @@ struct EditorLayer : Layer {
 							continue;
 						}
 						glm::mat4 model = transform.get_world_transform();
-						model = glm::scale(model, glm::vec3(m_light_gizmo_size));
+						model = glm::scale(model, glm::vec3(m_settings.light_gizmo_size));
 						light_matrices.push_back(model);
 					}
 
@@ -127,11 +163,16 @@ struct EditorLayer : Layer {
 		// so we use default resolution here (512x512)
 		m_picking = std::make_shared<PickingSystem>();
 
-		load_scene();
+		if (!m_settings.last_opened_scene_guid.empty()) {
+			load_scene(Scene::load(Guid::make(m_settings.last_opened_scene_guid)));
+		}
+		else {
+			load_scene();
+		}
 	}
 
 	~EditorLayer() {
-
+		save_editor_settings(m_settings);
 	}
 
 	void on_attach() override {
@@ -206,6 +247,7 @@ struct EditorLayer : Layer {
 	void load_scene(std::shared_ptr<Scene> const& scene = nullptr) {
 		if (scene) {
 			m_active_scene = scene;
+			m_settings.last_opened_scene_guid = m_active_scene->m_meta.guid.value;
 		}
 		else {
 			auto folder = m_browser->get_curr_dir();
@@ -213,15 +255,32 @@ struct EditorLayer : Layer {
 			if (!m_active_scene) {
 				return;
 			}
+			m_settings.last_opened_scene_guid = m_active_scene->m_meta.guid.value;
 		}
 
 		m_selected_entity = nullptr;
 
 		// setup editor viewport camera
 		auto camera = m_active_scene->create_transient_entity("[Editor] Viewport Camera");
-		camera->add_component<CameraComponent>();
+		auto& cam_comp = camera->add_component<CameraComponent>();
+		auto& trans_comp = camera->get_component<TransformComponent>();
+
+		if (m_active_scene->m_editor_camera_data.is_valid) {
+			cam_comp.m_aspect = m_active_scene->m_editor_camera_data.camera.m_aspect;
+			cam_comp.m_near = m_active_scene->m_editor_camera_data.camera.m_near;
+			cam_comp.m_far = m_active_scene->m_editor_camera_data.camera.m_far;
+			cam_comp.m_use_fixed_aspect = m_active_scene->m_editor_camera_data.camera.m_use_fixed_aspect;
+			cam_comp.m_intrinsic = m_active_scene->m_editor_camera_data.camera.m_intrinsic;
+
+			trans_comp.m_location = m_active_scene->m_editor_camera_data.transform.m_location;
+			trans_comp.m_rotation = m_active_scene->m_editor_camera_data.transform.m_rotation;
+			trans_comp.m_scale = m_active_scene->m_editor_camera_data.transform.m_scale;
+		}
+		else {
+			trans_comp.m_location = { 0.0f, 0.0f, 5.0f };
+		}
+		
 		camera->attach_script<HoveringCameraCtrlScript>(m_gui);
-		camera->get_component<TransformComponent>().m_location = { 0.0f, 0.0f, 5.0f };
 		m_active_scene->set_main_camera(camera);
 	}
 
@@ -270,8 +329,8 @@ struct EditorLayer : Layer {
 				}
 			}
 
-			ImGui::DragFloat("light gizmo size", &m_light_gizmo_size, 0.1f, 0.1f, 10.0f);
-			ImGui::Checkbox("show light gizmos", &m_show_light_gizmos);
+			ImGui::DragFloat("light gizmo size", &m_settings.light_gizmo_size, 0.1f, 0.1f, 10.0f);
+			ImGui::Checkbox("show light gizmos", &m_settings.show_light_gizmos);
 
 		}
 		ImGui::End();
@@ -284,6 +343,7 @@ struct EditorLayer : Layer {
 	}
 
 private:
+	EditorSettings m_settings;
 	std::shared_ptr<EditorGUI> m_gui;
 	std::shared_ptr<Scene> m_active_scene;
 	std::unique_ptr<ContentBrowser> m_browser;
@@ -296,8 +356,8 @@ private:
 	bool m_is_using_gizmo = false;
 	ImGuizmo::OPERATION m_current_gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
 	ImGuizmo::MODE m_current_gizmo_mode = ImGuizmo::MODE::LOCAL;
-	float m_light_gizmo_size = 0.1f;
-	bool m_show_light_gizmos = true;
+	//float m_light_gizmo_size = 0.1f;
+	//bool m_show_light_gizmos = true;
 
 	int m_fps_counter = 0;
 	float m_fps_timer = 0.0;

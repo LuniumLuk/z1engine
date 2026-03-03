@@ -13,6 +13,8 @@ namespace z1 {
 	REFLECTED_STRUCT(CameraComponent) : Requires<TransformComponent> {
 		CameraComponent() = default;
 
+		DISABLE_COPY(CameraComponent)
+
 		glm::mat4 get_proj() const {
 			if (m_is_perspective) {
 				return glm::perspective(glm::radians(m_intrinsic.fov), m_aspect, m_near, m_far);

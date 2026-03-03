@@ -51,6 +51,13 @@ namespace z1 {
 		static std::shared_ptr<Scene> load(Guid const& guid);
 		void save() const;
 
+		struct EditorCameraData {
+			TransformComponent transform;
+			CameraComponent camera;
+			bool is_valid = false;
+		};
+		mutable EditorCameraData m_editor_camera_data;
+
 		entt::registry m_registry;
 		std::vector<std::shared_ptr<Entity>> m_entities;
 		std::vector<std::shared_ptr<Entity>> m_transient_entities;
