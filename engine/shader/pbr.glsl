@@ -59,6 +59,10 @@
 		vec3 L_diffuse = vec3(0.0);
 		vec3 L_specular = vec3(0.0);
 
+		// Sunlight
+		calculate_pbr_illumination(normalize(u_sun_direction.xyz), u_sun_intensity.rgb, 1.0, get_shadow(),
+			N, V, F0, roughness, metallic, base_color, L_diffuse, L_specular);
+
 		int count = int(u_lights_count.x);
 		for (int i = 0; i < count; ++i) {
 			Light light = u_lights[i];
