@@ -53,4 +53,4 @@ The Bakery is a standalone CLI tool for asset processing.
 ## Build System
 
 -   **Premake5**: Used to generate Visual Studio project files (`.sln`, `.vcxproj`).
--   **Scripts**: `generate_vs2022.bat` and `build_vs2022.bat` automate the setup process.
+-   **Scripts**: `generate_vs2026.bat` and `build_vs2026.bat` automate the setup process.

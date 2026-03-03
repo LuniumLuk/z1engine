@@ -5,8 +5,8 @@ Thank you for your interest in contributing to z1engine! This document outlines 
 
 ## Getting Started
 
-1.  **Setup**: Follow the instructions in [AI_AGENT_SETUP.md](AI_AGENT_SETUP.md) to set up your development environment.
-2.  **Build**: Use `generate_vs2022.bat` (or latest) to generate project files, then build `z1engine.sln` with Visual Studio or `build_vs2022.bat`.
+1.  **Setup**: Refer to [BUILDING.md](BUILDING.md) for environment setup and repository structure.
+2.  **Build**: Use `generate_vs2026.bat` (or latest) to generate project files, then build `z1engine.sln` with Visual Studio or `build_vs2026.bat`.
 
 ## Development Workflow
 
@@ -96,3 +96,10 @@ Example:
 Generated-by: Copilot
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
 ```
+
+### 3. Agent Operational Rules
+
+-   **Work in Repository Root**: Execute commands from `D:\z1engine` unless a subdirectory is strictly required.
+-   **Use Provided Scripts**: Always use `generate_vs2026.bat` and `build_vs2026.bat` to ensure consistent environment configuration.
+-   **Minimal Changes**: Group related changes into single atomic commits. Do not add global linters or CI steps without approval.
+-   **Report Intent**: Before modifying files, explicitly state your plan (intent) and the steps you will take.

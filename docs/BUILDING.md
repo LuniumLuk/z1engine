@@ -6,8 +6,23 @@ This guide provides instructions on how to build z1engine from source on Windows
 ## Prerequisites
 
 -   **Windows 10/11**
--   **Visual Studio 2022** (with "Desktop development with C++" workload)
+-   **Visual Studio 2026** (with "Desktop development with C++" workload)
 -   **Git**
+
+## Repository Structure
+
+-   `3rdparty/`: Bundled libraries (glfw, yaml-cpp, stb, tinyexr, lz4, etc.)
+-   `asset/`: Assets used by project
+-   `bakery/`: Asset bakery / conversion tools
+-   `build/`: Generated build artifacts
+-   `build-int/`: Intermediate build artifacts
+-   `content/`: Runtime content
+-   `editor/`: Editor app
+-   `engine/`: Core engine code
+-   `release/`: Release packages
+-   `runtime/`: Runtime/launcher
+-   `test/`: Tests and test assets
+-   `utils/`: Helper tools (contains premake binary under utils/premake)
 
 ## Setup
 
@@ -16,20 +31,20 @@ This guide provides instructions on how to build z1engine from source on Windows
     git clone --recursive https://github.com/your-username/z1engine.git
     cd z1engine
     ```
-    *Note: The `--recursive` flag is important to fetch submodules if any exist (though currently most dependencies are vendored).*
+    *Note: The `--recursive` flag is important to fetch submodules if any exist.*
 
 2.  **Generate Project Files**:
     Run the generation script from the root directory:
     ```cmd
-    generate_vs2022.bat
+    generate_vs2026.bat
     ```
-    This will invoke `premake5` to generate the Visual Studio solution (`z1engine.sln`).
+    This will invoke `premake5` to generate the Visual Studio solution (`z1engine.sln`) configured for VS2026.
 
 ## Building
 
 ### Option 1: Visual Studio
 
-1.  Open `z1engine.sln` in Visual Studio 2022.
+1.  Open `z1engine.sln` in Visual Studio 2026.
 2.  Select your build configuration (Debug, Release, Profile) and platform (x64).
 3.  Right-click the **z1engine** solution in Solution Explorer and select **Build Solution** (or press `Ctrl+Shift+B`).
 4.  The output binaries will be located in:
@@ -40,7 +55,7 @@ This guide provides instructions on how to build z1engine from source on Windows
 You can use the provided build script to compile directly from the command line:
 
 ```cmd
-build_vs2022.bat
+build_vs2026.bat
 ```
 
 This script automatically builds the `Debug` configuration by default.
@@ -57,5 +72,5 @@ The main entry point is the **Editor**.
 
 ## Troubleshooting
 
--   **"premake5 is not recognized"**: Ensure `utils\premake\premake5.exe` exists or is in your PATH. The `generate_vs2022.bat` script should handle this automatically.
+-   **"premake5 is not recognized"**: Ensure `utils\premake\premake5.exe` exists or is in your PATH. The `generate_vs2026.bat` script should handle this automatically.
 -   **Missing DLLs**: If `python314.dll` or other dependencies are missing, ensure the post-build steps ran successfully. The solution is configured to copy necessary DLLs to the output directory.
