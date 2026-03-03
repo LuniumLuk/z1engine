@@ -41,10 +41,11 @@ namespace z1 {
 
 		//void scan_assets(bool force_refresh = false);
 		//void import_asset(Guid const& guid, bool force_refresh = false);
-		void remove_asset(Guid const& guid);
+		bool remove_asset(Guid const& guid);
 
 		bool has_asset(Guid const& guid) const;
 		AssetMeta get_meta(Guid const& guid) const;
+		bool move_asset(Guid const& guid, Filepath const& new_path);
 
 		Guid get_guid_from_path(Filepath const& path) const {
 			auto it = m_path_to_guid_mapping.find(path);
@@ -148,6 +149,10 @@ namespace z1 {
 		std::unordered_map<Guid, Filepath> m_guid_to_file_mapping;
 		std::unordered_map<Filepath, Guid> m_path_to_guid_mapping;
 		std::unique_ptr<AssetNode> m_asset_tree_root;
+
+		void insert_asset_node(AssetMeta const& meta);
+		void remove_asset_node(AssetMeta const& meta);
+		Filepath get_root_for_meta(AssetMeta const& meta) const;
 	};
 
 	template<>
