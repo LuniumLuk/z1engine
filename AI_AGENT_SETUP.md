@@ -82,6 +82,12 @@ Appendix: Useful file pointers
 - Build scripts: build_vs2022.bat, build_vs2026.bat
 - Generate scripts: generate_vs2022.bat, generate_vs2026.bat
 
+90. Documentation Index
+91. - ARCHITECTURE.md : High-level system overview.
+92. - BUILDING.md     : Detailed build instructions.
+93. - CONTRIBUTING.md : Guidelines for contributing code.
+94. - ROADMAP.md      : Current development roadmap.
+
 Notes
 - This document is intentionally concise; update it as tooling and CI change.
 - For questions about policies (branching, releases), refer to repository maintainers or add an ISSUE requesting clarification.
