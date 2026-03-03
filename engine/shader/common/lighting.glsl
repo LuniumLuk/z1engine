@@ -8,19 +8,89 @@ vec4 phone_shading(vec3 normal, vec3 world_pos, vec4 color, float shadow) {
 	// Ambient lighting
 	vec3 ambient = color.rgb * u_sun_ambient.rgb;
 
-	// Diffuse lighting
-	vec3 sun_dir = normalize(u_sun_direction.xyz);
-	float diff = max(dot(normal, sun_dir), 0.0);
-	vec3 diffuse = diff * u_sun_intensity.xyz;
-
-	// Specular lighting
-	float specular_strength = 0.5;
+	vec3 total_diffuse = vec3(0.0);
+	vec3 total_specular = vec3(0.0);
 	vec3 view_dir = normalize(u_cam_position.xyz - world_pos);
-	vec3 refl_dir = reflect(-sun_dir, normal);
-	float spec = pow(max(dot(view_dir, refl_dir), 0.0), 32);
-	vec3 specular = specular_strength * spec * u_sun_intensity.xyz;
 
-	vec3 result = (ambient + (diffuse + specular) * shadow) * color.rgb;
+	// Sun lighting
+	{
+		// Diffuse lighting
+		vec3 sun_dir = normalize(u_sun_direction.xyz);
+		float diff = max(dot(normal, sun_dir), 0.0);
+		vec3 diffuse = diff * u_sun_intensity.xyz;
+
+		// Specular lighting
+		float specular_strength = 0.5;
+		vec3 view_dir = normalize(u_cam_position.xyz - world_pos);
+		vec3 refl_dir = reflect(-sun_dir, normal);
+		float spec = pow(max(dot(view_dir, refl_dir), 0.0), 32);
+		vec3 specular = specular_strength * spec * u_sun_intensity.xyz;
+
+		total_diffuse += diffuse * shadow;
+		total_specular += specular * shadow;
+	}
+
+	// Loop over lights
+	int count = int(u_lights_count.x);
+	for (int i = 0; i < count; ++i) {
+		Light light = u_lights[i];
+		vec3 light_dir;
+		float attenuation = 1.0;
+
+		// 0: Directional, 1: Point, 2: Spot
+		int type = int(light.position.w);
+
+		if (type == 0) { // Directional
+			light_dir = normalize(-light.direction.xyz);
+		}
+		else { // Point or Spot
+			vec3 dist_vec = light.position.xyz - world_pos;
+			float dist = length(dist_vec);
+			if (dist > light.direction.w) continue; // Range check
+			light_dir = normalize(dist_vec);
+
+			// Linear falloff based on range
+			attenuation = max(0.0, 1.0 - dist / light.direction.w);
+			attenuation *= attenuation;
+
+			if (type == 2) { // Spot
+				float theta = dot(light_dir, normalize(-light.direction.xyz));
+				float inner = light.cone.x;
+				float outer = light.cone.y;
+				float epsilon = inner - outer;
+				// if inner=20, outer=30 (cosines are 0.94, 0.86), epsilon = 0.08
+				// if theta > inner (0.94), clamp gives 1.
+				// if theta < outer (0.86), clamp gives 0.
+				float intensity = clamp((theta - outer) / (epsilon + 1e-5), 0.0, 1.0);
+				attenuation *= intensity;
+			}
+		}
+
+		// Shadows
+		float shadow_factor = 1.0;
+		if (light.cone.z > 0.5) { // Cast shadows
+			// Only apply shadow map if this is a directional light matching the shadow caster
+			// We compare light direction with global sun direction (which is used for shadow map generation)
+			if (type == 0) {
+				vec3 sun_dir = normalize(u_sun_direction.xyz);
+				if (dot(light_dir, sun_dir) > 0.99) {
+					shadow_factor = shadow;
+				}
+			}
+		}
+
+		// Diffuse
+		float diff = max(dot(normal, light_dir), 0.0);
+		total_diffuse += diff * light.color.rgb * light.color.w * attenuation * shadow_factor;
+
+		// Specular
+		float specular_strength = 0.5;
+		vec3 refl_dir = reflect(-light_dir, normal);
+		float spec = pow(max(dot(view_dir, refl_dir), 0.0), 32);
+		total_specular += specular_strength * spec * light.color.rgb * light.color.w * attenuation * shadow_factor;
+	}
+
+	vec3 result = (ambient + total_diffuse + total_specular) * color.rgb;
 	return vec4(result, color.a);
 }
 
@@ -56,6 +126,34 @@ float geometry_smith(vec3 N, vec3 V, vec3 L, float roughness) {
 
 vec3 fresnel_schlick(float cos_theta, vec3 f0) {
 	return f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);
+}
+
+void calculate_pbr_illumination(
+	vec3 light_dir, vec3 light_color, float attenuation, float shadow_factor,
+	vec3 N, vec3 V, vec3 F0, float roughness, float metallic, vec3 base_color,
+	inout vec3 L_diffuse, inout vec3 L_specular
+) {
+	vec3 L = light_dir;
+	vec3 H = normalize(V + L);
+
+	// Cook-Torrance BRDF
+	float NDF = distribution_ggx(N, H, roughness);
+	float G   = geometry_smith(N, V, L, roughness);
+	vec3  F   = fresnel_schlick(max(dot(H, V), 0.0), F0);
+
+	vec3 numerator    = NDF * G * F;
+	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 1e-5;
+	vec3 specular     = numerator / denominator;
+
+	vec3 kS = F;
+	vec3 kD = vec3(1.0) - kS;
+	kD *= 1.0 - metallic;
+
+	float NdotL = max(dot(N, L), 0.0);
+	vec3 radiance = light_color * attenuation; // Light color includes intensity
+
+	L_diffuse += (kD * base_color / PI) * radiance * NdotL * shadow_factor;
+	L_specular += specular * radiance * NdotL * shadow_factor;
 }
 
 // ----------------------------------------------------------------------------

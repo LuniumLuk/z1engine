@@ -9,6 +9,7 @@
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
+#include "scene/component/light.h"
 #include "render/renderer/renderer_forward.h"
 #include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
@@ -91,6 +92,8 @@ namespace z1 {
 			// cache the depth attachment image for binding
 			m_shadow_image = m_shadow_framebuffer->get_attachment_image(0);
 		}
+
+		m_lights_buffer = UniformBuffer::create(nullptr, sizeof(LightsBlock), BufferUsage::Static);
 	}
 
 	RendererForward::~RendererForward() {
@@ -158,6 +161,37 @@ namespace z1 {
 		g->projview = projview_jittered;
 		g->cam_position = cam_pos;
 
+		// --- Light Logic ---
+		LightsBlock lights_block = {};
+		int light_count = 0;
+		bool found_shadow_caster = false;
+
+		auto lights = scene->m_registry.view<TransformComponent const, LightComponent const>();
+		for (auto [entity, transform, light] : lights.each()) {
+			if (light_count >= MAX_LIGHTS) break;
+
+			glm::mat4 model = transform.get_world_transform();
+			glm::vec3 pos = glm::vec3(model[3]);
+			// forward direction (-Z in local space) transformed to world space
+			// use rotation part only
+			glm::mat3 rot = glm::mat3(model);
+			glm::vec3 direction = glm::normalize(rot * glm::vec3(0, 0, -1));
+
+			lights_block.lights[light_count].position = glm::vec4(pos, (float)light.m_type);
+			lights_block.lights[light_count].direction = glm::vec4(direction, light.m_range);
+			lights_block.lights[light_count].color = glm::vec4(light.m_color, light.m_intensity);
+			lights_block.lights[light_count].cone = glm::vec4(
+				glm::cos(glm::radians(light.m_inner_cone)),
+				glm::cos(glm::radians(light.m_outer_cone)),
+				light.m_cast_shadow ? 1.0f : 0.0f,
+				0.0f
+			);
+
+			light_count++;
+		}
+		lights_block.count.x = (float)light_count;
+		m_lights_buffer->write(&lights_block, sizeof(LightsBlock));
+
 		// compute light projection (simple orthographic)
 		float ortho_size = g->sm_ortho_size;
 		glm::vec3 sun_dir = g->sun_direction;
@@ -195,6 +229,9 @@ namespace z1 {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 
+				m_lights_buffer->bind();
+				per_frame.lights_binding = m_lights_buffer->get_binding();
+
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 				for (auto [entity, transform, mesh] : view.each()) {
 					per_frame.model = transform.get_world_transform();
@@ -224,7 +261,7 @@ namespace z1 {
 			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
 			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
-			auto const& cam = scene->get_main_camera();
+				auto const& cam = scene->get_main_camera();
 				g->projview = projview;
 				g->flush();
 

@@ -5,6 +5,7 @@
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
+#include "scene/component/light.h"
 #include "core/core.h"
 #include "render/shader.h"
 #include "render/renderer/renderer_2d.h"
@@ -214,14 +215,28 @@ namespace z1 {
 				auto& sprite = entity->add_component<SpriteComponent>();
 				sprite.m_color = sprite_yaml["color"].as<glm::vec4>();
 				if (sprite_yaml["texture"] && !sprite_yaml["texture"].IsNull()) {
-					sprite.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(Guid::make(sprite_yaml["texture"].as<std::string>()));
+					auto tex_guid = Guid::make(sprite_yaml["texture"].as<std::string>());
+					sprite.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
 				}
 				sprite.m_tiling_scale = sprite_yaml["tiling_scale"].as<glm::vec2>();
 				sprite.m_tiling_offset = sprite_yaml["tiling_offset"].as<glm::vec2>();
 				auto const& texcoords_yaml = sprite_yaml["texcoords"];
-				for (size_t i = 0; i < sprite.m_texcoords.size(); ++i) {
+				for (size_t i = 0; i < 4; ++i) {
 					sprite.m_texcoords[i] = texcoords_yaml[i].as<glm::vec2>();
 				}
+			}
+
+			// LightComponent
+			if (entity_yaml["light"]) {
+				auto const& light_yaml = entity_yaml["light"];
+				auto& light = entity->add_component<LightComponent>();
+				light.m_type = light_yaml["type"].as<int>();
+				light.m_color = light_yaml["color"].as<glm::vec3>();
+				light.m_intensity = light_yaml["intensity"].as<float>();
+				light.m_range = light_yaml["range"].as<float>();
+				light.m_inner_cone = light_yaml["inner_cone"].as<float>();
+				light.m_outer_cone = light_yaml["outer_cone"].as<float>();
+				light.m_cast_shadow = light_yaml["cast_shadow"].as<bool>();
 			}
 		}
 
@@ -323,6 +338,21 @@ namespace z1 {
 					yaml << uv;
 				}
 				yaml << YAML::EndSeq;
+				yaml << YAML::EndMap;
+			}
+
+			// LightComponent
+			if (entity->has_component<LightComponent>()) {
+				auto const& light = entity->get_component<LightComponent>();
+				yaml << YAML::Key << "light" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "type" << YAML::Value << light.m_type;
+				yaml << YAML::Key << "color" << YAML::Value << light.m_color;
+				yaml << YAML::Key << "intensity" << YAML::Value << light.m_intensity;
+				yaml << YAML::Key << "range" << YAML::Value << light.m_range;
+				yaml << YAML::Key << "inner_cone" << YAML::Value << light.m_inner_cone;
+				yaml << YAML::Key << "outer_cone" << YAML::Value << light.m_outer_cone;
+				yaml << YAML::Key << "cast_shadow" << YAML::Value << light.m_cast_shadow;
 				yaml << YAML::EndMap;
 			}
 

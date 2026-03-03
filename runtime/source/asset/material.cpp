@@ -197,6 +197,7 @@ namespace z1 {
 		m_material->m_pipeline->bind();
 		auto const& shader = m_material->m_pipeline->m_shader;
 		shader->set_uniform_block_binding("Global", per_frame.global_binding);
+		shader->set_uniform_block_binding("Lights", per_frame.lights_binding);
 		shader->set_uniform("u_model", &per_frame.model);
 		for (auto const& [name, var] : m_override_variables) {
 			if (!var.visible || var.location == INVALID_LOCATION) continue;

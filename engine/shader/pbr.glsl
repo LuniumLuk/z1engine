@@ -38,47 +38,76 @@
 
 		vec3 N = get_normal_from_map(v_world_position, normalize(v_normal), normalize(v_tangent), normal_map);
 		vec3 V = normalize(u_cam_position.xyz - v_world_position);
-		vec3 L = normalize(u_sun_direction.xyz);
-		vec3 H = normalize(V + L);
 
 		float shadow = get_shadow();
 
 		// Base material inputs
-		vec4 base_color = texture(s_base_color, v_texcoord0);
-		base_color.rgb = pow(base_color.rgb, vec3(2.2));
-		base_color = base_color * v_color * u_base_color_factor;
+		vec4 base_color_sample = texture(s_base_color, v_texcoord0);
+		base_color_sample.rgb = pow(base_color_sample.rgb, vec3(2.2));
+		vec4 base_color_vec = base_color_sample * v_color * u_base_color_factor;
+		vec3 base_color = base_color_vec.rgb;
+		float alpha = base_color_vec.a;
+
 		vec2 rm = texture(s_metallic_roughness, v_texcoord0).gb;
 		rm = pow(rm, vec2(2.2));
 		float roughness = clamp(rm.x * u_roughness_factor, 0.04, 1.0);
 		float metallic  = rm.y * u_metallic_factor;
 
-		// Light color
-		vec3 light_color = u_sun_intensity.xyz;
-
 		// Fresnel reflectance at normal incidence
-		vec3 F0 = mix(vec3(0.04), base_color.rgb, metallic);
+		vec3 F0 = mix(vec3(0.04), base_color, metallic);
 
-		// Cook-Torrance BRDF
-		float NDF = distribution_ggx(N, H, roughness);
-		float G   = geometry_smith(N, V, L, roughness);
-		vec3  F   = fresnel_schlick(max(dot(H, V), 0.0), F0);
+		vec3 L_diffuse = vec3(0.0);
+		vec3 L_specular = vec3(0.0);
 
-		vec3 numerator    = NDF * G * F;
-		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 1e-5;
-		vec3 specular     = numerator / denominator;
+		int count = int(u_lights_count.x);
+		for (int i = 0; i < count; ++i) {
+			Light light = u_lights[i];
+			vec3 light_dir;
+			float attenuation = 1.0;
 
-		vec3 kS = F;
-		vec3 kD = vec3(1.0) - kS;
-		kD *= 1.0 - metallic;
+			// 0: Directional, 1: Point, 2: Spot
+			int type = int(light.position.w);
 
-		float NdotL = max(dot(N, L), 0.0);
-		vec3 radiance = light_color * NdotL;
+			if (type == 0) { // Directional
+				light_dir = normalize(-light.direction.xyz);
+			}
+			else { // Point or Spot
+				vec3 dist_vec = light.position.xyz - v_world_position;
+				float dist = length(dist_vec);
+				if (dist > light.direction.w) continue; // Range check
+				light_dir = normalize(dist_vec);
 
-		vec3 L_diffuse = (kD * base_color.rgb / PI) * radiance * shadow;
-		vec3 L_specular = specular * radiance * shadow;
+				// Linear falloff
+				attenuation = max(0.0, 1.0 - dist / light.direction.w);
+				attenuation *= attenuation;
+
+				if (type == 2) { // Spot
+					float theta = dot(light_dir, normalize(-light.direction.xyz));
+					float inner = light.cone.x;
+					float outer = light.cone.y;
+					float epsilon = inner - outer;
+					float intensity = clamp((theta - outer) / (epsilon + 1e-5), 0.0, 1.0);
+					attenuation *= intensity;
+				}
+			}
+
+			// Shadows
+			float shadow_factor = 1.0;
+			if (light.cone.z > 0.5) { // Cast shadows
+				if (type == 0) {
+					vec3 sun_dir = normalize(u_sun_direction.xyz);
+					if (dot(light_dir, sun_dir) > 0.99) {
+						shadow_factor = shadow;
+					}
+				}
+			}
+
+			calculate_pbr_illumination(light_dir, light.color.rgb * light.color.w, attenuation, shadow_factor,
+				N, V, F0, roughness, metallic, base_color, L_diffuse, L_specular);
+		}
 
 		// Simple ambient term
-		vec3 ambient = base_color.rgb * u_sun_ambient.rgb;
+		vec3 ambient = base_color * u_sun_ambient.rgb;
 
 		// Emissive term
 		vec3 emissive = texture(s_emissive, v_texcoord0).rgb;
@@ -88,7 +117,7 @@
 		float ao = texture(s_occlusion, v_texcoord0).r;
 
 		vec3 result = (ambient + L_diffuse) * ao + L_specular + emissive;
-		frag_color = vec4(result, base_color.a);
+		frag_color = vec4(result, alpha);
 
 		frag_color = vec4(
 			isnan(frag_color.x) ? 0.0 : frag_color.x,

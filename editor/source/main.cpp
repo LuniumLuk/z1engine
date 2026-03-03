@@ -9,6 +9,7 @@
 #include "picking_system.h"
 #include "browser.h"
 #include "stb/stb_image_write.h"
+#include "scene/component/light.h"
 
 using namespace z1;
 namespace fs = std::filesystem;
@@ -76,18 +77,39 @@ struct EditorLayer : Layer {
 
 		m_gui->m_draw_viewport_func =
 			[&]() {
-				if (m_selected_entity) {
-					auto const& cam = m_active_scene->get_main_camera();
-					if (cam) {
-						ImVec2 image_min = ImGui::GetItemRectMin(); // top-left corner
-						ImVec2 image_max = ImGui::GetItemRectMax(); // bottom-right corner
-						ImVec2 present_size = ImVec2(image_max.x - image_min.x, image_max.y - image_min.y);
+				auto const& cam = m_active_scene->get_main_camera();
+				if (!cam) return;
 
+				auto view = cam->get_component<CameraComponent>().get_view();
+				auto proj = cam->get_component<CameraComponent>().get_proj();
+
+				ImVec2 image_min = ImGui::GetItemRectMin(); // top-left corner
+				ImVec2 image_max = ImGui::GetItemRectMax(); // bottom-right corner
+				ImVec2 present_size = ImVec2(image_max.x - image_min.x, image_max.y - image_min.y);
+				ImGuizmo::SetRect(image_min.x, image_min.y, present_size.x, present_size.y);
+
+				// Visualize lights using ImGuizmo::DrawCubes
+				if (m_show_light_gizmos) {
+					std::vector<glm::mat4> light_matrices;
+					auto light_view = m_active_scene->m_registry.view<TransformComponent const, LightComponent const>();
+					for (auto [entity, transform, light] : light_view.each()) {
+						// Don't draw cube for selected entity to avoid clutter with the manipulator
+						if (m_selected_entity && m_selected_entity->get_component<TagComponent>().m_id == m_active_scene->m_registry.get<TagComponent>(entity).m_id) {
+							continue;
+						}
+						glm::mat4 model = transform.get_world_transform();
+						model = glm::scale(model, glm::vec3(m_light_gizmo_size));
+						light_matrices.push_back(model);
+					}
+
+					if (!light_matrices.empty()) {
+						ImGuizmo::DrawCubes(&view[0][0], &proj[0][0], (float*)light_matrices.data(), (int)light_matrices.size());
+					}
+				}
+
+				if (m_selected_entity) {
 						auto transform = m_selected_entity->get_component<TransformComponent>().get_world_transform();
 
-						ImGuizmo::SetRect(image_min.x, image_min.y, present_size.x, present_size.y);
-						auto view = cam->get_component<CameraComponent>().get_view();
-						auto proj = cam->get_component<CameraComponent>().get_proj();
 						ImGuizmo::Manipulate(&view[0][0], &proj[0][0], m_current_gizmo_operation, m_current_gizmo_mode, &transform[0][0], NULL, NULL);
 
 						m_is_using_gizmo = ImGuizmo::IsUsing() || ImGuizmo::IsOver();
@@ -98,7 +120,6 @@ struct EditorLayer : Layer {
 							m_selected_entity->get_component<TransformComponent>().m_rotation = rotation;
 							m_selected_entity->get_component<TransformComponent>().m_scale = scale;
 						}
-					}
 				}
 			};
 
@@ -248,6 +269,10 @@ struct EditorLayer : Layer {
 					std::cout << "Saved: " << filename << std::endl;
 				}
 			}
+
+			ImGui::DragFloat("light gizmo size", &m_light_gizmo_size, 0.1f, 0.1f, 10.0f);
+			ImGui::Checkbox("show light gizmos", &m_show_light_gizmos);
+
 		}
 		ImGui::End();
 
@@ -271,6 +296,8 @@ private:
 	bool m_is_using_gizmo = false;
 	ImGuizmo::OPERATION m_current_gizmo_operation = ImGuizmo::OPERATION::TRANSLATE;
 	ImGuizmo::MODE m_current_gizmo_mode = ImGuizmo::MODE::LOCAL;
+	float m_light_gizmo_size = 0.1f;
+	bool m_show_light_gizmos = true;
 
 	int m_fps_counter = 0;
 	float m_fps_timer = 0.0;
@@ -455,6 +482,10 @@ private:
 				SHOW_COMPONENT(TagComponent)
 				SHOW_COMPONENT(TransformComponent)
 
+				if (m_selected_entity->has_component<LightComponent>()) {
+					SHOW_COMPONENT(LightComponent)
+				}
+
 				if (m_selected_entity->has_component<SpriteComponent>()) {
 					if (ImGui::CollapsingHeader("SpriteComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& sprite = m_selected_entity->get_component<SpriteComponent>();
@@ -576,6 +607,7 @@ private:
 
 				if (ImGui::BeginPopupContextWindow()) {
 					component_context_menu<CameraComponent>("camera component", m_selected_entity);
+					component_context_menu<LightComponent>("light component", m_selected_entity);
 					component_context_menu<SpriteComponent>("sprite component", m_selected_entity);
 					component_context_menu<ScriptComponent>("script component", m_selected_entity, m_selected_entity);
 					ImGui::EndPopup();

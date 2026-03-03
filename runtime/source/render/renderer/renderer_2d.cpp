@@ -58,16 +58,18 @@ namespace z1 {
 		PROFILE_FUNCTION();
 
 		std::vector<Renderer2D::Quad> quads;
-		auto view = scene->m_registry.view<TransformComponent const, SpriteComponent const>();
-		for (auto [entity, transform, sprite] : view.each()) {
-			Renderer2D::Quad quad{};
-			quad.m_transform = transform.get_world_transform();
-			quad.m_color = sprite.m_color;
-			quad.m_texture = sprite.m_texture ? sprite.m_texture->m_image : nullptr;
-			quad.m_tiling_scale = sprite.m_tiling_scale;
-			quad.m_tiling_offset = sprite.m_tiling_offset;
-			quad.m_texcoords = sprite.m_texcoords;
-			quads.push_back(quad);
+		if (scene) {
+			auto view = scene->m_registry.view<TransformComponent const, SpriteComponent const>();
+			for (auto [entity, transform, sprite] : view.each()) {
+				Renderer2D::Quad quad{};
+				quad.m_transform = transform.get_world_transform();
+				quad.m_color = sprite.m_color;
+				quad.m_texture = sprite.m_texture ? sprite.m_texture->m_image : nullptr;
+				quad.m_tiling_scale = sprite.m_tiling_scale;
+				quad.m_tiling_offset = sprite.m_tiling_offset;
+				quad.m_texcoords = sprite.m_texcoords;
+				quads.push_back(quad);
+			}
 		}
 
 		draw_quads(quads);

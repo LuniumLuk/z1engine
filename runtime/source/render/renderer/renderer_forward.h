@@ -30,6 +30,20 @@ namespace z1 {
 		std::shared_ptr<Image> m_shadow_image;
 		std::shared_ptr<Framebuffer> m_history_color;
 
+		struct alignas(16) LightData {
+			glm::vec4 position; // w = type (0:dir, 1:point, 2:spot)
+			glm::vec4 direction; // w = range
+			glm::vec4 color;    // w = intensity
+			glm::vec4 cone;     // x = inner, y = outer, z = cast_shadow, w = unused
+		};
+
+		static const int MAX_LIGHTS = 16;
+		struct alignas(16) LightsBlock {
+			glm::vec4 count; // x = count
+			LightData lights[MAX_LIGHTS];
+		};
+		std::shared_ptr<UniformBuffer> m_lights_buffer;
+
 	};
 
 }
