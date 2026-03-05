@@ -197,8 +197,28 @@ const float k_light_radius = 0.3;
 const float k_max_filter_radius = 6.0;
 const float k_blocker_search_radius = 2.5;
 
-float sample_shadow(vec2 uv, vec2 offset, float depth) {
-	return depth - k_shadow_bias > texture(u_shadow_map, uv + offset).r ? 0.0 : 1.0;
+float sample_shadow(vec2 uv, float depth) {
+	return depth - k_shadow_bias > texture(u_shadow_map, uv).r ? 0.0 : 1.0;
+}
+
+float sample_shadow_pcf(vec2 uv, float depth) {
+	ivec2 tex_size = textureSize(u_shadow_map, 0);
+
+	int u0 = int(floor(uv.x * tex_size.x));
+	int v0 = int(floor(uv.y * tex_size.y));
+	int u1 = u0 + 1;
+	int v1 = v0 + 1;
+	vec2 uv00 = (vec2(u0, v0) + 0.5) / vec2(tex_size);
+	vec2 uv10 = (vec2(u1, v0) + 0.5) / vec2(tex_size);
+	vec2 uv01 = (vec2(u0, v1) + 0.5) / vec2(tex_size);
+	vec2 uv11 = (vec2(u1, v1) + 0.5) / vec2(tex_size);
+
+	float sum = 0.0;
+	sum += texelFetch(u_shadow_map, ivec2(u0, v0), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec2(u1, v0), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec2(u0, v1), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec2(u1, v1), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	return sum * 0.25;
 }
 
 float pcf_filter(vec2 uv, float depth, vec2 texel_size, float radius) {
@@ -208,7 +228,7 @@ float pcf_filter(vec2 uv, float depth, vec2 texel_size, float radius) {
 	for (int x = -1; x <= 1; ++x) {
 		for (int y = -1; y <= 1; ++y) {
 			vec2 offset = vec2(float(x), float(y)) * scaled;
-			shadow += sample_shadow(uv, offset, depth);
+			shadow += sample_shadow(uv + offset, depth);
 			samples += 1.0;
 		}
 	}

@@ -476,26 +476,30 @@ namespace z1 {
 			meta.type = "texture2d";
 			meta.path = settings.path / name;
 
-			auto const& sampler = model.samplers[tex.sampler];
 			// TODO
 			// here we only use min filter as sampler mode
 			// and only use wrap s as wrap mode
 			SamplerMode sampler_mode = SamplerMode::Linear;
-			switch (sampler.minFilter) {
-			case TINYGLTF_TEXTURE_FILTER_NEAREST:
-			case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
-			case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
-				sampler_mode = SamplerMode::Nearest; break;
-			default: break;
-			}
-
 			WrapMode wrap_mode = WrapMode::Repeat;
-			switch (sampler.wrapS) {
-			case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-				wrap_mode = WrapMode::ClampToEdge; break;
-			case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-				wrap_mode = WrapMode::MirroredRepeat; break;
-			default: break;
+			if (tex.sampler >= 0) {
+				auto const& sampler = model.samplers[tex.sampler];
+				switch (sampler.minFilter) {
+				case TINYGLTF_TEXTURE_FILTER_NEAREST:
+				case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+				case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+					sampler_mode = SamplerMode::Nearest;
+					break;
+				default:
+					break;
+				}
+
+				switch (sampler.wrapS) {
+				case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+					wrap_mode = WrapMode::ClampToEdge; break;
+				case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+					wrap_mode = WrapMode::MirroredRepeat; break;
+				default: break;
+				}
 			}
 
 			meta.extra["sampler_mode"] = (int)sampler_mode;
