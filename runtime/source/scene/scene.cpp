@@ -6,6 +6,8 @@
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
 #include "scene/component/light.h"
+#include "scene/component/animation.h"
+#include "scene/animation_system.h"
 #include "core/core.h"
 #include "render/global.h"
 #include "render/shader.h"
@@ -98,6 +100,7 @@ namespace z1 {
 
 	void Scene::on_update(float delta_time) {
 		PROFILE_FUNCTION();
+		AnimationSystem::update(this, delta_time);
 		auto view = m_registry.view<ScriptComponent>();
 		for (auto [entity, script_comp] : view.each()) {
 			for (auto it = script_comp.m_scripts.begin(); it != script_comp.m_scripts.end();) {
@@ -246,6 +249,21 @@ namespace z1 {
 				if (mesh_yaml["guid"] && !mesh_yaml["guid"].IsNull()) {
 					auto sm = g_runtime_context.m_asset_manager->get<StaticMesh>(Guid::make(mesh_yaml["guid"].as<std::string>()));
 					auto& mesh = entity->add_component<StaticMeshComponent>(sm);
+				}
+			}
+
+			// SkeletalMeshComponent
+			if (entity_yaml["skeletal_mesh"]) {
+				auto const& mesh_yaml = entity_yaml["skeletal_mesh"];
+				if (mesh_yaml["mesh"] && !mesh_yaml["mesh"].IsNull()) {
+					auto sk = g_runtime_context.m_asset_manager->get<SkeletalMesh>(
+						Guid::make(mesh_yaml["mesh"].as<std::string>()));
+					std::shared_ptr<Skeleton> skel = nullptr;
+					if (mesh_yaml["skeleton"] && !mesh_yaml["skeleton"].IsNull()) {
+						skel = g_runtime_context.m_asset_manager->get<Skeleton>(
+							Guid::make(mesh_yaml["skeleton"].as<std::string>()));
+					}
+					auto& mesh = entity->add_component<SkeletalMeshComponent>(sk, skel);
 				}
 			}
 
@@ -408,6 +426,21 @@ namespace z1 {
 				yaml << YAML::Key << "static_mesh" << YAML::Value;
 				yaml << YAML::BeginMap;
 				yaml << YAML::Key << "guid" << YAML::Value << mesh.m_mesh->m_meta.guid;
+				yaml << YAML::EndMap;
+			}
+
+			// SkeletalMeshComponent
+			if (entity->has_component<SkeletalMeshComponent>()) {
+				auto const& mesh = entity->get_component<SkeletalMeshComponent>();
+				yaml << YAML::Key << "skeletal_mesh" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "mesh" << YAML::Value << mesh.m_mesh->m_meta.guid;
+				if (mesh.m_skeleton) {
+					yaml << YAML::Key << "skeleton" << YAML::Value << mesh.m_skeleton->m_meta.guid;
+				}
+				else {
+					yaml << YAML::Key << "skeleton" << YAML::Value << YAML::Null;
+				}
 				yaml << YAML::EndMap;
 			}
 

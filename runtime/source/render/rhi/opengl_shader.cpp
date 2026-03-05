@@ -147,49 +147,43 @@ namespace z1 {
 	void OpenGLShader::set_uniform(std::string const& name, void const* data) {
 		PROFILE_FUNCTION();
 		auto it = m_uniform_indices.find(name);
-		if (it != m_uniform_indices.end()) {
-			uint32_t index = it->second;
-			switch (m_uniforms[index].m_type) {
-			case DataType::Bool: set_bool(m_uniforms[index].m_location, *(bool*)data); return;
-			case DataType::Int: set_int(m_uniforms[index].m_location, *(int*)data); return;
-			case DataType::Float: set_float(m_uniforms[index].m_location, *(float*)data); return;
-			case DataType::Float2: set_vec2(m_uniforms[index].m_location, *(glm::vec2*)data); return;
-			case DataType::Float3: set_vec3(m_uniforms[index].m_location, *(glm::vec3*)data); return;
-			case DataType::Float4: set_vec4(m_uniforms[index].m_location, *(glm::vec4*)data); return;
-			case DataType::Mat3: set_mat3(m_uniforms[index].m_location, *(glm::mat3*)data); return;
-			case DataType::Mat4: set_mat4(m_uniforms[index].m_location, *(glm::mat4*)data); return;
-			case DataType::Sampler2D:
-			case DataType::SamplerCube:
-				if (m_uniforms[index].m_count == 1) {
-					set_int(m_uniforms[index].m_location, *(int*)data);
-				}
-				else {
-					set_int_array(m_uniforms[index].m_location, (int*)data, m_uniforms[index].m_count);
-				}
-				return;
+		DEBUG_CHECK(it != m_uniform_indices.end(), "uniform {0} not found!", name);
+
+		uint32_t index = it->second;
+		switch (m_uniforms[index].m_type) {
+		case DataType::Bool: set_bool(m_uniforms[index].m_location, *(bool*)data); return;
+		case DataType::Int: set_int(m_uniforms[index].m_location, *(int*)data); return;
+		case DataType::Float: set_float(m_uniforms[index].m_location, *(float*)data); return;
+		case DataType::Float2: set_vec2(m_uniforms[index].m_location, *(glm::vec2*)data); return;
+		case DataType::Float3: set_vec3(m_uniforms[index].m_location, *(glm::vec3*)data); return;
+		case DataType::Float4: set_vec4(m_uniforms[index].m_location, *(glm::vec4*)data); return;
+		case DataType::Mat3: set_mat3(m_uniforms[index].m_location, *(glm::mat3*)data); return;
+		case DataType::Mat4: set_mat4(m_uniforms[index].m_location, *(glm::mat4*)data); return;
+		case DataType::Sampler2D:
+		case DataType::SamplerCube:
+			if (m_uniforms[index].m_count == 1) {
+				set_int(m_uniforms[index].m_location, *(int*)data);
 			}
-			CORE_WARN("uniform {0} with unknown or unsupported DataType!", name);
+			else {
+				set_int_array(m_uniforms[index].m_location, (int*)data, m_uniforms[index].m_count);
+			}
+			return;
 		}
-		else {
-			CORE_WARN("uniform {0} not found!", name);
-		}
+		DEBUG_CHECK(false, "uniform {0} with unknown or unsupported DataType!", name);
 	}
 
 	void OpenGLShader::set_uniform_binding(std::string const& name, uint32_t binding) {
 		PROFILE_FUNCTION();
 		auto it = m_uniform_indices.find(name);
-		if (it != m_uniform_indices.end()) {
-			uint32_t index = it->second;
-			switch (m_uniforms[index].m_type) {
-			case DataType::Sampler2D:
-			case DataType::SamplerCube:
-				set_int(m_uniforms[index].m_location, binding); return;
-			}
-			CORE_WARN("uniform {0} cannot be set to a binding position!", name);
+		DEBUG_CHECK(it != m_uniform_indices.end(), "uniform {0} not found!", name);
+
+		uint32_t index = it->second;
+		switch (m_uniforms[index].m_type) {
+		case DataType::Sampler2D:
+		case DataType::SamplerCube:
+			set_int(m_uniforms[index].m_location, binding); return;
 		}
-		else {
-			CORE_WARN("uniform {0} not found!", name);
-		}
+		DEBUG_CHECK(false, "uniform {0} cannot be set to a binding position!", name);
 	}
 
 	void OpenGLShader::set_uniform_block_binding(std::string const& name, uint32_t binding) {

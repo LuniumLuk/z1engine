@@ -557,7 +557,7 @@ private:
 						if (sprite.m_texture) {
 							auto w = sprite.m_texture->m_image->get_description().m_width;
 							auto h = sprite.m_texture->m_image->get_description().m_height;
-							ImGui::Image(sprite.m_texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+							ImGui::Image(sprite.m_texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(0, 1));
 						}
 						else {
 							ImGui::Text("No Texture");
@@ -599,15 +599,59 @@ private:
 					if (ImGui::CollapsingHeader("StaticMeshComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
 						auto& mesh = m_selected_entity->get_component<StaticMeshComponent>();
 						ImGui::Text("guid: %s", mesh.m_mesh->m_meta.guid.value.c_str());
-						ImGui::Text("bound min: (%f, %f, %f)", mesh.m_mesh->m_bound_min.x, mesh.m_mesh->m_bound_min.y, mesh.m_mesh->m_bound_min.z);
-						ImGui::Text("bound max: (%f, %f, %f)", mesh.m_mesh->m_bound_max.x, mesh.m_mesh->m_bound_max.y, mesh.m_mesh->m_bound_max.z);
 						ImGui::Text("primitives");
-						for (auto const& prim : mesh.m_mesh->m_primitives) {
-							ImGui::Indent();
-							ImGui::Text("triangle count: %d", prim.get_triangle_count());
-							ImGui::Text("bound min: (%f, %f, %f)", prim.m_bound_min.x, prim.m_bound_min.y, prim.m_bound_min.z);
-							ImGui::Text("bound max: (%f, %f, %f)", prim.m_bound_max.x, prim.m_bound_max.y, prim.m_bound_max.z);
-							ImGui::Unindent();
+						ImGui::Indent();
+						for (int i = 0; i < mesh.m_mesh->m_primitives.size(); ++i) {
+							auto const& prim = mesh.m_mesh->m_primitives[i];
+							if (ImGui::CollapsingHeader(("primitive " + std::to_string(i)).c_str())) {
+								ImGui::Text("triangle count: %d", prim.get_triangle_count());
+								ImGui::Text("material");
+								ImGui::Indent();
+								if (prim.m_material.is_valid()) {
+									auto mat_meta = g_runtime_context.m_asset_manager->get_meta(prim.m_material);
+									ImGui::Text("guid: %s", mat_meta.guid.value.c_str());
+									ImGui::Text("path: %s", mat_meta.path.generic_string().c_str());
+								}
+								else {
+									ImGui::Text("no material attached");
+								}
+								ImGui::Unindent();
+							}
+						}
+						ImGui::Unindent();
+					}
+				}
+
+				if (m_selected_entity->has_component<SkeletalMeshComponent>()) {
+					if (ImGui::CollapsingHeader("SkeletalMeshComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
+						auto& mesh = m_selected_entity->get_component<SkeletalMeshComponent>();
+						ImGui::Text("guid: %s", mesh.m_mesh->m_meta.guid.value.c_str());
+						ImGui::Text("primitives");
+						ImGui::Indent();
+						for (int i = 0; i < mesh.m_mesh->m_primitives.size(); ++i) {
+							auto const& prim = mesh.m_mesh->m_primitives[i];
+							if (ImGui::CollapsingHeader(("primitive " + std::to_string(i)).c_str())) {
+								ImGui::Text("triangle count: %d", prim.get_triangle_count());
+								ImGui::Text("material");
+								ImGui::Indent();
+								if (prim.m_material.is_valid()) {
+									auto mat_meta = g_runtime_context.m_asset_manager->get_meta(prim.m_material);
+									ImGui::Text("guid: %s", mat_meta.guid.value.c_str());
+									ImGui::Text("path: %s", mat_meta.path.generic_string().c_str());
+								} else {
+									ImGui::Text("no material attached");
+								}
+								ImGui::Unindent();
+							}
+						}
+						ImGui::Unindent();
+
+						if (mesh.m_skeleton) {
+							ImGui::Text("skeleton guid: %s", mesh.m_skeleton->m_meta.guid.value.c_str());
+							ImGui::Text("joint count: %d", mesh.m_skeleton->bones.size());
+						}
+						else {
+							ImGui::Text("no skeleton attached");
 						}
 					}
 				}
@@ -849,6 +893,13 @@ private:
 					ent->add_component<StaticMeshComponent>(
 						g_runtime_context.m_asset_manager->get<StaticMesh>(m_selected_asset->guid)
 					);
+				}
+			}
+			else if (m_selected_asset->type == "skeletal mesh") {
+				if (ImGui::Button("add to scene")) {
+					auto ent = m_active_scene->create_entity(m_selected_asset->name());
+					ent->add_component<SkeletalMeshComponent>(
+						g_runtime_context.m_asset_manager->get<SkeletalMesh>(m_selected_asset->guid));
 				}
 			}
 		}

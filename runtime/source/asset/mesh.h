@@ -7,40 +7,8 @@
 
 namespace z1 {
 
-	struct API SkeletalMesh {
-		struct VertexData {
-			glm::vec3 position;
-			glm::vec3 normal;
-			glm::vec2 texcoord0;
-			glm::vec2 texcoord1;
-			glm::vec4 tangent;
-			glm::vec4 joint;
-			glm::vec4 weight;
-			glm::vec4 color;
-			VertexData() = default;
-			VertexData(
-				glm::vec3 const& pos,
-				glm::vec3 const& norm,
-				glm::vec2 const& tex0,
-				glm::vec2 const& tex1,
-				glm::vec4 const& tan,
-				glm::vec4 const& joi,
-				glm::vec4 const& wei,
-				glm::vec4 const& col)
-				: position(pos)
-				, normal(norm)
-				, texcoord0(tex0)
-				, texcoord1(tex1)
-				, tangent(tan)
-				, joint(joi)
-				, weight(wei)
-				, color(col) {
-			}
-		};
-	};
-
 	struct API StaticMesh : Asset<StaticMesh> {
-
+		using IndexType = uint32_t;
 		struct VertexData {
 			glm::vec3 position{ 0.0f };
 			glm::vec3 normal{ 0.0f, 0.0f, 1.0f };
@@ -130,6 +98,90 @@ namespace z1 {
 		std::vector<Primitive> m_primitives;
 
 		// axis-aligned bounding box for the whole mesh
+		glm::vec3 m_bound_min;
+		glm::vec3 m_bound_max;
+	};
+
+	struct API SkeletalMesh : Asset<SkeletalMesh> {
+		using IndexType = uint32_t;
+		struct VertexData {
+			glm::vec3 position{ 0.0f };
+			glm::vec3 normal{ 0.0f, 0.0f, 1.0f };
+			glm::vec2 texcoord0{ 0.0f };
+			glm::vec2 texcoord1{ 0.0f };
+			glm::vec4 tangent{ 1.0f, 0.0f, 0.0f, 0.0f };
+			glm::vec4 color{ 1.0f };
+			glm::vec4 joint{ 0.0f };
+			glm::vec4 weight{ 0.0f };
+			VertexData() = default;
+			VertexData(
+				glm::vec3 const& pos,
+				glm::vec3 const& norm,
+				glm::vec2 const& tex0,
+				glm::vec2 const& tex1,
+				glm::vec4 const& tan,
+				glm::vec4 const& col,
+				glm::vec4 const& joi,
+				glm::vec4 const& wei)
+				: position(pos)
+				, normal(norm)
+				, texcoord0(tex0)
+				, texcoord1(tex1)
+				, tangent(tan)
+				, color(col)
+				, joint(joi)
+				, weight(wei) {
+			}
+			static const VertexBuffer::Layout s_layout;
+		};
+
+		struct Primitive {
+			struct Storage {
+				uint32_t index_start;
+				uint32_t index_count;
+				uint32_t vertex_count;
+				glm::vec3 bound_min;
+				glm::vec3 bound_max;
+				Guid material;
+				bool has_indices;
+				bool has_normal;
+				bool has_tangent;
+			};
+			PrimitiveType m_primitive_type;
+			std::shared_ptr<VertexArray> m_vertex_array;
+			glm::vec3 m_bound_min;
+			glm::vec3 m_bound_max;
+			Guid m_material;
+
+			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array, glm::vec3 const& bound_min, glm::vec3 const& bound_max, Guid material)
+				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(bound_min), m_bound_max(bound_max), m_material(material) {}
+
+			size_t get_triangle_count() const;
+			bool is_bounding_box_valid() const { return m_bound_min != m_bound_max; }
+		};
+
+		struct Storage {
+			std::vector<VertexData> vertices;
+			std::vector<uint32_t> indices;
+			std::vector<Primitive::Storage> primitives;
+			glm::vec3 bound_min;
+			glm::vec3 bound_max;
+
+			AssetMeta import(Filepath const& path) const;
+		};
+
+		static std::shared_ptr<SkeletalMesh> load(Guid const& guid);
+
+		SkeletalMesh(std::shared_ptr<Storage> const& storage);
+
+		void draw(
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
+			std::vector<glm::mat4> const* bone_matrices = nullptr) const;
+
+		void draw() const;
+
+		std::vector<Primitive> m_primitives;
 		glm::vec3 m_bound_min;
 		glm::vec3 m_bound_max;
 	};

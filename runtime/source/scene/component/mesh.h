@@ -2,6 +2,7 @@
 
 #include "core/core.h"
 #include "asset/mesh.h"
+#include "animation/skeleton.h"
 
 namespace z1 {
 
@@ -12,6 +13,19 @@ namespace z1 {
 			: m_mesh(mesh) {}
 
 		DISABLE_COPY(StaticMeshComponent)
+
+	};
+
+	REFLECTED_STRUCT(SkeletalMeshComponent) {
+		std::shared_ptr<SkeletalMesh> m_mesh;
+		std::shared_ptr<Skeleton> m_skeleton;
+
+		SkeletalMeshComponent(
+			std::shared_ptr<SkeletalMesh> const& mesh,
+			std::shared_ptr<Skeleton> const& skeleton = nullptr) noexcept
+			: m_mesh(mesh), m_skeleton(skeleton) {}
+
+		DISABLE_COPY(SkeletalMeshComponent)
 
 	};
 

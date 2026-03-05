@@ -10,6 +10,7 @@
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
 #include "scene/component/light.h"
+#include "scene/component/animation.h"
 #include "render/renderer/renderer_forward.h"
 #include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
@@ -215,6 +216,24 @@ namespace z1 {
 				for (auto [entity, transform, mesh] : view.each()) {
 					glm::mat4 model = transform.get_world_transform();
 					s->set_uniform("u_model", &model);
+					// static shader doesn't have skinning uniform
+					mesh.m_mesh->draw();
+				}
+
+				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
+				for (auto [entity, transform, mesh] : view_skel.each()) {
+					if (!mesh.m_mesh) continue;
+					glm::mat4 model = transform.get_world_transform();
+					s->set_uniform("u_model", &model);
+					int has_skinning = 0;
+					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
+						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+						if (!anim.bone_matrices.empty()) {
+							has_skinning = 1;
+							s->set_uniform("u_bone_matrices", anim.bone_matrices.data());
+						}
+					}
+					s->set_uniform("u_has_skinning", &has_skinning);
 					mesh.m_mesh->draw();
 				}
 				m_pipeline_shadow->unbind();
@@ -236,6 +255,17 @@ namespace z1 {
 				for (auto [entity, transform, mesh] : view.each()) {
 					per_frame.model = transform.get_world_transform();
 					mesh.m_mesh->draw(per_frame, m_default_material);
+				}
+				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
+				for (auto [entity, transform, mesh] : view_skel.each()) {
+					if (!mesh.m_mesh) continue;
+					per_frame.model = transform.get_world_transform();
+					std::vector<glm::mat4> const* bones = nullptr;
+					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
+						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+						bones = &anim.bone_matrices;
+					}
+					mesh.m_mesh->draw(per_frame, m_default_material, bones);
 				}
 
 				if (history_uninitialized) {
@@ -272,6 +302,22 @@ namespace z1 {
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 				for (auto [entity, transform, mesh] : view.each()) {
 					s->set_uniform("u_model", &transform.get_world_transform());
+					mesh.m_mesh->draw();
+				}
+
+				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
+				for (auto [entity, transform, mesh] : view_skel.each()) {
+					if (!mesh.m_mesh) continue;
+					s->set_uniform("u_model", &transform.get_world_transform());
+					int has_skinning = 0;
+					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
+						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+						if (!anim.bone_matrices.empty()) {
+							has_skinning = 1;
+							s->set_uniform("u_bone_matrices", anim.bone_matrices.data());
+						}
+					}
+					s->set_uniform("u_has_skinning", &has_skinning);
 					mesh.m_mesh->draw();
 				}
 

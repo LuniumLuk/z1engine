@@ -2,23 +2,12 @@
 	#include <common/uniforms.glsl>
 }
 @stage: vert {
-	layout(location = 0) in vec3 a_position;
-
-	layout(location = 0) out vec4 v_curr_clip;
-	layout(location = 1) out vec4 v_prev_clip;
-
-	void main() {
-		vec4 world_position = u_model * vec4(a_position, 1.0);
-
-		v_curr_clip = u_projview * world_position;
-		v_prev_clip = u_prev_projview * world_position;
-
-		gl_Position = v_curr_clip;
-	}
+#define VELOCITY
+	#include <common/vert.glsl>
 }
 @stage: frag {
-	layout(location = 0) in vec4 v_curr_clip;
-	layout(location = 1) in vec4 v_prev_clip;
+	layout(location = 6) in vec4 v_curr_clip;
+	layout(location = 7) in vec4 v_prev_clip;
 	layout(location = 0) out vec4 frag_color;
 
 	void main() {

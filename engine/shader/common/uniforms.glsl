@@ -29,10 +29,10 @@ layout (std140) uniform Global {
 uniform sampler2D u_shadow_map;
 
 struct Light {
-	vec4 position; // w = type (0:dir, 1:point, 2:spot)
+	vec4 position;  // w = type (0:dir, 1:point, 2:spot)
 	vec4 direction; // w = range
-	vec4 color;    // w = intensity
-	vec4 cone;     // x = inner, y = outer, z = cast_shadow
+	vec4 color;     // w = intensity
+	vec4 cone;      // x = inner, y = outer, z = cast_shadow
 };
 
 layout(std140) uniform Lights {

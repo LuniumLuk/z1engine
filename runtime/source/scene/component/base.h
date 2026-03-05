@@ -114,9 +114,9 @@ namespace z1 {
 		}
 	};
 
-	REFLECTED_FIELD(TransformComponent, m_location, FF_Default, "[slider]")
-	REFLECTED_FIELD(TransformComponent, m_rotation, FF_Default, "[slider]")
-	REFLECTED_FIELD(TransformComponent, m_scale,    FF_Default, "[slider]")
+	REFLECTED_FIELD(TransformComponent, m_location, FF_Default, "[input]")
+	REFLECTED_FIELD(TransformComponent, m_rotation, FF_Default, "[input]")
+	REFLECTED_FIELD(TransformComponent, m_scale,    FF_Default, "[input]")
 
 	struct Entity;
 

@@ -61,16 +61,57 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 		glm::mat4 cam_projview = camera_comp.get_proj() * camera_comp.get_view();
 
 		m_pipeline->bind();
-		m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);
-		{
-			auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const, TagComponent const>();
-			for (auto [entity, transform, mesh, tag] : view.each()) {
-				float object_id = static_cast<float>(tag.m_id) + 1.0f;
-				m_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
-				m_pipeline->m_shader->set_uniform("u_object_id", &object_id);
-				mesh.m_mesh->draw();
-			}
+		g_runtime_context.m_global->bind();
+		m_pipeline->m_shader->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+
+		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const, TagComponent const>();
+		for (auto [entity, transform, mesh, tag] : view.each()) {
+			float object_id = static_cast<float>(tag.m_id) + 1.0f;
+
+			auto model = transform.get_world_transform();
+			m_pipeline->m_shader->set_uniform("u_model", &model);
+			m_pipeline->m_shader->set_uniform("u_object_id", &object_id);
+
+			mesh.m_mesh->draw();
 		}
+		auto view_skel =
+			scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const, TagComponent const>();
+		for (auto [entity, transform, mesh, tag] : view_skel.each()) {
+			if (!mesh.m_mesh)
+				continue;
+
+			float object_id = static_cast<float>(tag.m_id) + 1.0f;
+
+			auto model = transform.get_world_transform();
+			m_pipeline->m_shader->set_uniform("u_model", &model);
+			m_pipeline->m_shader->set_uniform("u_object_id", &object_id);
+
+			std::vector<glm::mat4> const* bones = nullptr;
+			if (scene->m_registry.all_of<AnimationComponent>(entity)) {
+				auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+				bones = &anim.bone_matrices;
+			}
+			int has_skinning = 0;
+			if (bones && !bones->empty()) {
+				has_skinning = 1;
+				m_pipeline->m_shader->set_uniform("u_bone_matrices", bones->data());
+			}
+			m_pipeline->m_shader->set_uniform("u_has_skinning", &has_skinning);
+			mesh.m_mesh->draw();
+		}
+
+		g_runtime_context.m_global->unbind();
+
+		//m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);
+		//{
+		//	auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const, TagComponent const>();
+		//	for (auto [entity, transform, mesh, tag] : view.each()) {
+		//		float object_id = static_cast<float>(tag.m_id) + 1.0f;
+		//		m_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
+		//		m_pipeline->m_shader->set_uniform("u_object_id", &object_id);
+		//		mesh.m_mesh->draw();
+		//	}
+		//}
 		m_pipeline->unbind();
 
 		m_sprite_pipeline->bind();

@@ -117,14 +117,14 @@ namespace z1 {
 #include "util/instrumentor.h"
 
 #ifdef ENABLE_PROFILE
-#   define CONCAT(x, y) x ## y
-#   define C(x, y) CONCAT(x, y)
-#   define PROFILE_BEGIN_SESSION(name, filepath)  z1::Instrumentor::get().begin_session(name, filepath)
-#   define PROFILE_END_SESSION()                  z1::Instrumentor::get().end_session()
-#   define PROFILE_SET_THREAD_NAME(name)          z1::Instrumentor::get().set_thread_name(std::hash<std::thread::id>{}(std::this_thread::get_id()), name)
-#   define PROFILE_SCOPE(name)                    z1::InstrumentationTimer C(__PROFILE_TIMER_, __LINE__)(name)
-#   define PROFILE_COUNTER(name, value)           z1::report_counter(name, static_cast<int64_t>(value))
-#   define PROFILE_INSTANT(name)                  z1::report_instant(name)
+#    define CONCAT(x, y) x ## y
+#    define C(x, y) CONCAT(x, y)
+#    define PROFILE_BEGIN_SESSION(name, filepath)  z1::Instrumentor::get().begin_session(name, filepath)
+#    define PROFILE_END_SESSION()                  z1::Instrumentor::get().end_session()
+#    define PROFILE_SET_THREAD_NAME(name)          z1::Instrumentor::get().set_thread_name(std::hash<std::thread::id>{}(std::this_thread::get_id()), name)
+#    define PROFILE_SCOPE(name)                    z1::InstrumentationTimer C(__PROFILE_TIMER_, __LINE__)(name)
+#    define PROFILE_COUNTER(name, value)           z1::report_counter(name, static_cast<int64_t>(value))
+#    define PROFILE_INSTANT(name)                  z1::report_instant(name)
 // Flow event can be used to represent the asynchronous dependencies between scope events
 // The valid flow events should satisfy the following conditions:
 //  1. The flow begin event should be called before a scope event's end on the same thread
@@ -142,19 +142,19 @@ namespace z1 {
 //     PROFILE_SCOPE("scope2");
 //     // do something ...
 // }
-#   define PROFILE_FLOW_BEGIN(id)                 z1::report_flow(id, "s")
-#   define PROFILE_FLOW_END(id)                   z1::report_flow(id, "f")
-#   define PROFILE_FUNCTION()                     PROFILE_SCOPE(__FUNCSIG__)
+#    define PROFILE_FLOW_BEGIN(id)                 z1::report_flow(id, "s")
+#    define PROFILE_FLOW_END(id)                   z1::report_flow(id, "f")
+#    define PROFILE_FUNCTION()                     PROFILE_SCOPE(__FUNCSIG__)
 #else
-#   define PROFILE_BEGIN_SESSION(name, filepath)
-#   define PROFILE_END_SESSION()
-#   define PROFILE_SET_THREAD_NAME(name)
-#   define PROFILE_SCOPE(name)
-#   define PROFILE_COUNTER(name, value)
-#   define PROFILE_INSTANT(name)
-#   define PROFILE_FLOW_BEGIN(id)
-#   define PROFILE_FLOW_END(id)
-#   define PROFILE_FUNCTION()
+#    define PROFILE_BEGIN_SESSION(name, filepath)
+#    define PROFILE_END_SESSION()
+#    define PROFILE_SET_THREAD_NAME(name)
+#    define PROFILE_SCOPE(name)
+#    define PROFILE_COUNTER(name, value)
+#    define PROFILE_INSTANT(name)
+#    define PROFILE_FLOW_BEGIN(id)
+#    define PROFILE_FLOW_END(id)
+#    define PROFILE_FUNCTION()
 #endif
 
 #include "core/reflection.h"
@@ -191,3 +191,15 @@ namespace z1 {
 	type& operator=(type const&) = delete;
 
 #define TYPE_NAME(type) #type
+
+#ifdef DEBUG
+#define DEBUG_CHECK(expr, msg)                                         \
+	{                                                                  \
+		if (!(expr)) {                                                 \
+			CORE_ERROR("debug check failed: {0}", msg);                \
+			__debugbreak();                                            \
+		}                                                              \
+	}
+#else
+#define DEBUG_CHECK(expr, msg)
+#endif

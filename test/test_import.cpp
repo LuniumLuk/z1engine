@@ -60,20 +60,20 @@ int main() {
 		ObjImporter().import(settings);
 	}
 
-	std::vector<std::string> engine_meshes = {
-		"Cone",
-		"Cube",
-		"Cylinder",
-		"Sphere",
-		"Suzanne",
-	};
+	//std::vector<std::string> engine_meshes = {
+	//	"Cone",
+	//	"Cube",
+	//	"Cylinder",
+	//	"Sphere",
+	//	"Suzanne",
+	//};
 
-	for (auto& mesh : engine_meshes) {
-		ObjImporterSettings settings{};
-		settings.file = "../../asset/mesh/" + mesh + ".obj";
-		settings.path = "mesh/SM_" + mesh;
-		ObjImporter().import(settings);
-	}
+	//for (auto& mesh : engine_meshes) {
+	//	ObjImporterSettings settings{};
+	//	settings.file = "../../asset/mesh/" + mesh + ".obj";
+	//	settings.path = "mesh/SM_" + mesh;
+	//	ObjImporter().import(settings);
+	//}
 
 	return 0;
 }

@@ -4,11 +4,16 @@
 #include "scene/component/mesh.h"
 #include "asset/mesh.h"
 #include "asset/material.h"
+#include "animation/skeleton.h"
+#include "animation/animation.h"
+#include "asset/binary_file.h"
 #include "util/yaml.h"
 
 #include "bakery.h"
 #include "tinygltf/tiny_gltf.h"
+#include "stb/stb_image.h"
 #include "glm/gtc/type_ptr.hpp"
+#include "glm/gtc/quaternion.hpp"
 
 namespace z1 {
 
@@ -67,9 +72,9 @@ namespace z1 {
 		return result;
 	}
 
-	template<typename T>
-	static void process_indices(const void* ptr, size_t count, std::shared_ptr<StaticMesh::Storage> const& mesh_storage, uint32_t& index_start, uint32_t vertex_start) {
-		const T* buf = static_cast<const T*>(ptr);
+	template<typename MeshType, typename IndexType>
+	static void process_indices(const void* ptr, size_t count, std::shared_ptr<typename MeshType::Storage> const& mesh_storage, uint32_t& index_start, uint32_t vertex_start) {
+		const auto* buf = static_cast<const IndexType*>(ptr);
 		for (size_t i = 0; i < count; ++i) {
 			mesh_storage->indices.push_back(buf[i] + vertex_start);
 			++index_start;
@@ -119,141 +124,270 @@ namespace z1 {
 			}
 		}
 
-		auto mesh_storage = std::make_shared<StaticMesh::Storage>();
-		mesh_storage->bound_min = glm::vec3{ FLT_MAX };
-		mesh_storage->bound_max = glm::vec3{ FLT_MIN };
-
-		uint32_t mesh_vertex_count = 0;
-		uint32_t mesh_index_count = 0;
-		uint32_t vertex_start = 0;
-		uint32_t index_start = 0;
-
 		if (node.mesh > -1) {
 			auto const& mesh = model.meshes[node.mesh];
 
-			// preprocess node for memory pre-allocation
+			bool is_skeletal = false;
 			for (auto const& primitive : mesh.primitives) {
-				mesh_vertex_count += static_cast<uint32_t>(model.accessors[primitive.attributes.find("POSITION")->second].count);
-				if (primitive.indices > -1) {
-					mesh_index_count += static_cast<uint32_t>(model.accessors[primitive.indices].count);
+				if (primitive.attributes.find("JOINTS_0") != primitive.attributes.end() &&
+					primitive.attributes.find("WEIGHTS_0") != primitive.attributes.end()) {
+					is_skeletal = true;
+					break;
 				}
 			}
 
-			mesh_storage->vertices.reserve(mesh_vertex_count);
-			mesh_storage->indices.reserve(mesh_index_count);
+			if (is_skeletal) {
+				auto mesh_storage = std::make_shared<SkeletalMesh::Storage>();
+				mesh_storage->bound_min = glm::vec3{ FLT_MAX };
+				mesh_storage->bound_max = glm::vec3{ FLT_MIN };
 
-			for (auto const& primitive : mesh.primitives) {
+				uint32_t mesh_vertex_count = 0;
+				uint32_t mesh_index_count = 0;
+				uint32_t vertex_start = 0;
+				uint32_t index_start = 0;
 
-				StaticMesh::Primitive::Storage prim_storage{};
-
-				// load vertices
-				{
-					if (primitive.attributes.find("POSITION") == primitive.attributes.end()) {
-						CORE_WARN("skip mesh for POSITION attribute not exist");
-						return;
-					}
-
-					auto const& accessor_pos = model.accessors[primitive.attributes.find("POSITION")->second];
-					prim_storage.bound_min = glm::make_vec3(accessor_pos.minValues.data());
-					prim_storage.bound_max = glm::make_vec3(accessor_pos.maxValues.data());
-					// update mesh bound
-					mesh_storage->bound_min = glm::min(mesh_storage->bound_min, prim_storage.bound_min);
-					mesh_storage->bound_max = glm::max(mesh_storage->bound_max, prim_storage.bound_max);
-
-					prim_storage.vertex_count = static_cast<uint32_t>(accessor_pos.count);
-
-					auto pos     = load_attribute(model, primitive, "POSITION",   TINYGLTF_TYPE_VEC3);
-					auto normal  = load_attribute(model, primitive, "NORMAL",     TINYGLTF_TYPE_VEC3);
-					auto uv0     = load_attribute(model, primitive, "TEXCOORD_0", TINYGLTF_TYPE_VEC2);
-					auto uv1     = load_attribute(model, primitive, "TEXCOORD_1", TINYGLTF_TYPE_VEC2);
-					auto tangent = load_attribute(model, primitive, "TANGENT",    TINYGLTF_TYPE_VEC4);
-					auto color   = load_attribute(model, primitive, "COLOR_0",    TINYGLTF_TYPE_VEC3);
-					auto weight  = load_attribute(model, primitive, "WEIGHTS_0",  TINYGLTF_TYPE_VEC4);
-					auto joint   = load_non_float_attribute(model, primitive, "JOINTS_0", TINYGLTF_TYPE_VEC4);
-
-					prim_storage.has_indices = primitive.indices > -1;
-					prim_storage.has_normal = (normal.data != nullptr);
-					prim_storage.has_tangent = (tangent.data != nullptr);
-					bool has_skin = (joint.data && weight.data);
-
-					for (size_t v = 0; v < accessor_pos.count; ++v) {
-						StaticMesh::VertexData vert{};
-						vert.position = glm::vec4{ glm::make_vec3(&pos.data[v * pos.stride]), 1.f };
-						if (normal.data) vert.normal = glm::normalize(glm::make_vec3(&normal.data[v * normal.stride]));
-						if (uv0.data) vert.texcoord0 = glm::make_vec2(&uv0.data[v * uv0.stride]);
-						if (uv1.data) vert.texcoord1 = glm::make_vec2(&uv1.data[v * uv1.stride]);
-						if (tangent.data) vert.tangent = glm::make_vec4(&tangent.data[v * tangent.stride]);
-						if (color.data) vert.color = glm::make_vec4(&color.data[v * color.stride]);
-
-						//if (has_skin) {
-						//	switch (joint.component_type) {
-						//	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
-						//		uint16_t const* buf = static_cast<uint16_t const*>(joint.data);
-						//		vert.joint = glm::vec4(glm::make_vec4(&buf[v * joint.stride]));
-						//		break;
-						//	}
-						//	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
-						//		uint8_t const* buf = static_cast<uint8_t const*>(joint.data);
-						//		vert.joint = glm::vec4(glm::make_vec4(&buf[v * joint.stride]));
-						//		break;
-						//	}
-						//	default:
-						//		CORE_WARN("skip mesh for unsupported joint component type");
-						//		return;
-						//	}
-						//	vert.weight = glm::make_vec4(&weight.data[v * weight.stride]);
-						//}
-						//else {
-						//	vert.joint = glm::vec4(0.0f);
-						//	vert.weight = glm::vec4(0.0f);
-						//}
-						//if (glm::length(vert.weight) == 0.0f) vert.weight.x = 1.0f;
-
-						mesh_storage->vertices.push_back(vert);
+				// preprocess node for memory pre-allocation
+				for (auto const& primitive : mesh.primitives) {
+					mesh_vertex_count += static_cast<uint32_t>(model.accessors[primitive.attributes.find("POSITION")->second].count);
+					if (primitive.indices > -1) {
+						mesh_index_count += static_cast<uint32_t>(model.accessors[primitive.indices].count);
 					}
 				}
 
-				// load indices
-				if (prim_storage.has_indices) {
-					auto const& accessor = model.accessors[primitive.indices > -1 ? primitive.indices : 0];
-					auto const& view = model.bufferViews[accessor.bufferView];
-					auto const& buffer = model.buffers[view.buffer];
+				mesh_storage->vertices.reserve(mesh_vertex_count);
+				mesh_storage->indices.reserve(mesh_index_count);
 
-					prim_storage.index_start = index_start;
-					prim_storage.index_count = static_cast<uint32_t>(accessor.count);
-					const void* ptr = &(buffer.data[accessor.byteOffset + view.byteOffset]);
+				for (auto const& primitive : mesh.primitives) {
 
-					switch (accessor.componentType) {
-					case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT: 
-						process_indices<uint32_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
-						break;
-					case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
-						process_indices<uint16_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
-						break;
-					case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
-						process_indices<uint8_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
-						break;
-					default:
-						CORE_WARN("skip mesh for index type not supported");
-						return;
+					SkeletalMesh::Primitive::Storage prim_storage{};
+
+					// load vertices
+					{
+						if (primitive.attributes.find("POSITION") == primitive.attributes.end()) {
+							CORE_WARN("skip mesh for POSITION attribute not exist");
+							return;
+						}
+
+						auto const& accessor_pos = model.accessors[primitive.attributes.find("POSITION")->second];
+						prim_storage.bound_min = glm::make_vec3(accessor_pos.minValues.data());
+						prim_storage.bound_max = glm::make_vec3(accessor_pos.maxValues.data());
+						// update mesh bound
+						mesh_storage->bound_min = glm::min(mesh_storage->bound_min, prim_storage.bound_min);
+						mesh_storage->bound_max = glm::max(mesh_storage->bound_max, prim_storage.bound_max);
+
+						prim_storage.vertex_count = static_cast<uint32_t>(accessor_pos.count);
+
+						auto pos = load_attribute(model, primitive, "POSITION", TINYGLTF_TYPE_VEC3);
+						auto normal = load_attribute(model, primitive, "NORMAL", TINYGLTF_TYPE_VEC3);
+						auto uv0 = load_attribute(model, primitive, "TEXCOORD_0", TINYGLTF_TYPE_VEC2);
+						auto uv1 = load_attribute(model, primitive, "TEXCOORD_1", TINYGLTF_TYPE_VEC2);
+						auto tangent = load_attribute(model, primitive, "TANGENT", TINYGLTF_TYPE_VEC4);
+						auto color = load_attribute(model, primitive, "COLOR_0", TINYGLTF_TYPE_VEC3);
+						auto weight = load_attribute(model, primitive, "WEIGHTS_0", TINYGLTF_TYPE_VEC4);
+						auto joint = load_non_float_attribute(model, primitive, "JOINTS_0", TINYGLTF_TYPE_VEC4);
+
+						prim_storage.has_indices = primitive.indices > -1;
+						prim_storage.has_normal = (normal.data != nullptr);
+						prim_storage.has_tangent = (tangent.data != nullptr);
+						bool has_skin = (joint.data && weight.data);
+
+						for (size_t v = 0; v < accessor_pos.count; ++v) {
+							SkeletalMesh::VertexData vert{};
+							vert.position = glm::vec4{ glm::make_vec3(&pos.data[v * pos.stride]), 1.f };
+							if (normal.data) vert.normal = glm::normalize(glm::make_vec3(&normal.data[v * normal.stride]));
+							if (uv0.data) vert.texcoord0 = glm::make_vec2(&uv0.data[v * uv0.stride]);
+							if (uv1.data) vert.texcoord1 = glm::make_vec2(&uv1.data[v * uv1.stride]);
+							if (tangent.data) vert.tangent = glm::make_vec4(&tangent.data[v * tangent.stride]);
+							if (color.data) vert.color = glm::make_vec4(&color.data[v * color.stride]);
+
+							if (has_skin) {
+								switch (joint.component_type) {
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+									uint16_t const* buf = static_cast<uint16_t const*>(joint.data);
+									auto* ptr = &buf[v * joint.stride];
+									vert.joint = glm::vec4(ptr[0], ptr[1], ptr[2], ptr[3]);
+									break;
+								}
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+									uint8_t const* buf = static_cast<uint8_t const*>(joint.data);
+									auto* ptr = &buf[v * joint.stride];
+									vert.joint = glm::vec4(ptr[0], ptr[1], ptr[2], ptr[3]);
+									break;
+								}
+								default:
+									CORE_WARN("skip mesh for unsupported joint component type");
+									return;
+								}
+								vert.weight = glm::make_vec4(&weight.data[v * weight.stride]);
+							}
+							else {
+								vert.joint = glm::vec4(0.0f);
+								vert.weight = glm::vec4(0.0f);
+							}
+							if (glm::length(vert.weight) == 0.0f) vert.weight.x = 1.0f;
+
+							mesh_storage->vertices.push_back(vert);
+						}
 					}
+
+					// load indices
+					if (prim_storage.has_indices) {
+						auto const& accessor = model.accessors[primitive.indices > -1 ? primitive.indices : 0];
+						auto const& view = model.bufferViews[accessor.bufferView];
+						auto const& buffer = model.buffers[view.buffer];
+
+						prim_storage.index_start = index_start;
+						prim_storage.index_count = static_cast<uint32_t>(accessor.count);
+						const void* ptr = &(buffer.data[accessor.byteOffset + view.byteOffset]);
+
+						switch (accessor.componentType) {
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
+							process_indices<SkeletalMesh, uint32_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+							break;
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
+							process_indices<SkeletalMesh, uint16_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+							break;
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
+							process_indices<SkeletalMesh, uint8_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+							break;
+						default:
+							CORE_WARN("skip mesh for index type not supported");
+							return;
+						}
+					}
+
+					if (primitive.material >= 0) {
+						prim_storage.material = loaded_materials[primitive.material];
+					}
+
+					mesh_storage->primitives.push_back(prim_storage);
 				}
 
-				if (primitive.material >= 0) {
-					prim_storage.material = loaded_materials[primitive.material];
-				}
+				auto const& root = FileSystem::s_content_root;
 
-				mesh_storage->primitives.push_back(prim_storage);
+				std::string name = mesh.name.empty() ? ("SKM_" + std::to_string(node.mesh)) : mesh.name;
+				auto meta = mesh_storage->import(settings.path / name);
+				if (meta.guid.is_valid()) {
+					ret.assets.push_back(meta);
+					ret.files.push_back((root / (name + ".bin")));
+				}
 			}
+			else {
+				auto mesh_storage = std::make_shared<StaticMesh::Storage>();
+				mesh_storage->bound_min = glm::vec3{ FLT_MAX };
+				mesh_storage->bound_max = glm::vec3{ FLT_MIN };
 
-			auto const& root = FileSystem::s_content_root;
+				uint32_t mesh_vertex_count = 0;
+				uint32_t mesh_index_count = 0;
+				uint32_t vertex_start = 0;
+				uint32_t index_start = 0;
 
-			std::string name = mesh.name.empty() ? ("SM_" + std::to_string(node.mesh)) : mesh.name;
-			auto meta = mesh_storage->import(settings.path / name);
-			if (meta.guid.is_valid()) {
-				ret.assets.push_back(meta);
-				ret.files.push_back((root / (name + ".bin")));
+				// preprocess node for memory pre-allocation
+				for (auto const& primitive : mesh.primitives) {
+					mesh_vertex_count += static_cast<uint32_t>(model.accessors[primitive.attributes.find("POSITION")->second].count);
+					if (primitive.indices > -1) {
+						mesh_index_count += static_cast<uint32_t>(model.accessors[primitive.indices].count);
+					}
+				}
+
+				mesh_storage->vertices.reserve(mesh_vertex_count);
+				mesh_storage->indices.reserve(mesh_index_count);
+
+				for (auto const& primitive : mesh.primitives) {
+
+					StaticMesh::Primitive::Storage prim_storage{};
+
+					// load vertices
+					{
+						if (primitive.attributes.find("POSITION") == primitive.attributes.end()) {
+							CORE_WARN("skip mesh for POSITION attribute not exist");
+							return;
+						}
+
+						auto const& accessor_pos = model.accessors[primitive.attributes.find("POSITION")->second];
+						prim_storage.bound_min = glm::make_vec3(accessor_pos.minValues.data());
+						prim_storage.bound_max = glm::make_vec3(accessor_pos.maxValues.data());
+						// update mesh bound
+						mesh_storage->bound_min = glm::min(mesh_storage->bound_min, prim_storage.bound_min);
+						mesh_storage->bound_max = glm::max(mesh_storage->bound_max, prim_storage.bound_max);
+
+						prim_storage.vertex_count = static_cast<uint32_t>(accessor_pos.count);
+
+						auto pos = load_attribute(model, primitive, "POSITION", TINYGLTF_TYPE_VEC3);
+						auto normal = load_attribute(model, primitive, "NORMAL", TINYGLTF_TYPE_VEC3);
+						auto uv0 = load_attribute(model, primitive, "TEXCOORD_0", TINYGLTF_TYPE_VEC2);
+						auto uv1 = load_attribute(model, primitive, "TEXCOORD_1", TINYGLTF_TYPE_VEC2);
+						auto tangent = load_attribute(model, primitive, "TANGENT", TINYGLTF_TYPE_VEC4);
+						auto color = load_attribute(model, primitive, "COLOR_0", TINYGLTF_TYPE_VEC3);
+
+						prim_storage.has_indices = primitive.indices > -1;
+						prim_storage.has_normal = (normal.data != nullptr);
+						prim_storage.has_tangent = (tangent.data != nullptr);
+
+						for (size_t v = 0; v < accessor_pos.count; ++v) {
+							StaticMesh::VertexData vert{};
+							vert.position = glm::vec4{ glm::make_vec3(&pos.data[v * pos.stride]), 1.f };
+							if (normal.data) vert.normal = glm::normalize(glm::make_vec3(&normal.data[v * normal.stride]));
+							if (uv0.data) vert.texcoord0 = glm::make_vec2(&uv0.data[v * uv0.stride]);
+							if (uv1.data) vert.texcoord1 = glm::make_vec2(&uv1.data[v * uv1.stride]);
+							if (tangent.data) vert.tangent = glm::make_vec4(&tangent.data[v * tangent.stride]);
+							if (color.data) vert.color = glm::make_vec4(&color.data[v * color.stride]);
+
+							mesh_storage->vertices.push_back(vert);
+						}
+					}
+
+					// load indices
+					if (prim_storage.has_indices) {
+						auto const& accessor = model.accessors[primitive.indices > -1 ? primitive.indices : 0];
+						auto const& view = model.bufferViews[accessor.bufferView];
+						auto const& buffer = model.buffers[view.buffer];
+
+						prim_storage.index_start = index_start;
+						prim_storage.index_count = static_cast<uint32_t>(accessor.count);
+						const void* ptr = &(buffer.data[accessor.byteOffset + view.byteOffset]);
+
+						switch (accessor.componentType) {
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
+							process_indices<StaticMesh, uint32_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+							break;
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
+							process_indices<StaticMesh, uint16_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+							break;
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
+							process_indices<StaticMesh, uint8_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+							break;
+						default:
+							CORE_WARN("skip mesh for index type not supported");
+							return;
+						}
+					}
+
+					if (primitive.material >= 0) {
+						prim_storage.material = loaded_materials[primitive.material];
+					}
+
+					mesh_storage->primitives.push_back(prim_storage);
+				}
+
+				auto const& root = FileSystem::s_content_root;
+
+				std::string name = mesh.name.empty() ? ("SM_" + std::to_string(node.mesh)) : mesh.name;
+				auto meta = mesh_storage->import(settings.path / name);
+				if (meta.guid.is_valid()) {
+					ret.assets.push_back(meta);
+					ret.files.push_back((root / (name + ".bin")));
+				}
 			}
+		}
+	}
+
+	template<typename T>
+	static void process_indices(const void* ptr, size_t count, std::shared_ptr<SkeletalMesh::Storage> const& mesh_storage, uint32_t& index_start, uint32_t vertex_start) {
+		const T* buf = static_cast<const T*>(ptr);
+		for (size_t i = 0; i < count; ++i) {
+			mesh_storage->indices.push_back(buf[i] + vertex_start);
+			++index_start;
 		}
 	}
 
@@ -312,7 +446,7 @@ namespace z1 {
 				continue;
 			}
 
-			flip_vertically(image);
+			//flip_vertically(image);
 
 			uint8_t const* data_ptr = nullptr;
 			std::vector<uint8_t> rgba_data;
@@ -466,6 +600,293 @@ namespace z1 {
 		}
 	}
 
+	static void import_skeleton(
+		GltfImporterSettings const& settings,
+		tinygltf::Model const& model,
+		tinygltf::Skin const& skin,
+		ImportResult& ret) {
+
+		Skeleton skeleton;
+		std::vector<glm::mat4> inverse_bind_matrices;
+
+		if (skin.inverseBindMatrices > -1) {
+			auto const& accessor = model.accessors[skin.inverseBindMatrices];
+			auto const& view = model.bufferViews[accessor.bufferView];
+			auto const& buffer = model.buffers[view.buffer];
+			const float* data = reinterpret_cast<const float*>(&buffer.data[accessor.byteOffset + view.byteOffset]);
+			for (size_t i = 0; i < accessor.count; ++i) {
+				inverse_bind_matrices.push_back(glm::make_mat4(&data[i * 16]));
+			}
+		}
+
+		std::vector<int> joints = skin.joints;
+		if (joints.empty()) {
+			// If no joints specified, maybe all nodes are joints?
+			// But usually skin has joints.
+			return;
+		}
+
+		// Map node index to bone index
+		std::unordered_map<int, int> node_to_bone_index;
+		for (size_t i = 0; i < joints.size(); ++i) {
+			node_to_bone_index[joints[i]] = static_cast<int>(i);
+		}
+
+		for (size_t i = 0; i < joints.size(); ++i) {
+			int node_idx = joints[i];
+			auto const& node = model.nodes[node_idx];
+
+			Bone bone;
+			bone.name = node.name;
+			bone.id = static_cast<int>(i); // Bone index in skeleton
+			bone.local_bind_transform = get_transform(node);
+
+			// Find parent
+			// We need to find if any parent of this node is also in the skeleton
+			// Note: glTF nodes have children, but not parent pointer.
+			// But we can iterate over all joints to find which one has this node as child.
+
+			// Optimization: Since we are iterating all joints, for the current joint, we can check its children.
+			// If a child is also a joint, we set the child's parent_id to current joint.
+			// But here we are processing 'bone'. We need to find ITS parent.
+
+			// Let's rely on a separate pass or just search.
+			// Since we process bones in order of 'skin.joints', usually topological sort is not guaranteed but common.
+			// But we need parent_id.
+
+			// Search who is parent of node_idx
+			int parent_node_idx = -1;
+			bool found_parent = false;
+
+			// Iterate all nodes to find who lists node_idx as child
+			// This is slow O(N*M). But N (nodes) is small usually.
+			// Better: build node->parent map once for the whole model.
+			// But here, let's just search within the joints?
+			// The parent MUST be in the skeleton for it to be a valid bone parent.
+
+			for (size_t j = 0; j < joints.size(); ++j) {
+				if (i == j) continue;
+				int other_node_idx = joints[j];
+				auto const& other_node = model.nodes[other_node_idx];
+				for (int child : other_node.children) {
+					if (child == node_idx) {
+						parent_node_idx = other_node_idx;
+						found_parent = true;
+						break;
+					}
+				}
+				if (found_parent) break;
+			}
+
+			if (found_parent) {
+				if (node_to_bone_index.find(parent_node_idx) != node_to_bone_index.end()) {
+					bone.parent_id = node_to_bone_index[parent_node_idx];
+				}
+			}
+
+			if (i < inverse_bind_matrices.size()) {
+				bone.offset_matrix = inverse_bind_matrices[i];
+			}
+
+			skeleton.bones.push_back(bone);
+		}
+
+		// Save skeleton
+		auto const& root = FileSystem::s_content_root;
+		std::string name = skin.name.empty() ? ("SK_" + std::to_string(ret.assets.size())) : skin.name;
+		// Ensure unique name if multiple skins
+
+		AssetMeta meta{};
+		meta.guid = Guid::generate();
+		meta.type = "skeleton";
+		meta.path = settings.path / name;
+
+		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
+			return;
+		}
+
+		YAML::Emitter yaml;
+		yaml << YAML::BeginMap;
+		yaml << YAML::Key << "bones" << YAML::Value << YAML::BeginSeq;
+		for (auto const& bone : skeleton.bones) {
+			yaml << YAML::BeginMap;
+			yaml << YAML::Key << "name" << YAML::Value << bone.name;
+			yaml << YAML::Key << "id" << YAML::Value << bone.id;
+			yaml << YAML::Key << "parent_id" << YAML::Value << bone.parent_id;
+			yaml << YAML::Key << "offset_matrix" << YAML::Value << bone.offset_matrix;
+			yaml << YAML::Key << "local_bind_transform" << YAML::Value << bone.local_bind_transform;
+			yaml << YAML::EndMap;
+		}
+		yaml << YAML::EndSeq;
+
+		yaml << YAML::Key << "meta" << YAML::Value << meta;
+		yaml << YAML::EndMap;
+
+		Filepath file = root / meta.path;
+		BinaryFile bf;
+		bf.set_yaml(yaml.c_str());
+		if (bf.save(file.concat(".bin"))) {
+			save_yaml(file.replace_extension(".yaml"), yaml);
+			ret.assets.push_back(meta);
+			ret.files.push_back(file);
+		}
+	}
+
+	static void import_animation(
+		GltfImporterSettings const& settings,
+		tinygltf::Model const& model,
+		tinygltf::Animation const& anim,
+		ImportResult& ret) {
+
+		Animation animation;
+		animation.name = anim.name;
+
+		for (auto const& channel : anim.channels) {
+			if (channel.target_node == -1) continue;
+
+			AnimationChannel anim_channel;
+			anim_channel.bone_id = channel.target_node; // This is node index, might need mapping to bone index later
+			// But wait, AnimationChannel stores 'bone_name'.
+			auto const& node = model.nodes[channel.target_node];
+			anim_channel.bone_name = node.name;
+
+			auto const& sampler = anim.samplers[channel.sampler];
+			auto const& input_accessor = model.accessors[sampler.input];
+			auto const& output_accessor = model.accessors[sampler.output];
+
+			std::vector<float> times;
+			{
+				auto const& view = model.bufferViews[input_accessor.bufferView];
+				auto const& buffer = model.buffers[view.buffer];
+				const float* data = reinterpret_cast<const float*>(&buffer.data[input_accessor.byteOffset + view.byteOffset]);
+				for (size_t i = 0; i < input_accessor.count; ++i) {
+					times.push_back(data[i]);
+					animation.duration = std::max(animation.duration, data[i]);
+				}
+			}
+
+			auto const& view = model.bufferViews[output_accessor.bufferView];
+			auto const& buffer = model.buffers[view.buffer];
+			const float* data = reinterpret_cast<const float*>(&buffer.data[output_accessor.byteOffset + view.byteOffset]);
+
+			if (channel.target_path == "translation") {
+				for (size_t i = 0; i < output_accessor.count; ++i) {
+					PositionKeyframe key;
+					key.time = times[i];
+					key.value = glm::make_vec3(&data[i * 3]);
+					anim_channel.position_keys.push_back(key);
+				}
+			}
+			else if (channel.target_path == "rotation") {
+				for (size_t i = 0; i < output_accessor.count; ++i) {
+					RotationKeyframe key;
+					key.time = times[i];
+					key.value = glm::make_quat(&data[i * 4]);
+					anim_channel.rotation_keys.push_back(key);
+				}
+			}
+			else if (channel.target_path == "scale") {
+				for (size_t i = 0; i < output_accessor.count; ++i) {
+					ScaleKeyframe key;
+					key.time = times[i];
+					key.value = glm::make_vec3(&data[i * 3]);
+					anim_channel.scale_keys.push_back(key);
+				}
+			}
+
+			bool found = false;
+			for (auto& existing : animation.channels) {
+				if (existing.bone_name == anim_channel.bone_name) {
+					if (!anim_channel.position_keys.empty()) existing.position_keys = anim_channel.position_keys;
+					if (!anim_channel.rotation_keys.empty()) existing.rotation_keys = anim_channel.rotation_keys;
+					if (!anim_channel.scale_keys.empty()) existing.scale_keys = anim_channel.scale_keys;
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				animation.channels.push_back(anim_channel);
+			}
+		}
+
+		// Save animation
+		auto const& root = FileSystem::s_content_root;
+		std::string name = anim.name.empty() ? ("AN_" + std::to_string(ret.assets.size())) : anim.name;
+
+		AssetMeta meta{};
+		meta.guid = Guid::generate();
+		meta.type = "animation";
+		meta.path = settings.path / name;
+
+		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
+			return;
+		}
+
+		size_t data_size = 0;
+		for (auto const& ch : animation.channels) {
+			data_size += ch.position_keys.size() * sizeof(PositionKeyframe);
+			data_size += ch.rotation_keys.size() * sizeof(RotationKeyframe);
+			data_size += ch.scale_keys.size() * sizeof(ScaleKeyframe);
+		}
+
+		BinaryFile bf;
+		bf.reserve(data_size);
+
+		YAML::Emitter yaml;
+		yaml << YAML::BeginMap;
+		yaml << YAML::Key << "name" << YAML::Value << animation.name;
+		yaml << YAML::Key << "duration" << YAML::Value << animation.duration;
+		yaml << YAML::Key << "ticks_per_second" << YAML::Value << animation.ticks_per_second;
+		yaml << YAML::Key << "channels" << YAML::Value << YAML::BeginSeq;
+
+		size_t current_offset = 0;
+		for (auto const& ch : animation.channels) {
+			yaml << YAML::BeginMap;
+			yaml << YAML::Key << "bone_name" << YAML::Value << ch.bone_name;
+			yaml << YAML::Key << "bone_id" << YAML::Value << ch.bone_id;
+
+			size_t pos_size = ch.position_keys.size() * sizeof(PositionKeyframe);
+			size_t rot_size = ch.rotation_keys.size() * sizeof(RotationKeyframe);
+			size_t scl_size = ch.scale_keys.size() * sizeof(ScaleKeyframe);
+
+			yaml << YAML::Key << "pos_count" << YAML::Value << ch.position_keys.size();
+			yaml << YAML::Key << "rot_count" << YAML::Value << ch.rotation_keys.size();
+			yaml << YAML::Key << "scl_count" << YAML::Value << ch.scale_keys.size();
+
+			yaml << YAML::Key << "pos_offset" << YAML::Value << current_offset;
+			if (pos_size > 0) {
+				bf.set_data(ch.position_keys.data(), pos_size, current_offset);
+				current_offset += pos_size;
+			}
+
+			yaml << YAML::Key << "rot_offset" << YAML::Value << current_offset;
+			if (rot_size > 0) {
+				bf.set_data(ch.rotation_keys.data(), rot_size, current_offset);
+				current_offset += rot_size;
+			}
+
+			yaml << YAML::Key << "scl_offset" << YAML::Value << current_offset;
+			if (scl_size > 0) {
+				bf.set_data(ch.scale_keys.data(), scl_size, current_offset);
+				current_offset += scl_size;
+			}
+
+			yaml << YAML::EndMap;
+		}
+		yaml << YAML::EndSeq;
+
+		yaml << YAML::Key << "meta" << YAML::Value << meta;
+		yaml << YAML::EndMap;
+
+		bf.set_yaml(yaml.c_str());
+		Filepath file = root / meta.path;
+		if (bf.save(file.concat(".bin"))) {
+			save_yaml(file.replace_extension(".yaml"), yaml);
+			ret.assets.push_back(meta);
+			ret.files.push_back(file);
+		}
+	}
+
 	ImportResult GltfImporter::import(GltfImporterSettings const& settings) {
 		ImportResult ret{};
 
@@ -479,6 +900,7 @@ namespace z1 {
 		std::string err;
 		std::string warn;
 
+		stbi_set_flip_vertically_on_load(true);
 		bool result = loader.LoadBinaryFromFile(&model, &err, &warn, settings.file.string());
 
 		if (!err.empty()) {
@@ -508,6 +930,16 @@ namespace z1 {
 		for (auto i : default_scene.nodes) {
 			auto const& node = model.nodes[i];
 			load_node(settings, node, model, ret, loaded_materials);
+		}
+
+		// load skins (skeletons)
+		for (auto const& skin : model.skins) {
+			import_skeleton(settings, model, skin, ret);
+		}
+
+		// load animations
+		for (auto const& anim : model.animations) {
+			import_animation(settings, model, anim, ret);
 		}
 
 		ret.success = true;

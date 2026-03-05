@@ -23,10 +23,12 @@
 
 #include "scene/scene.h"
 #include "scene/entity.h"
+#include "scene/animation_system.h"
 #include "scene/component/base.h"
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
+#include "scene/component/animation.h"
 
 #include "render/global.h"
 #include "render/graphics_context.h"
@@ -41,6 +43,9 @@
 #include "render/framebuffer.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
+
+#include "animation/animation.h"
+#include "animation/skeleton.h"
 
 #include "util/instrumentor.h"
 #include "util/random_utils.h"
