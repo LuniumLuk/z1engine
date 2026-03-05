@@ -74,12 +74,14 @@ namespace z1 {
 			m_pipeline_taa = Pipeline::build(desc);
 		}
 
+		/*
 		{
 			Pipeline::Description desc{};
 			desc.cull_mode = CullMode::None;
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/copy");
 			m_pipeline_copy = Pipeline::build(desc);
 		}
+		*/
 
 		// Shadow pipeline and framebuffer
 		{
@@ -111,19 +113,27 @@ namespace z1 {
 
 		bool history_uninitialized = false;
 
-		if (!m_history_color) {
-			m_history_color = Framebuffer::create(
+		if (!m_history_colors[0]) {
+			m_history_colors[0] = Framebuffer::create(
+				width,
+				height,
+				{ { ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder } });
+			m_history_colors[1] = Framebuffer::create(
 				width,
 				height,
 				{ { ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder } });
 			history_uninitialized = true;
 		}
 
-		if (m_history_color->get_width() != width ||
-			m_history_color->get_height() != height) {
-			m_history_color->resize(width, height);
+		if (m_history_colors[0]->get_width() != width ||
+			m_history_colors[0]->get_height() != height) {
+			m_history_colors[0]->resize(width, height);
+			m_history_colors[1]->resize(width, height);
 			history_uninitialized = true;
 		}
+
+		int write_idx = s_frame_index % 2;
+		int read_idx = (s_frame_index + 1) % 2;
 
 		auto const& cam = scene->get_main_camera();
 
@@ -271,7 +281,7 @@ namespace z1 {
 				if (history_uninitialized) {
 					ctx.blit_attachment(
 						node.get_output(),
-						m_history_color,
+						m_history_colors[read_idx],
 						0, 0,
 						0, 0,
 						0, 0,
@@ -329,13 +339,12 @@ namespace z1 {
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
 
 		rg.add_pass("taa")
-			.set_resolution_as(framebuffer)
+			.set_output(m_history_colors[write_idx])
 			.set_pass_desc(desc)
-			.add_output("taa", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_input("scene-color")
 			.add_input("velocity")
 			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
-				auto& h = m_history_color->get_attachment_image(0);
+				auto& h = m_history_colors[read_idx]->get_attachment_image(0);
 				h->bind();
 
 				m_pipeline_taa->bind();
@@ -364,6 +373,7 @@ namespace z1 {
 				m_pipeline_taa->unbind();
 				});
 
+		/*
 		rg.add_pass("copy")
 			.set_output(m_history_color)
 			.set_pass_desc(desc)
@@ -383,26 +393,30 @@ namespace z1 {
 
 				m_pipeline_copy->unbind();
 				});
+		*/
 
 		rg.add_pass("postprocessing")
 			.set_output(framebuffer)
 			.set_pass_desc(desc)
-			.add_input("taa")
+			// .add_input("taa")
 			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_postprocess->bind();
 				auto& s = m_pipeline_postprocess->m_shader;
 				s->set_uniform_block_binding(
 					"Global",
 					g_runtime_context.m_global->get_binding());
+
+				auto& scene = m_history_colors[write_idx]->get_attachment_image(0);
+				scene->bind();
 				s->set_uniform_binding(
 					"u_scene",
-					node.bind_input_index(0));
+					scene->get_binding());
 
 				m_quad->bind();
 				m_quad->draw(PrimitiveType::Triangles);
 				m_quad->unbind();
 
-				node.unbind_input_index(0);
+				scene->unbind();
 
 				m_pipeline_postprocess->unbind();
 				});

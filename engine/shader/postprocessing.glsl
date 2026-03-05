@@ -15,6 +15,22 @@
 	// Utilities
 	// ------------------------------------------------------------
 
+	vec3 sharpen(sampler2D tex, vec2 uv) {
+		vec3 color = texture(tex, uv).rgb;
+		float amount = 0.5; // Hardcoded sharpness
+
+		vec2 texSize = vec2(textureSize(tex, 0));
+		vec2 pixelSize = 1.0 / texSize;
+
+		vec3 up = texture(tex, uv + vec2(0, pixelSize.y)).rgb;
+		vec3 down = texture(tex, uv - vec2(0, pixelSize.y)).rgb;
+		vec3 left = texture(tex, uv - vec2(pixelSize.x, 0)).rgb;
+		vec3 right = texture(tex, uv + vec2(pixelSize.x, 0)).rgb;
+
+		vec3 blurred = (up + down + left + right) * 0.25;
+		return color + (color - blurred) * amount;
+	}
+
 	vec3 tonemap_reinhard(vec3 color) {
 		return color / (color + vec3(1.0));
 	}
@@ -28,7 +44,7 @@
 	// ------------------------------------------------------------
 
 	void main() {
-		vec3 color = texture(u_scene, v_uv).rgb;
+		vec3 color = sharpen(u_scene, v_uv);
 
 		// Exposure
 		color *= u_pp_exposure;

@@ -3,6 +3,7 @@
 #include "render/framebuffer.h"
 #include "render/pipeline.h"
 #include "asset/material.h"
+#include <array>
 
 namespace z1 {
 
@@ -24,11 +25,11 @@ namespace z1 {
 		std::shared_ptr<Pipeline> m_pipeline_postprocess;
 		std::shared_ptr<Pipeline> m_pipeline_velocity;
 		std::shared_ptr<Pipeline> m_pipeline_taa;
-		std::shared_ptr<Pipeline> m_pipeline_copy;
+		// std::shared_ptr<Pipeline> m_pipeline_copy; // Removed copy pipeline
 		std::shared_ptr<Pipeline> m_pipeline_shadow;
 		std::shared_ptr<Framebuffer> m_shadow_framebuffer;
 		std::shared_ptr<Image> m_shadow_image;
-		std::shared_ptr<Framebuffer> m_history_color;
+		std::array<std::shared_ptr<Framebuffer>, 2> m_history_colors;
 
 		struct alignas(16) LightData {
 			glm::vec4 position; // w = type (0:dir, 1:point, 2:spot)

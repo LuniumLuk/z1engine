@@ -111,7 +111,7 @@ def process_file(filepath, tasks, dry_run):
 
 def main():
 	parser = argparse.ArgumentParser(description="Code formatter utility.")
-	parser.add_argument('--extensions', type=str, default=".h,.cpp", help="Comma-separated list of extensions (default: .h,.cpp)")
+	parser.add_argument('--extensions', type=str, default=".h,.cpp,.glsl", help="Comma-separated list of extensions (default: .h,.cpp)")
 	parser.add_argument('--tasks', type=str, default="all", help="Comma-separated list of tasks: trailing, tabs, ascii, crlf (or all)")
 	parser.add_argument('--dry-run', action='store_true', help="Run without modifying files")
 
@@ -122,6 +122,7 @@ def main():
 		os.path.join(root, 'engine'),
 		os.path.join(root, 'editor'),
 		os.path.join(root, 'runtime'),
+		os.path.join(root, 'test'),
 	]
 	extensions = [e.strip() for e in args.extensions.split(',')]
 
