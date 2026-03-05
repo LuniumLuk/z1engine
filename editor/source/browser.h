@@ -112,9 +112,19 @@ struct ContentBrowser {
 					if (ImGui::MenuItem("copy path")) {
 						ImGui::SetClipboardText(child->meta->path.generic_string().c_str());
 					}
-					if (ImGui::MenuItem("Delete asset")) {
+					if (ImGui::MenuItem("Rename")) {
+						m_rename_target_guid = child->meta->guid;
+						std::string filename = child->meta->path.filename().string();
+						std::memset(m_rename_buffer, 0, sizeof(m_rename_buffer));
+						std::strncpy(m_rename_buffer, filename.c_str(), sizeof(m_rename_buffer) - 1);
+						m_rename_popup_open = true;
+						ImGui::CloseCurrentPopup();
+					}
+					if (ImGui::MenuItem("Safe Delete")) {
 						m_pending_delete_guid = child->meta->guid;
 						m_pending_delete_label = child->name;
+						m_delete_warnings = g_runtime_context.m_asset_manager->find_references(m_pending_delete_guid);
+						m_delete_popup_open = true;
 						m_selected_in_folder = nullptr;
 						ImGui::CloseCurrentPopup();
 					}
@@ -142,6 +152,26 @@ struct ContentBrowser {
 			ImGui::NextColumn();
 		}
 
+		if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
+			if (ImGui::BeginMenu("Create")) {
+				if (ImGui::MenuItem("Material Instance")) {
+					m_create_mi_popup_open = true;
+					std::strncpy(m_create_mi_name_buffer, "NewMaterialInstance", sizeof(m_create_mi_name_buffer));
+
+					// Populate cached materials
+					m_cached_materials = g_runtime_context.m_asset_manager->get_all_metas();
+					// Filter only materials
+					auto it = std::remove_if(m_cached_materials.begin(), m_cached_materials.end(), [](const AssetMeta& meta) {
+						return meta.type != "material";
+					});
+					m_cached_materials.erase(it, m_cached_materials.end());
+					m_create_mi_selected_mat_idx = -1;
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndPopup();
+		}
+
 		ImGui::Columns(1);
 	}
 
@@ -156,7 +186,12 @@ struct ContentBrowser {
 					"All Files\0*.*\0";
 				std::string file = open_file_dialog(import_filter);
 				if (!file.empty()) {
-					import_asset(Filepath(file));
+					m_import_source_path = file;
+					Filepath folder = get_curr_dir();
+					Filepath dest = folder / Filepath(file).stem();
+					std::memset(m_import_dest_buffer, 0, sizeof(m_import_dest_buffer));
+					std::strncpy(m_import_dest_buffer, dest.generic_string().c_str(), sizeof(m_import_dest_buffer) - 1);
+					m_import_popup_open = true;
 				}
 			}
 			if (!m_import_status.empty()) {
@@ -196,6 +231,9 @@ struct ContentBrowser {
 
 				ImGui::EndTable();
 			}
+
+			// --- Popups ---
+
 			if (m_move_popup_open) {
 				ImGui::OpenPopup("Move Asset");
 				m_move_popup_open = false;
@@ -224,22 +262,140 @@ struct ContentBrowser {
 						m_selected_in_folder = nullptr;
 					}
 				}
-				else {
-					ImGui::Text("No asset selected");
-					if (ImGui::Button("Close")) {
-						ImGui::CloseCurrentPopup();
-					}
+				ImGui::EndPopup();
+			}
+
+			if (m_rename_popup_open) {
+				ImGui::OpenPopup("Rename Asset");
+				m_rename_popup_open = false;
+			}
+			if (ImGui::BeginPopupModal("Rename Asset", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+				ImGui::InputText("New Name", m_rename_buffer, sizeof(m_rename_buffer));
+				if (ImGui::Button("Cancel")) {
+					ImGui::CloseCurrentPopup();
+					m_rename_target_guid = {};
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Rename")) {
+					AssetMeta meta = g_runtime_context.m_asset_manager->get_meta(m_rename_target_guid);
+					Filepath new_path = meta.path.parent_path() / m_rename_buffer;
+					bool success = g_runtime_context.m_asset_manager->move_asset(m_rename_target_guid, new_path);
+					m_action_status = success ? "Renamed asset" : "Failed to rename asset";
+					m_action_success = success;
+					ImGui::CloseCurrentPopup();
+					m_rename_target_guid = {};
+					m_selected_in_folder = nullptr;
 				}
 				ImGui::EndPopup();
 			}
-			if (m_pending_delete_guid.is_valid()) {
-				bool success = g_runtime_context.m_asset_manager->remove_asset(m_pending_delete_guid);
-				m_action_status = success ? ("Deleted " + m_pending_delete_label) : "Failed to delete asset";
-				m_action_success = success;
-				m_pending_delete_guid = {};
-				m_pending_delete_label.clear();
-				m_selected_in_folder = nullptr;
+
+			if (m_create_mi_popup_open) {
+				ImGui::OpenPopup("Create Material Instance");
+				m_create_mi_popup_open = false;
 			}
+			if (ImGui::BeginPopupModal("Create Material Instance", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+				ImGui::InputText("Name", m_create_mi_name_buffer, sizeof(m_create_mi_name_buffer));
+
+				std::string preview_value = "Select Material...";
+				if (m_create_mi_selected_mat_idx >= 0 && m_create_mi_selected_mat_idx < m_cached_materials.size()) {
+					preview_value = m_cached_materials[m_create_mi_selected_mat_idx].path.generic_string();
+				}
+
+				if (ImGui::BeginCombo("Parent Material", preview_value.c_str())) {
+					for (int i = 0; i < m_cached_materials.size(); i++) {
+						const bool is_selected = (m_create_mi_selected_mat_idx == i);
+						if (ImGui::Selectable(m_cached_materials[i].path.generic_string().c_str(), is_selected)) {
+							m_create_mi_selected_mat_idx = i;
+						}
+						if (is_selected) {
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
+
+				if (ImGui::Button("Cancel")) {
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Create")) {
+					if (m_create_mi_selected_mat_idx >= 0) {
+						Filepath folder = get_curr_dir();
+						Filepath path = folder / m_create_mi_name_buffer;
+						auto mat = Material::load(m_cached_materials[m_create_mi_selected_mat_idx].guid);
+						if (mat) {
+							auto mi = MaterialInstance::create(path, mat);
+							if (mi) {
+								m_action_status = "Created Material Instance";
+								m_action_success = true;
+							} else {
+								m_action_status = "Failed to create Material Instance";
+								m_action_success = false;
+							}
+						}
+					}
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+
+			if (m_import_popup_open) {
+				ImGui::OpenPopup("Import Asset");
+				m_import_popup_open = false;
+			}
+			if (ImGui::BeginPopupModal("Import Asset", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+				ImGui::Text("Source: %s", m_import_source_path.c_str());
+				ImGui::InputText("Destination Path", m_import_dest_buffer, sizeof(m_import_dest_buffer));
+
+				if (ImGui::Button("Cancel")) {
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Import")) {
+					if (import_asset(Filepath(m_import_source_path), Filepath(m_import_dest_buffer))) {
+						m_import_status = "Import Successful";
+						m_import_success = true;
+					} else {
+						// Error message is set in import_asset
+						m_import_success = false;
+					}
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+
+			if (m_delete_popup_open) {
+				ImGui::OpenPopup("Safe Delete Asset");
+				m_delete_popup_open = false;
+			}
+			if (ImGui::BeginPopupModal("Safe Delete Asset", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+				if (!m_delete_warnings.empty()) {
+					ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Warning: This asset is referenced by:");
+					for (auto& ref : m_delete_warnings) {
+						ImGui::Text("- %s", ref.generic_string().c_str());
+					}
+					ImGui::Separator();
+				}
+
+				ImGui::Text("Are you sure you want to delete %s?", m_pending_delete_label.c_str());
+
+				if (ImGui::Button("Cancel")) {
+					ImGui::CloseCurrentPopup();
+					m_pending_delete_guid = {};
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Delete")) {
+					bool success = g_runtime_context.m_asset_manager->remove_asset(m_pending_delete_guid);
+					m_action_status = success ? ("Deleted " + m_pending_delete_label) : "Failed to delete asset";
+					m_action_success = success;
+					m_pending_delete_guid = {};
+					m_pending_delete_label.clear();
+					m_selected_in_folder = nullptr;
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+
 		}
 		ImGui::End();
 	}
@@ -263,14 +419,23 @@ struct ContentBrowser {
 		return "";
 	}
 
-	bool import_asset(Filepath const& file) {
+	bool import_asset(Filepath const& file, Filepath dest_path = {}) {
 		if (file.empty()) {
 			return false;
 		}
 
-		Filepath folder = get_curr_dir();
-		Filepath dest_path = folder / file.stem();
+		if (dest_path.empty()) {
+			Filepath folder = get_curr_dir();
+			dest_path = folder / file.stem();
+		}
+
 		auto const& root = FileSystem::s_content_root;
+		if (dest_path.is_absolute()) {
+			// Try to make it relative to content root
+			dest_path = std::filesystem::relative(dest_path, root);
+		}
+
+		Filepath folder = dest_path.parent_path();
 		if (!folder.empty()) {
 			try {
 				std::filesystem::create_directories(root / folder);
@@ -346,11 +511,32 @@ struct ContentBrowser {
 
 	std::string m_action_status;
 	bool m_action_success = false;
+
+	// Rename
+	Guid m_rename_target_guid;
+	bool m_rename_popup_open = false;
+	char m_rename_buffer[260] = {};
+
+	// Create Material Instance
+	bool m_create_mi_popup_open = false;
+	char m_create_mi_name_buffer[260] = "NewMaterialInstance";
+	int m_create_mi_selected_mat_idx = -1;
+	std::vector<AssetMeta> m_cached_materials;
+
+	// Import
+	bool m_import_popup_open = false;
+	std::string m_import_source_path;
+	char m_import_dest_buffer[260] = {};
+
+	// Delete
+	Guid m_pending_delete_guid;
+	std::string m_pending_delete_label;
+	bool m_delete_popup_open = false;
+	std::vector<Filepath> m_delete_warnings;
+
 	Guid m_move_target_guid;
 	bool m_move_popup_open = false;
 	char m_move_path_buffer[260] = {};
-	Guid m_pending_delete_guid;
-	std::string m_pending_delete_label;
 
 	std::function<void(AssetMeta* meta)> m_on_asset_opened;
 	AssetNode* m_selected_in_hierachy = nullptr;

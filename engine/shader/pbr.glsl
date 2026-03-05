@@ -36,7 +36,7 @@
 		// Inputs
 		vec3 normal_map = texture(s_normal, v_texcoord0).rgb * 2.0 - 1.0;
 
-		vec3 N = get_normal_from_map(v_world_position, normalize(v_normal), normalize(v_tangent), normal_map);
+		vec3 N = get_normal_from_map(v_world_position, v_normal, v_tangent, normal_map);
 		vec3 V = normalize(u_cam_position.xyz - v_world_position);
 
 		float shadow = get_shadow();

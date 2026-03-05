@@ -122,6 +122,44 @@ namespace z1 {
 		// check if guid is already registered, if not register it and return true
 		bool register_guid(Guid const& guid);
 
+		std::vector<AssetMeta> get_all_metas() const {
+			std::vector<AssetMeta> metas;
+			metas.reserve(m_asset_metas.size());
+			for (auto const& [guid, meta] : m_asset_metas) {
+				metas.push_back(meta);
+			}
+			return metas;
+		}
+
+		std::vector<Filepath> find_references(Guid const& guid) const {
+			std::vector<Filepath> refs;
+			std::string guid_str = guid.value;
+			for (auto const& [id, meta] : m_asset_metas) {
+				if (meta.guid == guid) continue; // skip self
+
+				// checks yaml files (meta.yaml, material.yaml, scene.yaml etc)
+				// simplistic check: just read file and find string
+				// This is slow but acceptable for a tool feature
+				Filepath root = get_root_for_meta(meta);
+				Filepath path = root / meta.path;
+
+				// check .yaml
+				Filepath yaml_path = path;
+				yaml_path += ".yaml";
+				if (std::filesystem::exists(yaml_path)) {
+					std::ifstream file(yaml_path);
+					std::string line;
+					while (std::getline(file, line)) {
+						if (line.find(guid_str) != std::string::npos) {
+							refs.push_back(meta.path);
+							break;
+						}
+					}
+				}
+			}
+			return refs;
+		}
+
 		AssetNode* get_asset_tree_root() const { return m_asset_tree_root.get(); }
 
 	private:

@@ -176,6 +176,10 @@ vec3 get_normal_from_map(vec3 world_pos, vec3 normal, vec4 tangent, vec3 normal_
 	vec2 duv1 = dFdx(v_texcoord0);
 	vec2 duv2 = dFdy(v_texcoord0);
 
+	if (dot(duv1, duv1) + dot(duv2, duv2) < 1e-6) {
+		return normalize(normal);
+	}
+
 	vec3 N = normalize(normal);
 	vec3 T = normalize(dp1 * duv2.y - dp2 * duv1.y);
 	vec3 B = normalize(cross(N, T));

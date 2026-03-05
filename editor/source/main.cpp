@@ -279,7 +279,7 @@ struct EditorLayer : Layer {
 		else {
 			trans_comp.m_location = { 0.0f, 0.0f, 5.0f };
 		}
-		
+
 		camera->attach_script<HoveringCameraCtrlScript>(m_gui);
 		m_active_scene->set_main_camera(camera);
 	}
@@ -615,6 +615,14 @@ private:
 								else {
 									ImGui::Text("no material attached");
 								}
+								accept_payload("ASSET_ITEM",
+									[&](void* data) {
+										AssetMeta* meta = *(AssetMeta**)data;
+										if (meta->type == "material" || meta->type == "material instance") {
+											mesh.m_mesh->m_primitives[i].m_material = meta->guid;
+										}
+									}
+								);
 								ImGui::Unindent();
 							}
 						}
@@ -641,6 +649,14 @@ private:
 								} else {
 									ImGui::Text("no material attached");
 								}
+								accept_payload("ASSET_ITEM",
+									[&](void* data) {
+										AssetMeta* meta = *(AssetMeta**)data;
+										if (meta->type == "material" || meta->type == "material instance") {
+											mesh.m_mesh->m_primitives[i].m_material = meta->guid;
+										}
+									}
+								);
 								ImGui::Unindent();
 							}
 						}
