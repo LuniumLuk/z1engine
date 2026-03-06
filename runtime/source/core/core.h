@@ -116,13 +116,15 @@ namespace z1 {
 
 #include "util/instrumentor.h"
 
+#define CONCAT_IMPL(a, b) a##b
+#define CONCAT(a, b) CONCAT_IMPL(a, b)
+#define CONCAT3(a, b, c) CONCAT(CONCAT(a, b), c)
+
 #ifdef ENABLE_PROFILE
-#    define CONCAT(x, y) x ## y
-#    define C(x, y) CONCAT(x, y)
 #    define PROFILE_BEGIN_SESSION(name, filepath)  z1::Instrumentor::get().begin_session(name, filepath)
 #    define PROFILE_END_SESSION()                  z1::Instrumentor::get().end_session()
 #    define PROFILE_SET_THREAD_NAME(name)          z1::Instrumentor::get().set_thread_name(std::hash<std::thread::id>{}(std::this_thread::get_id()), name)
-#    define PROFILE_SCOPE(name)                    z1::InstrumentationTimer C(__PROFILE_TIMER_, __LINE__)(name)
+#    define PROFILE_SCOPE(name)                    z1::InstrumentationTimer CONCAT(__PROFILE_TIMER_, __LINE__)(name)
 #    define PROFILE_COUNTER(name, value)           z1::report_counter(name, static_cast<int64_t>(value))
 #    define PROFILE_INSTANT(name)                  z1::report_instant(name)
 // Flow event can be used to represent the asynchronous dependencies between scope events
@@ -159,10 +161,6 @@ namespace z1 {
 
 #include "core/reflection.h"
 
-#define CONCAT_IMPL(a, b) a##b
-#define CONCAT(a, b) CONCAT_IMPL(a, b)
-#define CONCAT3(a, b, c) CONCAT(CONCAT(a, b), c)
-
 #define REFLECTED_STRUCT(type)                                         \
 	struct _REFLECT_REGISTER_##type {                                  \
 		_REFLECT_REGISTER_##type() {                                   \
@@ -193,13 +191,13 @@ namespace z1 {
 #define TYPE_NAME(type) #type
 
 #ifdef DEBUG
-#define DEBUG_CHECK(expr, msg)                                         \
+#define DEBUG_CHECK(expr, ...)                                         \
 	{                                                                  \
 		if (!(expr)) {                                                 \
-			CORE_ERROR("debug check failed: {0}", msg);                \
+			CORE_ERROR("debug check failed: {0}", __VA_ARGS__);        \
 			__debugbreak();                                            \
 		}                                                              \
 	}
 #else
-#define DEBUG_CHECK(expr, msg)
+#define DEBUG_CHECK(expr, ...)
 #endif
