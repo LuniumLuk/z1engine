@@ -66,6 +66,23 @@ namespace z1 {
 		return entity;
 	}
 
+	void Scene::destroy_entity(std::shared_ptr<Entity> const& entity) {
+		if (!entity || !entity->is_valid()) return;
+
+		auto it = std::find(m_entities.begin(), m_entities.end(), entity);
+		if (it != m_entities.end()) {
+			m_entities.erase(it);
+			m_is_dirty = true;
+			return;
+		}
+
+		auto it_transient = std::find(m_transient_entities.begin(), m_transient_entities.end(), entity);
+		if (it_transient != m_transient_entities.end()) {
+			m_transient_entities.erase(it_transient);
+			// m_is_dirty = true; // transient entities don't affect scene dirtiness?
+		}
+	}
+
 	std::shared_ptr<Entity> Scene::cast_to_entity(entt::entity handle) const {
 		CORE_ASSERT(m_registry.valid(handle), "Entity handle is invalid!");
 		auto entity_ptr = m_registry.try_get<Scene::EntityPtr>(handle);
@@ -202,17 +219,33 @@ namespace z1 {
 		}
 
 		auto entities = yaml["entities"];
-		if (!entities) {
+		if (entities) {
+			scene->create_entities_from_yaml(entities);
+		}
+		else {
 			CORE_WARN("scene has no entities: {}", file.generic_string());
-			return scene;
 		}
 
+		return scene;
+	}
+
+	std::vector<std::shared_ptr<Entity>> Scene::create_entities_from_yaml(YAML::Node const& entities) {
+		std::vector<std::shared_ptr<Entity>> created_entities;
 		std::unordered_map<uint32_t, TransformComponent*> id_to_transform;
 		std::vector<std::pair<TransformComponent*, uint32_t>> transform_parent_pairs;
+
 		for (auto const& entity_yaml : entities) {
 			// TagComponent
-			auto entity = scene->create_entity(entity_yaml["name"].as<std::string>());
-			id_to_transform[entity_yaml["id"].as<uint32_t>()] = &entity->get_component<TransformComponent>();
+			auto entity = create_entity(entity_yaml["name"].as<std::string>());
+			created_entities.push_back(entity);
+
+			// Map the ID from YAML (local to file) to the component
+			// Note: We don't overwrite the entity's actual runtime ID here,
+			// because create_entity() assigns a new unique runtime ID.
+			// This mapping is solely for resolving parent pointers within this batch.
+			if (entity_yaml["id"]) {
+				id_to_transform[entity_yaml["id"].as<uint32_t>()] = &entity->get_component<TransformComponent>();
+			}
 
 			// TransformComponent
 			auto& transform = entity->get_component<TransformComponent>();
@@ -236,10 +269,10 @@ namespace z1 {
 				camera.m_use_fixed_aspect = camera_yaml["use_fixed_aspect"].as<bool>();
 				camera.m_is_primary = camera_yaml["is_primary"].as<bool>();
 				if (camera.m_is_primary) {
-					if (scene->m_main_camera) {
+					if (m_main_camera) {
 						CORE_WARN("scene has multiple primary cameras, overriding previous primary camera");
 					}
-					scene->m_main_camera = entity;
+					set_main_camera(entity);
 				}
 			}
 
@@ -304,11 +337,16 @@ namespace z1 {
 				transform->m_parent = id_to_transform[parent_id];
 			}
 			else {
-				CORE_WARN("failed to find parent with id {}", parent_id);
+				// Warn only if parent ID was present in this batch
+				// For prefabs, if parent ID refers to something outside the prefab, it won't be found here.
+				// But standard prefabs should be self-contained or root-level.
+				// If a root in prefab has a parent in original scene, that parent won't be in prefab.
+				// So we just ignore it (it becomes a root in the new scene).
+				// CORE_WARN("failed to find parent with id {}", parent_id);
 			}
 		}
 
-		return scene;
+		return created_entities;
 	}
 
 	void Scene::save() const {

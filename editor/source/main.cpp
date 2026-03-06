@@ -10,6 +10,7 @@
 #include "browser.h"
 #include "stb/stb_image_write.h"
 #include "scene/component/light.h"
+#include "scene/prefab.h"
 #include <yaml-cpp/yaml.h>
 
 using namespace z1;
@@ -364,26 +365,170 @@ private:
 
 	void show_scene_graph() {
 		if (ImGui::Begin("scene")) {
-			ImGui::Text("entities in scene: %d", m_active_scene->get_entity_count());
+			ImGui::Text("entities in scene: %llu", m_active_scene->get_entity_count());
 			ImGui::Separator();
-			for (auto const& ent : m_active_scene->m_registry.view<TransformComponent>()) {
-				auto entity = m_active_scene->cast_to_entity(ent);
-				auto const& tag = entity->get_component<TagComponent>();
-				if (ImGui::Selectable((tag.m_tag + "##" + std::to_string(tag.m_id)).c_str(), entity == m_selected_entity)) {
-					m_selected_entity = entity; // Update selection
-				}
-				if (m_picked_from_viewport && entity == m_selected_entity) {
-					ImGui::SetScrollHereY();
-					m_picked_from_viewport = false;
+
+			std::unordered_map<TransformComponent*, Entity*> transform_to_entity;
+			std::unordered_map<Entity*, std::vector<std::shared_ptr<Entity>>> children;
+			std::vector<std::shared_ptr<Entity>> roots;
+
+			// 1. Map transforms to entities
+			for (auto const& ent : m_active_scene->m_entities) {
+				if (ent) {
+					transform_to_entity[&ent->get_component<TransformComponent>()] = ent.get();
 				}
 			}
 
-			if (ImGui::BeginPopupContextWindow()) {
+			// 2. Build hierarchy
+			for (auto const& ent : m_active_scene->m_entities) {
+				if (!ent) continue;
+				auto& tc = ent->get_component<TransformComponent>();
+				if (tc.m_parent) {
+					auto it = transform_to_entity.find(tc.m_parent);
+					if (it != transform_to_entity.end()) {
+						children[it->second].push_back(ent);
+					}
+					else {
+						roots.push_back(ent); // parent not found in scene entities
+					}
+				}
+				else {
+					roots.push_back(ent);
+				}
+			}
+
+			// 3. Recursive draw function
+			std::function<void(std::shared_ptr<Entity>)> draw_node;
+			draw_node = [&](std::shared_ptr<Entity> entity) {
+				if (!entity) return;
+				auto const& tag = entity->get_component<TagComponent>();
+				
+				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+				if (children[entity.get()].empty()) {
+					flags |= ImGuiTreeNodeFlags_Leaf;
+				}
+				if (m_selected_entity == entity) {
+					flags |= ImGuiTreeNodeFlags_Selected;
+				}
+
+				bool opened = ImGui::TreeNodeEx((void*)(intptr_t)tag.m_id, flags, "%s", tag.m_tag.c_str());
+
+				if (ImGui::IsItemClicked()) {
+					m_selected_entity = entity;
+				}
+
+				// Drag Source
+				if (ImGui::BeginDragDropSource()) {
+					Entity* ptr = entity.get();
+					ImGui::SetDragDropPayload("ENTITY_ITEM", &ptr, sizeof(Entity*));
+					ImGui::Text("%s", tag.m_tag.c_str());
+					ImGui::EndDragDropSource();
+				}
+
+				// Drop Target (Reparenting)
+				if (ImGui::BeginDragDropTarget()) {
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ENTITY_ITEM")) {
+						Entity* source_ptr = *(Entity**)payload->Data;
+						// Find shared_ptr for source
+						std::shared_ptr<Entity> source_entity;
+						for (auto& e : m_active_scene->m_entities) {
+							if (e.get() == source_ptr) {
+								source_entity = e;
+								break;
+							}
+						}
+
+						if (source_entity && source_entity != entity) {
+							// Check for circular dependency
+							bool circular = false;
+							Entity* check = entity.get();
+							while (check) {
+								if (check == source_entity.get()) {
+									circular = true;
+									break;
+								}
+								auto& tc = check->get_component<TransformComponent>();
+								if (tc.m_parent) {
+									auto it = transform_to_entity.find(tc.m_parent);
+									check = (it != transform_to_entity.end()) ? it->second : nullptr;
+								}
+								else {
+									check = nullptr;
+								}
+							}
+
+							if (!circular) {
+								source_entity->get_component<TransformComponent>().set_parent(&entity->get_component<TransformComponent>());
+							}
+						}
+					}
+
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_ITEM")) {
+						AssetMeta* meta = *(AssetMeta**)payload->Data;
+						if (meta && meta->type == "prefab") {
+							auto prefab = Prefab::load(meta->guid);
+							if (prefab) {
+								auto new_entities = prefab->instantiate(m_active_scene);
+								for (auto& new_entity : new_entities) {
+									new_entity->get_component<TransformComponent>().set_parent(&entity->get_component<TransformComponent>());
+								}
+							}
+						}
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				// Context Menu
+				if (ImGui::BeginPopupContextItem()) {
+					if (ImGui::MenuItem("Delete")) {
+						if (m_selected_entity == entity) m_selected_entity = nullptr;
+						m_active_scene->destroy_entity(entity);
+					}
+					ImGui::EndPopup();
+				}
+
+				if (opened) {
+					for (auto& child : children[entity.get()]) {
+						draw_node(child);
+					}
+					ImGui::TreePop();
+				}
+			};
+
+			// 4. Draw roots
+			for (auto& root : roots) {
+				draw_node(root);
+			}
+
+			// Drop target for background (instantiate as root)
+			ImGui::Dummy(ImGui::GetContentRegionAvail());
+			if (ImGui::BeginDragDropTarget()) {
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_ITEM")) {
+					AssetMeta* meta = *(AssetMeta**)payload->Data;
+					if (meta && meta->type == "prefab") {
+						auto prefab = Prefab::load(meta->guid);
+						if (prefab) {
+							prefab->instantiate(m_active_scene);
+						}
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+			// Right click on empty space to create entity
+			if (ImGui::BeginPopupContextWindow(0, ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
 				if (ImGui::MenuItem("create empty entity")) {
 					m_active_scene->create_entity("new entity");
 				}
 				ImGui::EndPopup();
 			}
+
+			// Drop target on window background to detach (make root)
+			// This is tricky with ImGui child windows. 
+			// A simple way is to check if mouse is in window and payload is active, but not hovering any item.
+			// But that logic is complex to get right without 'BeginDragDropTargetCustom'.
+			// We'll skip "detach via drag to background" for now unless explicitly requested.
+			// Users can detach by dragging to "Scene" header if we added a target there, or we can add a "Detach" context menu.
 		}
 		ImGui::End();
 	}
@@ -916,6 +1061,14 @@ private:
 					auto ent = m_active_scene->create_entity(m_selected_asset->name());
 					ent->add_component<SkeletalMeshComponent>(
 						g_runtime_context.m_asset_manager->get<SkeletalMesh>(m_selected_asset->guid));
+				}
+			}
+			else if (m_selected_asset->type == "prefab") {
+				if (ImGui::Button("instantiate in scene")) {
+					auto prefab = Prefab::load(m_selected_asset->guid);
+					if (prefab) {
+						prefab->instantiate(m_active_scene);
+					}
 				}
 			}
 		}

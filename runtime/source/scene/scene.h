@@ -32,7 +32,13 @@ namespace z1 {
 		// - behaves like a normal entity during simulation/rendering, but excluded from serialization.
 		std::shared_ptr<Entity> create_transient_entity(std::string const& name);
 
+		void destroy_entity(std::shared_ptr<Entity> const& entity);
+
 		std::shared_ptr<Entity> cast_to_entity(entt::entity handle) const;
+
+		// Creates entities from a YAML sequence node (as found in scene/prefab files)
+		// Handles creating components and resolving internal parent-child relationships
+		std::vector<std::shared_ptr<Entity>> create_entities_from_yaml(YAML::Node const& entities_node);
 
 		size_t get_entity_count() const {
 			//auto view = m_registry.view<TransformComponent>();

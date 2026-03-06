@@ -302,24 +302,26 @@ namespace z1 {
 	void AssetManager::insert_asset_node(AssetMeta const& meta) {
 		auto root = get_root_for_meta(meta);
 		AssetNode* node = m_asset_tree_root.get();
-		auto asset_name = meta.path.filename().string();
 		auto editor_path = root / meta.path;
 
-		for (auto const& part : editor_path) {
-			auto name = part.string();
-			bool is_folder = (name != asset_name);
-			auto it = node->children.find(name);
-			if (it == node->children.end()) {
+		for (auto it = editor_path.begin(); it != editor_path.end(); ++it) {
+			auto name = it->string();
+			auto next = it;
+			++next;
+			bool is_last = (next == editor_path.end());
+
+			auto found = node->children.find(name);
+			if (found == node->children.end()) {
 				auto new_node = std::make_unique<AssetNode>();
 				new_node->name = name;
 				new_node->parent = node;
 				node = (node->children[name] = std::move(new_node)).get();
 			}
 			else {
-				node = it->second.get();
+				node = found->second.get();
 			}
 
-			if (!is_folder) {
+			if (is_last) {
 				node->meta = &m_asset_metas[meta.guid];
 			}
 		}
