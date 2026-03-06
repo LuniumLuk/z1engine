@@ -10,6 +10,7 @@
 	uniform vec4 u_diffuse_factor;
 	uniform vec3 u_specular_factor;
 	uniform float u_glossiness_factor;
+	uniform float u_alpha_cutoff;
 }
 @reflections: {
 	#include <common/reflections.glsl>
@@ -23,6 +24,7 @@
 	u_diffuse_factor        = vec4 1.0 1.0 1.0 1.0
 	u_specular_factor       = vec3 1.0 1.0 1.0
 	u_glossiness_factor     = float 1.0
+	u_alpha_cutoff          = float 0.5
 }
 @stage: vert {
 	#include <common/vert.glsl>
@@ -47,6 +49,8 @@
 		vec4 diffuse_color_vec = diffuse_sample * v_color * u_diffuse_factor;
 		vec3 base_color = diffuse_color_vec.rgb;
 		float alpha = diffuse_color_vec.a;
+
+		if (alpha < u_alpha_cutoff) discard;
 
 		// Specular Glossiness
 		vec4 sg_sample = texture(s_specular_glossiness, v_texcoord0);

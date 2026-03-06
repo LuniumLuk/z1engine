@@ -95,6 +95,11 @@ namespace z1 {
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr) const;
 
+		void draw_primitive(
+			size_t index,
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material = nullptr) const;
+
 		std::vector<Primitive> m_primitives;
 
 		// axis-aligned bounding box for the whole mesh
@@ -175,6 +180,12 @@ namespace z1 {
 		SkeletalMesh(std::shared_ptr<Storage> const& storage);
 
 		void draw(
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
+			std::vector<glm::mat4> const* bone_matrices = nullptr) const;
+
+		void draw_primitive(
+			size_t index,
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
 			std::vector<glm::mat4> const* bone_matrices = nullptr) const;

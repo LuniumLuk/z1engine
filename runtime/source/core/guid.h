@@ -14,6 +14,7 @@ namespace z1 {
 		Guid() : value("") {}
 
 		bool operator==(const Guid& other) const noexcept { return value == other.value; }
+		bool operator!=(const Guid& other) const noexcept { return !(*this == other); }
 
 		bool is_valid() const { return !value.empty(); }
 

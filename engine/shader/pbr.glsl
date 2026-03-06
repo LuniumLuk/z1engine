@@ -10,6 +10,7 @@
 	uniform vec4 u_base_color_factor;
 	uniform float u_roughness_factor;
 	uniform float u_metallic_factor;
+	uniform float u_alpha_cutoff;
 }
 @reflections: {
 	#include <common/reflections.glsl>
@@ -23,6 +24,7 @@
 	u_base_color_factor  = vec4 1.0 1.0 1.0 1.0
 	u_roughness_factor   = float 0.5
 	u_metallic_factor    = float 0.5
+	u_alpha_cutoff       = float 0.5
 }
 @stage: vert {
 	#include <common/vert.glsl>
@@ -47,6 +49,8 @@
 		vec4 base_color_vec = base_color_sample * v_color * u_base_color_factor;
 		vec3 base_color = base_color_vec.rgb;
 		float alpha = base_color_vec.a;
+
+		if (alpha < u_alpha_cutoff) discard;
 
 		vec2 rm = texture(s_metallic_roughness, v_texcoord0).gb;
 		rm = pow(rm, vec2(2.2));

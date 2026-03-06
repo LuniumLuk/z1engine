@@ -263,13 +263,16 @@ namespace z1 {
 
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 				for (auto [entity, transform, mesh] : view.each()) {
+					if (!mesh.m_mesh) continue;
 					per_frame.model = transform.get_world_transform();
 					mesh.m_mesh->draw(per_frame, m_default_material);
 				}
+
 				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
 				for (auto [entity, transform, mesh] : view_skel.each()) {
 					if (!mesh.m_mesh) continue;
 					per_frame.model = transform.get_world_transform();
+
 					std::vector<glm::mat4> const* bones = nullptr;
 					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
