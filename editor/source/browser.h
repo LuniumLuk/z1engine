@@ -178,13 +178,7 @@ struct ContentBrowser {
 	void draw() {
 		if (ImGui::Begin("browser")) {
 			if (ImGui::Button("Import asset")) {
-				static const char import_filter[] =
-					"Textures (*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.psd;*.gif;*.pic;*.exr)\0"
-					"*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.psd;*.gif;*.pic;*.exr\0"
-					"Models (*.obj;*.gltf;*.glb)\0"
-					"*.obj;*.gltf;*.glb\0"
-					"All Files\0*.*\0";
-				std::string file = open_file_dialog(import_filter);
+				std::string file = open_file_dialog();
 				if (!file.empty()) {
 					m_import_source_path = file;
 					Filepath folder = get_curr_dir();
