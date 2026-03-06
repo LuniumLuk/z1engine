@@ -43,6 +43,10 @@ Before marking a task as complete, ensure the project compiles successfully.
     dev\compile_vs2026.bat
     ```
     *(Note: This script assumes Visual Studio 2026. Modify the path in the script if necessary.)*
+3.  Format code using python script:
+    ```cmd
+    python utils\format_code.py
+    ```
 
 ## 4. Shader Validation
 
