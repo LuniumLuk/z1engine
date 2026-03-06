@@ -402,7 +402,7 @@ private:
 			draw_node = [&](std::shared_ptr<Entity> entity) {
 				if (!entity) return;
 				auto const& tag = entity->get_component<TagComponent>();
-				
+
 				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
 				if (children[entity.get()].empty()) {
 					flags |= ImGuiTreeNodeFlags_Leaf;
@@ -524,7 +524,7 @@ private:
 			}
 
 			// Drop target on window background to detach (make root)
-			// This is tricky with ImGui child windows. 
+			// This is tricky with ImGui child windows.
 			// A simple way is to check if mouse is in window and payload is active, but not hovering any item.
 			// But that logic is complex to get right without 'BeginDragDropTargetCustom'.
 			// We'll skip "detach via drag to background" for now unless explicitly requested.

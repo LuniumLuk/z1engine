@@ -417,7 +417,7 @@ namespace z1 {
 						mesh_guid = meta.guid;
 					}
 				}
-				
+
 				loaded_meshes[node.mesh] = { mesh_guid, is_skeletal };
 			}
 
@@ -634,36 +634,85 @@ namespace z1 {
 
 			// base material for material instance
 			auto base = g_runtime_context.m_asset_manager->get<Material>(Guid::make("material/M_pbr"));
+
+			// Check for KHR_materials_pbrSpecularGlossiness
+			bool has_specular_glossiness = false;
+			if (mat.extensions.find("KHR_materials_pbrSpecularGlossiness") != mat.extensions.end()) {
+				has_specular_glossiness = true;
+				base = g_runtime_context.m_asset_manager->get<Material>(Guid::make("material/M_pbr_sg"));
+			}
+
 			auto mi = MaterialInstance::create(settings.path / name, base);
 
-			handle_texture(mi, mat, loaded_textures, "baseColorTexture", "s_base_color");
-			handle_texture(mi, mat, loaded_textures, "metallicRoughnessTexture", "s_metallic_roughness");
+			if (has_specular_glossiness) {
+				auto const& ext = mat.extensions["KHR_materials_pbrSpecularGlossiness"];
+
+				// Handle textures
+				if (ext.Has("diffuseTexture")) {
+					int index = ext.Get("diffuseTexture").Get("index").Get<int>();
+					auto const& guid = loaded_textures[index];
+					mi->m_override_variables["s_diffuse"].default_value.valid = true;
+					mi->m_override_variables["s_diffuse"].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+				}
+				if (ext.Has("specularGlossinessTexture")) {
+					int index = ext.Get("specularGlossinessTexture").Get("index").Get<int>();
+					auto const& guid = loaded_textures[index];
+					mi->m_override_variables["s_specular_glossiness"].default_value.valid = true;
+					mi->m_override_variables["s_specular_glossiness"].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+				}
+
+				// Handle factors
+				if (ext.Has("diffuseFactor")) {
+					auto const& factor = ext.Get("diffuseFactor");
+					mi->m_override_variables["u_diffuse_factor"].default_value.valid = true;
+					for (int i = 0; i < 4; ++i) {
+						mi->m_override_variables["u_diffuse_factor"].default_value.vec[i] = static_cast<float>(factor.Get(i).Get<double>());
+					}
+				}
+				if (ext.Has("specularFactor")) {
+					auto const& factor = ext.Get("specularFactor");
+					mi->m_override_variables["u_specular_factor"].default_value.valid = true;
+					for (int i = 0; i < 3; ++i) {
+						mi->m_override_variables["u_specular_factor"].default_value.vec[i] = static_cast<float>(factor.Get(i).Get<double>());
+					}
+				}
+				if (ext.Has("glossinessFactor")) {
+					mi->m_override_variables["u_glossiness_factor"].default_value.valid = true;
+					mi->m_override_variables["u_glossiness_factor"].default_value.vec[0] = static_cast<float>(ext.Get("glossinessFactor").Get<double>());
+				}
+			}
+			else {
+				// Standard PBR
+				handle_texture(mi, mat, loaded_textures, "baseColorTexture", "s_base_color");
+				handle_texture(mi, mat, loaded_textures, "metallicRoughnessTexture", "s_metallic_roughness");
+
+				if (mat.values.find("baseColorFactor") != mat.values.end()) {
+					mi->m_override_variables["u_base_color_factor"].default_value.valid = true;
+					for (int i = 0; i < 4; ++i) {
+						mi->m_override_variables["u_base_color_factor"].default_value.vec[i] = static_cast<float>(mat.values["baseColorFactor"].ColorFactor()[i]);
+					}
+				}
+				if (mat.values.find("roughnessFactor") != mat.values.end()) {
+					mi->m_override_variables["u_roughness_factor"].default_value.valid = true;
+					mi->m_override_variables["u_roughness_factor"].default_value.vec[0] = static_cast<float>(mat.values["roughnessFactor"].Factor());
+				}
+				else if (mi->m_override_variables.find("s_metallic_roughness") != mi->m_override_variables.end()) {
+					mi->m_override_variables["u_roughness_factor"].default_value.valid = true;
+					mi->m_override_variables["u_roughness_factor"].default_value.vec[0] = 1.0f;
+				}
+				if (mat.values.find("metallicFactor") != mat.values.end()) {
+					mi->m_override_variables["u_metallic_factor"].default_value.valid = true;
+					mi->m_override_variables["u_metallic_factor"].default_value.vec[0] = static_cast<float>(mat.values["metallicFactor"].Factor());
+				}
+				else if (mi->m_override_variables.find("s_metallic_roughness") != mi->m_override_variables.end()) {
+					mi->m_override_variables["u_metallic_factor"].default_value.valid = true;
+					mi->m_override_variables["u_metallic_factor"].default_value.vec[0] = 1.0f;
+				}
+			}
+
 			handle_texture(mi, mat, loaded_textures, "normalTexture", "s_normal");
 			handle_texture(mi, mat, loaded_textures, "emissiveTexture", "s_emissive");
 			handle_texture(mi, mat, loaded_textures, "occlusionTexture", "s_occlusion");
-
-			if (mat.values.find("baseColorFactor") != mat.values.end()) {
-				mi->m_override_variables["u_base_color_factor"].default_value.valid = true;
-				for (int i = 0; i < 4; ++i) {
-					mi->m_override_variables["u_base_color_factor"].default_value.vec[i] = static_cast<float>(mat.values["baseColorFactor"].ColorFactor()[i]);
-				}
-			}
-			if (mat.values.find("roughnessFactor") != mat.values.end()) {
-				mi->m_override_variables["u_roughness_factor"].default_value.valid = true;
-				mi->m_override_variables["u_roughness_factor"].default_value.vec[0] = static_cast<float>(mat.values["roughnessFactor"].Factor());
-			}
-			else if (mi->m_override_variables.find("s_metallic_roughness") != mi->m_override_variables.end()) {
-				mi->m_override_variables["u_roughness_factor"].default_value.valid = true;
-				mi->m_override_variables["u_roughness_factor"].default_value.vec[0] = 1.0f;
-			}
-			if (mat.values.find("metallicFactor") != mat.values.end()) {
-				mi->m_override_variables["u_metallic_factor"].default_value.valid = true;
-				mi->m_override_variables["u_metallic_factor"].default_value.vec[0] = static_cast<float>(mat.values["metallicFactor"].Factor());
-			}
-			else if (mi->m_override_variables.find("s_metallic_roughness") != mi->m_override_variables.end()) {
-				mi->m_override_variables["u_metallic_factor"].default_value.valid = true;
-				mi->m_override_variables["u_metallic_factor"].default_value.vec[0] = 1.0f;
-			}
 
 			mi->save();
 			loaded_materials.push_back(mi->m_meta.guid);

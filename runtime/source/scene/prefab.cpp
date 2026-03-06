@@ -7,10 +7,10 @@ namespace z1 {
 	std::shared_ptr<Prefab> Prefab::load(Guid const& guid) {
 		auto prefab = std::make_shared<Prefab>();
 		prefab->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
-		
+
 		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 		try {
-			// AssetManager typically returns file without extension for get_file_from_guid? 
+			// AssetManager typically returns file without extension for get_file_from_guid?
 			// No, it returns full path including extension if it was registered with it.
 			// But Scene::load does `file.concat(".yaml")`.
 			// AssetManager registration:
@@ -31,7 +31,7 @@ namespace z1 {
 			// So `get_file_from_guid` returns `myscene.scene`.
 			// So `concat(".yaml")` is correct.
 			// For Prefab, if we follow the same pattern: `myprefab.prefab` -> `myprefab.prefab.yaml`.
-			
+
 			auto yaml = YAML::LoadFile((file.concat(".yaml")).string());
 			if (yaml["entities"]) {
 				prefab->m_data = yaml["entities"];
