@@ -63,6 +63,14 @@ struct ContentBrowser {
 		float const padding = 16.0f;
 		float panel_width = ImGui::GetContentRegionAvail().x;
 
+		// Filters
+		ImGui::Checkbox("Textures", &m_show_textures); ImGui::SameLine();
+		ImGui::Checkbox("Materials", &m_show_materials); ImGui::SameLine();
+		ImGui::Checkbox("Meshes", &m_show_meshes); ImGui::SameLine();
+		ImGui::Checkbox("Others", &m_show_others);
+
+		ImGui::Separator();
+
 		// approximate width per item: text width + padding
 		float max_item_width = 120.0f;
 		int col_count = (int)(panel_width / max_item_width);
@@ -71,11 +79,28 @@ struct ContentBrowser {
 		ImGui::Columns(col_count, 0, false);
 
 		for (auto& [_, child] : node->children) {
-			ImGui::PushStyleColor(ImGuiCol_Text,
-				child->is_folder()
-				? ImVec4(0.9f, 0.8f, 0.2f, 1.0f)  // yellow for folders
-				: ImVec4(1.0f, 1.0f, 1.0f, 1.0f)  // white for assets
-			);
+			if (!child->is_folder()) {
+				std::string type = child->meta->type;
+				if (type == "texture2d" && !m_show_textures) continue;
+				else if ((type == "material" || type == "material instance") && !m_show_materials) continue;
+				else if ((type == "static mesh" || type == "skeletal mesh") && !m_show_meshes) continue;
+				else if (type != "texture2d" && type != "material" && type != "material instance" && type != "static mesh" && type != "skeletal mesh" && !m_show_others) continue;
+			}
+
+			ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+			if (child->is_folder()) {
+				color = ImVec4(0.9f, 0.8f, 0.2f, 1.0f); // Yellow for folders
+			}
+			else {
+				std::string type = child->meta->type;
+				if (type == "texture2d") color = ImVec4(1.0f, 0.5f, 0.5f, 1.0f); // Reddish for textures
+				else if (type == "material" || type == "material instance") color = ImVec4(0.5f, 1.0f, 0.5f, 1.0f); // Greenish for materials
+				else if (type == "static mesh" || type == "skeletal mesh") color = ImVec4(0.5f, 0.5f, 1.0f, 1.0f); // Blueish for meshes
+				else if (type == "prefab") color = ImVec4(0.5f, 1.0f, 1.0f, 1.0f); // Cyan for prefabs
+				else if (type == "scene") color = ImVec4(1.0f, 0.5f, 1.0f, 1.0f); // Magenta for scenes
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Text, color);
 
 			bool selected = (m_selected_in_folder == child.get());
 			// handle single-click
@@ -535,4 +560,10 @@ struct ContentBrowser {
 	std::function<void(AssetMeta* meta)> m_on_asset_opened;
 	AssetNode* m_selected_in_hierachy = nullptr;
 	AssetNode* m_selected_in_folder = nullptr;
+
+	// Filters
+	bool m_show_textures = true;
+	bool m_show_materials = true;
+	bool m_show_meshes = true;
+	bool m_show_others = true;
 };

@@ -606,16 +606,25 @@ namespace z1 {
 		tinygltf::Material& mat,
 		std::vector<Guid> const& loaded_textures,
 		std::string const& gltf_name,
-		std::string const& shader_name) {
+		std::string const& shader_name,
+		std::string const& uv_name) {
+		int tex_coord = 0;
 		if (mat.values.find(gltf_name) != mat.values.end()) {
 			auto const& guid = loaded_textures[mat.values[gltf_name].TextureIndex()];
 			mi->m_override_variables[shader_name].default_value.valid = true;
 			mi->m_override_variables[shader_name].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+			tex_coord = mat.values[gltf_name].TextureTexCoord();
 		}
 		if (mat.additionalValues.find(gltf_name) != mat.additionalValues.end()) {
 			auto const& guid = loaded_textures[mat.additionalValues[gltf_name].TextureIndex()];
 			mi->m_override_variables[shader_name].default_value.valid = true;
 			mi->m_override_variables[shader_name].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+			tex_coord = mat.additionalValues[gltf_name].TextureTexCoord();
+		}
+
+		if (!uv_name.empty()) {
+			mi->m_override_variables[uv_name].default_value.valid = true;
+			mi->m_override_variables[uv_name].default_value.ivec[0] = tex_coord;
 		}
 	}
 
@@ -768,8 +777,8 @@ namespace z1 {
 			}
 			else {
 				// Standard PBR
-				handle_texture(mi, mat, loaded_textures, "baseColorTexture", "s_base_color");
-				handle_texture(mi, mat, loaded_textures, "metallicRoughnessTexture", "s_metallic_roughness");
+				handle_texture(mi, mat, loaded_textures, "baseColorTexture", "s_base_color", "u_base_color_uv_set");
+				handle_texture(mi, mat, loaded_textures, "metallicRoughnessTexture", "s_metallic_roughness", "u_metallic_roughness_uv_set");
 
 				if (mat.values.find("baseColorFactor") != mat.values.end()) {
 					mi->m_override_variables["u_base_color_factor"].default_value.valid = true;
@@ -795,9 +804,9 @@ namespace z1 {
 				}
 			}
 
-			handle_texture(mi, mat, loaded_textures, "normalTexture", "s_normal");
-			handle_texture(mi, mat, loaded_textures, "emissiveTexture", "s_emissive");
-			handle_texture(mi, mat, loaded_textures, "occlusionTexture", "s_occlusion");
+			handle_texture(mi, mat, loaded_textures, "normalTexture", "s_normal", "u_normal_uv_set");
+			handle_texture(mi, mat, loaded_textures, "emissiveTexture", "s_emissive", "u_emissive_uv_set");
+			handle_texture(mi, mat, loaded_textures, "occlusionTexture", "s_occlusion", "u_occlusion_uv_set");
 
 			if (mat.alphaMode == "MASK") {
 				mi->m_override_variables["u_alpha_cutoff"].default_value.valid = true;

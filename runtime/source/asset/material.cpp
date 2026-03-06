@@ -340,12 +340,14 @@ namespace z1 {
 		for (auto const& var_node : node["overrides"]) {
 			std::string name = var_node["name"].as<std::string>();
 			if (mi->m_override_variables.find(name) == mi->m_override_variables.end()) {
+				DEBUG_CHECK(false);
 				CORE_WARN("material instance: {0} has unknown override variable: {1}", guid, name);
 				continue;
 			}
 			auto& var = mi->m_override_variables[name];
 			var.type = static_cast<DataType>(var_node["type"].as<int>());
 			if (var.type != material->m_variables[name].type) {
+				DEBUG_CHECK(false);
 				CORE_WARN("material instance: {0} has inconsistent type {1} with material variable {2}!", guid, get_data_type_name(var.type), get_data_type_name(material->m_variables[name].type));
 				continue;
 			}

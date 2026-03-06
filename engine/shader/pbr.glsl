@@ -7,6 +7,12 @@
 	uniform sampler2D s_emissive;
 	uniform sampler2D s_occlusion;
 
+	uniform int u_base_color_uv_set;
+	uniform int u_metallic_roughness_uv_set;
+	uniform int u_normal_uv_set;
+	uniform int u_emissive_uv_set;
+	uniform int u_occlusion_uv_set;
+
 	uniform vec4 u_base_color_factor;
 	uniform float u_roughness_factor;
 	uniform float u_metallic_factor;
@@ -21,6 +27,12 @@
 	s_emissive           = sampler2D texture/T_black
 	s_occlusion          = sampler2D texture/T_white
 
+	u_base_color_uv_set         = int 0
+	u_metallic_roughness_uv_set = int 0
+	u_normal_uv_set             = int 0
+	u_emissive_uv_set           = int 0
+	u_occlusion_uv_set          = int 0
+
 	u_base_color_factor  = vec4 1.0 1.0 1.0 1.0
 	u_roughness_factor   = float 0.5
 	u_metallic_factor    = float 0.5
@@ -33,10 +45,15 @@
 	#include <common/frag_attrs.glsl>
 	#include <common/lighting.glsl>
 
+	vec2 get_uv(int uv_set) {
+		if (uv_set == 1) return v_texcoord1;
+		return v_texcoord0;
+	}
+
 	void main() {
 
 		// Inputs
-		vec3 normal_map = texture(s_normal, v_texcoord0).rgb * 2.0 - 1.0;
+		vec3 normal_map = texture(s_normal, get_uv(u_normal_uv_set)).rgb * 2.0 - 1.0;
 
 		vec3 N = get_normal_from_map(v_world_position, v_normal, v_tangent, normal_map);
 		vec3 V = normalize(u_cam_position.xyz - v_world_position);
@@ -44,7 +61,7 @@
 		float shadow = get_shadow();
 
 		// Base material inputs
-		vec4 base_color_sample = texture(s_base_color, v_texcoord0);
+		vec4 base_color_sample = texture(s_base_color, get_uv(u_base_color_uv_set));
 		base_color_sample.rgb = pow(base_color_sample.rgb, vec3(2.2));
 		vec4 base_color_vec = base_color_sample * v_color * u_base_color_factor;
 		vec3 base_color = base_color_vec.rgb;
@@ -52,7 +69,7 @@
 
 		if (alpha < u_alpha_cutoff) discard;
 
-		vec2 rm = texture(s_metallic_roughness, v_texcoord0).gb;
+		vec2 rm = texture(s_metallic_roughness, get_uv(u_metallic_roughness_uv_set)).gb;
 		rm = pow(rm, vec2(2.2));
 		float roughness = clamp(rm.x * u_roughness_factor, 0.04, 1.0);
 		float metallic  = rm.y * u_metallic_factor;
@@ -118,11 +135,11 @@
 		vec3 ambient = base_color * u_sun_ambient.rgb;
 
 		// Emissive term
-		vec3 emissive = texture(s_emissive, v_texcoord0).rgb;
+		vec3 emissive = texture(s_emissive, get_uv(u_emissive_uv_set)).rgb;
 		emissive = pow(emissive, vec3(2.2));
 
 		// Occlusion term
-		float ao = texture(s_occlusion, v_texcoord0).r;
+		float ao = texture(s_occlusion, get_uv(u_occlusion_uv_set)).r;
 
 		vec3 result = (ambient + L_diffuse) * ao + L_specular + emissive;
 		frag_color = vec4(result, alpha);

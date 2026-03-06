@@ -7,6 +7,10 @@
 	uniform sampler2D s_emissive;
 	uniform sampler2D s_occlusion;
 
+	uniform int u_normal_uv_set;
+	uniform int u_emissive_uv_set;
+	uniform int u_occlusion_uv_set;
+
 	uniform vec4 u_diffuse_factor;
 	uniform vec3 u_specular_factor;
 	uniform float u_glossiness_factor;
@@ -21,6 +25,10 @@
 	s_emissive              = sampler2D texture/T_black
 	s_occlusion             = sampler2D texture/T_white
 
+	u_normal_uv_set             = int 0
+	u_emissive_uv_set           = int 0
+	u_occlusion_uv_set          = int 0
+
 	u_diffuse_factor        = vec4 1.0 1.0 1.0 1.0
 	u_specular_factor       = vec3 1.0 1.0 1.0
 	u_glossiness_factor     = float 1.0
@@ -33,10 +41,15 @@
 	#include <common/frag_attrs.glsl>
 	#include <common/lighting.glsl>
 
+	vec2 get_uv(int uv_set) {
+		if (uv_set == 1) return v_texcoord1;
+		return v_texcoord0;
+	}
+
 	void main() {
 
 		// Inputs
-		vec3 normal_map = texture(s_normal, v_texcoord0).rgb * 2.0 - 1.0;
+		vec3 normal_map = texture(s_normal, get_uv(u_normal_uv_set)).rgb * 2.0 - 1.0;
 
 		vec3 N = get_normal_from_map(v_world_position, v_normal, v_tangent, normal_map);
 		vec3 V = normalize(u_cam_position.xyz - v_world_position);
@@ -136,11 +149,11 @@
 		vec3 ambient = base_color * u_sun_ambient.rgb;
 
 		// Emissive term
-		vec3 emissive = texture(s_emissive, v_texcoord0).rgb;
+		vec3 emissive = texture(s_emissive, get_uv(u_emissive_uv_set)).rgb;
 		emissive = pow(emissive, vec3(2.2));
 
 		// Occlusion term
-		float ao = texture(s_occlusion, v_texcoord0).r;
+		float ao = texture(s_occlusion, get_uv(u_occlusion_uv_set)).r;
 
 		vec3 result = (ambient + L_diffuse) * ao + L_specular + emissive;
 		frag_color = vec4(result, alpha);
