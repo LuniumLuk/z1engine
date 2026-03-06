@@ -58,7 +58,7 @@ namespace z1 {
 			glm::mat4 t = get_local_transform();
 			TransformComponent const* parent = m_parent;
 			while (parent) {
-				t = t * parent->get_local_transform();
+				t = parent->get_local_transform() * t;
 				parent = parent->m_parent;
 			}
 			return t;
@@ -68,7 +68,7 @@ namespace z1 {
 			glm::mat4 t = get_local_rotation();
 			TransformComponent const* parent = m_parent;
 			while (parent) {
-				t = t * parent->get_local_rotation();
+				t = parent->get_local_rotation() * t;
 				parent = parent->m_parent;
 			}
 			return t;
