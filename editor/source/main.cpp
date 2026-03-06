@@ -151,11 +151,7 @@ struct EditorLayer : Layer {
 
 						m_is_using_gizmo = ImGuizmo::IsUsing() || ImGuizmo::IsOver();
 						if (m_is_using_gizmo) {
-							glm::vec3 translation{}, rotation{}, scale{};
-							ImGuizmo::DecomposeMatrixToComponents(&transform[0][0], &translation.x, &rotation.x, &scale.x);
-							m_selected_entity->get_component<TransformComponent>().m_location = translation;
-							m_selected_entity->get_component<TransformComponent>().m_rotation = rotation;
-							m_selected_entity->get_component<TransformComponent>().m_scale = scale;
+							m_selected_entity->get_component<TransformComponent>().set_world_transform(transform);
 						}
 				}
 			};
