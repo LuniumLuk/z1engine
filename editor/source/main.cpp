@@ -102,6 +102,10 @@ struct EditorLayer : Layer {
 						ImGui::Text("Draw Calls: %u", stats.draw_calls);
 						ImGui::Text("Visible Objects: %u", stats.visible_objects);
 						ImGui::Text("Culled Objects: %u", stats.culled_objects);
+						ImGui::Text("FPS: %.1f", stats.fps);
+						ImGui::Text("5%% Low: %.1f", stats.low_5_percent);
+						ImGui::Text("1%% Low: %.1f", stats.low_1_percent);
+						ImGui::Text("Frame Time: %.2f ms", stats.frame_time);
 					}
 				}
 				ImGui::End();

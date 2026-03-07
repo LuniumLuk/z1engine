@@ -1,6 +1,10 @@
 #pragma once
 
 #include "core/core.h"
+#include <deque>
+#include <vector>
+#include <numeric>
+#include <algorithm>
 
 namespace z1 {
 
@@ -12,6 +16,11 @@ namespace z1 {
 		uint32_t draw_calls = 0;
 		uint32_t visible_objects = 0;
 		uint32_t culled_objects = 0;
+
+		float fps = 0.0f;
+		float low_5_percent = 0.0f;
+		float low_1_percent = 0.0f;
+		float frame_time = 0.0f;
 
 		void reset() {
 			draw_calls = 0;
@@ -27,7 +36,9 @@ namespace z1 {
 		virtual void swap_buffers() = 0;
 		virtual void finish() = 0;
 
-		static std::shared_ptr<GraphicsContext> GraphicsContext::create();
+		static std::shared_ptr<GraphicsContext> create();
+
+		void update_stats(float dt);
 
 		virtual void bind_framebuffer(std::shared_ptr<Framebuffer> const& framebuffer) = 0;
 		virtual void bind_pipeline(std::shared_ptr<Pipeline> const& pipeline) = 0;
@@ -70,6 +81,9 @@ namespace z1 {
 		std::shared_ptr<Pipeline> m_current_pipeline = nullptr;
 
 		RenderStats m_stats;
+
+	private:
+		std::deque<float> m_frame_time_history;
 
 	protected:
 		std::stack<uint32_t> m_free_image_bindings;

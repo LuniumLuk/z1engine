@@ -33,6 +33,7 @@ namespace z1 {
 
 		g_runtime_context.m_timer->update();
 		while (!m_should_exit) {
+			g_runtime_context.m_graphics_context->update_stats(g_runtime_context.m_timer->get_delta_time());
 			g_runtime_context.m_graphics_context->m_stats.reset();
 			g_runtime_context.m_graphics_context->begin_frame();
 			if (!m_minimized) {
