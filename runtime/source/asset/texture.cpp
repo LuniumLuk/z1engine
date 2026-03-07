@@ -51,6 +51,16 @@ namespace z1 {
 			int width, height;
 			int success = LoadEXR(&data, &width, &height, file.string().c_str(), &err);
 			if (success == TINYEXR_SUCCESS) {
+
+				// flip image upside down
+				for (int y = 0; y < height / 2; ++y) {
+					for (int x = 0; x < width; ++x) {
+						for (int c = 0; c < 4; ++c) {
+							std::swap(data[(y * width + x) * 4 + c], data[((height - 1 - y) * width + x) * 4 + c]);
+						}
+					}
+				}
+
 				auto image = Image2D::create(
 					data, width * height * 4 * sizeof(float),
 					width, height,
