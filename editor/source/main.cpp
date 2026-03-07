@@ -155,19 +155,61 @@ struct EditorLayer : Layer {
 
 				// Visualize skeletons using ImGuizmo::DrawLines
 				if (m_settings.show_skeleton_guizmos) {
-					std::vector<glm::vec3> line_vertices;
-					auto skel_view = m_active_scene->m_registry.view<TransformComponent const, AnimationComponent const>();
-					for (auto [entity, transform, anim] : skel_view.each()) {
-						if (anim.bone_matrices.empty())
+					auto skel_view = m_active_scene->m_registry.view<TransformComponent const, AnimationComponent const, SkeletalMeshComponent const>();
+					for (auto [entity, transform, anim, mesh_comp] : skel_view.each()) {
+						if (anim.global_bone_transforms.empty() || !mesh_comp.m_skeleton)
 							continue;
 
+						auto const& skeleton = *mesh_comp.m_skeleton;
 						std::vector<glm::mat4> matrices;
-						for (auto const& bone_matrix : anim.bone_matrices) {
-							glm::mat4 model = transform.get_world_transform() * bone_matrix;
+						for (auto const& global_transform : anim.global_bone_transforms) {
+							glm::mat4 model = transform.get_world_transform() * global_transform;
 							model = glm::scale(model, glm::vec3(m_settings.skeleton_gizmo_size));
 							matrices.push_back(model);
 						}
 						ImGuizmo::DrawCubes(&view[0][0], &proj[0][0], (float*)matrices.data(), (int)matrices.size());
+
+						// Draw lines connecting bones
+						// We need absolute world positions for lines, not model matrices
+						// ImGuizmo doesn't seem to have a simple DrawLine API that takes world coords easily mixed with DrawCubes?
+						// Actually it does not. We might need to use ImGui::GetWindowDrawList() if we want 2D lines,
+						// or use a debug renderer.
+						// But wait, we can try to use ImGui's draw list with projected coordinates.
+
+						// Let's implement a simple line drawer using ImGui::GetWindowDrawList()
+						auto draw_list = ImGui::GetWindowDrawList();
+						glm::mat4 view_proj = proj * view;
+
+						auto world_transform = transform.get_world_transform();
+
+						for (size_t i = 0; i < skeleton.bones.size(); ++i) {
+							int parent_id = skeleton.bones[i].parent_id;
+							if (parent_id != -1 && parent_id < (int)anim.global_bone_transforms.size()) {
+								glm::vec3 p1 = glm::vec3(world_transform * anim.global_bone_transforms[i][3]); // Position is in last column
+								glm::vec3 p2 = glm::vec3(world_transform * anim.global_bone_transforms[parent_id][3]);
+
+								// Project to screen
+								glm::vec4 clip_p1 = view_proj * glm::vec4(p1, 1.0f);
+								glm::vec4 clip_p2 = view_proj * glm::vec4(p2, 1.0f);
+
+								if (clip_p1.w > 0 && clip_p2.w > 0) { // Simple clipping check
+									glm::vec3 ndc_p1 = glm::vec3(clip_p1) / clip_p1.w;
+									glm::vec3 ndc_p2 = glm::vec3(clip_p2) / clip_p2.w;
+
+									// Map to screen coords
+									ImVec2 screen_p1 = {
+										(ndc_p1.x + 1.0f) * 0.5f * present_size.x + image_min.x,
+										(1.0f - ndc_p1.y) * 0.5f * present_size.y + image_min.y
+									};
+									ImVec2 screen_p2 = {
+										(ndc_p2.x + 1.0f) * 0.5f * present_size.x + image_min.x,
+										(1.0f - ndc_p2.y) * 0.5f * present_size.y + image_min.y
+									};
+
+									draw_list->AddLine(screen_p1, screen_p2, IM_COL32(255, 255, 0, 255), 2.0f);
+								}
+							}
+						}
 					}
 				}
 
@@ -354,9 +396,9 @@ struct EditorLayer : Layer {
 				}
 			}
 
-			ImGui::DragFloat("light gizmo size", &m_settings.light_gizmo_size, 0.1f, 0.1f, 10.0f);
+			ImGui::DragFloat("light gizmo size", &m_settings.light_gizmo_size, 0.0f, 0.1f, 10.0f);
 			ImGui::Checkbox("show light gizmos", &m_settings.show_light_gizmos);
-			ImGui::DragFloat("skeleton gizmo size", &m_settings.skeleton_gizmo_size, 0.1f, 0.1f, 10.0f);
+			ImGui::DragFloat("skeleton gizmo size", &m_settings.skeleton_gizmo_size, 0.0f, 0.1f, 10.0f);
 			ImGui::Checkbox("show skeleton gizmos", &m_settings.show_skeleton_guizmos);
 
 		}
@@ -1148,6 +1190,22 @@ private:
 					auto prefab = Prefab::load(m_selected_asset->guid);
 					if (prefab) {
 						prefab->instantiate(m_active_scene);
+					}
+				}
+			}
+			else if (m_selected_asset->type == "animation") {
+				auto anim = g_runtime_context.m_asset_manager->get<Animation>(m_selected_asset->guid);
+				ImGui::Text("duration: %.2fs", anim->duration);
+				ImGui::Text("ticks per second: %.2f", anim->ticks_per_second);
+				ImGui::Text("channels: %d", anim->channels.size());
+				for (int c = 0; c < anim->channels.size(); ++c) {
+					auto& channel = anim->channels[c];
+					if (ImGui::CollapsingHeader(("channel " + std::to_string(c)).c_str())) {
+						ImGui::Text("bone id: %d", channel.bone_id);
+						ImGui::Text("bone name: %s", channel.bone_name.c_str());
+						ImGui::Text("position frame count: %d", channel.position_keys.size());
+						ImGui::Text("rotation frame count: %d", channel.rotation_keys.size());
+						ImGui::Text("scale frame count: %d", channel.scale_keys.size());
 					}
 				}
 			}

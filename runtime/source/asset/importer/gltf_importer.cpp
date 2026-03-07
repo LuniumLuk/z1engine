@@ -195,6 +195,7 @@ namespace z1 {
 
 					for (auto const& primitive : mesh.primitives) {
 
+						uint32_t vertex_start_copy = vertex_start;
 						SkeletalMesh::Primitive::Storage prim_storage{};
 
 						// load vertices
@@ -264,6 +265,7 @@ namespace z1 {
 
 								mesh_storage->vertices.push_back(vert);
 							}
+							vertex_start += static_cast<uint32_t>(accessor_pos.count);
 						}
 
 						// load indices
@@ -278,13 +280,13 @@ namespace z1 {
 
 							switch (accessor.componentType) {
 							case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
-								process_indices<SkeletalMesh, uint32_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+								process_indices<SkeletalMesh, uint32_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start_copy);
 								break;
 							case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
-								process_indices<SkeletalMesh, uint16_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+								process_indices<SkeletalMesh, uint16_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start_copy);
 								break;
 							case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
-								process_indices<SkeletalMesh, uint8_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+								process_indices<SkeletalMesh, uint8_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start_copy);
 								break;
 							default:
 								CORE_WARN("skip mesh for index type not supported");
@@ -332,6 +334,7 @@ namespace z1 {
 
 					for (auto const& primitive : mesh.primitives) {
 
+						uint32_t vertex_start_copy = vertex_start;
 						StaticMesh::Primitive::Storage prim_storage{};
 
 						// load vertices
@@ -372,6 +375,8 @@ namespace z1 {
 
 								mesh_storage->vertices.push_back(vert);
 							}
+
+							vertex_start += static_cast<uint32_t>(accessor_pos.count);
 						}
 
 						// load indices
@@ -386,13 +391,13 @@ namespace z1 {
 
 							switch (accessor.componentType) {
 							case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
-								process_indices<StaticMesh, uint32_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+								process_indices<StaticMesh, uint32_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start_copy);
 								break;
 							case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
-								process_indices<StaticMesh, uint16_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+								process_indices<StaticMesh, uint16_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start_copy);
 								break;
 							case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
-								process_indices<StaticMesh, uint8_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start);
+								process_indices<StaticMesh, uint8_t>(ptr, accessor.count, mesh_storage, index_start, vertex_start_copy);
 								break;
 							default:
 								CORE_WARN("skip mesh for index type not supported");
@@ -963,7 +968,7 @@ namespace z1 {
 
 		Animation animation;
 		animation.name = anim.name;
-		animation.ticks_per_second = 25.0f; // default
+		animation.ticks_per_second = 1.0f; // GLTF uses seconds, so 1 tick = 1 second
 
 		for (auto const& channel : anim.channels) {
 			if (channel.target_node == -1) continue;
@@ -1209,20 +1214,6 @@ namespace z1 {
 
 		ret.success = true;
 		return ret;
-
-		//loadAnimations(model);
-		//loadSkins(model);
-
-		//for (auto& node : mNodes) {
-		//	if (node->skinIndex > -1) {
-		//		node->skin = &mSkins[node->skinIndex];
-		//	}
-		//	if (node->mesh) {
-		//		node->update(mTransform);
-		//	}
-		//}
-
-		//mExtensions = model.extensionsUsed;
 	}
 
 }

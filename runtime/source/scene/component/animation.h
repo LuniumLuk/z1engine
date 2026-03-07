@@ -15,8 +15,10 @@ namespace z1 {
 		bool loop = true;
 		bool playing = true;
 
-		// Final bone matrices for rendering
+		// Final bone matrices for rendering (GlobalTransform * InverseBindPose)
 		std::vector<glm::mat4> bone_matrices;
+		// Global bone transforms for debug drawing (GlobalTransform)
+		std::vector<glm::mat4> global_bone_transforms;
 		// Uniform buffer for bone matrices
 		std::shared_ptr<UniformBuffer> bone_ubo;
 

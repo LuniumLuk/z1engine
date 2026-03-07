@@ -82,7 +82,10 @@ namespace z1 {
 			auto& anim = *anim_comp.animation_asset;
 			auto& skeleton = *mesh_comp.m_skeleton;
 
-			anim_comp.current_time += dt * anim.ticks_per_second * anim_comp.speed;
+			// GLTF animations are in seconds, so ticks_per_second should be ignored or is 1.0f.
+			// Legacy assets might have ticks_per_second=25.0f, but keys are still in seconds.
+			// So we just increment by dt (seconds).
+			anim_comp.current_time += dt * anim_comp.speed;
 
 			if (anim_comp.loop) {
 				if (anim.duration > 0.0f) {
@@ -168,7 +171,10 @@ namespace z1 {
 
 			// Final skinning matrices = GlobalTransform * InverseBindPose
 			anim_comp.bone_matrices.assign(MAX_BONES, glm::mat4(1.0f));
+			anim_comp.global_bone_transforms.resize(skeleton.bones.size());
+
 			for (size_t i = 0; i < skeleton.bones.size(); ++i) {
+				anim_comp.global_bone_transforms[i] = global_transforms[i];
 				if (i >= MAX_BONES)
 					break;
 				anim_comp.bone_matrices[i] = global_transforms[i] * skeleton.bones[i].offset_matrix;
