@@ -54,4 +54,55 @@ namespace z1 {
 		}
 	}
 
+	bool legalize_path(Filepath& path) {
+		if (path.empty())
+			return false;
+
+		// 1. Reserved Windows Device Names (cannot be filenames)
+		static const std::set<std::string> reserved_names = {
+			"CON",	"PRN",	"AUX",	"NUL",	"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
+			"COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
+
+		const std::string illegal_chars = "<>:\"|?*";
+		Filepath legal_path;
+
+		// Iterate through each part of the path (e.g., "folder", "subfolder", "file.txt")
+		for (auto& part : path) {
+			std::string name = part.string();
+
+			// Skip root directory (e.g., "C:/") to avoid breaking drive letters
+			if (part == path.root_name() || part == path.root_directory()) {
+				legal_path /= part;
+				continue;
+			}
+
+			// 2. Remove illegal and control characters
+			for (char& c : name) {
+				if (illegal_chars.find(c) != std::string::npos || (unsigned char)c < 32) {
+					c = '_';
+				}
+			}
+
+			// 3. Remove trailing dots and spaces
+			while (!name.empty() && (name.back() == ' ' || name.back() == '.')) {
+				name.pop_back();
+			}
+
+			// 4. Check for Reserved Names (e.g., "CON.txt" is illegal)
+			// We check the stem (filename without extension)
+			std::string stem = Filepath(name).stem().string();
+			std::transform(stem.begin(), stem.end(), stem.begin(), ::toupper);
+			if (reserved_names.count(stem)) {
+				name = "_" + name;
+			}
+
+			if (!name.empty()) {
+				legal_path /= name;
+			}
+		}
+
+		path = legal_path;
+		return !path.empty();
+	}
+
 }

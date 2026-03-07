@@ -27,7 +27,7 @@ layout(location = 7) out vec4 v_prev_clip;
 #endif
 
 layout(std140) uniform Bones {
-	mat4 u_bone_matrices[100];
+	mat4 u_bone_matrices[144];
 };
 
 uniform int u_has_skinning;

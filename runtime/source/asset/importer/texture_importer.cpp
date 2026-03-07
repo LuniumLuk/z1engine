@@ -42,6 +42,7 @@ namespace z1 {
 		meta.extra["sampler_mode"] = (int)settings.sampler_mode;
 		meta.extra["wrap_mode"] = (int)settings.wrap_mode;
 
+		legalize_path(meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return ret;
 		}

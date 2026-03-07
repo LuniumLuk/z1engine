@@ -8,6 +8,7 @@
 #include "animation/animation.h"
 #include "asset/binary_file.h"
 #include "util/yaml.h"
+#include "util/string_utils.h"
 
 #include "bakery.h"
 #include "tinygltf/tiny_gltf.h"
@@ -578,6 +579,7 @@ namespace z1 {
 			meta.extra["wrap_mode"] = (int)wrap_mode;
 			meta.extra["hdr"] = false;
 
+			legalize_path(meta.path);
 			if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 				continue;
 			}
@@ -682,6 +684,7 @@ namespace z1 {
 				new_meta.path = settings.path / (name + "_Mat");
 				new_mat->m_meta = new_meta;
 
+				legalize_path(new_meta.path);
 				g_runtime_context.m_asset_manager->register_asset(new_meta, FileSystem::s_content_root);
 				// We need to save it too.
 				new_mat->save();
@@ -702,6 +705,7 @@ namespace z1 {
 						new_meta.path = settings.path / (name + "_Mat");
 						new_mat->m_meta = new_meta;
 
+						legalize_path(new_meta.path);
 						g_runtime_context.m_asset_manager->register_asset(new_meta, FileSystem::s_content_root);
 						base = new_mat;
 					}
@@ -723,6 +727,7 @@ namespace z1 {
 						new_meta.path = settings.path / (name + "_Mat");
 						new_mat->m_meta = new_meta;
 
+						legalize_path(new_meta.path);
 						g_runtime_context.m_asset_manager->register_asset(new_meta, FileSystem::s_content_root);
 						base = new_mat;
 					}
@@ -926,6 +931,7 @@ namespace z1 {
 		meta.type = "skeleton";
 		meta.path = settings.path / name;
 
+		legalize_path(meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return {};
 		}
@@ -1069,6 +1075,7 @@ namespace z1 {
 		meta.type = "animation";
 		meta.path = settings.path / name;
 
+		legalize_path(meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return;
 		}
@@ -1223,6 +1230,7 @@ namespace z1 {
 			fout << yaml.c_str();
 			fout.close();
 
+			legalize_path(prefab_meta.path);
 			if (g_runtime_context.m_asset_manager->register_asset(prefab_meta, FileSystem::s_content_root)) {
 				ret.assets.push_back(prefab_meta);
 				ret.files.push_back(physical_path);

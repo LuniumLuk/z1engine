@@ -33,7 +33,7 @@ void save_editor_settings(EditorSettings const& settings) {
 	yaml << YAML::Key << "light_gizmo_size" << YAML::Value << settings.light_gizmo_size;
 	yaml << YAML::Key << "curr_resolution" << YAML::Value << settings.curr_resolution;
 	yaml << YAML::Key << "show_skeleton_guizmos" << YAML::Value << settings.show_skeleton_guizmos;
-	yaml << YAML::Key << "skeleton_gizmo_size" << YAML::Value << settings.show_skeleton_guizmos;
+	yaml << YAML::Key << "skeleton_gizmo_size" << YAML::Value << settings.skeleton_gizmo_size;
 	yaml << YAML::EndMap;
 
 	std::ofstream fout("editor_settings.yaml");
@@ -50,7 +50,7 @@ EditorSettings load_editor_settings() {
 		if (yaml["show_light_gizmos"]) settings.show_light_gizmos = yaml["show_light_gizmos"].as<bool>();
 		if (yaml["light_gizmo_size"]) settings.light_gizmo_size = yaml["light_gizmo_size"].as<float>();
 		if (yaml["curr_resolution"]) settings.curr_resolution = yaml["curr_resolution"].as<uint32_t>();
-		if (yaml["show_skeleton_guizmos"]) settings.show_skeleton_guizmos = yaml["show_skeleton_guizmos"].as<float>();
+		if (yaml["show_skeleton_guizmos"]) settings.show_skeleton_guizmos = yaml["show_skeleton_guizmos"].as<bool>();
 		if (yaml["skeleton_gizmo_size"]) settings.skeleton_gizmo_size = yaml["skeleton_gizmo_size"].as<float>();
 	}
 	catch (...) {
@@ -396,9 +396,9 @@ struct EditorLayer : Layer {
 				}
 			}
 
-			ImGui::DragFloat("light gizmo size", &m_settings.light_gizmo_size, 0.0f, 0.1f, 10.0f);
+			ImGui::DragFloat("light gizmo size", &m_settings.light_gizmo_size, 0.01f, 0.0f, 1.0f);
 			ImGui::Checkbox("show light gizmos", &m_settings.show_light_gizmos);
-			ImGui::DragFloat("skeleton gizmo size", &m_settings.skeleton_gizmo_size, 0.0f, 0.1f, 10.0f);
+			ImGui::DragFloat("skeleton gizmo size", &m_settings.skeleton_gizmo_size, 0.01f, 0.0f, 1.0f);
 			ImGui::Checkbox("show skeleton gizmos", &m_settings.show_skeleton_guizmos);
 
 		}
@@ -753,6 +753,7 @@ private:
 						value = Texture2D::load(meta->guid);
 					}
 				});
+				ImGui::Unindent();
 			}
 			else if (*field.type == typeid(std::shared_ptr<Animation>)) {
 				std::shared_ptr<Animation>& value = field.get<std::shared_ptr<Animation>>(instance);
@@ -767,13 +768,13 @@ private:
 				else {
 					ImGui::Text("No Animation");
 				}
-
 				accept_payload("ASSET_ITEM", [&](void* data) {
 					AssetMeta* meta = *(AssetMeta**)data;
 					if (meta->type == "animation") {
 						value = Animation::load(meta->guid);
 					}
 				});
+				ImGui::Unindent();
 			}
 
 			if (!editable)

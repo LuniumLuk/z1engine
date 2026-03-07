@@ -55,8 +55,8 @@ struct HoveringCameraCtrlScript : CameraCtrlScript {
 		auto& transform = get_component<TransformComponent>();
 
 		if (g_runtime_context.m_input_system->is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)) {
-			transform.m_rotation.x += -m_mouse_delta_y * m_rotate_speed * delta_time;
-			transform.m_rotation.y += -m_mouse_delta_x * m_rotate_speed * delta_time;
+			transform.m_rotation.x += -m_mouse_delta_y * m_rotate_speed;
+			transform.m_rotation.y += -m_mouse_delta_x * m_rotate_speed;
 			transform.m_rotation.x = std::clamp(transform.m_rotation.x, -89.0f, 89.0f); // clamp pitch to avoid gimbal lock
 		}
 
@@ -81,7 +81,7 @@ struct HoveringCameraCtrlScript : CameraCtrlScript {
 		transform.m_location += move;
 	}
 
-	float m_rotate_speed = 40.0f;
+	float m_rotate_speed = 0.5f;
 	float m_move_speed = 4.0f;
 };
 

@@ -27,4 +27,6 @@ namespace z1 {
 
 	};
 
+	bool legalize_path(Filepath& path);
+
 }
