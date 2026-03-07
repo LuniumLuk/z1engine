@@ -17,10 +17,14 @@ namespace z1 {
 
 		// Final bone matrices for rendering (GlobalTransform * InverseBindPose)
 		std::vector<glm::mat4> bone_matrices;
+		// Previous frame's bone matrices for TAA
+		std::vector<glm::mat4> prev_bone_matrices;
 		// Global bone transforms for debug drawing (GlobalTransform)
 		std::vector<glm::mat4> global_bone_transforms;
 		// Uniform buffer for bone matrices
 		std::shared_ptr<UniformBuffer> bone_ubo;
+		// Uniform buffer for previous frame's bone matrices
+		std::shared_ptr<UniformBuffer> prev_bone_ubo;
 
 		AnimationComponent(std::shared_ptr<Animation> const& animation = nullptr) noexcept
 			: animation_asset(animation) {}
@@ -30,8 +34,8 @@ namespace z1 {
 	};
 
 	REFLECTED_FIELD(AnimationComponent, animation_asset, FF_Default)
-	REFLECTED_FIELD(AnimationComponent, current_time,    FF_ReadOnly)
-	REFLECTED_FIELD(AnimationComponent, speed,           FF_Default)
+	REFLECTED_FIELD(AnimationComponent, current_time,    FF_Default, "[input]min=0")
+	REFLECTED_FIELD(AnimationComponent, speed,           FF_Default, "[input]min=0")
 	REFLECTED_FIELD(AnimationComponent, loop,            FF_Default)
 	REFLECTED_FIELD(AnimationComponent, playing,         FF_Default)
 

@@ -25,6 +25,7 @@ namespace z1 {
 		// TAA
 		bool      taa_enabled           = true;
 		float     taa_blend             = 0.9f;
+		bool      taa_animated          = true; // Calculate velocity of animated object for better TAA effect
 		// Post-processing
 		float     pp_exposure           = 1.0f;
 		float     pp_gamma              = 2.2f;
@@ -33,6 +34,8 @@ namespace z1 {
 		float     sm_near               = 1.0f;
 		float     sm_far                = 100.0f;
 		float     sm_ortho_size         = 40.0f;
+		// Animation
+		bool      anim_enabled          = true;
 
 		void flush();
 		void bind();
@@ -68,11 +71,13 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, sun_ambient_intensity, FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, taa_enabled,           FF_Default)
 	REFLECTED_FIELD(GlobalSettings, taa_blend,             FF_Default, "[slider]min=0.0,max=1.0")
+	REFLECTED_FIELD(GlobalSettings, taa_animated,          FF_Default)
 	REFLECTED_FIELD(GlobalSettings, pp_exposure,           FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, pp_gamma,              FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, pp_tint,               FF_Default, "[color]")
 	REFLECTED_FIELD(GlobalSettings, sm_near,               FF_Default)
 	REFLECTED_FIELD(GlobalSettings, sm_far,                FF_Default)
 	REFLECTED_FIELD(GlobalSettings, sm_ortho_size,         FF_Default)
+	REFLECTED_FIELD(GlobalSettings, anim_enabled,          FF_Default)
 
 }

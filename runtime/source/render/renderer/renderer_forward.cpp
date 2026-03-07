@@ -435,6 +435,11 @@ namespace z1 {
 				auto& s = m_pipeline_velocity->m_shader;
 				s->set_uniform_block_binding("Global", g->get_binding());
 
+				int has_skinning = 0;
+				int use_prev_bones = 0;
+				s->set_uniform("u_has_skinning", &has_skinning);
+				s->set_uniform("u_use_prev_bones", &use_prev_bones);
+
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 				for (auto [entity, transform, mesh] : view.each()) {
 					s->set_uniform("u_model", &transform.get_world_transform());
@@ -444,20 +449,31 @@ namespace z1 {
 				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
 				for (auto [entity, transform, mesh] : view_skel.each()) {
 					if (!mesh.m_mesh) continue;
+					has_skinning = 0;
+					use_prev_bones = 0;
 					s->set_uniform("u_model", &transform.get_world_transform());
-					int has_skinning = 0;
 					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
 						if (anim.bone_ubo) {
 							has_skinning = 1;
 							anim.bone_ubo->bind();
 							s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
+							if (g->anim_enabled && g->taa_animated && anim.prev_bone_ubo) {
+								anim.prev_bone_ubo->bind();
+								s->set_uniform_block_binding("PrevBones", anim.prev_bone_ubo->get_binding());
+								use_prev_bones = 1;
+							}
 						}
 					}
 					s->set_uniform("u_has_skinning", &has_skinning);
+					s->set_uniform("u_use_prev_bones", &use_prev_bones);
 					mesh.m_mesh->draw();
-					if (has_skinning)
-						scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
+					if (has_skinning) {
+						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+						anim.bone_ubo->unbind();
+						if (use_prev_bones)
+							anim.prev_bone_ubo->unbind();
+					}
 				}
 
 				m_pipeline_velocity->unbind();

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "render/global.h"
 #include "scene/animation_system.h"
 #include "scene/component/mesh.h"
 #include "scene/component/animation.h"
@@ -71,7 +72,11 @@ namespace z1 {
 	void AnimationSystem::update(Scene* scene, float dt) {
 		PROFILE_FUNCTION();
 
+		if (!g_runtime_context.m_global->anim_enabled)
+			return;
+
 		auto view = scene->m_registry.view<AnimationComponent, SkeletalMeshComponent>();
+		auto const& g = g_runtime_context.m_global;
 
 		for (auto entity : view) {
 			auto& anim_comp = view.get<AnimationComponent>(entity);
@@ -170,6 +175,10 @@ namespace z1 {
 			}
 
 			// Final skinning matrices = GlobalTransform * InverseBindPose
+			if (g->taa_animated && !anim_comp.bone_matrices.empty()) {
+				anim_comp.prev_bone_matrices = anim_comp.bone_matrices;
+			}
+
 			anim_comp.bone_matrices.assign(MAX_BONES, glm::mat4(1.0f));
 			anim_comp.global_bone_transforms.resize(skeleton.bones.size());
 
@@ -185,6 +194,17 @@ namespace z1 {
 				anim_comp.bone_ubo = UniformBuffer::create(nullptr, MAX_BONES * sizeof(glm::mat4), BufferUsage::Dynamic);
 			}
 			anim_comp.bone_ubo->write(anim_comp.bone_matrices.data(), skeleton.bones.size() * sizeof(glm::mat4));
+
+			if (g->taa_animated) {
+				// Upload previous frame's matrices
+				if (anim_comp.prev_bone_matrices.empty()) {
+					anim_comp.prev_bone_matrices = anim_comp.bone_matrices;
+				}
+				if (!anim_comp.prev_bone_ubo) {
+					anim_comp.prev_bone_ubo = UniformBuffer::create(nullptr, MAX_BONES * sizeof(glm::mat4), BufferUsage::Dynamic);
+				}
+				anim_comp.prev_bone_ubo->write(anim_comp.prev_bone_matrices.data(), skeleton.bones.size() * sizeof(glm::mat4));
+			}
 		}
 	}
 

@@ -32,6 +32,14 @@ layout(std140) uniform Bones {
 
 uniform int u_has_skinning;
 
+#ifdef VELOCITY
+layout(std140) uniform PrevBones {
+	mat4 u_prev_bone_matrices[144];
+};
+
+uniform int u_use_prev_bones;
+#endif
+
 void main() {
 	mat4 skin_matrix = mat4(1.0);
 	if (u_has_skinning > 0) {
@@ -67,7 +75,18 @@ void main() {
 
 #ifdef VELOCITY
 	v_curr_clip = u_projview * vec4(world_position, 1.0);
-	v_prev_clip = u_prev_projview * vec4(world_position, 1.0);
+	vec3 prev_world_position = world_position;
+	if (u_has_skinning > 0 && u_use_prev_bones > 0) {
+		vec4 prev_local_position = vec4(a_position, 1.0);
+		mat4 prev_skin_matrix =
+			u_prev_bone_matrices[int(a_joints.x)] * a_weights.x +
+			u_prev_bone_matrices[int(a_joints.y)] * a_weights.y +
+			u_prev_bone_matrices[int(a_joints.z)] * a_weights.z +
+			u_prev_bone_matrices[int(a_joints.w)] * a_weights.w;
+		prev_local_position = prev_skin_matrix * prev_local_position;
+		prev_world_position = (u_model * prev_local_position).xyz;
+	}
+	v_prev_clip = u_prev_projview * vec4(prev_world_position, 1.0);
 #endif
 
 }

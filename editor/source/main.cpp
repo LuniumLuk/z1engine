@@ -275,6 +275,8 @@ struct EditorLayer : Layer {
 			m_current_gizmo_operation = ImGuizmo::OPERATION::ROTATE; break;
 		case KEY_R:
 			m_current_gizmo_operation = ImGuizmo::OPERATION::SCALE; break;
+		case KEY_G:
+			m_selected_entity = nullptr; break;
 		default:
 			break;
 		}
@@ -1094,12 +1096,14 @@ private:
 				for (auto& [name, var] : mat->m_variables) {
 					if (!var.visible) continue;
 
+					ImGui::Text(name.c_str());
+					ImGui::Indent();
 					ImGui::BeginDisabled();
 					switch (var.type) {
 					case DataType::Float: ImGui::InputFloat(("##" + name).c_str(), var.default_value.vec); break;
 					case DataType::Float2: ImGui::InputFloat2(("##" + name).c_str(), var.default_value.vec); break;
-					case DataType::Float3: ImGui::InputFloat3(("##" + name).c_str(), var.default_value.vec); break;
-					case DataType::Float4: ImGui::InputFloat4(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float3: ImGui::ColorEdit3(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float4: ImGui::ColorEdit4(("##" + name).c_str(), var.default_value.vec); break;
 					case DataType::Int: ImGui::InputInt(("##" + name).c_str(), var.default_value.ivec); break;
 					case DataType::Int2: ImGui::InputInt2(("##" + name).c_str(), var.default_value.ivec); break;
 					case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
@@ -1110,6 +1114,7 @@ private:
 					}
 
 					ImGui::EndDisabled();
+					ImGui::Unindent();
 
 					if (var.type == DataType::Sampler2D && var.default_value.tex2D) {
 						ImGui::SameLine();
@@ -1130,15 +1135,15 @@ private:
 					if (!var.visible) continue;
 
 					ImGui::Checkbox(name.c_str(), &var.default_value.valid);
-					ImGui::SameLine();
+					ImGui::Indent();
 					if (!var.default_value.valid) {
 						ImGui::BeginDisabled();
 					}
 					switch (var.type) {
 					case DataType::Float: ImGui::InputFloat(("##" + name).c_str(), var.default_value.vec); break;
 					case DataType::Float2: ImGui::InputFloat2(("##" + name).c_str(), var.default_value.vec); break;
-					case DataType::Float3: ImGui::InputFloat3(("##" + name).c_str(), var.default_value.vec); break;
-					case DataType::Float4: ImGui::InputFloat4(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float3: ImGui::ColorEdit3(("##" + name).c_str(), var.default_value.vec); break;
+					case DataType::Float4: ImGui::ColorEdit4(("##" + name).c_str(), var.default_value.vec); break;
 					case DataType::Int: ImGui::InputInt(("##" + name).c_str(), var.default_value.ivec); break;
 					case DataType::Int2: ImGui::InputInt2(("##" + name).c_str(), var.default_value.ivec); break;
 					case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
@@ -1148,6 +1153,7 @@ private:
 					if (!var.default_value.valid) {
 						ImGui::EndDisabled();
 					}
+					ImGui::Unindent();
 
 					if (var.type == DataType::Sampler2D && var.default_value.tex2D) {
 						auto const& texture = var.default_value.tex2D;
