@@ -173,6 +173,7 @@ namespace z1 {
 		update_lights(scene);
 		calculate_csm_splits(camera_comp, g->sun_direction);
 
+		g->flush();
 		g->bind();
 
 		RenderGraph rg;
@@ -386,6 +387,8 @@ namespace z1 {
 			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
 			.execute([this, scene, projview, &g](RenderGraphNode& node, GraphicsContext& ctx) {
+
+				auto jittered_projview = g->projview;
 				g->projview = projview;
 				g->flush();
 
@@ -416,6 +419,10 @@ namespace z1 {
 				}
 
 				m_pipeline_velocity->unbind();
+
+				g->projview = jittered_projview;
+				g->flush();
+
 				});
 	}
 
