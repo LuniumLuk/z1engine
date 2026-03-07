@@ -31,6 +31,117 @@ namespace z1 {
 		return r;
 	}
 
+	struct Plane {
+		float a, b, c, d;
+		float distance(glm::vec3 const& p) const {
+			return a * p.x + b * p.y + c * p.z + d;
+		}
+		void normalize() {
+			float len = std::sqrt(a * a + b * b + c * c);
+			a /= len; b /= len; c /= len; d /= len;
+		}
+	};
+
+	struct Frustum {
+		Plane planes[6];
+	};
+
+	static Frustum create_frustum(glm::mat4 const& m) {
+		Frustum f;
+		// Left
+		f.planes[0].a = m[0][3] + m[0][0];
+		f.planes[0].b = m[1][3] + m[1][0];
+		f.planes[0].c = m[2][3] + m[2][0];
+		f.planes[0].d = m[3][3] + m[3][0];
+		// Right
+		f.planes[1].a = m[0][3] - m[0][0];
+		f.planes[1].b = m[1][3] - m[1][0];
+		f.planes[1].c = m[2][3] - m[2][0];
+		f.planes[1].d = m[3][3] - m[3][0];
+		// Bottom
+		f.planes[2].a = m[0][3] + m[0][1];
+		f.planes[2].b = m[1][3] + m[1][1];
+		f.planes[2].c = m[2][3] + m[2][1];
+		f.planes[2].d = m[3][3] + m[3][1];
+		// Top
+		f.planes[3].a = m[0][3] - m[0][1];
+		f.planes[3].b = m[1][3] - m[1][1];
+		f.planes[3].c = m[2][3] - m[2][1];
+		f.planes[3].d = m[3][3] - m[3][1];
+		// Near
+		f.planes[4].a = m[0][3] + m[0][2];
+		f.planes[4].b = m[1][3] + m[1][2];
+		f.planes[4].c = m[2][3] + m[2][2];
+		f.planes[4].d = m[3][3] + m[3][2];
+		// Far
+		f.planes[5].a = m[0][3] - m[0][2];
+		f.planes[5].b = m[1][3] - m[1][2];
+		f.planes[5].c = m[2][3] - m[2][2];
+		f.planes[5].d = m[3][3] - m[3][2];
+
+		for (int i = 0; i < 6; ++i) f.planes[i].normalize();
+		return f;
+	}
+
+	static bool is_aabb_in_frustum(Frustum const& f, glm::vec3 const& min, glm::vec3 const& max) {
+		for (int i = 0; i < 6; ++i) {
+			glm::vec3 p = min;
+			if (f.planes[i].a >= 0) p.x = max.x;
+			if (f.planes[i].b >= 0) p.y = max.y;
+			if (f.planes[i].c >= 0) p.z = max.z;
+
+			if (f.planes[i].distance(p) < 0) return false;
+		}
+		return true;
+	}
+
+	static bool is_mesh_visible(Frustum const& f, glm::mat4 const& transform, glm::vec3 const& min, glm::vec3 const& max) {
+		glm::vec3 corners[8] = {
+			{min.x, min.y, min.z}, {min.x, min.y, max.z},
+			{min.x, max.y, min.z}, {min.x, max.y, max.z},
+			{max.x, min.y, min.z}, {max.x, min.y, max.z},
+			{max.x, max.y, min.z}, {max.x, max.y, max.z}
+		};
+
+		glm::vec3 world_min(FLT_MAX), world_max(-FLT_MAX);
+		for (int i = 0; i < 8; ++i) {
+			glm::vec3 p = glm::vec3(transform * glm::vec4(corners[i], 1.0f));
+			world_min = glm::min(world_min, p);
+			world_max = glm::max(world_max, p);
+		}
+		return is_aabb_in_frustum(f, world_min, world_max);
+	}
+
+	static void get_skeletal_bounds(
+		SkeletalMeshComponent const& mesh,
+		AnimationComponent const& anim,
+		glm::vec3& out_min,
+		glm::vec3& out_max)
+	{
+		if (anim.global_bone_transforms.empty()) {
+			out_min = mesh.m_mesh->m_bound_min;
+			out_max = mesh.m_mesh->m_bound_max;
+			return;
+		}
+
+		glm::vec3 min_bones(FLT_MAX);
+		glm::vec3 max_bones(-FLT_MAX);
+
+		for (auto const& m : anim.global_bone_transforms) {
+			glm::vec3 pos = glm::vec3(m[3]); // Translation
+			min_bones = glm::min(min_bones, pos);
+			max_bones = glm::max(max_bones, pos);
+		}
+
+		// Calculate static size for padding
+		glm::vec3 static_size = mesh.m_mesh->m_bound_max - mesh.m_mesh->m_bound_min;
+		// Use the full length of the diagonal as padding to be conservative and avoid early culling
+		float padding = glm::length(static_size);
+
+		out_min = min_bones - glm::vec3(padding);
+		out_max = max_bones + glm::vec3(padding);
+	}
+
 	static int s_frame_index = 0;
 
 	RendererForward::RendererForward() {
@@ -186,7 +297,7 @@ namespace z1 {
 
 		RenderGraph rg;
 		add_shadow_pass(rg, scene);
-		add_main_pass(rg, scene, framebuffer, history_uninitialized, read_idx);
+		add_main_pass(rg, scene, framebuffer, history_uninitialized, read_idx, projview);
 		add_velocity_pass(rg, scene, framebuffer, projview);
 		add_taa_pass(rg, m_history_colors[write_idx], m_history_colors[read_idx]);
 		add_postprocess_pass(rg, framebuffer, m_history_colors[write_idx]);
@@ -329,7 +440,7 @@ namespace z1 {
 		}
 	}
 
-	void RendererForward::add_main_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx) {
+	void RendererForward::add_main_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
@@ -345,16 +456,19 @@ namespace z1 {
 			.set_pass_desc(desc)
 			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("scene-depth", ImageFormat::Depth)
-			.execute([this, scene, history_uninitialized, read_idx, width, height](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, scene, history_uninitialized, read_idx, width, height, projview](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 
 				m_lights_buffer->bind();
 				per_frame.lights_binding = m_lights_buffer->get_binding();
 
+				Frustum frustum = create_frustum(projview);
+
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 				for (auto [entity, transform, mesh] : view.each()) {
 					if (!mesh.m_mesh) continue;
+					if (!is_mesh_visible(frustum, transform.get_world_transform(), mesh.m_mesh->m_bound_min, mesh.m_mesh->m_bound_max)) continue;
 					per_frame.model = transform.get_world_transform();
 					mesh.m_mesh->draw(per_frame, m_default_material);
 				}
@@ -362,13 +476,20 @@ namespace z1 {
 				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
 				for (auto [entity, transform, mesh] : view_skel.each()) {
 					if (!mesh.m_mesh) continue;
-					per_frame.model = transform.get_world_transform();
+
+					glm::vec3 min = mesh.m_mesh->m_bound_min;
+					glm::vec3 max = mesh.m_mesh->m_bound_max;
 
 					std::shared_ptr<UniformBuffer> bones = nullptr;
 					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
 						bones = anim.bone_ubo;
+						get_skeletal_bounds(mesh, anim, min, max);
 					}
+
+					if (!is_mesh_visible(frustum, transform.get_world_transform(), min, max)) continue;
+					per_frame.model = transform.get_world_transform();
+
 					mesh.m_mesh->draw(per_frame, m_default_material, bones);
 				}
 
@@ -435,6 +556,8 @@ namespace z1 {
 				auto& s = m_pipeline_velocity->m_shader;
 				s->set_uniform_block_binding("Global", g->get_binding());
 
+				Frustum frustum = create_frustum(projview);
+
 				int has_skinning = 0;
 				int use_prev_bones = 0;
 				s->set_uniform("u_has_skinning", &has_skinning);
@@ -442,6 +565,8 @@ namespace z1 {
 
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 				for (auto [entity, transform, mesh] : view.each()) {
+					if (!mesh.m_mesh) continue;
+					if (!is_mesh_visible(frustum, transform.get_world_transform(), mesh.m_mesh->m_bound_min, mesh.m_mesh->m_bound_max)) continue;
 					s->set_uniform("u_model", &transform.get_world_transform());
 					mesh.m_mesh->draw();
 				}
@@ -449,6 +574,17 @@ namespace z1 {
 				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
 				for (auto [entity, transform, mesh] : view_skel.each()) {
 					if (!mesh.m_mesh) continue;
+
+					glm::vec3 min = mesh.m_mesh->m_bound_min;
+					glm::vec3 max = mesh.m_mesh->m_bound_max;
+
+					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
+						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+						get_skeletal_bounds(mesh, anim, min, max);
+					}
+
+					if (!is_mesh_visible(frustum, transform.get_world_transform(), min, max)) continue;
+
 					has_skinning = 0;
 					use_prev_bones = 0;
 					s->set_uniform("u_model", &transform.get_world_transform());
