@@ -351,7 +351,6 @@ namespace z1 {
 					auto anim_guid = Guid::make(anim_yaml["animation"].as<std::string>());
 					anim.animation_asset = g_runtime_context.m_asset_manager->get<Animation>(anim_guid);
 				}
-				anim.current_time = anim_yaml["current_time"].as<float>();
 				anim.speed = anim_yaml["speed"].as<float>();
 				anim.loop = anim_yaml["loop"].as<bool>();
 				anim.playing = anim_yaml["playing"].as<bool>();
@@ -576,7 +575,6 @@ namespace z1 {
 				else {
 					yaml << YAML::Key << "animation" << YAML::Value << YAML::Null;
 				}
-				yaml << YAML::Key << "current_time" << YAML::Value << anim.current_time;
 				yaml << YAML::Key << "speed" << YAML::Value << anim.speed;
 				yaml << YAML::Key << "loop" << YAML::Value << anim.loop;
 				yaml << YAML::Key << "playing" << YAML::Value << anim.playing;
