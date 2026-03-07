@@ -167,22 +167,32 @@ namespace z1 {
 
 		auto projview_jittered = proj_jittered * camera_comp.get_view();
 
-		auto rg = RenderGraph();
-
-		RenderPass::Description desc;
-		desc.color_attachments.resize(1);
-		desc.color_attachments[0].load_op = LoadOp::Clear;
-		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
-		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
-		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
-
 		g->projview = projview_jittered;
 		g->cam_position = cam_pos;
 
-		// --- Light Logic ---
+		update_lights(scene);
+		calculate_csm_splits(camera_comp, g->sun_direction);
+
+		g->bind();
+
+		RenderGraph rg;
+		add_shadow_pass(rg, scene);
+		add_main_pass(rg, scene, framebuffer, history_uninitialized, read_idx);
+		add_velocity_pass(rg, scene, framebuffer, projview);
+		add_taa_pass(rg, m_history_colors[write_idx], m_history_colors[read_idx]);
+		add_postprocess_pass(rg, framebuffer, m_history_colors[write_idx]);
+
+		rg.compile();
+		rg.execute();
+
+		++s_frame_index;
+		g->unbind();
+		g->prev_projview = projview;
+	}
+
+	void RendererForward::update_lights(std::shared_ptr<Scene> const& scene) {
 		LightsBlock lights_block = {};
 		int light_count = 0;
-		bool found_shadow_caster = false;
 
 		auto lights = scene->m_registry.view<TransformComponent const, LightComponent const>();
 		for (auto [entity, transform, light] : lights.each()) {
@@ -190,8 +200,6 @@ namespace z1 {
 
 			glm::mat4 model = transform.get_world_transform();
 			glm::vec3 pos = glm::vec3(model[3]);
-			// forward direction (-Z in local space) transformed to world space
-			// use rotation part only
 			glm::mat3 rot = glm::mat3(model);
 			glm::vec3 direction = glm::normalize(rot * glm::vec3(0, 0, -1));
 
@@ -209,13 +217,12 @@ namespace z1 {
 		}
 		lights_block.count.x = (float)light_count;
 		m_lights_buffer->write(&lights_block, sizeof(LightsBlock));
+	}
 
-		lights_block.count.x = (float)light_count;
-		m_lights_buffer->write(&lights_block, sizeof(LightsBlock));
-
-		// CSM Splits
-		float near_clip = camera_comp.m_near;
-		float far_clip = camera_comp.m_far;
+	void RendererForward::calculate_csm_splits(CameraComponent& camera, glm::vec3 const& sun_dir) {
+		auto& g = g_runtime_context.m_global;
+		float near_clip = camera.m_near;
+		float far_clip = camera.m_far;
 		float split_lambda = 0.95f;
 
 		float splits[5] = {};
@@ -230,37 +237,26 @@ namespace z1 {
 		}
 		g->csm_splits = glm::vec4(splits[1], splits[2], splits[3], splits[4]);
 
-		glm::vec3 sun_dir = g->sun_direction;
-		// use camera frustum center for each cascade
-		glm::mat4 inv_view = glm::inverse(camera_comp.get_view());
+		glm::mat4 inv_view = glm::inverse(camera.get_view());
 		glm::vec3 cam_pos_world = glm::vec3(inv_view[3]);
-		glm::vec3 cam_forward = -glm::vec3(inv_view[2]); // Forward is -Z in view space
+		glm::vec3 cam_forward = -glm::vec3(inv_view[2]);
 
 		for (int i = 0; i < CSM_LAYERS; ++i) {
 			float cascade_near = splits[i];
 			float cascade_far = splits[i + 1];
 			float mid_dist = (cascade_near + cascade_far) * 0.5f;
 
-			// Center position of the cascade frustum slice
 			glm::vec3 center = cam_pos_world + cam_forward * mid_dist;
 
-			// Calculate size of the ortho projection
-			// A simple heuristic: scale base size by cascade index
-			// Or better: fit the frustum slice.
-			// Using simpler heuristic for now: base size * 2^i
-			// But we need to make sure it covers the slice.
-			// Slice diagonal at far plane is roughly: 2 * far * tan(fov/2) * sqrt(1+aspect^2)
-			// For perspective:
-			float fov = camera_comp.m_intrinsic.fov;
-			float aspect = camera_comp.m_aspect;
+			float fov = camera.m_intrinsic.fov;
+			float aspect = camera.m_aspect;
 			float tan_half_fov = std::tan(glm::radians(fov) * 0.5f);
 			float far_height = 2.0f * cascade_far * tan_half_fov;
 			float far_width = far_height * aspect;
 			float diag = std::sqrt(far_height * far_height + far_width * far_width);
 
-			float size = diag * 0.5f; // half size
+			float size = diag * 0.5f;
 
-			// Move light back to cover geometry in front of the center
 			glm::vec3 light_pos = center + glm::normalize(sun_dir) * size;
 
 			glm::mat4 light_view = glm::lookAt(light_pos, center, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -268,11 +264,14 @@ namespace z1 {
 
 			g->sun_projview[i] = light_proj * light_view;
 		}
+	}
 
-		g->flush();
-		g->bind();
+	void RendererForward::add_shadow_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene) {
+		auto& g = g_runtime_context.m_global;
+		RenderPass::Description desc;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
+		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
 
-		// Shadow pass: render depth from sun's POV into a dedicated framebuffer
 		for (int cascade = 0; cascade < CSM_LAYERS; ++cascade) {
 			rg.add_pass(std::string("shadow-CSM") + std::to_string(cascade))
 				.set_output(m_shadow_framebuffer)
@@ -280,7 +279,7 @@ namespace z1 {
 				.pre_pass([&, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
 					m_shadow_framebuffer->set_attachment_layer(0, cascade);
 				})
-				.execute([&, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
+				.execute([this, cascade, scene, &g](RenderGraphNode& node, GraphicsContext& ctx) {
 					m_pipeline_shadow->bind();
 					auto& s = m_pipeline_shadow->m_shader;
 					s->set_uniform_block_binding("Global", g->get_binding());
@@ -291,7 +290,6 @@ namespace z1 {
 					for (auto [entity, transform, mesh] : view.each()) {
 						glm::mat4 model = transform.get_world_transform();
 						s->set_uniform("u_model", &model);
-						// static shader doesn't have skinning uniform
 						mesh.m_mesh->draw();
 					}
 
@@ -316,13 +314,25 @@ namespace z1 {
 					m_pipeline_shadow->unbind();
 				});
 		}
+	}
+
+	void RendererForward::add_main_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::Clear;
+		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
+		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
+
+		auto const width = framebuffer->get_width();
+		auto const height = framebuffer->get_height();
 
 		rg.add_pass("main")
 			.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
 			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("scene-depth", ImageFormat::Depth)
-			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, scene, history_uninitialized, read_idx, width, height](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 
@@ -359,7 +369,11 @@ namespace z1 {
 						width, height);
 				}
 				});
+	}
 
+	void RendererForward::add_velocity_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview) {
+		auto& g = g_runtime_context.m_global;
+		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
 		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -371,8 +385,7 @@ namespace z1 {
 			.set_pass_desc(desc)
 			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
-			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
-				auto const& cam = scene->get_main_camera();
+			.execute([this, scene, projview, &g](RenderGraphNode& node, GraphicsContext& ctx) {
 				g->projview = projview;
 				g->flush();
 
@@ -404,18 +417,21 @@ namespace z1 {
 
 				m_pipeline_velocity->unbind();
 				});
+	}
 
+	void RendererForward::add_taa_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& history_write, std::shared_ptr<Framebuffer> const& history_read) {
+		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::DontCare;
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
 
 		rg.add_pass("taa")
-			.set_output(m_history_colors[write_idx])
+			.set_output(history_write)
 			.set_pass_desc(desc)
 			.add_input("scene-color")
 			.add_input("velocity")
-			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
-				auto& h = m_history_colors[read_idx]->get_attachment_image(0);
+			.execute([this, history_read](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto& h = history_read->get_attachment_image(0);
 				h->bind();
 
 				m_pipeline_taa->bind();
@@ -443,41 +459,25 @@ namespace z1 {
 
 				m_pipeline_taa->unbind();
 				});
+	}
 
-		/*
-		rg.add_pass("copy")
-			.set_output(m_history_color)
-			.set_pass_desc(desc)
-			.add_input("taa")
-			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
-				m_pipeline_copy->bind();
-				auto& s = m_pipeline_copy->m_shader;
-				s->set_uniform_binding(
-					"u_input",
-					node.bind_input_index(0));
-
-				m_quad->bind();
-				m_quad->draw(PrimitiveType::Triangles);
-				m_quad->unbind();
-
-				node.unbind_input_index(0);
-
-				m_pipeline_copy->unbind();
-				});
-		*/
+	void RendererForward::add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target, std::shared_ptr<Framebuffer> const& source) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::DontCare;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
 
 		rg.add_pass("postprocessing")
-			.set_output(framebuffer)
+			.set_output(target)
 			.set_pass_desc(desc)
-			// .add_input("taa")
-			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, source](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_postprocess->bind();
 				auto& s = m_pipeline_postprocess->m_shader;
 				s->set_uniform_block_binding(
 					"Global",
 					g_runtime_context.m_global->get_binding());
 
-				auto& scene = m_history_colors[write_idx]->get_attachment_image(0);
+				auto& scene = source->get_attachment_image(0);
 				scene->bind();
 				s->set_uniform_binding(
 					"u_scene",
@@ -491,14 +491,6 @@ namespace z1 {
 
 				m_pipeline_postprocess->unbind();
 				});
-
-		rg.compile();
-		rg.execute();
-
-		++s_frame_index;
-		g->unbind();
-		g->prev_projview = projview;
-
 	}
 
 }
