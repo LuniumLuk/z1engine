@@ -295,10 +295,51 @@ namespace z1 {
 		g->flush();
 		g->bind();
 
+		Frustum frustum = create_frustum(projview);
+		VisibleDrawList draw_list;
+		auto& stats = g_runtime_context.m_graphics_context->m_stats;
+
+		{
+			auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
+			for (auto [entity, transform, mesh] : view.each()) {
+				if (!mesh.m_mesh) continue;
+				if (!is_mesh_visible(frustum, transform.get_world_transform(), mesh.m_mesh->m_bound_min, mesh.m_mesh->m_bound_max)) {
+					stats.culled_objects++;
+					continue;
+				}
+
+				draw_list.static_meshes.push_back({ transform.get_world_transform(), &mesh });
+				stats.visible_objects++;
+			}
+		}
+
+		{
+			auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
+			for (auto [entity, transform, mesh] : view_skel.each()) {
+				if (!mesh.m_mesh) continue;
+
+				glm::vec3 min = mesh.m_mesh->m_bound_min;
+				glm::vec3 max = mesh.m_mesh->m_bound_max;
+
+				AnimationComponent const* anim_comp = nullptr;
+				if (scene->m_registry.all_of<AnimationComponent>(entity)) {
+					anim_comp = &scene->m_registry.get<AnimationComponent>(entity);
+					get_skeletal_bounds(mesh, *anim_comp, min, max);
+				}
+
+				if (!is_mesh_visible(frustum, transform.get_world_transform(), min, max)) {
+					stats.culled_objects++;
+					continue;
+				}
+				draw_list.skeletal_meshes.push_back({ transform.get_world_transform(), &mesh, anim_comp });
+				stats.visible_objects++;
+			}
+		}
+
 		RenderGraph rg;
 		add_shadow_pass(rg, scene);
-		add_main_pass(rg, scene, framebuffer, history_uninitialized, read_idx, projview);
-		add_velocity_pass(rg, scene, framebuffer, projview);
+		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview);
+		add_velocity_pass(rg, draw_list, scene, framebuffer, projview);
 		add_taa_pass(rg, m_history_colors[write_idx], m_history_colors[read_idx]);
 		add_postprocess_pass(rg, framebuffer, m_history_colors[write_idx]);
 
@@ -440,7 +481,7 @@ namespace z1 {
 		}
 	}
 
-	void RendererForward::add_main_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview) {
+	void RendererForward::add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
@@ -456,51 +497,26 @@ namespace z1 {
 			.set_pass_desc(desc)
 			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("scene-depth", ImageFormat::Depth)
-			.execute([this, scene, history_uninitialized, read_idx, width, height, projview](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, &draw_list, scene, history_uninitialized, read_idx, width, height, projview](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 
 				m_lights_buffer->bind();
 				per_frame.lights_binding = m_lights_buffer->get_binding();
 
-				Frustum frustum = create_frustum(projview);
-
-				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
-				for (auto [entity, transform, mesh] : view.each()) {
-					if (!mesh.m_mesh) continue;
-					if (!is_mesh_visible(frustum, transform.get_world_transform(), mesh.m_mesh->m_bound_min, mesh.m_mesh->m_bound_max)) {
-						ctx.m_stats.culled_objects += 1;
-						continue;
-					}
-					per_frame.model = transform.get_world_transform();
-					mesh.m_mesh->draw(per_frame, m_default_material);
-
-					ctx.m_stats.visible_objects += 1;
+				for (auto const& item : draw_list.static_meshes) {
+					per_frame.model = item.transform;
+					item.mesh->m_mesh->draw(per_frame, m_default_material);
 				}
 
-				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
-				for (auto [entity, transform, mesh] : view_skel.each()) {
-					if (!mesh.m_mesh) continue;
-
-					glm::vec3 min = mesh.m_mesh->m_bound_min;
-					glm::vec3 max = mesh.m_mesh->m_bound_max;
-
+				for (auto const& item : draw_list.skeletal_meshes) {
 					std::shared_ptr<UniformBuffer> bones = nullptr;
-					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
-						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-						bones = anim.bone_ubo;
-						get_skeletal_bounds(mesh, anim, min, max);
+					if (item.anim) {
+						bones = item.anim->bone_ubo;
 					}
 
-					if (!is_mesh_visible(frustum, transform.get_world_transform(), min, max)) {
-						ctx.m_stats.culled_objects += 1;
-						continue;
-					}
-					per_frame.model = transform.get_world_transform();
-
-					mesh.m_mesh->draw(per_frame, m_default_material, bones);
-
-					ctx.m_stats.visible_objects += 1;
+					per_frame.model = item.transform;
+					item.mesh->m_mesh->draw(per_frame, m_default_material, bones);
 				}
 
 				auto sky_view = scene->m_registry.view<SkyLightComponent const>();
@@ -542,7 +558,7 @@ namespace z1 {
 				});
 	}
 
-	void RendererForward::add_velocity_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview) {
+	void RendererForward::add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview) {
 		auto& g = g_runtime_context.m_global;
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
@@ -556,7 +572,7 @@ namespace z1 {
 			.set_pass_desc(desc)
 			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
-			.execute([this, scene, projview, &g](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, &draw_list, projview, &g](RenderGraphNode& node, GraphicsContext& ctx) {
 
 				auto jittered_projview = g->projview;
 				g->projview = projview;
@@ -566,59 +582,40 @@ namespace z1 {
 				auto& s = m_pipeline_velocity->m_shader;
 				s->set_uniform_block_binding("Global", g->get_binding());
 
-				Frustum frustum = create_frustum(projview);
-
 				int has_skinning = 0;
 				int use_prev_bones = 0;
 				s->set_uniform("u_has_skinning", &has_skinning);
 				s->set_uniform("u_use_prev_bones", &use_prev_bones);
 
-				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
-				for (auto [entity, transform, mesh] : view.each()) {
-					if (!mesh.m_mesh) continue;
-					if (!is_mesh_visible(frustum, transform.get_world_transform(), mesh.m_mesh->m_bound_min, mesh.m_mesh->m_bound_max)) continue;
-					s->set_uniform("u_model", &transform.get_world_transform());
-					mesh.m_mesh->draw();
+				for (auto const& item : draw_list.static_meshes) {
+					s->set_uniform("u_model", &item.transform);
+					item.mesh->m_mesh->draw();
 				}
 
-				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
-				for (auto [entity, transform, mesh] : view_skel.each()) {
-					if (!mesh.m_mesh) continue;
-
-					glm::vec3 min = mesh.m_mesh->m_bound_min;
-					glm::vec3 max = mesh.m_mesh->m_bound_max;
-
-					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
-						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-						get_skeletal_bounds(mesh, anim, min, max);
-					}
-
-					if (!is_mesh_visible(frustum, transform.get_world_transform(), min, max)) continue;
-
+				for (auto const& item : draw_list.skeletal_meshes) {
 					has_skinning = 0;
 					use_prev_bones = 0;
-					s->set_uniform("u_model", &transform.get_world_transform());
-					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
-						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-						if (anim.bone_ubo) {
+					s->set_uniform("u_model", &item.transform);
+
+					if (item.anim) {
+						if (item.anim->bone_ubo) {
 							has_skinning = 1;
-							anim.bone_ubo->bind();
-							s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
-							if (g->anim_enabled && g->taa_animated && anim.prev_bone_ubo) {
-								anim.prev_bone_ubo->bind();
-								s->set_uniform_block_binding("PrevBones", anim.prev_bone_ubo->get_binding());
+							item.anim->bone_ubo->bind();
+							s->set_uniform_block_binding("Bones", item.anim->bone_ubo->get_binding());
+							if (g->anim_enabled && g->taa_animated && item.anim->prev_bone_ubo) {
+								item.anim->prev_bone_ubo->bind();
+								s->set_uniform_block_binding("PrevBones", item.anim->prev_bone_ubo->get_binding());
 								use_prev_bones = 1;
 							}
 						}
 					}
 					s->set_uniform("u_has_skinning", &has_skinning);
 					s->set_uniform("u_use_prev_bones", &use_prev_bones);
-					mesh.m_mesh->draw();
+					item.mesh->m_mesh->draw();
 					if (has_skinning) {
-						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-						anim.bone_ubo->unbind();
+						item.anim->bone_ubo->unbind();
 						if (use_prev_bones)
-							anim.prev_bone_ubo->unbind();
+							item.anim->prev_bone_ubo->unbind();
 					}
 				}
 

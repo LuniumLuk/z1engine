@@ -22,11 +22,32 @@ namespace z1 {
 		float low_1_percent = 0.0f;
 		float frame_time = 0.0f;
 
+		std::vector<std::pair<std::string, uint32_t>> counters;
+		uint32_t* current_counter = nullptr;
+
 		void reset() {
 			draw_calls = 0;
 			visible_objects = 0;
 			culled_objects = 0;
+			counters.clear();
+			current_counter = nullptr;
 		}
+
+		void begin_counter(std::string const& name) {
+			counters.push_back({ name, 0 });
+			current_counter = &counters.back().second;
+		}
+
+		void end_counter() {
+			current_counter = nullptr;
+		}
+
+		void increment_counter(uint32_t value = 1) {
+			if (current_counter)
+				*current_counter += value;
+			draw_calls += value;
+		}
+
 	};
 
 	struct API GraphicsContext {

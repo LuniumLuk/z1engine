@@ -78,7 +78,7 @@ namespace z1 {
 		else {
 			glDrawArrays(primitive_type_to_opengl_type(type), 0, num == NUM_MAX ? m_element_count : num);
 		}
-		g_runtime_context.m_graphics_context->m_stats.draw_calls += 1;
+		g_runtime_context.m_graphics_context->m_stats.increment_counter();
 	}
 
 	void OpenGLVertexArray::draw_instanced(PrimitiveType type, uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) {
@@ -94,7 +94,7 @@ namespace z1 {
 		else {
 			glDrawArraysInstanced(primitive_type_to_opengl_type(type), 0, (uint32_t)m_element_count, num);
 		}
-		g_runtime_context.m_graphics_context->m_stats.draw_calls += 1;
+		g_runtime_context.m_graphics_context->m_stats.increment_counter();
 	}
 
 }

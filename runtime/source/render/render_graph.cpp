@@ -290,6 +290,7 @@ namespace z1 {
 			auto& node = m_nodes[i];
 
 			ctx->push_debug_group(node.m_name);
+			ctx->m_stats.begin_counter(node.m_name);
 
 			ctx->bind_framebuffer(node.m_output);
 			node.m_render_pass->execute = [&](GraphicsContext& ctx) {
@@ -302,6 +303,7 @@ namespace z1 {
 				node.m_post_pass_func(node, *ctx);
 
 			ctx->pop_debug_group();
+			ctx->m_stats.end_counter();
 		}
 	}
 
