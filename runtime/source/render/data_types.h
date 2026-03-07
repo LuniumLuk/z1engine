@@ -7,22 +7,23 @@ namespace z1 {
 	// define enum by X Macro.
 	// reference: https://digitalmars.com/articles/b51.html
 
-	//        Name,        Size,      ElementCount
-#define DATA_TYPE_LIST                              \
-			X(None,        0,         0           ) \
-			X(Float,       4,         1           ) \
-			X(Float2,      4 * 2,     2           ) \
-			X(Float3,      4 * 3,     3           ) \
-			X(Float4,      4 * 4,     4           ) \
-			X(Int,         4,         1           ) \
-			X(Int2,        4 * 2,     2           ) \
-			X(Int3,        4 * 3,     3           ) \
-			X(Int4,        4 * 4,     4           ) \
-			X(Mat3,        4 * 3 * 3, 3           ) \
-			X(Mat4,        4 * 4 * 4, 4           ) \
-			X(Bool,        1,         1           ) \
-			X(Sampler2D,   4,         1           ) \
-			X(SamplerCube, 4,         1           )
+	//        Name,           Size,      ElementCount
+#define DATA_TYPE_LIST                                 \
+			X(None,           0,         0           ) \
+			X(Float,          4,         1           ) \
+			X(Float2,         4 * 2,     2           ) \
+			X(Float3,         4 * 3,     3           ) \
+			X(Float4,         4 * 4,     4           ) \
+			X(Int,            4,         1           ) \
+			X(Int2,           4 * 2,     2           ) \
+			X(Int3,           4 * 3,     3           ) \
+			X(Int4,           4 * 4,     4           ) \
+			X(Mat3,           4 * 3 * 3, 3           ) \
+			X(Mat4,           4 * 4 * 4, 4           ) \
+			X(Bool,           1,         1           ) \
+			X(Sampler2D,      4,         1           ) \
+			X(Sampler2DArray, 4,         1           ) \
+			X(SamplerCube,    4,         1           )
 
 	enum struct API DataType {
 #define X(name, size, count) name,

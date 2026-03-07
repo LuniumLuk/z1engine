@@ -20,6 +20,7 @@ namespace z1 {
 		void read_pixels(uint32_t attachment, uint32_t x, uint32_t y, uint32_t width, uint32_t height, void* data) const override;
 
 		void bind_attachment(uint32_t index, uint32_t binding) const override;
+		void set_attachment_layer(uint32_t index, int layer) override;
 
 		std::shared_ptr<Image> get_attachment_image(uint32_t attachment) const override;
 
@@ -32,7 +33,7 @@ namespace z1 {
 
 		uint32_t m_handle = 0;
 		std::vector<GLenum> m_attachment_ids;
-		std::vector<std::shared_ptr<Image2D>> m_attachment_images;
+		std::vector<std::shared_ptr<Image>> m_attachment_images;
 		uint32_t m_depth_stencil_attachment_index = INVALID_INDEX;
 	};
 
@@ -49,6 +50,7 @@ namespace z1 {
 		void read_pixels(uint32_t attachment, uint32_t x, uint32_t y, uint32_t width, uint32_t height, void* data) const override {};
 
 		void bind_attachment(uint32_t index, uint32_t binding) const override {}
+		void set_attachment_layer(uint32_t index, int layer) override {}
 
 		std::shared_ptr<Image> get_attachment_image(uint32_t attachment) const override { return nullptr; }
 

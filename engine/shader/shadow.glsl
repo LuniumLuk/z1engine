@@ -4,6 +4,7 @@
 
 @stage: vert {
 #define SHADOW
+	uniform int u_csm_index;
 	#include <common/vert.glsl>
 }
 

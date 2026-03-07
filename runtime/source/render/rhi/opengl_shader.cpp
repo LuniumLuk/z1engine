@@ -19,6 +19,7 @@ namespace z1 {
 		case GL_FLOAT_MAT4: return DataType::Mat4;
 		case GL_BOOL: return DataType::Bool;
 		case GL_SAMPLER_2D: return DataType::Sampler2D;
+		case GL_SAMPLER_2D_ARRAY: return DataType::Sampler2DArray;
 		case GL_SAMPLER_CUBE: return DataType::SamplerCube;
 		}
 		CORE_ASSERT(false, "unknown data type!");
@@ -160,6 +161,7 @@ namespace z1 {
 		case DataType::Mat3: set_mat3(m_uniforms[index].m_location, *(glm::mat3*)data); return;
 		case DataType::Mat4: set_mat4(m_uniforms[index].m_location, *(glm::mat4*)data); return;
 		case DataType::Sampler2D:
+		case DataType::Sampler2DArray:
 		case DataType::SamplerCube:
 			if (m_uniforms[index].m_count == 1) {
 				set_int(m_uniforms[index].m_location, *(int*)data);
@@ -180,6 +182,7 @@ namespace z1 {
 		uint32_t index = it->second;
 		switch (m_uniforms[index].m_type) {
 		case DataType::Sampler2D:
+		case DataType::Sampler2DArray:
 		case DataType::SamplerCube:
 			set_int(m_uniforms[index].m_location, binding); return;
 		}
@@ -230,6 +233,7 @@ namespace z1 {
 			case DataType::Bool:
 				glGetUniformiv(m_handle, m_uniforms[index].m_location, (GLint*)ptr); return;
 			case DataType::Sampler2D:
+			case DataType::Sampler2DArray:
 			case DataType::SamplerCube:
 				glGetUniformiv(m_handle, m_uniforms[index].m_location, (GLint*)ptr); return;
 			}
@@ -272,6 +276,7 @@ namespace z1 {
 			uint32_t index = it->second;
 			switch (m_uniforms[index].m_type) {
 			case DataType::Sampler2D:
+			case DataType::Sampler2DArray:
 			case DataType::SamplerCube:
 				glGetUniformiv(m_handle, m_uniforms[index].m_location, (GLint*)&binding);
 			}

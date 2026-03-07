@@ -17,6 +17,7 @@ namespace z1 {
 		if (type_str == "mat3") return DataType::Mat3;
 		if (type_str == "mat4") return DataType::Mat4;
 		if (type_str == "sampler2D") return DataType::Sampler2D;
+		if (type_str == "sampler2DArray") return DataType::Sampler2DArray;
 		if (type_str == "samplerCube") return DataType::SamplerCube;
 		return DataType::None; // unknown type
 	}
@@ -226,6 +227,7 @@ namespace z1 {
 				}
 				break;
 			default:
+				DEBUG_CHECK(false);
 				CORE_WARN("unsupported material variable type: {0}", get_data_type_name(var.type));
 				break;
 			}

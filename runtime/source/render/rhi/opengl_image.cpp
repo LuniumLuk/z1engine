@@ -144,6 +144,71 @@ namespace z1 {
 			data);
 	}
 
+	// OpenGLImage2DArray definitions
+	// --------------------------------------------------
+
+	OpenGLImage2DArray::OpenGLImage2DArray(void const* data, size_t size, Description const& desc) {
+		m_description = desc;
+		CORE_ASSERT(desc.m_depth > 1, "Image2DArray must have more than 1 layer!");
+
+		glGenTextures(1, &m_handle);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, m_handle);
+
+		CORE_ASSERT((size == 0) | (size == m_description.m_width * m_description.m_height * m_description.m_depth * image_format_to_opengl_data_size(m_description.m_format)),
+			"data size must match the whole image!");
+
+		glTexImage3D(
+			GL_TEXTURE_2D_ARRAY, 0,
+			image_format_to_opengl_internal_format(desc.m_format),
+			desc.m_width, desc.m_height, desc.m_depth, 0,
+			image_format_to_opengl_format(desc.m_format),
+			image_format_to_opengl_data_type(desc.m_format),
+			data);
+
+		if (desc.m_mipmap) {
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, sampler_mode_to_opengl_mipmap_type(desc.m_sampler_mode));
+		}
+		else {
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, sampler_mode_to_opengl_type(desc.m_sampler_mode));
+		}
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, sampler_mode_to_opengl_type(desc.m_sampler_mode));
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, wrap_mode_to_opengl_type(desc.m_wrap_mode));
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, wrap_mode_to_opengl_type(desc.m_wrap_mode));
+
+		if (desc.m_mipmap) {
+			glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+		}
+
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	}
+
+	OpenGLImage2DArray::~OpenGLImage2DArray() {
+		if (m_handle == 0) return;
+		glDeleteTextures(1, &m_handle);
+	}
+
+	void OpenGLImage2DArray::bind(uint32_t binding) const {
+		glActiveTexture(GL_TEXTURE0 + binding);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, m_handle);
+	}
+
+	void OpenGLImage2DArray::unbind(uint32_t binding) const {
+		glActiveTexture(GL_TEXTURE0 + binding);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	}
+
+	void OpenGLImage2DArray::write(void const* data, size_t size) const {
+		PROFILE_FUNCTION();
+		size_t bytePerPixel = image_format_to_opengl_data_size(m_description.m_format);
+		CORE_ASSERT(size == m_description.m_width * m_description.m_height * m_description.m_depth * bytePerPixel, "data size must match the whole image!");
+		glTextureSubImage3D(
+			m_handle, 0, 0, 0, 0,
+			m_description.m_width, m_description.m_height, m_description.m_depth,
+			image_format_to_opengl_format(m_description.m_format),
+			image_format_to_opengl_data_type(m_description.m_format),
+			data);
+	}
+
 	static void* GetDataFromFaces(GLenum target, ImageCube::Faces const& data) {
 		switch (target) {
 		case GL_TEXTURE_CUBE_MAP_POSITIVE_X: return data.m_right;

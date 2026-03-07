@@ -978,6 +978,7 @@ private:
 					case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
 					case DataType::Int4: ImGui::InputInt4(("##" + name).c_str(), var.default_value.ivec); break;
 					case DataType::Sampler2D: ImGui::Text(name.c_str()); break;
+					case DataType::Sampler2DArray: ImGui::Text(name.c_str()); break;
 					case DataType::SamplerCube: ImGui::Text(name.c_str()); break;
 					}
 

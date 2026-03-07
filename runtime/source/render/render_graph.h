@@ -25,7 +25,9 @@ namespace z1 {
 		RenderGraphNode& set_output(std::shared_ptr<Framebuffer> const& framebuffer);
 		RenderGraphNode& set_pass_desc(RenderPass::Description const& desc);
 
+		RenderGraphNode& pre_pass(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func);
 		RenderGraphNode& execute(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func);
+		RenderGraphNode& post_pass(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func);
 
 		uint32_t bind_input_index(uint32_t index);
 		uint32_t bind_input_name(std::string const& name);
@@ -61,7 +63,9 @@ namespace z1 {
 		std::unordered_map<int, std::pair<RenderGraphNode*, int>> m_inputs_by_index;
 		std::shared_ptr<RenderPass> m_render_pass;
 
+		std::function<void(RenderGraphNode&, GraphicsContext&)> m_pre_pass_func;
 		std::function<void(RenderGraphNode&, GraphicsContext&)> m_exec_func;
+		std::function<void(RenderGraphNode&, GraphicsContext&)> m_post_pass_func;
 	};
 
 	struct API RenderGraph {

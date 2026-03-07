@@ -19,6 +19,7 @@ namespace z1 {
 		//glm::vec3 sun_intensity;
 		uint32_t global_binding;
 		uint32_t lights_binding;
+		uint32_t shadow_map_binding;
 	};
 
 	struct API Material : Asset<Material> {

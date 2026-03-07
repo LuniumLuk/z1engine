@@ -54,6 +54,30 @@ namespace z1 {
 		return std::shared_ptr<Image2D>(new OpenGLImage2D(data, size, desc));
 	}
 
+	std::shared_ptr<Image2DArray> Image2DArray::create(
+		void const* data,
+		size_t size,
+		uint32_t width,
+		uint32_t height,
+		uint32_t layers,
+		ImageFormat format,
+		SamplerMode sampler_mode,
+		WrapMode wrap_mode,
+		bool mipmap) {
+		PROFILE_FUNCTION();
+
+		Description desc{};
+		desc.m_width = width;
+		desc.m_height = height;
+		desc.m_depth = layers;
+		desc.m_format = format;
+		desc.m_sampler_mode = sampler_mode;
+		desc.m_wrap_mode = wrap_mode;
+		desc.m_mipmap = mipmap;
+
+		return std::shared_ptr<Image2DArray>(new OpenGLImage2DArray(data, size, desc));
+	}
+
 	std::shared_ptr<ImageCube> ImageCube::create(
 		Faces data,
 		size_t size,

@@ -49,7 +49,7 @@ void main() {
 
 	vec3 world_position = (u_model * local_position).xyz;
 #ifdef SHADOW
-	gl_Position = u_sun_projview * vec4(world_position, 1.0);
+	gl_Position = u_sun_projview[u_csm_index] * vec4(world_position, 1.0);
 #else
 	gl_Position = u_projview * vec4(world_position, 1.0);
 #endif

@@ -14,7 +14,8 @@ uniform mat4 u_model;
 layout (std140) uniform Global {
 	mat4  u_projview;
 	mat4  u_prev_projview;
-	mat4  u_sun_projview;
+	mat4  u_sun_projview[4];
+	vec4  u_csm_splits;
 	vec4  u_sun_direction;
 	vec4  u_sun_intensity;
 	vec4  u_sun_ambient;
@@ -26,7 +27,7 @@ layout (std140) uniform Global {
 	vec4  u_pp_tint;
 };
 
-uniform sampler2D u_shadow_map;
+uniform sampler2DArray u_shadow_map;
 
 struct Light {
 	vec4 position;  // w = type (0:dir, 1:point, 2:spot)

@@ -150,6 +150,19 @@ namespace z1 {
 			bool mipmap = true);
 	};
 
+	struct API Image2DArray : Image {
+		static std::shared_ptr<Image2DArray> create(
+			void const* data,
+			size_t size,
+			uint32_t width,
+			uint32_t height,
+			uint32_t layers,
+			ImageFormat format = ImageFormat::RGBA8,
+			SamplerMode sampler_mode = SamplerMode::Linear,
+			WrapMode wrap_mode = WrapMode::Repeat,
+			bool mipmap = true);
+	};
+
 	struct API ImageCube : Image {
 		struct Faces {
 			void* m_right;

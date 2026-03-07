@@ -13,6 +13,7 @@ namespace z1 {
 			ImageFormat format;
 			SamplerMode sampler_mode;
 			WrapMode wrap_mode;
+			uint32_t layers = 1;
 		};
 
 		struct Description {
@@ -32,6 +33,7 @@ namespace z1 {
 		virtual void read_pixels(uint32_t attachment, uint32_t x, uint32_t y, uint32_t width, uint32_t height, void* data) const = 0;
 
 		virtual void bind_attachment(uint32_t index, uint32_t binding) const = 0;
+		virtual void set_attachment_layer(uint32_t index, int layer) = 0;
 
 		virtual void* get_native_handle() const = 0;
 		virtual void* get_attachment_native_handle(uint32_t attachment) const = 0;

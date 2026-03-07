@@ -15,6 +15,8 @@
 #include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
 
+#define CSM_LAYERS 4
+
 namespace z1 {
 
 	static float halton(int index, int base) {
@@ -91,7 +93,12 @@ namespace z1 {
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/shadow");
 			m_pipeline_shadow = Pipeline::build(desc);
 			const uint32_t shadow_res = 2048;
-			m_shadow_framebuffer = Framebuffer::create(shadow_res, shadow_res, { { ImageFormat::Depth, SamplerMode::Nearest, WrapMode::ClampToBorder } });
+			Framebuffer::Attachment attachment;
+			attachment.format = ImageFormat::Depth;
+			attachment.sampler_mode = SamplerMode::Nearest;
+			attachment.wrap_mode = WrapMode::ClampToBorder;
+			attachment.layers = 4;
+			m_shadow_framebuffer = Framebuffer::create(shadow_res, shadow_res, { attachment });
 			// cache the depth attachment image for binding
 			m_shadow_image = m_shadow_framebuffer->get_attachment_image(0);
 		}
@@ -203,51 +210,112 @@ namespace z1 {
 		lights_block.count.x = (float)light_count;
 		m_lights_buffer->write(&lights_block, sizeof(LightsBlock));
 
-		// compute light projection (simple orthographic)
-		float ortho_size = g->sm_ortho_size;
+		lights_block.count.x = (float)light_count;
+		m_lights_buffer->write(&lights_block, sizeof(LightsBlock));
+
+		// CSM Splits
+		float near_clip = camera_comp.m_near;
+		float far_clip = camera_comp.m_far;
+		float split_lambda = 0.95f;
+
+		float splits[5] = {};
+		splits[0] = near_clip;
+		splits[4] = far_clip;
+
+		for (int i = 1; i < 4; i++) {
+			float p = (float)i / 4.0f;
+			float log = near_clip * std::pow(far_clip / near_clip, p);
+			float uniform = near_clip + (far_clip - near_clip) * p;
+			splits[i] = split_lambda * log + (1.0f - split_lambda) * uniform;
+		}
+		g->csm_splits = glm::vec4(splits[1], splits[2], splits[3], splits[4]);
+
 		glm::vec3 sun_dir = g->sun_direction;
-		glm::vec3 light_pos = cam_pos + glm::normalize(sun_dir) * ortho_size;
-		glm::mat4 light_view = glm::lookAt(light_pos, cam_pos, glm::vec3(0.0f, 1.0f, 0.0f));
-		glm::mat4 light_proj = glm::ortho(-ortho_size, ortho_size, -ortho_size, ortho_size, g->sm_near, g->sm_far);
-		g->sun_projview = light_proj * light_view;
+		// use camera frustum center for each cascade
+		glm::mat4 inv_view = glm::inverse(camera_comp.get_view());
+		glm::vec3 cam_pos_world = glm::vec3(inv_view[3]);
+		glm::vec3 cam_forward = -glm::vec3(inv_view[2]); // Forward is -Z in view space
+
+		for (int i = 0; i < CSM_LAYERS; ++i) {
+			float cascade_near = splits[i];
+			float cascade_far = splits[i + 1];
+			float mid_dist = (cascade_near + cascade_far) * 0.5f;
+
+			// Center position of the cascade frustum slice
+			glm::vec3 center = cam_pos_world + cam_forward * mid_dist;
+
+			// Calculate size of the ortho projection
+			// A simple heuristic: scale base size by cascade index
+			// Or better: fit the frustum slice.
+			// Using simpler heuristic for now: base size * 2^i
+			// But we need to make sure it covers the slice.
+			// Slice diagonal at far plane is roughly: 2 * far * tan(fov/2) * sqrt(1+aspect^2)
+			// For perspective:
+			float fov = camera_comp.m_intrinsic.fov;
+			float aspect = camera_comp.m_aspect;
+			float tan_half_fov = std::tan(glm::radians(fov) * 0.5f);
+			float far_height = 2.0f * cascade_far * tan_half_fov;
+			float far_width = far_height * aspect;
+			float diag = std::sqrt(far_height * far_height + far_width * far_width);
+
+			float size = diag * 0.5f; // half size
+
+			// Move light back to cover geometry in front of the center
+			glm::vec3 light_pos = center + glm::normalize(sun_dir) * size;
+
+			glm::mat4 light_view = glm::lookAt(light_pos, center, glm::vec3(0.0f, 1.0f, 0.0f));
+			glm::mat4 light_proj = glm::ortho(-size, size, -size, size, -size * 6.0f, size * 6.0f);
+
+			g->sun_projview[i] = light_proj * light_view;
+		}
 
 		g->flush();
 		g->bind();
 
 		// Shadow pass: render depth from sun's POV into a dedicated framebuffer
-		rg.add_pass("shadow")
-			.set_output(m_shadow_framebuffer)
-			.set_pass_desc(desc)
-			.execute([&](RenderGraphNode& node, GraphicsContext& ctx) {
-				m_pipeline_shadow->bind();
-				auto& s = m_pipeline_shadow->m_shader;
-				s->set_uniform_block_binding("Global", g->get_binding());
-				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
-				for (auto [entity, transform, mesh] : view.each()) {
-					glm::mat4 model = transform.get_world_transform();
-					s->set_uniform("u_model", &model);
-					// static shader doesn't have skinning uniform
-					mesh.m_mesh->draw();
-				}
+		for (int cascade = 0; cascade < CSM_LAYERS; ++cascade) {
+			rg.add_pass(std::string("shadow-CSM") + std::to_string(cascade))
+				.set_output(m_shadow_framebuffer)
+				.set_pass_desc(desc)
+				.pre_pass([&, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
+					m_shadow_framebuffer->set_attachment_layer(0, cascade);
+				})
+				.execute([&, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
+					m_pipeline_shadow->bind();
+					auto& s = m_pipeline_shadow->m_shader;
+					s->set_uniform_block_binding("Global", g->get_binding());
 
-				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
-				for (auto [entity, transform, mesh] : view_skel.each()) {
-					if (!mesh.m_mesh) continue;
-					glm::mat4 model = transform.get_world_transform();
-					s->set_uniform("u_model", &model);
-					int has_skinning = 0;
-					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
-						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-						if (!anim.bone_matrices.empty()) {
-							has_skinning = 1;
-							s->set_uniform("u_bone_matrices", anim.bone_matrices.data());
-						}
+					s->set_uniform("u_csm_index", &cascade);
+
+					auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
+					for (auto [entity, transform, mesh] : view.each()) {
+						glm::mat4 model = transform.get_world_transform();
+						s->set_uniform("u_model", &model);
+						// static shader doesn't have skinning uniform
+						mesh.m_mesh->draw();
 					}
-					s->set_uniform("u_has_skinning", &has_skinning);
-					mesh.m_mesh->draw();
-				}
-				m_pipeline_shadow->unbind();
-			});
+
+					auto view_skel =
+						scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
+					for (auto [entity, transform, mesh] : view_skel.each()) {
+						if (!mesh.m_mesh)
+							continue;
+						glm::mat4 model = transform.get_world_transform();
+						s->set_uniform("u_model", &model);
+						int has_skinning = 0;
+						if (scene->m_registry.all_of<AnimationComponent>(entity)) {
+							auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+							if (!anim.bone_matrices.empty()) {
+								has_skinning = 1;
+								s->set_uniform("u_bone_matrices", anim.bone_matrices.data());
+							}
+						}
+						s->set_uniform("u_has_skinning", &has_skinning);
+						mesh.m_mesh->draw();
+					}
+					m_pipeline_shadow->unbind();
+				});
+		}
 
 		rg.add_pass("main")
 			.set_resolution_as(framebuffer)

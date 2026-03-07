@@ -42,21 +42,42 @@ namespace z1 {
 
 		m_attachment_ids.clear();
 		for (auto const& attachment : m_attachments) {
-			auto image = Image2D::create(
-				nullptr, 0,
-				m_description.width,
-				m_description.height,
-				attachment.format,
-				attachment.sampler_mode,
-				attachment.wrap_mode,
-				false);
+			std::shared_ptr<Image> image;
+			if (attachment.layers > 1) {
+				image = Image2DArray::create(
+					nullptr, 0,
+					m_description.width,
+					m_description.height,
+					attachment.layers,
+					attachment.format,
+					attachment.sampler_mode,
+					attachment.wrap_mode,
+					false);
+			}
+			else {
+				image = Image2D::create(
+					nullptr, 0,
+					m_description.width,
+					m_description.height,
+					attachment.format,
+					attachment.sampler_mode,
+					attachment.wrap_mode,
+					false);
+			}
 			auto attachment_id = image_format_to_attachment_type(attachment.format, binding);
 
 			GLuint native_handle = (GLuint)reinterpret_cast<uintptr_t>(image->get_native_handle());
 
-			glBindTexture(GL_TEXTURE_2D, native_handle);
-			glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, native_handle, 0);
-			glBindTexture(GL_TEXTURE_2D, 0);
+			if (attachment.layers > 1) {
+				glBindTexture(GL_TEXTURE_2D_ARRAY, native_handle);
+				glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, native_handle, 0);
+				glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+			}
+			else {
+				glBindTexture(GL_TEXTURE_2D, native_handle);
+				glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, native_handle, 0);
+				glBindTexture(GL_TEXTURE_2D, 0);
+			}
 
 			m_attachment_ids.push_back(attachment_id);
 
@@ -137,7 +158,30 @@ namespace z1 {
 
 		GLuint native_handle = (GLuint)reinterpret_cast<uintptr_t>(m_attachment_images[index]->get_native_handle());
 		glActiveTexture(GL_TEXTURE0 + binding);
-		glBindTexture(GL_TEXTURE_2D, native_handle);
+
+		if (m_attachments[index].layers > 1) {
+			glBindTexture(GL_TEXTURE_2D_ARRAY, native_handle);
+		}
+		else {
+			glBindTexture(GL_TEXTURE_2D, native_handle);
+		}
+	}
+
+	void OpenGLFramebuffer::set_attachment_layer(uint32_t index, int layer) {
+		if (index >= m_attachment_images.size()) return;
+		auto id = m_attachment_ids[index];
+		auto image = m_attachment_images[index];
+		GLuint texture = (GLuint)reinterpret_cast<uintptr_t>(image->get_native_handle());
+
+		//bind();
+		if (layer < 0) {
+			// Attach whole texture (if layered, it attaches all layers)
+			glFramebufferTexture(GL_FRAMEBUFFER, id, texture, 0);
+		}
+		else {
+			glFramebufferTextureLayer(GL_FRAMEBUFFER, id, texture, 0, layer);
+		}
+		//unbind();
 	}
 
 	std::shared_ptr<Image> OpenGLFramebuffer::get_attachment_image(uint32_t attachment) const {

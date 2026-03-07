@@ -48,8 +48,18 @@ namespace z1 {
 		return *this;
 	}
 
+	RenderGraphNode& RenderGraphNode::pre_pass(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func) {
+		m_pre_pass_func = func;
+		return *this;
+	}
+
 	RenderGraphNode& RenderGraphNode::execute(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func) {
 		m_exec_func = func;
+		return *this;
+	}
+
+	RenderGraphNode& RenderGraphNode::post_pass(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func) {
+		m_post_pass_func = func;
 		return *this;
 	}
 
@@ -271,7 +281,11 @@ namespace z1 {
 			node.m_render_pass->execute = [&](GraphicsContext& ctx) {
 				node.m_exec_func(node, ctx);
 				};
+			if (node.m_pre_pass_func)
+				node.m_pre_pass_func(node, *ctx);
 			ctx->exec_render_pass(node.m_render_pass);
+			if (node.m_post_pass_func)
+				node.m_post_pass_func(node, *ctx);
 
 			ctx->pop_debug_group();
 		}

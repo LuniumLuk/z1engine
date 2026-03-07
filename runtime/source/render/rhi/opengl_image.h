@@ -35,6 +35,22 @@ namespace z1 {
 		uint32_t m_handle = 0;
 	};
 
+	struct OpenGLImage2DArray : Image2DArray {
+		friend struct OpenGLFramebuffer;
+
+		OpenGLImage2DArray(void const* data, size_t size, Description const& desc);
+		~OpenGLImage2DArray() override;
+
+		void bind(uint32_t binding) const override;
+		void unbind(uint32_t binding) const override;
+		void write(void const* data, size_t size) const override;
+
+		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
+
+	private:
+		uint32_t m_handle = 0;
+	};
+
 	struct OpenGLImageCube : ImageCube {
 		OpenGLImageCube(Faces data, size_t size, Description const& desc);
 		~OpenGLImageCube() override;

@@ -197,52 +197,49 @@ const float k_light_radius = 0.3;
 const float k_max_filter_radius = 6.0;
 const float k_blocker_search_radius = 2.5;
 
-float sample_shadow(vec2 uv, float depth) {
+float sample_shadow(vec3 uv, float depth) {
 	return depth - k_shadow_bias > texture(u_shadow_map, uv).r ? 0.0 : 1.0;
 }
 
-float sample_shadow_pcf(vec2 uv, float depth) {
-	ivec2 tex_size = textureSize(u_shadow_map, 0);
+float sample_shadow_pcf(vec3 uv, float depth) {
+	ivec3 tex_size = textureSize(u_shadow_map, 0);
 
 	int u0 = int(floor(uv.x * tex_size.x));
 	int v0 = int(floor(uv.y * tex_size.y));
 	int u1 = u0 + 1;
 	int v1 = v0 + 1;
-	vec2 uv00 = (vec2(u0, v0) + 0.5) / vec2(tex_size);
-	vec2 uv10 = (vec2(u1, v0) + 0.5) / vec2(tex_size);
-	vec2 uv01 = (vec2(u0, v1) + 0.5) / vec2(tex_size);
-	vec2 uv11 = (vec2(u1, v1) + 0.5) / vec2(tex_size);
+	// vec2 uv00 = (vec2(u0, v0) + 0.5) / vec2(tex_size.xy);
 
 	float sum = 0.0;
-	sum += texelFetch(u_shadow_map, ivec2(u0, v0), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec2(u1, v0), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec2(u0, v1), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec2(u1, v1), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec3(u0, v0, uv.z), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec3(u1, v0, uv.z), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec3(u0, v1, uv.z), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec3(u1, v1, uv.z), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
 	return sum * 0.25;
 }
 
-float pcf_filter(vec2 uv, float depth, vec2 texel_size, float radius) {
+float pcf_filter(vec3 uv, float depth, vec2 texel_size, float radius) {
 	float shadow = 0.0;
 	float samples = 0.0;
 	vec2 scaled = texel_size * radius;
 	for (int x = -1; x <= 1; ++x) {
 		for (int y = -1; y <= 1; ++y) {
 			vec2 offset = vec2(float(x), float(y)) * scaled;
-			shadow += sample_shadow(uv + offset, depth);
+			shadow += sample_shadow(vec3(uv.xy + offset, uv.z), depth);
 			samples += 1.0;
 		}
 	}
 	return shadow / samples;
 }
 
-float find_blockers(vec2 uv, float depth, vec2 texel_size) {
+float find_blockers(vec3 uv, float depth, vec2 texel_size) {
 	float sum = 0.0;
 	float count = 0.0;
 	vec2 scaled = texel_size * k_blocker_search_radius;
 	for (int x = -2; x <= 2; ++x) {
 		for (int y = -2; y <= 2; ++y) {
 			vec2 offset = vec2(float(x), float(y)) * scaled;
-			float sampled = texture(u_shadow_map, uv + offset).r;
+			float sampled = texture(u_shadow_map, vec3(uv.xy + offset, uv.z)).r;
 			if (sampled < depth - k_shadow_bias) {
 				sum += sampled;
 				count += 1.0;
@@ -252,16 +249,28 @@ float find_blockers(vec2 uv, float depth, vec2 texel_size) {
 	return count > 0.0 ? sum / count : 0.0;
 }
 
-float get_shadow() {
-	vec4 ls = u_sun_projview * vec4(v_world_position, 1.0);
-	vec3 proj = ls.xyz / ls.w;
-	vec2 uv = proj.xy * 0.5 + 0.5;
-	float current_depth = proj.z * 0.5 + 0.5;
-	if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-		return 1.0;
-	}
+int get_cascade_index(vec3 world_pos) {
+	float dist = distance(u_cam_position.xyz, world_pos);
+	if (dist < u_csm_splits.x) return 0;
+	if (dist < u_csm_splits.y) return 1;
+	if (dist < u_csm_splits.z) return 2;
+	return 3;
+}
 
-	vec2 texel_size = 1.0 / vec2(textureSize(u_shadow_map, 0));
+float get_shadow() {
+	int layer = get_cascade_index(v_world_position);
+
+	vec4 ls = u_sun_projview[layer] * vec4(v_world_position, 1.0);
+	vec3 proj = ls.xyz / ls.w;
+	vec3 uv = vec3(proj.xy * 0.5 + 0.5, float(layer));
+	float current_depth = proj.z * 0.5 + 0.5;
+
+	// Check if point is outside the shadow map bounds
+	// if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+	// 	return 1.0;
+	// }
+
+	vec2 texel_size = 1.0 / vec2(textureSize(u_shadow_map, 0).xy);
 	float blockers = find_blockers(uv, current_depth, texel_size);
 	if (blockers == 0.0) {
 		return pcf_filter(uv, current_depth, texel_size, 1.0);
