@@ -858,6 +858,7 @@ namespace z1 {
 			Bone bone;
 			bone.name = node.name;
 			bone.id = static_cast<int>(i); // Bone index in skeleton
+			bone.node_index = node_idx;
 			bone.local_bind_transform = get_transform(node);
 
 			// Find parent
@@ -931,6 +932,7 @@ namespace z1 {
 			yaml << YAML::BeginMap;
 			yaml << YAML::Key << "name" << YAML::Value << bone.name;
 			yaml << YAML::Key << "id" << YAML::Value << bone.id;
+			yaml << YAML::Key << "node_index" << YAML::Value << bone.node_index;
 			yaml << YAML::Key << "parent_id" << YAML::Value << bone.parent_id;
 			yaml << YAML::Key << "offset_matrix" << YAML::Value << bone.offset_matrix;
 			yaml << YAML::Key << "local_bind_transform" << YAML::Value << bone.local_bind_transform;

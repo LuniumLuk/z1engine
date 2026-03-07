@@ -25,6 +25,7 @@ namespace z1 {
 				Bone bone;
 				bone.name = n["name"].as<std::string>();
 				bone.id = n["id"].as<int>();
+				bone.node_index = n["node_index"] ? n["node_index"].as<int>() : -1;
 				bone.parent_id = n["parent_id"].as<int>();
 				bone.offset_matrix = n["offset_matrix"].as<glm::mat4>();
 				if (n["local_bind_transform"]) {

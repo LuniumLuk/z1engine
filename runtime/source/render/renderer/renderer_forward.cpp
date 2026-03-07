@@ -295,21 +295,22 @@ namespace z1 {
 
 					s->set_uniform("u_csm_index", &cascade);
 
+					int has_skinning = 0;
 					auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 					for (auto [entity, transform, mesh] : view.each()) {
 						glm::mat4 model = transform.get_world_transform();
 						s->set_uniform("u_model", &model);
+						s->set_uniform("u_has_skinning", &has_skinning);
 						mesh.m_mesh->draw();
 					}
 
-					auto view_skel =
-						scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
+					auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
 					for (auto [entity, transform, mesh] : view_skel.each()) {
 						if (!mesh.m_mesh)
 							continue;
 						glm::mat4 model = transform.get_world_transform();
 						s->set_uniform("u_model", &model);
-						int has_skinning = 0;
+						has_skinning = 0;
 						if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 							auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
 							if (anim.bone_ubo) {

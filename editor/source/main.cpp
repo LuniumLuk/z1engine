@@ -21,6 +21,8 @@ struct EditorSettings {
 	bool show_light_gizmos = true;
 	float light_gizmo_size = 0.1f;
 	uint32_t curr_resolution = 0;
+	bool show_skeleton_guizmos = true;
+	float skeleton_gizmo_size = 0.1f;
 };
 
 void save_editor_settings(EditorSettings const& settings) {
@@ -30,6 +32,8 @@ void save_editor_settings(EditorSettings const& settings) {
 	yaml << YAML::Key << "show_light_gizmos" << YAML::Value << settings.show_light_gizmos;
 	yaml << YAML::Key << "light_gizmo_size" << YAML::Value << settings.light_gizmo_size;
 	yaml << YAML::Key << "curr_resolution" << YAML::Value << settings.curr_resolution;
+	yaml << YAML::Key << "show_skeleton_guizmos" << YAML::Value << settings.show_skeleton_guizmos;
+	yaml << YAML::Key << "skeleton_gizmo_size" << YAML::Value << settings.show_skeleton_guizmos;
 	yaml << YAML::EndMap;
 
 	std::ofstream fout("editor_settings.yaml");
@@ -46,6 +50,8 @@ EditorSettings load_editor_settings() {
 		if (yaml["show_light_gizmos"]) settings.show_light_gizmos = yaml["show_light_gizmos"].as<bool>();
 		if (yaml["light_gizmo_size"]) settings.light_gizmo_size = yaml["light_gizmo_size"].as<float>();
 		if (yaml["curr_resolution"]) settings.curr_resolution = yaml["curr_resolution"].as<uint32_t>();
+		if (yaml["show_skeleton_guizmos"]) settings.show_skeleton_guizmos = yaml["show_skeleton_guizmos"].as<float>();
+		if (yaml["skeleton_gizmo_size"]) settings.skeleton_gizmo_size = yaml["skeleton_gizmo_size"].as<float>();
 	}
 	catch (...) {
 		std::cout << "failed to load editor settings" << std::endl;
@@ -144,6 +150,24 @@ struct EditorLayer : Layer {
 
 					if (!light_matrices.empty()) {
 						ImGuizmo::DrawCubes(&view[0][0], &proj[0][0], (float*)light_matrices.data(), (int)light_matrices.size());
+					}
+				}
+
+				// Visualize skeletons using ImGuizmo::DrawLines
+				if (m_settings.show_skeleton_guizmos) {
+					std::vector<glm::vec3> line_vertices;
+					auto skel_view = m_active_scene->m_registry.view<TransformComponent const, AnimationComponent const>();
+					for (auto [entity, transform, anim] : skel_view.each()) {
+						if (anim.bone_matrices.empty())
+							continue;
+
+						std::vector<glm::mat4> matrices;
+						for (auto const& bone_matrix : anim.bone_matrices) {
+							glm::mat4 model = transform.get_world_transform() * bone_matrix;
+							model = glm::scale(model, glm::vec3(m_settings.skeleton_gizmo_size));
+							matrices.push_back(model);
+						}
+						ImGuizmo::DrawCubes(&view[0][0], &proj[0][0], (float*)matrices.data(), (int)matrices.size());
 					}
 				}
 
@@ -332,6 +356,8 @@ struct EditorLayer : Layer {
 
 			ImGui::DragFloat("light gizmo size", &m_settings.light_gizmo_size, 0.1f, 0.1f, 10.0f);
 			ImGui::Checkbox("show light gizmos", &m_settings.show_light_gizmos);
+			ImGui::DragFloat("skeleton gizmo size", &m_settings.skeleton_gizmo_size, 0.1f, 0.1f, 10.0f);
+			ImGui::Checkbox("show skeleton gizmos", &m_settings.show_skeleton_guizmos);
 
 		}
 		ImGui::End();

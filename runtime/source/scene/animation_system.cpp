@@ -11,6 +11,8 @@ namespace z1 {
 	static glm::vec3 interpolate_position(std::vector<PositionKeyframe> const& keys, float time) {
 		if (keys.empty()) return glm::vec3(0.0f);
 		if (keys.size() == 1) return keys[0].value;
+		if (time <= keys.front().time) return keys.front().value;
+		if (time >= keys.back().time) return keys.back().value;
 
 		size_t idx = 0;
 		for (size_t i = 0; i < keys.size() - 1; ++i) {
@@ -29,6 +31,8 @@ namespace z1 {
 	static glm::quat interpolate_rotation(std::vector<RotationKeyframe> const& keys, float time) {
 		if (keys.empty()) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 		if (keys.size() == 1) return keys[0].value;
+		if (time <= keys.front().time) return keys.front().value;
+		if (time >= keys.back().time) return keys.back().value;
 
 		size_t idx = 0;
 		for (size_t i = 0; i < keys.size() - 1; ++i) {
@@ -47,6 +51,8 @@ namespace z1 {
 	static glm::vec3 interpolate_scale(std::vector<ScaleKeyframe> const& keys, float time) {
 		if (keys.empty()) return glm::vec3(1.0f);
 		if (keys.size() == 1) return keys[0].value;
+		if (time <= keys.front().time) return keys.front().value;
+		if (time >= keys.back().time) return keys.back().value;
 
 		size_t idx = 0;
 		for (size_t i = 0; i < keys.size() - 1; ++i) {
@@ -98,21 +104,20 @@ namespace z1 {
 			// Apply animation channels
 			for (auto const& channel : anim.channels) {
 				int bone_idx = -1;
-				// Try match by ID first (fast)
-				// Assuming channel.bone_id corresponds to skeleton.bones[].id
-				// But we need bone index in array.
-				// Since we saved ID == index in import_skeleton, we can use it directly?
-				// Usually IDs are consecutive 0..N-1 if we created them that way.
-				if (channel.bone_id >= 0 && channel.bone_id < (int)skeleton.bones.size()) {
-					if (skeleton.bones[channel.bone_id].id == channel.bone_id) {
-						bone_idx = channel.bone_id;
-					}
+
+				// 1. Try match by Node Index (if available)
+				// channel.bone_id is the GLTF Node Index
+				for(size_t i=0; i<skeleton.bones.size(); ++i) {
+					 if (skeleton.bones[i].node_index != -1 && skeleton.bones[i].node_index == channel.bone_id) {
+						 bone_idx = (int)i;
+						 break;
+					 }
 				}
 
-				// Fallback to search
+				// 2. Fallback: Match by Name (slower but robust)
 				if (bone_idx == -1) {
 					for(size_t i=0; i<skeleton.bones.size(); ++i) {
-						 if (skeleton.bones[i].id == channel.bone_id) {
+						 if (skeleton.bones[i].name == channel.bone_name) {
 							 bone_idx = (int)i;
 							 break;
 						 }
@@ -121,33 +126,44 @@ namespace z1 {
 
 				if (bone_idx == -1) continue;
 
-				glm::vec3 pos = interpolate_position(channel.position_keys, anim_comp.current_time);
-				glm::quat rot = interpolate_rotation(channel.rotation_keys, anim_comp.current_time);
-				glm::vec3 scl = interpolate_scale(channel.scale_keys, anim_comp.current_time);
+				glm::vec3 pos(0.0f);
+				glm::quat rot(1.0f, 0.0f, 0.0f, 0.0f);
+				glm::vec3 scl(1.0f);
+				glm::vec3 skew(0.0f);
+				glm::vec4 perspective(0.0f, 0.0f, 0.0f, 1.0f);
+				glm::decompose(local_transforms[bone_idx], scl, rot, pos, skew, perspective);
+
+				if (!channel.position_keys.empty())
+					pos = interpolate_position(channel.position_keys, anim_comp.current_time);
+				if (!channel.rotation_keys.empty())
+					rot = interpolate_rotation(channel.rotation_keys, anim_comp.current_time);
+				if (!channel.scale_keys.empty())
+					scl = interpolate_scale(channel.scale_keys, anim_comp.current_time);
 
 				local_transforms[bone_idx] = glm::translate(glm::mat4(1.0f), pos) * glm::mat4(rot) * glm::scale(glm::mat4(1.0f), scl);
 			}
 
 			// Compute global transforms
-			// Assuming parent comes before child in array (topological sort)
-			// If not, we need recursive approach or re-order.
-			// glTF usually exports in hierarchy order (DFS).
-
 			std::vector<glm::mat4> global_transforms(skeleton.bones.size());
+			std::vector<bool> computed(skeleton.bones.size(), false);
+
+			std::function<glm::mat4 const&(int)> get_global_transform =
+				[&](int bone_idx) -> glm::mat4 const& {
+				if (computed[bone_idx]) return global_transforms[bone_idx];
+
+				int parent_idx = skeleton.bones[bone_idx].parent_id;
+				if (parent_idx != -1) {
+					global_transforms[bone_idx] = get_global_transform(parent_idx) * local_transforms[bone_idx];
+				} else {
+					global_transforms[bone_idx] = local_transforms[bone_idx];
+				}
+
+				computed[bone_idx] = true;
+				return global_transforms[bone_idx];
+			};
 
 			for (size_t i = 0; i < skeleton.bones.size(); ++i) {
-				int parent = skeleton.bones[i].parent_id;
-				if (parent != -1 && parent < (int)i) {
-					global_transforms[i] = global_transforms[parent] * local_transforms[i];
-				} else if (parent != -1) {
-					// Parent is after child? This case requires recursion or multi-pass.
-					// For now assume sorted.
-					// If parent is not processed, we use identity?
-					// Or just use local?
-					global_transforms[i] = local_transforms[i];
-				} else {
-					global_transforms[i] = local_transforms[i];
-				}
+				get_global_transform((int)i);
 			}
 
 			// Final skinning matrices = GlobalTransform * InverseBindPose
