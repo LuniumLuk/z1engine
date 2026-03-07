@@ -20,6 +20,7 @@ struct EditorSettings {
 	std::string last_opened_scene_guid;
 	bool show_light_gizmos = true;
 	float light_gizmo_size = 0.1f;
+	uint32_t curr_resolution = 0;
 };
 
 void save_editor_settings(EditorSettings const& settings) {
@@ -28,6 +29,7 @@ void save_editor_settings(EditorSettings const& settings) {
 	yaml << YAML::Key << "last_opened_scene_guid" << YAML::Value << settings.last_opened_scene_guid;
 	yaml << YAML::Key << "show_light_gizmos" << YAML::Value << settings.show_light_gizmos;
 	yaml << YAML::Key << "light_gizmo_size" << YAML::Value << settings.light_gizmo_size;
+	yaml << YAML::Key << "curr_resolution" << YAML::Value << settings.curr_resolution;
 	yaml << YAML::EndMap;
 
 	std::ofstream fout("editor_settings.yaml");
@@ -43,6 +45,7 @@ EditorSettings load_editor_settings() {
 		if (yaml["last_opened_scene_guid"]) settings.last_opened_scene_guid = yaml["last_opened_scene_guid"].as<std::string>();
 		if (yaml["show_light_gizmos"]) settings.show_light_gizmos = yaml["show_light_gizmos"].as<bool>();
 		if (yaml["light_gizmo_size"]) settings.light_gizmo_size = yaml["light_gizmo_size"].as<float>();
+		if (yaml["curr_resolution"]) settings.curr_resolution = yaml["curr_resolution"].as<uint32_t>();
 	}
 	catch (...) {
 		std::cout << "failed to load editor settings" << std::endl;
@@ -53,7 +56,7 @@ EditorSettings load_editor_settings() {
 struct EditorLayer : Layer {
 	EditorLayer() {
 		m_settings = load_editor_settings();
-		m_gui = std::make_shared<EditorGUI>();
+		m_gui = std::make_shared<EditorGUI>(m_settings.curr_resolution);
 		m_browser = std::make_unique<ContentBrowser>();
 		m_browser->m_on_asset_opened =
 			[&](AssetMeta* meta) {
@@ -169,6 +172,7 @@ struct EditorLayer : Layer {
 	}
 
 	~EditorLayer() {
+		m_settings.curr_resolution = m_gui->m_current_resolution;
 		save_editor_settings(m_settings);
 	}
 
@@ -682,6 +686,27 @@ private:
 					}
 				});
 			}
+			else if (*field.type == typeid(std::shared_ptr<Animation>)) {
+				std::shared_ptr<Animation>& value = field.get<std::shared_ptr<Animation>>(instance);
+				ImGui::Text(field.name.c_str());
+				ImGui::Indent();
+				if (value) {
+					ImGui::Text("guid: %s", value->m_meta.guid.value.c_str());
+					ImGui::Text("name: %s", value->name.c_str());
+					ImGui::Text("duration: %.2fs", value->duration);
+					ImGui::Text("ticks per second: %.2f", value->ticks_per_second);
+				}
+				else {
+					ImGui::Text("No Animation");
+				}
+
+				accept_payload("ASSET_ITEM", [&](void* data) {
+					AssetMeta* meta = *(AssetMeta**)data;
+					if (meta->type == "animation") {
+						value = Animation::load(meta->guid);
+					}
+				});
+			}
 
 			if (!editable)
 				ImGui::EndDisabled();
@@ -703,7 +728,9 @@ private:
 				if (m_selected_entity->has_component<SkyLightComponent>()) {
 					SHOW_COMPONENT(SkyLightComponent)
 				}
-
+				if (m_selected_entity->has_component<AnimationComponent>()) {
+					SHOW_COMPONENT(AnimationComponent)
+				}
 				if (m_selected_entity->has_component<LightComponent>()) {
 					SHOW_COMPONENT(LightComponent)
 				}
@@ -831,6 +858,13 @@ private:
 						else {
 							ImGui::Text("no skeleton attached");
 						}
+
+						accept_payload("ASSET_ITEM", [&](void* data) {
+							AssetMeta* meta = *(AssetMeta**)data;
+							if (meta->type == "skeleton") {
+								mesh.m_skeleton = Skeleton::load(meta->guid);
+							}
+						});
 					}
 				}
 
@@ -893,6 +927,7 @@ private:
 					component_context_menu<SpriteComponent>("sprite component", m_selected_entity);
 					component_context_menu<ScriptComponent>("script component", m_selected_entity, m_selected_entity);
 					component_context_menu<SkyLightComponent>("skylight component", m_selected_entity);
+					component_context_menu<AnimationComponent>("animation component", m_selected_entity);
 					ImGui::EndPopup();
 				}
 			}

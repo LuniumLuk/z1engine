@@ -961,6 +961,7 @@ namespace z1 {
 
 		Animation animation;
 		animation.name = anim.name;
+		animation.ticks_per_second = 25.0f; // default
 
 		for (auto const& channel : anim.channels) {
 			if (channel.target_node == -1) continue;

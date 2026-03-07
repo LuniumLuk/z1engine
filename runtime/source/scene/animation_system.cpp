@@ -151,11 +151,18 @@ namespace z1 {
 			}
 
 			// Final skinning matrices = GlobalTransform * InverseBindPose
-			anim_comp.bone_matrices.assign(100, glm::mat4(1.0f));
+			anim_comp.bone_matrices.assign(MAX_BONES, glm::mat4(1.0f));
 			for (size_t i = 0; i < skeleton.bones.size(); ++i) {
-				if (i >= 100) break;
+				if (i >= MAX_BONES)
+					break;
 				anim_comp.bone_matrices[i] = global_transforms[i] * skeleton.bones[i].offset_matrix;
 			}
+
+			// Upload to uniform buffer
+			if (!anim_comp.bone_ubo) {
+				anim_comp.bone_ubo = UniformBuffer::create(nullptr, MAX_BONES * sizeof(glm::mat4), BufferUsage::Dynamic);
+			}
+			anim_comp.bone_ubo->write(anim_comp.bone_matrices.data(), skeleton.bones.size() * sizeof(glm::mat4));
 		}
 	}
 

@@ -51,7 +51,7 @@ std::string save_file_dialog(char const* filter) {
 	return std::string(); // empty if canceled
 }
 
-EditorGUI::EditorGUI() {
+EditorGUI::EditorGUI(uint32_t curr_resolution) : m_current_resolution(curr_resolution) {
 	m_viewport_framebuffer = Framebuffer::create(g_viewport_resolutions[m_current_resolution][0], g_viewport_resolutions[m_current_resolution][1],
 		{
 			{ ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToBorder },

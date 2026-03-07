@@ -2,6 +2,8 @@
 
 #include "scene/scene.h"
 
+#define MAX_BONES 100
+
 namespace z1 {
 
 	class AnimationSystem {

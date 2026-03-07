@@ -3,6 +3,7 @@
 #include "core/core.h"
 #include "asset/mesh.h"
 #include "animation/skeleton.h"
+#include "animation/animation.h"
 
 namespace z1 {
 

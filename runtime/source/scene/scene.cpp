@@ -342,6 +342,20 @@ namespace z1 {
 				skylight.m_rotation = skylight_yaml["rotation"].as<float>();
 				skylight.m_mip_level = skylight_yaml["mip_level"].as<float>();
 			}
+
+			// AnimationComponent
+			if (entity_yaml["animation"]) {
+				auto const& anim_yaml = entity_yaml["animation"];
+				auto& anim = entity->add_component<AnimationComponent>();
+				if (anim_yaml["animation"] && !anim_yaml["animation"].IsNull()) {
+					auto anim_guid = Guid::make(anim_yaml["animation"].as<std::string>());
+					anim.animation_asset = g_runtime_context.m_asset_manager->get<Animation>(anim_guid);
+				}
+				anim.current_time = anim_yaml["current_time"].as<float>();
+				anim.speed = anim_yaml["speed"].as<float>();
+				anim.loop = anim_yaml["loop"].as<bool>();
+				anim.playing = anim_yaml["playing"].as<bool>();
+			}
 		}
 
 		// resolve parent references
@@ -548,6 +562,25 @@ namespace z1 {
 				yaml << YAML::Key << "rotation" << YAML::Value << light.m_rotation;
 				yaml << YAML::Key << "intensity" << YAML::Value << light.m_intensity;
 				yaml << YAML::Key << "mip_level" << YAML::Value << light.m_mip_level;
+				yaml << YAML::EndMap;
+			}
+
+			// AnimationComponent
+			if (entity->has_component<AnimationComponent>()) {
+				auto const& anim = entity->get_component<AnimationComponent>();
+				yaml << YAML::Key << "animation" << YAML::Value;
+				yaml << YAML::BeginMap;
+				if (anim.animation_asset) {
+					yaml << YAML::Key << "animation" << YAML::Value << anim.animation_asset->m_meta.guid;
+				}
+				else {
+					yaml << YAML::Key << "animation" << YAML::Value << YAML::Null;
+				}
+				yaml << YAML::Key << "current_time" << YAML::Value << anim.current_time;
+				yaml << YAML::Key << "speed" << YAML::Value << anim.speed;
+				yaml << YAML::Key << "loop" << YAML::Value << anim.loop;
+				yaml << YAML::Key << "playing" << YAML::Value << anim.playing;
+
 				yaml << YAML::EndMap;
 			}
 

@@ -312,13 +312,16 @@ namespace z1 {
 						int has_skinning = 0;
 						if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 							auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-							if (!anim.bone_matrices.empty()) {
+							if (anim.bone_ubo) {
 								has_skinning = 1;
-								s->set_uniform("u_bone_matrices", anim.bone_matrices.data());
+								anim.bone_ubo->bind();
+								s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
 							}
 						}
 						s->set_uniform("u_has_skinning", &has_skinning);
 						mesh.m_mesh->draw();
+						if (has_skinning)
+							scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
 					}
 					m_pipeline_shadow->unbind();
 				});
@@ -360,10 +363,10 @@ namespace z1 {
 					if (!mesh.m_mesh) continue;
 					per_frame.model = transform.get_world_transform();
 
-					std::vector<glm::mat4> const* bones = nullptr;
+					std::shared_ptr<UniformBuffer> bones = nullptr;
 					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-						bones = &anim.bone_matrices;
+						bones = anim.bone_ubo;
 					}
 					mesh.m_mesh->draw(per_frame, m_default_material, bones);
 				}
@@ -444,13 +447,16 @@ namespace z1 {
 					int has_skinning = 0;
 					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-						if (!anim.bone_matrices.empty()) {
+						if (anim.bone_ubo) {
 							has_skinning = 1;
-							s->set_uniform("u_bone_matrices", anim.bone_matrices.data());
+							anim.bone_ubo->bind();
+							s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
 						}
 					}
 					s->set_uniform("u_has_skinning", &has_skinning);
 					mesh.m_mesh->draw();
+					if (has_skinning)
+						scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
 				}
 
 				m_pipeline_velocity->unbind();
@@ -512,6 +518,7 @@ namespace z1 {
 		rg.add_pass("postprocessing")
 			.set_output(target)
 			.set_pass_desc(desc)
+			.depends_on("taa")
 			.execute([this, source](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_postprocess->bind();
 				auto& s = m_pipeline_postprocess->m_shader;

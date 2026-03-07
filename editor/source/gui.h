@@ -28,7 +28,7 @@ constexpr uint32_t g_viewport_resolutions[][2] = {
 };
 
 struct EditorGUI {
-	EditorGUI();
+	EditorGUI(uint32_t curr_resolution = 0);
 	~EditorGUI();
 
 	void draw();

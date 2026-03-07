@@ -24,6 +24,7 @@ namespace z1 {
 			WrapMode wrap_mode = WrapMode::Repeat);
 		RenderGraphNode& set_output(std::shared_ptr<Framebuffer> const& framebuffer);
 		RenderGraphNode& set_pass_desc(RenderPass::Description const& desc);
+		RenderGraphNode& depends_on(std::string const& pass_name);
 
 		RenderGraphNode& pre_pass(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func);
 		RenderGraphNode& execute(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func);
@@ -49,6 +50,7 @@ namespace z1 {
 
 		std::string m_name;
 		std::vector<std::string> m_inputs;
+		std::vector<std::string> m_manual_depends;
 		std::unordered_map<std::string, Framebuffer::Attachment> m_output_spec;
 		std::shared_ptr<Framebuffer> m_output;
 		RenderPass::Description m_pass_desc;

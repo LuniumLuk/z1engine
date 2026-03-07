@@ -86,18 +86,22 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 			m_pipeline->m_shader->set_uniform("u_model", &model);
 			m_pipeline->m_shader->set_uniform("u_object_id", &object_id);
 
-			std::vector<glm::mat4> const* bones = nullptr;
+			std::shared_ptr<UniformBuffer> bones = nullptr;
 			if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 				auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-				bones = &anim.bone_matrices;
+				bones = anim.bone_ubo;
 			}
 			int has_skinning = 0;
-			if (bones && !bones->empty()) {
+			if (bones) {
 				has_skinning = 1;
-				m_pipeline->m_shader->set_uniform("u_bone_matrices", bones->data());
+				bones->bind();
+				m_pipeline->m_shader->set_uniform_block_binding("Bones", bones->get_binding());
 			}
 			m_pipeline->m_shader->set_uniform("u_has_skinning", &has_skinning);
 			mesh.m_mesh->draw();
+			if (bones) {
+				bones->unbind();
+			}
 		}
 
 		g_runtime_context.m_global->unbind();

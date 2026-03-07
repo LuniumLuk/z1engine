@@ -3,6 +3,7 @@
 #include "core/core.h"
 #include "core/window.h"
 #include "core/application.h"
+#include "render/graphics_context.h"
 #include "imgui.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
@@ -62,6 +63,7 @@ namespace z1 {
 		ImGuiIO& io = ImGui::GetIO();
 		io.DisplaySize = ImVec2((float)g_runtime_context.m_window->get_width(), (float)g_runtime_context.m_window->get_height());
 
+		g_runtime_context.m_graphics_context->push_debug_group("ImGui");
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -71,6 +73,7 @@ namespace z1 {
 			ImGui::RenderPlatformWindowsDefault();
 			glfwMakeContextCurrent(currentContext);
 		}
+		g_runtime_context.m_graphics_context->pop_debug_group();
 	}
 
 }

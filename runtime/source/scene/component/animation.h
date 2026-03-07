@@ -17,12 +17,20 @@ namespace z1 {
 
 		// Final bone matrices for rendering
 		std::vector<glm::mat4> bone_matrices;
+		// Uniform buffer for bone matrices
+		std::shared_ptr<UniformBuffer> bone_ubo;
 
-		AnimationComponent(std::shared_ptr<Animation> const& animation) noexcept
+		AnimationComponent(std::shared_ptr<Animation> const& animation = nullptr) noexcept
 			: animation_asset(animation) {}
 
 		DISABLE_COPY(AnimationComponent)
 
 	};
+
+	REFLECTED_FIELD(AnimationComponent, animation_asset, FF_Default)
+	REFLECTED_FIELD(AnimationComponent, current_time,    FF_ReadOnly)
+	REFLECTED_FIELD(AnimationComponent, speed,           FF_Default)
+	REFLECTED_FIELD(AnimationComponent, loop,            FF_Default)
+	REFLECTED_FIELD(AnimationComponent, playing,         FF_Default)
 
 }

@@ -3,6 +3,7 @@
 #include "asset/asset.h"
 #include "asset/material.h"
 #include "render/vertex_array.h"
+#include "render/buffer.h"
 #include "glm/glm.hpp"
 
 namespace z1 {
@@ -182,13 +183,13 @@ namespace z1 {
 		void draw(
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
-			std::vector<glm::mat4> const* bone_matrices = nullptr) const;
+			std::shared_ptr<UniformBuffer> const& bones = nullptr) const;
 
 		void draw_primitive(
 			size_t index,
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
-			std::vector<glm::mat4> const* bone_matrices = nullptr) const;
+			std::shared_ptr<UniformBuffer> const& bones = nullptr) const;
 
 		void draw() const;
 

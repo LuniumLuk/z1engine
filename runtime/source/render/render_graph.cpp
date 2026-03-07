@@ -48,6 +48,11 @@ namespace z1 {
 		return *this;
 	}
 
+	RenderGraphNode& RenderGraphNode::depends_on(std::string const& pass_name) {
+		m_manual_depends.push_back(pass_name);
+		return *this;
+	}
+
 	RenderGraphNode& RenderGraphNode::pre_pass(std::function<void(RenderGraphNode&, GraphicsContext&)> const& func) {
 		m_pre_pass_func = func;
 		return *this;
@@ -210,6 +215,15 @@ namespace z1 {
 				node.m_inputs_by_name[input] = std::make_pair(&m_nodes[src_node_id], attachment_id);
 
 				input_idx += 1;
+			}
+
+			// manual dependencies
+			for (auto& dep : node.m_manual_depends) {
+				if (name_to_id.find(dep) == name_to_id.end()) {
+					CORE_ERROR("RenderGraph: dependency: {} not found, node: {}", dep, node.m_name);
+					return;
+				}
+				node.m_depends.insert(name_to_id[dep]);
 			}
 		}
 

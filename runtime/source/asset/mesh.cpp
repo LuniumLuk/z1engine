@@ -355,9 +355,9 @@ namespace z1 {
 	void SkeletalMesh::draw(
 		PerFrameConst const& per_frame,
 		std::shared_ptr<MaterialInstance> const& default_material,
-		std::vector<glm::mat4> const* bone_matrices) const {
+		std::shared_ptr<UniformBuffer> const& bones) const {
 		for (size_t i = 0; i < m_primitives.size(); ++i) {
-			draw_primitive(i, per_frame, default_material, bone_matrices);
+			draw_primitive(i, per_frame, default_material, bones);
 		}
 	}
 
@@ -365,7 +365,7 @@ namespace z1 {
 		size_t index,
 		PerFrameConst const& per_frame,
 		std::shared_ptr<MaterialInstance> const& default_material,
-		std::vector<glm::mat4> const* bone_matrices) const {
+		std::shared_ptr<UniformBuffer> const& bones) const {
 		if (index >= m_primitives.size()) return;
 		auto const& prim = m_primitives[index];
 		std::shared_ptr<MaterialInstance> mi = nullptr;
@@ -376,13 +376,15 @@ namespace z1 {
 			mi = default_material;
 		}
 
+		int has_skinning = 0;
 		if (mi) {
 			mi->bind(per_frame);
 			if (mi->m_material && mi->m_material->m_pipeline && mi->m_material->m_pipeline->m_shader) {
 				int has_skinning = 0;
-				if (bone_matrices && !bone_matrices->empty()) {
+				if (bones) {
 					has_skinning = 1;
-					mi->m_material->m_pipeline->m_shader->set_uniform("u_bone_matrices", bone_matrices->data());
+					bones->bind();
+					mi->m_material->m_pipeline->m_shader->set_uniform_block_binding("Bones", bones->get_binding());
 				}
 				mi->m_material->m_pipeline->m_shader->set_uniform("u_has_skinning", &has_skinning);
 			}
@@ -403,6 +405,9 @@ namespace z1 {
 		if (use_shadow_map) {
 			shadow_img->unbind();
 		}
+
+		if (has_skinning)
+			bones->unbind();
 
 		if (mi)
 			mi->unbind();
