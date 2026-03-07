@@ -664,6 +664,24 @@ private:
 					value = std::string(str_buffer);
 				}
 			}
+			else if (*field.type == typeid(std::shared_ptr<Texture2D>)) {
+				std::shared_ptr<Texture2D>& value = field.get<std::shared_ptr<Texture2D>>(instance);
+				ImGui::Text(field.name.c_str());
+				ImGui::Indent();
+				if (value) {
+					auto w = value->m_image->get_description().m_width;
+					auto h = value->m_image->get_description().m_height;
+					ImGui::Image(value->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+				} else {
+					ImGui::Text("No Texture");
+				}
+				accept_payload("ASSET_ITEM", [&](void* data) {
+					AssetMeta* meta = *(AssetMeta**)data;
+					if (meta->type == "texture2d") {
+						value = Texture2D::load(meta->guid);
+					}
+				});
+			}
 
 			if (!editable)
 				ImGui::EndDisabled();
@@ -682,6 +700,9 @@ private:
 			if (m_selected_entity) {
 				SHOW_COMPONENT(TagComponent)
 				SHOW_COMPONENT(TransformComponent)
+				if (m_selected_entity->has_component<SkyLightComponent>()) {
+					SHOW_COMPONENT(SkyLightComponent)
+				}
 
 				if (m_selected_entity->has_component<LightComponent>()) {
 					SHOW_COMPONENT(LightComponent)
@@ -698,7 +719,7 @@ private:
 						if (sprite.m_texture) {
 							auto w = sprite.m_texture->m_image->get_description().m_width;
 							auto h = sprite.m_texture->m_image->get_description().m_height;
-							ImGui::Image(sprite.m_texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(0, 1));
+							ImGui::Image(sprite.m_texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
 						}
 						else {
 							ImGui::Text("No Texture");
@@ -871,6 +892,7 @@ private:
 					component_context_menu<LightComponent>("light component", m_selected_entity);
 					component_context_menu<SpriteComponent>("sprite component", m_selected_entity);
 					component_context_menu<ScriptComponent>("script component", m_selected_entity, m_selected_entity);
+					component_context_menu<SkyLightComponent>("skylight component", m_selected_entity);
 					ImGui::EndPopup();
 				}
 			}

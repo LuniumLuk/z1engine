@@ -329,6 +329,19 @@ namespace z1 {
 				light.m_outer_cone = light_yaml["outer_cone"].as<float>();
 				light.m_cast_shadow = light_yaml["cast_shadow"].as<bool>();
 			}
+
+			// SkyLightComponent
+			if (entity_yaml["sky_light"]) {
+				auto const& skylight_yaml = entity_yaml["sky_light"];
+				auto& skylight = entity->add_component<SkyLightComponent>();
+				if (skylight_yaml["texture"] && !skylight_yaml["texture"].IsNull()) {
+					auto tex_guid = Guid::make(skylight_yaml["texture"].as<std::string>());
+					skylight.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
+				}
+				skylight.m_intensity = skylight_yaml["intensity"].as<float>();
+				skylight.m_rotation = skylight_yaml["rotation"].as<float>();
+				skylight.m_mip_level = skylight_yaml["mip_level"].as<float>();
+			}
 		}
 
 		// resolve parent references
@@ -517,6 +530,24 @@ namespace z1 {
 				yaml << YAML::Key << "inner_cone" << YAML::Value << light.m_inner_cone;
 				yaml << YAML::Key << "outer_cone" << YAML::Value << light.m_outer_cone;
 				yaml << YAML::Key << "cast_shadow" << YAML::Value << light.m_cast_shadow;
+				yaml << YAML::EndMap;
+			}
+
+			// SkyLightComponent
+			if (entity->has_component<SkyLightComponent>()) {
+				auto const& light = entity->get_component<SkyLightComponent>();
+				yaml << YAML::Key << "sky_light" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "texture" << YAML::Value;
+				if (light.m_texture) {
+					yaml << light.m_texture->m_meta.guid;
+				}
+				else {
+					yaml << YAML::Null;
+				}
+				yaml << YAML::Key << "rotation" << YAML::Value << light.m_rotation;
+				yaml << YAML::Key << "intensity" << YAML::Value << light.m_intensity;
+				yaml << YAML::Key << "mip_level" << YAML::Value << light.m_mip_level;
 				yaml << YAML::EndMap;
 			}
 

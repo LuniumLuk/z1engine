@@ -85,6 +85,14 @@ namespace z1 {
 		}
 		*/
 
+		{
+			Pipeline::Description desc{};
+			desc.depth_test = true;
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/skybox");
+			m_pipeline_skybox = Pipeline::build(desc);
+		}
+
 		// Shadow pipeline and framebuffer
 		{
 			Pipeline::Description desc{};
@@ -358,6 +366,33 @@ namespace z1 {
 						bones = &anim.bone_matrices;
 					}
 					mesh.m_mesh->draw(per_frame, m_default_material, bones);
+				}
+
+				auto sky_view = scene->m_registry.view<SkyLightComponent const>();
+				for (auto [entity, sky] : sky_view.each()) {
+					if (sky.m_texture && sky.m_texture->m_image) {
+						m_pipeline_skybox->bind();
+
+						sky.m_texture->m_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
+
+						auto& s = m_pipeline_skybox->m_shader;
+						s->set_uniform("u_rotation", &sky.m_rotation);
+						s->set_uniform("u_intensity", &sky.m_intensity);
+						s->set_uniform("u_mip_level", &sky.m_mip_level);
+
+						auto& g = g_runtime_context.m_global;
+						glm::mat4 inv_projview = glm::inverse(g->projview);
+						s->set_uniform("u_inv_projview", &inv_projview);
+						s->set_uniform("u_cam_position", &g->cam_position);
+
+						m_quad->bind();
+						m_quad->draw(PrimitiveType::Triangles);
+						m_quad->unbind();
+
+						sky.m_texture->m_image->unbind();
+						m_pipeline_skybox->unbind();
+					}
+					break;
 				}
 
 				if (history_uninitialized) {

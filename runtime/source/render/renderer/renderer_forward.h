@@ -3,6 +3,7 @@
 #include "render/framebuffer.h"
 #include "render/pipeline.h"
 #include "asset/material.h"
+#include "scene/component/sky_light.h"
 #include <array>
 
 namespace z1 {
@@ -38,6 +39,7 @@ namespace z1 {
 		std::shared_ptr<Pipeline> m_pipeline_taa;
 		// std::shared_ptr<Pipeline> m_pipeline_copy; // Removed copy pipeline
 		std::shared_ptr<Pipeline> m_pipeline_shadow;
+		std::shared_ptr<Pipeline> m_pipeline_skybox;
 		std::shared_ptr<Framebuffer> m_shadow_framebuffer;
 		std::shared_ptr<Image> m_shadow_image;
 		std::array<std::shared_ptr<Framebuffer>, 2> m_history_colors;
