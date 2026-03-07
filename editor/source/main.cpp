@@ -670,115 +670,116 @@ private:
 		ImGui::InputFloat##num(field.name.c_str(), value);                \
 	}
 
-	void show_type_fields(void* instance, const std::string& name) {
+#define ACCEPT_PAYLOAD(asset_type, meta_type)                             \
+	accept_payload("ASSET_ITEM", [&](void* data) {                        \
+		AssetMeta* meta = *(AssetMeta**)data;                             \
+		if (meta->type == meta_type) {                                    \
+			value = asset_type::load(meta->guid);                         \
+		}                                                                 \
+	});
 
+	void show_type_field(void* instance, FieldInfo const& field) {
+		bool const visible = (field.flag & FF_Visible) != 0;
+		bool const editable = (field.flag & FF_Editable) != 0;
+		if (!visible && !editable)
+			return;
+
+		if (!editable)
+			ImGui::BeginDisabled();
+
+		if (*field.type == typeid(bool)) {
+			bool& value = field.get<bool>(instance);
+			if (field.is_widget_type("radio")) {
+				if (ImGui::RadioButton(field.name.c_str(), value)) {
+					value = !value;
+				}
+			}
+			else {
+				ImGui::Checkbox(field.name.c_str(), &value);
+			}
+		}
+		else if (*field.type == typeid(float)) {
+			float& value = field.get<float>(instance);
+			SHOW_FLOAT_FIELD(, &value)
+		}
+		else if (*field.type == typeid(int)) {
+			int& value = field.get<int>(instance);
+			int min = field.get_widget_value<int>("min", -10000);
+			int max = field.get_widget_value<int>("max", 10000);
+			int step = field.get_widget_value<int>("step", 1);
+			if (field.is_widget_type("slider")) {
+				ImGui::SliderInt(field.name.c_str(), &value, min, max);
+			}
+		else if (field.is_widget_type("drag")) {
+				ImGui::DragInt(field.name.c_str(), &value, (float)step, min, max);
+			}
+			else {
+				ImGui::InputInt(field.name.c_str(), &value, step);
+			}
+		}
+		else if (*field.type == typeid(glm::vec2)) {
+			glm::vec2& value = field.get<glm::vec2>(instance);
+			SHOW_FLOAT_FIELD(2, &value[0])
+		}
+		else if (*field.type == typeid(glm::vec3)) {
+			glm::vec3& value = field.get<glm::vec3>(instance);
+			SHOW_FLOAT_FIELD_WITH_COLOR(3, &value[0])
+		}
+		else if (*field.type == typeid(glm::vec4)) {
+			glm::vec4& value = field.get<glm::vec4>(instance);
+			SHOW_FLOAT_FIELD_WITH_COLOR(4, &value[0])
+		}
+		else if (*field.type == typeid(std::string)) {
+			std::string& value = field.get<std::string>(instance);
+			static char str_buffer[256] = {};
+			strcpy_s(str_buffer, value.c_str());
+			if (ImGui::InputText(field.name.c_str(), str_buffer, IM_ARRAYSIZE(str_buffer))) {
+				value = std::string(str_buffer);
+			}
+		}
+		else if (*field.type == typeid(std::shared_ptr<Texture2D>)) {
+			std::shared_ptr<Texture2D>& value = field.get<std::shared_ptr<Texture2D>>(instance);
+			ImGui::Text(field.name.c_str());
+			ImGui::Indent();
+			if (value) {
+				auto w = value->m_image->get_description().m_width;
+				auto h = value->m_image->get_description().m_height;
+				ImGui::Image(value->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+			}
+			else {
+				ImGui::Text("No Texture");
+			}
+			ACCEPT_PAYLOAD(Texture2D, "texture2d")
+			ImGui::Unindent();
+		}
+		else if (*field.type == typeid(std::shared_ptr<Animation>)) {
+			std::shared_ptr<Animation>& value = field.get<std::shared_ptr<Animation>>(instance);
+			ImGui::Text(field.name.c_str());
+			ImGui::Indent();
+			if (value) {
+				ImGui::Text("guid: %s", value->m_meta.guid.value.c_str());
+				ImGui::Text("name: %s", value->name.c_str());
+				ImGui::Text("duration: %.2fs", value->duration);
+				ImGui::Text("ticks per second: %.2f", value->ticks_per_second);
+			}
+			else {
+				ImGui::Text("No Animation");
+			}
+			ACCEPT_PAYLOAD(Animation, "animation")
+			ImGui::Unindent();
+		}
+
+		if (!editable)
+			ImGui::EndDisabled();
+	}
+
+	void show_type_fields(void* instance, const std::string& name) {
 		auto const info = TypeRegistry::instance().get(name);
 		if (!info) return;
 
 		ImGui::Indent();
-		for (auto& field : info->fields)
-		{
-			bool const visible = (field.flag & FF_Visible) != 0;
-			bool const editable = (field.flag & FF_Editable) != 0;
-			if (!visible && !editable)
-				continue;
-
-			if (!editable)
-				ImGui::BeginDisabled();
-
-			if (*field.type == typeid(bool)) {
-				bool& value = field.get<bool>(instance);
-				if (field.is_widget_type("radio")) {
-					if (ImGui::RadioButton(field.name.c_str(), value)) {
-						value = !value;
-					}
-				}
-				else {
-					ImGui::Checkbox(field.name.c_str(), &value);
-				}
-			}
-			else if (*field.type == typeid(float)) {
-				float& value = field.get<float>(instance);
-				SHOW_FLOAT_FIELD(, &value)
-			}
-			else if (*field.type == typeid(int)) {
-				int& value = field.get<int>(instance);
-				int min = field.get_widget_value<int>("min", -10000);
-				int max = field.get_widget_value<int>("max",  10000);
-				int step = field.get_widget_value<int>("step", 1);
-				if (field.is_widget_type("slider")) {
-					ImGui::SliderInt(field.name.c_str(), &value, min, max);
-				}
-				else if (field.is_widget_type("drag")) {
-					ImGui::DragInt(field.name.c_str(), &value, (float)step, min, max);
-				}
-				else {
-					ImGui::InputInt(field.name.c_str(), &value, step);
-				}
-			}
-			else if (*field.type == typeid(glm::vec2)) {
-				glm::vec2& value = field.get<glm::vec2>(instance);
-				SHOW_FLOAT_FIELD(2, &value[0])
-			}
-			else if (*field.type == typeid(glm::vec3)) {
-				glm::vec3& value = field.get<glm::vec3>(instance);
-				SHOW_FLOAT_FIELD_WITH_COLOR(3, &value[0])
-			}
-			else if (*field.type == typeid(glm::vec4)) {
-				glm::vec4& value = field.get<glm::vec4>(instance);
-				SHOW_FLOAT_FIELD_WITH_COLOR(4, &value[0])
-			}
-			else if (*field.type == typeid(std::string)) {
-				std::string& value = field.get<std::string>(instance);
-				static char str_buffer[256] = {};
-				strcpy_s(str_buffer, value.c_str());
-				if (ImGui::InputText(field.name.c_str(), str_buffer, IM_ARRAYSIZE(str_buffer))) {
-					value = std::string(str_buffer);
-				}
-			}
-			else if (*field.type == typeid(std::shared_ptr<Texture2D>)) {
-				std::shared_ptr<Texture2D>& value = field.get<std::shared_ptr<Texture2D>>(instance);
-				ImGui::Text(field.name.c_str());
-				ImGui::Indent();
-				if (value) {
-					auto w = value->m_image->get_description().m_width;
-					auto h = value->m_image->get_description().m_height;
-					ImGui::Image(value->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-				} else {
-					ImGui::Text("No Texture");
-				}
-				accept_payload("ASSET_ITEM", [&](void* data) {
-					AssetMeta* meta = *(AssetMeta**)data;
-					if (meta->type == "texture2d") {
-						value = Texture2D::load(meta->guid);
-					}
-				});
-				ImGui::Unindent();
-			}
-			else if (*field.type == typeid(std::shared_ptr<Animation>)) {
-				std::shared_ptr<Animation>& value = field.get<std::shared_ptr<Animation>>(instance);
-				ImGui::Text(field.name.c_str());
-				ImGui::Indent();
-				if (value) {
-					ImGui::Text("guid: %s", value->m_meta.guid.value.c_str());
-					ImGui::Text("name: %s", value->name.c_str());
-					ImGui::Text("duration: %.2fs", value->duration);
-					ImGui::Text("ticks per second: %.2f", value->ticks_per_second);
-				}
-				else {
-					ImGui::Text("No Animation");
-				}
-				accept_payload("ASSET_ITEM", [&](void* data) {
-					AssetMeta* meta = *(AssetMeta**)data;
-					if (meta->type == "animation") {
-						value = Animation::load(meta->guid);
-					}
-				});
-				ImGui::Unindent();
-			}
-
-			if (!editable)
-				ImGui::EndDisabled();
+		for (auto& field : info->fields) {
+			show_type_field(instance, field);
 		}
 		ImGui::Unindent();
 	}
