@@ -192,16 +192,15 @@ vec3 get_normal_from_map(vec3 world_pos, vec3 normal, vec4 tangent, vec3 normal_
 // Shadow mapping (PCF / PCSS)
 // ----------------------------------------------------------------------------
 
-const float k_shadow_bias = 0.005;
 const float k_light_radius = 0.3;
 const float k_max_filter_radius = 6.0;
 const float k_blocker_search_radius = 2.5;
 
-float sample_shadow(vec3 uv, float depth) {
-	return depth - k_shadow_bias > texture(u_shadow_map, uv).r ? 0.0 : 1.0;
+float sample_shadow(vec3 uv, float depth, float bias) {
+	return depth - bias > texture(u_shadow_map, uv).r ? 0.0 : 1.0;
 }
 
-float sample_shadow_pcf(vec3 uv, float depth) {
+float sample_shadow_pcf(vec3 uv, float depth, float bias) {
 	ivec3 tex_size = textureSize(u_shadow_map, 0);
 
 	int u0 = int(floor(uv.x * tex_size.x));
@@ -211,28 +210,28 @@ float sample_shadow_pcf(vec3 uv, float depth) {
 	// vec2 uv00 = (vec2(u0, v0) + 0.5) / vec2(tex_size.xy);
 
 	float sum = 0.0;
-	sum += texelFetch(u_shadow_map, ivec3(u0, v0, uv.z), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec3(u1, v0, uv.z), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec3(u0, v1, uv.z), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec3(u1, v1, uv.z), 0).r < depth - k_shadow_bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec3(u0, v0, uv.z), 0).r < depth - bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec3(u1, v0, uv.z), 0).r < depth - bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec3(u0, v1, uv.z), 0).r < depth - bias ? 0.0 : 1.0;
+	sum += texelFetch(u_shadow_map, ivec3(u1, v1, uv.z), 0).r < depth - bias ? 0.0 : 1.0;
 	return sum * 0.25;
 }
 
-float pcf_filter(vec3 uv, float depth, vec2 texel_size, float radius) {
+float pcf_filter(vec3 uv, float depth, vec2 texel_size, float radius, float bias) {
 	float shadow = 0.0;
 	float samples = 0.0;
 	vec2 scaled = texel_size * radius;
 	for (int x = -1; x <= 1; ++x) {
 		for (int y = -1; y <= 1; ++y) {
 			vec2 offset = vec2(float(x), float(y)) * scaled;
-			shadow += sample_shadow(vec3(uv.xy + offset, uv.z), depth);
+			shadow += sample_shadow(vec3(uv.xy + offset, uv.z), depth, bias);
 			samples += 1.0;
 		}
 	}
 	return shadow / samples;
 }
 
-float find_blockers(vec3 uv, float depth, vec2 texel_size) {
+float find_blockers(vec3 uv, float depth, vec2 texel_size, float bias) {
 	float sum = 0.0;
 	float count = 0.0;
 	vec2 scaled = texel_size * k_blocker_search_radius;
@@ -240,7 +239,7 @@ float find_blockers(vec3 uv, float depth, vec2 texel_size) {
 		for (int y = -2; y <= 2; ++y) {
 			vec2 offset = vec2(float(x), float(y)) * scaled;
 			float sampled = texture(u_shadow_map, vec3(uv.xy + offset, uv.z)).r;
-			if (sampled < depth - k_shadow_bias) {
+			if (sampled < depth - bias) {
 				sum += sampled;
 				count += 1.0;
 			}
@@ -265,20 +264,26 @@ float get_shadow() {
 	vec3 uv = vec3(proj.xy * 0.5 + 0.5, float(layer));
 	float current_depth = proj.z * 0.5 + 0.5;
 
+	vec3 N = normalize(v_normal);
+	vec3 L = normalize(u_sun_direction.xyz);
+	float cos_theta = clamp(dot(N, L), 0.0, 1.0);
+	float bias = max(0.005 * (1.0 - cos_theta), 0.002);
+	if (layer > 0) bias *= 0.5; // reduce bias for further cascades since the depth range covers more world space
+
 	// Check if point is outside the shadow map bounds
 	// if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
 	// 	return 1.0;
 	// }
 
 	vec2 texel_size = 1.0 / vec2(textureSize(u_shadow_map, 0).xy);
-	float blockers = find_blockers(uv, current_depth, texel_size);
+	float blockers = find_blockers(uv, current_depth, texel_size, bias);
 	if (blockers == 0.0) {
-		return pcf_filter(uv, current_depth, texel_size, 1.0);
+		return pcf_filter(uv, current_depth, texel_size, 1.0, bias);
 	}
 
 	float diff = max(0.0, current_depth - blockers);
 	float penumbra = diff / max(blockers, 1e-4) * k_light_radius;
 	penumbra = clamp(penumbra, 0.0, k_max_filter_radius);
 	float filter_radius = max(1.0, penumbra);
-	return pcf_filter(uv, current_depth, texel_size, filter_radius);
+	return pcf_filter(uv, current_depth, texel_size, filter_radius, bias);
 }
