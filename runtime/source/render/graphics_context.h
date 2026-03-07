@@ -8,6 +8,18 @@ namespace z1 {
 	struct Pipeline;
 	struct RenderPass;
 
+	struct RenderStats {
+		uint32_t draw_calls = 0;
+		uint32_t visible_objects = 0;
+		uint32_t culled_objects = 0;
+
+		void reset() {
+			draw_calls = 0;
+			visible_objects = 0;
+			culled_objects = 0;
+		}
+	};
+
 	struct API GraphicsContext {
 		virtual void init() = 0;
 		virtual void begin_frame() = 0;
@@ -56,6 +68,8 @@ namespace z1 {
 		std::shared_ptr<Framebuffer> m_swapchain_framebuffer = nullptr;
 		std::shared_ptr<Framebuffer> m_current_framebuffer = nullptr;
 		std::shared_ptr<Pipeline> m_current_pipeline = nullptr;
+
+		RenderStats m_stats;
 
 	protected:
 		std::stack<uint32_t> m_free_image_bindings;

@@ -79,30 +79,32 @@ struct EditorLayer : Layer {
 		m_gui->m_draw_viewport_overlay_func =
 			[&]() {
 				ImVec2 window_pos = ImVec2(
-					ImGui::GetWindowPos().x + ImGui::GetWindowSize().x,
-					ImGui::GetWindowPos().y + 40
+					ImGui::GetWindowPos().x + ImGui::GetWindowSize().x - 10.0f,
+					ImGui::GetWindowPos().y + 30.0f
 				);
 				ImVec2 window_pos_pivot = ImVec2(1.0f, 0.0f); // right-top pivot
 
 				ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-				ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-
-				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f)); // no border
+				ImGui::SetNextWindowBgAlpha(0.7f);
 
 				if (ImGui::Begin("overlay on viewport", nullptr,
 					ImGuiWindowFlags_NoMove |
-					//ImGuiWindowFlags_NoBackground |
 					ImGuiWindowFlags_NoDecoration |
 					ImGuiWindowFlags_AlwaysAutoResize |
 					ImGuiWindowFlags_NoSavedSettings |
 					ImGuiWindowFlags_NoFocusOnAppearing |
 					ImGuiWindowFlags_NoNav))
 				{
-					ImGui::Text("overlay on viewport");
+					ImGui::Text("Renderer Statistics");
+					ImGui::Separator();
+					if (g_runtime_context.m_renderer_forward) {
+						auto const& stats = g_runtime_context.m_graphics_context->m_stats;
+						ImGui::Text("Draw Calls: %u", stats.draw_calls);
+						ImGui::Text("Visible Objects: %u", stats.visible_objects);
+						ImGui::Text("Culled Objects: %u", stats.culled_objects);
+					}
 				}
 				ImGui::End();
-
-				ImGui::PopStyleColor();
 			};
 
 		m_gui->m_draw_menu_bar_items_func =

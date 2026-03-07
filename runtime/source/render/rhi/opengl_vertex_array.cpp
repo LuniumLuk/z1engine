@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/rhi/opengl_vertex_array.h"
 #include "render/rhi/opengl_buffer.h"
+#include "render/graphics_context.h"
 #include "glad/glad.h"
 
 namespace z1 {
@@ -77,6 +78,7 @@ namespace z1 {
 		else {
 			glDrawArrays(primitive_type_to_opengl_type(type), 0, num == NUM_MAX ? m_element_count : num);
 		}
+		g_runtime_context.m_graphics_context->m_stats.draw_calls += 1;
 	}
 
 	void OpenGLVertexArray::draw_instanced(PrimitiveType type, uint32_t num, std::shared_ptr<VertexBuffer> const& instance_buffer, uint32_t start, uint32_t divisor) {
@@ -92,6 +94,7 @@ namespace z1 {
 		else {
 			glDrawArraysInstanced(primitive_type_to_opengl_type(type), 0, (uint32_t)m_element_count, num);
 		}
+		g_runtime_context.m_graphics_context->m_stats.draw_calls += 1;
 	}
 
 }

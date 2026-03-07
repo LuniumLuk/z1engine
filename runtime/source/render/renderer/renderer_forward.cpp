@@ -468,9 +468,14 @@ namespace z1 {
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 				for (auto [entity, transform, mesh] : view.each()) {
 					if (!mesh.m_mesh) continue;
-					if (!is_mesh_visible(frustum, transform.get_world_transform(), mesh.m_mesh->m_bound_min, mesh.m_mesh->m_bound_max)) continue;
+					if (!is_mesh_visible(frustum, transform.get_world_transform(), mesh.m_mesh->m_bound_min, mesh.m_mesh->m_bound_max)) {
+						ctx.m_stats.culled_objects += 1;
+						continue;
+					}
 					per_frame.model = transform.get_world_transform();
 					mesh.m_mesh->draw(per_frame, m_default_material);
+
+					ctx.m_stats.visible_objects += 1;
 				}
 
 				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
@@ -487,10 +492,15 @@ namespace z1 {
 						get_skeletal_bounds(mesh, anim, min, max);
 					}
 
-					if (!is_mesh_visible(frustum, transform.get_world_transform(), min, max)) continue;
+					if (!is_mesh_visible(frustum, transform.get_world_transform(), min, max)) {
+						ctx.m_stats.culled_objects += 1;
+						continue;
+					}
 					per_frame.model = transform.get_world_transform();
 
 					mesh.m_mesh->draw(per_frame, m_default_material, bones);
+
+					ctx.m_stats.visible_objects += 1;
 				}
 
 				auto sky_view = scene->m_registry.view<SkyLightComponent const>();
