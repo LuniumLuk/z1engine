@@ -987,45 +987,67 @@ namespace z1 {
 			{
 				auto const& view = model.bufferViews[input_accessor.bufferView];
 				auto const& buffer = model.buffers[view.buffer];
-				const float* data = reinterpret_cast<const float*>(&buffer.data[input_accessor.byteOffset + view.byteOffset]);
+				const uint8_t* data = &buffer.data[input_accessor.byteOffset + view.byteOffset];
+				int stride = input_accessor.ByteStride(view) ? input_accessor.ByteStride(view) : sizeof(float);
+
 				for (size_t i = 0; i < input_accessor.count; ++i) {
-					times.push_back(data[i]);
-					animation.duration = std::max(animation.duration, data[i]);
+					const float* val = reinterpret_cast<const float*>(data + i * stride);
+					times.push_back(*val);
+					animation.duration = std::max(animation.duration, *val);
 				}
 			}
 
 			auto const& view = model.bufferViews[output_accessor.bufferView];
 			auto const& buffer = model.buffers[view.buffer];
-			const float* data = reinterpret_cast<const float*>(&buffer.data[output_accessor.byteOffset + view.byteOffset]);
+			const uint8_t* data = &buffer.data[output_accessor.byteOffset + view.byteOffset];
+
+			bool is_cubic = sampler.interpolation == "CUBICSPLINE";
+
+			if (output_accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
+				CORE_WARN("Animation channel {} has non-float component type. Skipping.", channel.target_path);
+				continue;
+			}
 
 			if (channel.target_path == "translation") {
+				size_t element_size = 3 * sizeof(float);
+				size_t stride = view.byteStride ? view.byteStride : (is_cubic ? 3 : 1) * element_size;
 				for (size_t i = 0; i < output_accessor.count; ++i) {
 					PositionKeyframe key;
 					key.time = times[i];
-					key.value = glm::make_vec3(&data[i * 3]);
+					const float* val_ptr = reinterpret_cast<const float*>(data + i * stride);
+					if (is_cubic) val_ptr += 3; // Skip in-tangent (vec3)
+					key.value = glm::make_vec3(val_ptr);
 					anim_channel.position_keys.push_back(key);
 				}
 			}
 			else if (channel.target_path == "rotation") {
+				size_t element_size = 4 * sizeof(float);
+				size_t stride = view.byteStride ? view.byteStride : (is_cubic ? 3 : 1) * element_size;
 				for (size_t i = 0; i < output_accessor.count; ++i) {
 					RotationKeyframe key;
 					key.time = times[i];
-					key.value = glm::make_quat(&data[i * 4]);
+					const float* val_ptr = reinterpret_cast<const float*>(data + i * stride);
+					if (is_cubic) val_ptr += 4; // Skip in-tangent (vec4)
+					key.value = glm::normalize(glm::make_quat(val_ptr)); // Ensure normalized
 					anim_channel.rotation_keys.push_back(key);
 				}
 			}
 			else if (channel.target_path == "scale") {
+				size_t element_size = 3 * sizeof(float);
+				size_t stride = view.byteStride ? view.byteStride : (is_cubic ? 3 : 1) * element_size;
 				for (size_t i = 0; i < output_accessor.count; ++i) {
 					ScaleKeyframe key;
 					key.time = times[i];
-					key.value = glm::make_vec3(&data[i * 3]);
+					const float* val_ptr = reinterpret_cast<const float*>(data + i * stride);
+					if (is_cubic) val_ptr += 3; // Skip in-tangent (vec3)
+					key.value = glm::make_vec3(val_ptr);
 					anim_channel.scale_keys.push_back(key);
 				}
 			}
 
 			bool found = false;
 			for (auto& existing : animation.channels) {
-				if (existing.bone_name == anim_channel.bone_name) {
+				if (existing.bone_id == anim_channel.bone_id) {
 					if (!anim_channel.position_keys.empty()) existing.position_keys = anim_channel.position_keys;
 					if (!anim_channel.rotation_keys.empty()) existing.rotation_keys = anim_channel.rotation_keys;
 					if (!anim_channel.scale_keys.empty()) existing.scale_keys = anim_channel.scale_keys;
