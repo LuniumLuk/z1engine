@@ -798,6 +798,7 @@ namespace z1 {
 			.set_output(target)
 			.set_pass_desc(desc)
 			.depends_on("taa")
+			.depends_on("bloom-up-1")
 			.execute([this, source](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_postprocess->bind();
 				auto& s = m_pipeline_postprocess->m_shader;

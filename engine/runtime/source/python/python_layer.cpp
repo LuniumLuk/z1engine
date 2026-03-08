@@ -15,14 +15,6 @@ extern void ForceLinkPythonEngine();
 namespace z1 {
 
 	PythonLayer::PythonLayer() : Layer("Python layer") {
-
-	}
-
-	PythonLayer::~PythonLayer() {
-
-	}
-
-	void PythonLayer::on_attach() {
 		// temporary test space for python script runner
 		ForceLinkPythonEngine();
 
@@ -52,20 +44,27 @@ namespace z1 {
 		// We don't use scoped_interpreter here because we initialized manually
 		try {
 			py::exec(R"(
-			import sys
-			import os
-			print(f"Python Home: {sys.prefix}")
-			sys.path.append(os.path.abspath("./content"))
-			print(f"Searching in: {sys.path}")
+				import sys
+				import os
+				print(f"Python Home: {sys.prefix}")
+				sys.path.append(os.path.abspath("./content"))
+				print(f"Searching in: {sys.path}")
 
-			import z1
-			z1.log_info("Python Path verified!")
-		)");
-		}
-		catch (py::error_already_set& e) {
+				import z1
+				z1.log_info("Python Path verified!")
+			)");
+		} catch (py::error_already_set& e) {
 			CORE_ERROR("Python Error: {0}", e.what());
 		}
+	}
 
+	PythonLayer::~PythonLayer() {
+		CORE_DEBUG("shutting down PythonLayer ...");
+		// Cleanup manually at the end of the program
+		Py_Finalize();
+	}
+
+	void PythonLayer::on_attach() {
 		m_console_thread = std::make_unique<std::thread>([this]() {
 			std::string line;
 			while (m_running) {
@@ -98,15 +97,11 @@ namespace z1 {
 	}
 
 	void PythonLayer::on_detach() {
-		// 5. Cleanup manually at the end of the program
-		Py_Finalize();
-
-		// 6. Shutdown console thread
+		// Shutdown console thread
 		m_running = false;
 		if (m_console_thread->joinable()) {
 			m_console_thread->join();
 		}
-		CORE_DEBUG("shutting down PythonLayer ...");
 	}
 
 	void PythonLayer::on_update(float) {

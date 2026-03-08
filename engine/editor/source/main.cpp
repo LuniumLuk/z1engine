@@ -657,43 +657,43 @@ private:
 		}
 	}
 
-#define SHOW_FLOAT_FIELD(num, value)                                      \
-	float min = field.get_widget_value<float>("min", -1e6f);              \
-	float max = field.get_widget_value<float>("max",  1e6f);              \
-	float step = field.get_widget_value<float>("step", 0.01f);            \
-	if (field.is_widget_type("slider")) {                                 \
-		ImGui::SliderFloat##num(field.name.c_str(), value, min, max);     \
-	}                                                                     \
-	else if (field.is_widget_type("drag")) {                              \
-		ImGui::DragFloat##num(field.name.c_str(), value, step, min, max); \
-	}                                                                     \
-	else {                                                                \
-		ImGui::InputFloat##num(field.name.c_str(), value);                \
+#define SHOW_FLOAT_FIELD(num, value)                                       \
+	float min = field.get_widget_value<float>("min", -1e6f);               \
+	float max = field.get_widget_value<float>("max",  1e6f);               \
+	float step = field.get_widget_value<float>("step", 0.01f);             \
+	if (field.is_widget_type("slider")) {                                  \
+		ImGui::SliderFloat##num(widget_name.c_str(), value, min, max);     \
+	}                                                                      \
+	else if (field.is_widget_type("drag")) {                               \
+		ImGui::DragFloat##num(widget_name.c_str(), value, step, min, max); \
+	}                                                                      \
+	else {                                                                 \
+		ImGui::InputFloat##num(widget_name.c_str(), value);                \
 	}
 
-#define SHOW_FLOAT_FIELD_WITH_COLOR(num, value)                           \
-	float min = field.get_widget_value<float>("min", -1e6f);              \
-	float max = field.get_widget_value<float>("max",  1e6f);              \
-	float step = field.get_widget_value<float>("step", 0.01f);            \
-	if (field.is_widget_type("color")) {                                  \
-		ImGui::ColorEdit##num(field.name.c_str(), value);                 \
-	}                                                                     \
-	else if (field.is_widget_type("slider")) {                            \
-		ImGui::SliderFloat##num(field.name.c_str(), value, min, max);     \
-	}                                                                     \
-	else if (field.is_widget_type("drag")) {                              \
-		ImGui::DragFloat##num(field.name.c_str(), value, step, min, max); \
-	}                                                                     \
-	else {                                                                \
-		ImGui::InputFloat##num(field.name.c_str(), value);                \
+#define SHOW_FLOAT_FIELD_WITH_COLOR(num, value)                            \
+	float min = field.get_widget_value<float>("min", -1e6f);               \
+	float max = field.get_widget_value<float>("max",  1e6f);               \
+	float step = field.get_widget_value<float>("step", 0.01f);             \
+	if (field.is_widget_type("color")) {                                   \
+		ImGui::ColorEdit##num(widget_name.c_str(), value);                 \
+	}                                                                      \
+	else if (field.is_widget_type("slider")) {                             \
+		ImGui::SliderFloat##num(widget_name.c_str(), value, min, max);     \
+	}                                                                      \
+	else if (field.is_widget_type("drag")) {                               \
+		ImGui::DragFloat##num(widget_name.c_str(), value, step, min, max); \
+	}                                                                      \
+	else {                                                                 \
+		ImGui::InputFloat##num(widget_name.c_str(), value);                \
 	}
 
-#define ACCEPT_PAYLOAD(asset_type, meta_type)                             \
-	accept_payload("ASSET_ITEM", [&](void* data) {                        \
-		AssetMeta* meta = *(AssetMeta**)data;                             \
-		if (meta->type == meta_type) {                                    \
-			value = asset_type::load(meta->guid);                         \
-		}                                                                 \
+#define ACCEPT_PAYLOAD(asset_type, meta_type)                              \
+	accept_payload("ASSET_ITEM", [&](void* data) {                         \
+		AssetMeta* meta = *(AssetMeta**)data;                              \
+		if (meta->type == meta_type) {                                     \
+			value = asset_type::load(meta->guid);                          \
+		}                                                                  \
 	});
 
 	void show_type_field(void* instance, FieldInfo const& field) {
@@ -702,18 +702,22 @@ private:
 		if (!visible && !editable)
 			return;
 
+		ImGui::Text(field.name.c_str());
+		std::string widget_name = "##" + field.name;
+		ImGui::SetNextItemWidth(-1.0f);
+
 		if (!editable)
 			ImGui::BeginDisabled();
 
 		if (*field.type == typeid(bool)) {
 			bool& value = field.get<bool>(instance);
 			if (field.is_widget_type("radio")) {
-				if (ImGui::RadioButton(field.name.c_str(), value)) {
+				if (ImGui::RadioButton(widget_name.c_str(), value)) {
 					value = !value;
 				}
 			}
 			else {
-				ImGui::Checkbox(field.name.c_str(), &value);
+				ImGui::Checkbox(widget_name.c_str(), &value);
 			}
 		}
 		else if (*field.type == typeid(float)) {
@@ -726,13 +730,13 @@ private:
 			int max = field.get_widget_value<int>("max", 10000);
 			int step = field.get_widget_value<int>("step", 1);
 			if (field.is_widget_type("slider")) {
-				ImGui::SliderInt(field.name.c_str(), &value, min, max);
+				ImGui::SliderInt(widget_name.c_str(), &value, min, max);
 			}
 		else if (field.is_widget_type("drag")) {
-				ImGui::DragInt(field.name.c_str(), &value, (float)step, min, max);
+				ImGui::DragInt(widget_name.c_str(), &value, (float)step, min, max);
 			}
 			else {
-				ImGui::InputInt(field.name.c_str(), &value, step);
+				ImGui::InputInt(widget_name.c_str(), &value, step);
 			}
 		}
 		else if (*field.type == typeid(glm::vec2)) {
@@ -751,13 +755,13 @@ private:
 			std::string& value = field.get<std::string>(instance);
 			static char str_buffer[256] = {};
 			strcpy_s(str_buffer, value.c_str());
-			if (ImGui::InputText(field.name.c_str(), str_buffer, IM_ARRAYSIZE(str_buffer))) {
+			if (ImGui::InputText(widget_name.c_str(), str_buffer, IM_ARRAYSIZE(str_buffer))) {
 				value = std::string(str_buffer);
 			}
 		}
 		else if (*field.type == typeid(std::shared_ptr<Texture2D>)) {
 			std::shared_ptr<Texture2D>& value = field.get<std::shared_ptr<Texture2D>>(instance);
-			ImGui::Text(field.name.c_str());
+			ImGui::Text(widget_name.c_str());
 			ImGui::Indent();
 			if (value) {
 				auto w = value->m_image->get_description().m_width;
@@ -772,7 +776,7 @@ private:
 		}
 		else if (*field.type == typeid(std::shared_ptr<Animation>)) {
 			std::shared_ptr<Animation>& value = field.get<std::shared_ptr<Animation>>(instance);
-			ImGui::Text(field.name.c_str());
+			ImGui::Text(widget_name.c_str());
 			ImGui::Indent();
 			if (value) {
 				ImGui::Text("guid: %s", value->m_meta.guid.value.c_str());
@@ -795,11 +799,9 @@ private:
 		auto const info = TypeRegistry::instance().get(name);
 		if (!info) return;
 
-		ImGui::Indent();
 		for (auto& field : info->fields) {
 			show_type_field(instance, field);
 		}
-		ImGui::Unindent();
 	}
 
 #define SHOW_COMPONENT(ComponentType)                                               \
