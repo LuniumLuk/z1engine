@@ -25,6 +25,10 @@ layout (std140) uniform Global {
 	float u_pp_exposure;
 	float u_pp_gamma;
 	vec4  u_pp_tint;
+	float u_pp_bloom_enabled;
+	float u_pp_bloom_threshold;
+	float u_pp_bloom_intensity;
+	float u_pp_bloom_knee;
 };
 
 uniform sampler2DArray u_shadow_map;

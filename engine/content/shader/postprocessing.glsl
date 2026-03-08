@@ -2,6 +2,7 @@
 	#include <common/uniforms.glsl>
 
 	layout(location = 0) uniform sampler2D u_scene;
+	layout(location = 1) uniform sampler2D u_bloom_texture;
 }
 @stage: vert {
 	#include <common/quad.glsl>
@@ -45,6 +46,13 @@
 
 	void main() {
 		vec3 color = sharpen(u_scene, v_uv);
+
+		// Bloom
+		if (u_pp_bloom_enabled > 0.5) {
+			vec3 bloom = texture(u_bloom_texture, v_uv).rgb;
+			// Lerp bloom intensity
+			color = mix(color, color + bloom, u_pp_bloom_intensity);
+		}
 
 		// Exposure
 		color *= u_pp_exposure;

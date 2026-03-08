@@ -187,6 +187,23 @@ namespace z1 {
 			m_pipeline_taa = Pipeline::build(desc);
 		}
 
+		{
+			Pipeline::Description desc{};
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/bloom_downsample");
+			m_pipeline_bloom_downsample = Pipeline::build(desc);
+		}
+
+		{
+			Pipeline::Description desc{};
+			desc.cull_mode = CullMode::None;
+			desc.blend = true;
+			desc.src_blend_factor = BlendFactor::One;
+			desc.dst_blend_factor = BlendFactor::One;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/bloom_upsample");
+			m_pipeline_bloom_upsample = Pipeline::build(desc);
+		}
+
 		/*
 		{
 			Pipeline::Description desc{};
@@ -236,6 +253,21 @@ namespace z1 {
 		auto const height = framebuffer->get_height();
 
 		auto& g = g_runtime_context.m_global;
+
+		if (m_bloom_textures.empty() ||
+			m_bloom_textures[0]->get_width() != width / 2 ||
+			m_bloom_textures[0]->get_height() != height / 2)
+		{
+			m_bloom_textures.clear();
+			for (int i = 0; i < BLOOM_MIP_COUNT; i++) {
+				uint32_t mip_width = width >> (i + 1);
+				uint32_t mip_height = height >> (i + 1);
+				std::vector<Framebuffer::Attachment> attachments = {
+					{ ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToEdge }
+				};
+				m_bloom_textures.push_back(Framebuffer::create(mip_width, mip_height, attachments));
+			}
+		}
 
 		bool history_uninitialized = false;
 
@@ -341,6 +373,7 @@ namespace z1 {
 		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview);
 		add_velocity_pass(rg, draw_list, scene, framebuffer, projview);
 		add_taa_pass(rg, m_history_colors[write_idx], m_history_colors[read_idx]);
+		add_bloom_pass(rg, m_history_colors[write_idx]);
 		add_postprocess_pass(rg, framebuffer, m_history_colors[write_idx]);
 
 		rg.compile();
@@ -669,6 +702,92 @@ namespace z1 {
 				});
 	}
 
+	void RendererForward::add_bloom_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& source) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::DontCare;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
+
+		auto& g = g_runtime_context.m_global;
+		if (m_bloom_textures.empty()) return;
+
+		// Downsample
+		for (int i = 0; i < BLOOM_MIP_COUNT; i++) {
+			auto target = m_bloom_textures[i];
+			std::string name = "bloom-down-" + std::to_string(i);
+
+			auto& pass = rg.add_pass(name);
+			pass.set_output(target)
+				.set_pass_desc(desc);
+
+			if (i == 0) {
+				pass.depends_on("taa");
+			}
+			else {
+				pass.depends_on("bloom-down-" + std::to_string(i - 1));
+			}
+
+			pass.execute([this, i, source](RenderGraphNode& node, GraphicsContext& ctx) {
+				m_pipeline_bloom_downsample->bind();
+				auto& s = m_pipeline_bloom_downsample->m_shader;
+				s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+
+				std::shared_ptr<Image> src_img = nullptr;
+				if (i == 0) {
+					// Source is typically the TAA output (or scene color)
+					src_img = source->get_attachment_image(0);
+				}
+				else {
+					src_img = m_bloom_textures[i - 1]->get_attachment_image(0);
+				}
+
+				src_img->bind();
+				s->set_uniform_binding("u_src_texture", src_img->get_binding());
+
+				glm::vec2 resolution = { (float)src_img->get_description().m_width, (float)src_img->get_description().m_height };
+				// s->set_uniform("u_src_resolution", &resolution);
+				s->set_uniform("u_mip_level", &i);
+
+				m_quad->bind();
+				m_quad->draw(PrimitiveType::Triangles);
+				m_quad->unbind();
+
+				src_img->unbind();
+				m_pipeline_bloom_downsample->unbind();
+			});
+		}
+
+		// Upsample
+		for (int i = BLOOM_MIP_COUNT - 1; i > 0; i--) {
+			auto target = m_bloom_textures[i - 1];
+			std::string name = "bloom-up-" + std::to_string(i);
+
+			rg.add_pass(name)
+				.set_output(target)
+				.set_pass_desc(desc) // Note: Pipeline handles additive blending
+				.depends_on("bloom-down-" + std::to_string(BLOOM_MIP_COUNT - 1)) // Wait for all downsamples
+				.execute([this, i](RenderGraphNode& node, GraphicsContext& ctx) {
+					m_pipeline_bloom_upsample->bind();
+					auto& s = m_pipeline_bloom_upsample->m_shader;
+					s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+
+					auto src_img = m_bloom_textures[i]->get_attachment_image(0);
+					src_img->bind();
+					s->set_uniform_binding("u_src_texture", src_img->get_binding());
+
+					float radius = 1.0f; // Could be exposed
+					s->set_uniform("u_filter_radius", &radius);
+
+					m_quad->bind();
+					m_quad->draw(PrimitiveType::Triangles);
+					m_quad->unbind();
+
+					src_img->unbind();
+					m_pipeline_bloom_upsample->unbind();
+				});
+		}
+	}
+
 	void RendererForward::add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target, std::shared_ptr<Framebuffer> const& source) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
@@ -692,11 +811,21 @@ namespace z1 {
 					"u_scene",
 					scene->get_binding());
 
+				if (g_runtime_context.m_global->pp_bloom_enabled && !m_bloom_textures.empty()) {
+					auto& bloom = m_bloom_textures[0]->get_attachment_image(0);
+					bloom->bind();
+					s->set_uniform_binding("u_bloom_texture", bloom->get_binding());
+				}
+
 				m_quad->bind();
 				m_quad->draw(PrimitiveType::Triangles);
 				m_quad->unbind();
 
 				scene->unbind();
+
+				if (g_runtime_context.m_global->pp_bloom_enabled && !m_bloom_textures.empty()) {
+					m_bloom_textures[0]->get_attachment_image(0)->unbind();
+				}
 
 				m_pipeline_postprocess->unbind();
 				});

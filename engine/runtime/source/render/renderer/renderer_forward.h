@@ -50,6 +50,7 @@ namespace z1 {
 		void add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview);
 		void add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview);
 		void add_taa_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& history_write, std::shared_ptr<Framebuffer> const& history_read);
+		void add_bloom_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& source);
 		void add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target, std::shared_ptr<Framebuffer> const& source);
 
 		std::shared_ptr<MaterialInstance> m_default_material;
@@ -57,12 +58,16 @@ namespace z1 {
 		std::shared_ptr<Pipeline> m_pipeline_postprocess;
 		std::shared_ptr<Pipeline> m_pipeline_velocity;
 		std::shared_ptr<Pipeline> m_pipeline_taa;
+		std::shared_ptr<Pipeline> m_pipeline_bloom_downsample;
+		std::shared_ptr<Pipeline> m_pipeline_bloom_upsample;
 		// std::shared_ptr<Pipeline> m_pipeline_copy; // Removed copy pipeline
 		std::shared_ptr<Pipeline> m_pipeline_shadow;
 		std::shared_ptr<Pipeline> m_pipeline_skybox;
 		std::shared_ptr<Framebuffer> m_shadow_framebuffer;
 		std::shared_ptr<Image> m_shadow_image;
 		std::array<std::shared_ptr<Framebuffer>, 2> m_history_colors;
+		std::vector<std::shared_ptr<Framebuffer>> m_bloom_textures;
+		const int BLOOM_MIP_COUNT = 5;
 
 		struct alignas(16) LightData {
 			glm::vec4 position;  // w = type (0:dir, 1:point, 2:spot)

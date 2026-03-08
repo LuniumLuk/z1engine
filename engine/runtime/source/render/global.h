@@ -30,6 +30,11 @@ namespace z1 {
 		float     pp_exposure           = 1.0f;
 		float     pp_gamma              = 2.2f;
 		glm::vec4 pp_tint               = { 1.f, 1.f, 1.f, 1.f };
+		// Bloom
+		bool      pp_bloom_enabled      = true;
+		float     pp_bloom_threshold    = 1.0f;
+		float     pp_bloom_intensity    = 0.5f;
+		float     pp_bloom_knee         = 0.1f;
 		// Shadow map
 		float     sm_near               = 1.0f;
 		float     sm_far                = 100.0f;
@@ -60,6 +65,10 @@ namespace z1 {
 			float     pp_exposure;
 			float     pp_gamma;
 			glm::vec4 pp_tint;
+			float     pp_bloom_enabled;
+			float     pp_bloom_threshold;
+			float     pp_bloom_intensity;
+			float     pp_bloom_knee;
 		} m_data = {};
 
 	};
@@ -75,6 +84,10 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, pp_exposure,           FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, pp_gamma,              FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, pp_tint,               FF_Default, "[color]")
+	REFLECTED_FIELD(GlobalSettings, pp_bloom_enabled,      FF_Default)
+	REFLECTED_FIELD(GlobalSettings, pp_bloom_threshold,    FF_Default, "[drag]min=0.0")
+	REFLECTED_FIELD(GlobalSettings, pp_bloom_intensity,    FF_Default, "[drag]min=0.0")
+	REFLECTED_FIELD(GlobalSettings, pp_bloom_knee,         FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(GlobalSettings, sm_near,               FF_Default)
 	REFLECTED_FIELD(GlobalSettings, sm_far,                FF_Default)
 	REFLECTED_FIELD(GlobalSettings, sm_ortho_size,         FF_Default)

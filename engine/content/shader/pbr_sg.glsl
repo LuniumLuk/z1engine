@@ -13,6 +13,7 @@
 
 	uniform vec4 u_diffuse_factor;
 	uniform vec3 u_specular_factor;
+	uniform float u_emissive_factor;
 	uniform float u_glossiness_factor;
 	uniform float u_alpha_cutoff;
 }
@@ -31,6 +32,7 @@
 
 	u_diffuse_factor        = vec4 1.0 1.0 1.0 1.0
 	u_specular_factor       = vec3 1.0 1.0 1.0
+	u_emissive_factor       = float 1.0
 	u_glossiness_factor     = float 1.0
 	u_alpha_cutoff          = float 0.5
 }
@@ -150,7 +152,7 @@
 
 		// Emissive term
 		vec3 emissive = texture(s_emissive, get_uv(u_emissive_uv_set)).rgb;
-		emissive = pow(emissive, vec3(2.2));
+		emissive = pow(emissive, vec3(2.2)) * u_emissive_factor;
 
 		// Occlusion term
 		float ao = texture(s_occlusion, get_uv(u_occlusion_uv_set)).r;
