@@ -8,6 +8,7 @@
 #include "scene/component/light.h"
 #include "scene/component/animation.h"
 #include "scene/animation_system.h"
+#include "python/python_script.h"
 #include "core/core.h"
 #include "render/global.h"
 #include "render/shader.h"
@@ -355,6 +356,23 @@ namespace z1 {
 				anim.loop = anim_yaml["loop"].as<bool>();
 				anim.playing = anim_yaml["playing"].as<bool>();
 			}
+
+			// ScriptComponent
+			if (entity_yaml["script_component"]) {
+				auto const& scripts_yaml = entity_yaml["script_component"];
+				for (auto const& script_entry : scripts_yaml) {
+					std::string script_full_name = script_entry.as<std::string>();
+					size_t last_dot = script_full_name.find_last_of('.');
+					if (last_dot != std::string::npos) {
+						std::string module_name = script_full_name.substr(0, last_dot);
+						std::string class_name = script_full_name.substr(last_dot + 1);
+						entity->attach_script<PythonScript>(module_name, class_name);
+					}
+					else {
+						CORE_WARN("Invalid script name format: {}. Expected module.Class", script_full_name);
+					}
+				}
+			}
 		}
 
 		// resolve parent references
@@ -580,6 +598,21 @@ namespace z1 {
 				yaml << YAML::Key << "playing" << YAML::Value << anim.playing;
 
 				yaml << YAML::EndMap;
+			}
+
+			// ScriptComponent
+			if (entity->has_component<ScriptComponent>()) {
+				auto& sc = entity->get_component<ScriptComponent>();
+				yaml << YAML::Key << "script_component" << YAML::Value << YAML::BeginSeq;
+				for (auto& script : sc.m_scripts) {
+					if (script.instance) {
+						std::string name = script.instance->get_script_name();
+						if (name != "unregistered") {
+							yaml << name;
+						}
+					}
+				}
+				yaml << YAML::EndSeq;
 			}
 
 			yaml << YAML::EndMap;

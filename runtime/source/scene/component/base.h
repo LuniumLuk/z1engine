@@ -172,6 +172,7 @@ namespace z1 {
 
 	private:
 		friend struct ScriptComponent;
+		friend struct PythonScript;
 		std::weak_ptr<Entity> m_entity;
 		bool m_is_valid = true;
 

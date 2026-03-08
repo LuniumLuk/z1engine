@@ -1,4 +1,5 @@
 #include "iostream"
+#include <algorithm>
 #include "z1engine.h"
 #include "glad/glad.h"
 #include "glm/gtc/matrix_transform.hpp"
@@ -11,6 +12,8 @@
 #include "stb/stb_image_write.h"
 #include "scene/component/light.h"
 #include "scene/prefab.h"
+#include "asset/script_asset.h"
+#include "python/python_script.h"
 #include <yaml-cpp/yaml.h>
 
 using namespace z1;
@@ -971,13 +974,46 @@ private:
 						auto& script = m_selected_entity->get_component<ScriptComponent>();
 						bool new_script_added = false;
 						if (ImGui::BeginCombo("add", "select script...")) {
-							if (ImGui::Selectable("Generic2DCameraCtrlScript")) {
-								m_selected_entity->attach_script<Generic2DCameraCtrlScript>(m_gui);
-								new_script_added = true;
-							}
-							if (ImGui::Selectable("HoveringCameraCtrlScript")) {
-								m_selected_entity->attach_script<HoveringCameraCtrlScript>(m_gui);
-								new_script_added = true;
+							auto const& metas = g_runtime_context.m_asset_manager->get_all_metas();
+							for (auto const& meta : metas) {
+								if (meta.type == "script") {
+									if (ImGui::Selectable(meta.name().c_str())) {
+										// Convert path to module name
+										// e.g. scripts/test_mover.py -> scripts.test_mover
+										std::string module_path = meta.path.generic_string();
+
+										// remove extension
+										size_t lastindex = module_path.find_last_of(".");
+										if (lastindex != std::string::npos) {
+											module_path = module_path.substr(0, lastindex);
+										}
+
+										// replace / with .
+										std::replace(module_path.begin(), module_path.end(), '/', '.');
+										// replace \ with .
+										std::replace(module_path.begin(), module_path.end(), '\\', '.');
+
+										// Assume class name is PascalCase(filename)
+										// e.g. test_mover -> TestMover
+										std::string stem = meta.path.stem().string();
+										std::string class_name;
+										bool next_upper = true;
+										for (char c : stem) {
+											if (c == '_') {
+												next_upper = true;
+											} else {
+												if (next_upper) {
+													class_name += toupper(c);
+													next_upper = false;
+												} else {
+													class_name += c;
+												}
+											}
+										}
+										m_selected_entity->attach_script<PythonScript>(module_path, class_name);
+										new_script_added = true;
+									}
+								}
 							}
 							ImGui::EndCombo();
 						}

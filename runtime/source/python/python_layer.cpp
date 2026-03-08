@@ -32,7 +32,8 @@ namespace z1 {
 
 		// 2. Set the Python Home (the directory containing python314.zip or Lib/)
 		// This replaces Py_SetPythonHome
-		PyStatus status = PyConfig_SetString(&config, &config.home, L"./pyenv");
+		std::wstring home = std::filesystem::absolute("./pyenv").wstring();
+		PyStatus status = PyConfig_SetString(&config, &config.home, home.c_str());
 		if (PyStatus_Exception(status)) {
 			PyConfig_Clear(&config);
 			CORE_ASSERT(false, "Failed to set Python Home");
@@ -40,10 +41,12 @@ namespace z1 {
 
 		// 3. Apply the configuration and initialize the interpreter
 		status = Py_InitializeFromConfig(&config);
-		PyConfig_Clear(&config); // Done with config, clear memory
 		if (PyStatus_Exception(status)) {
+			CORE_ERROR("Python Init Error: {0}", status.err_msg);
+			PyConfig_Clear(&config);
 			CORE_ASSERT(false, "Failed to initialize Python interpreter");
 		}
+		PyConfig_Clear(&config); // Done with config, clear memory
 
 		// 4. Now that Python is started, pybind11 can wrap it
 		// We don't use scoped_interpreter here because we initialized manually
@@ -52,10 +55,11 @@ namespace z1 {
 			import sys
 			import os
 			print(f"Python Home: {sys.prefix}")
+			sys.path.append(os.path.abspath("./content"))
 			print(f"Searching in: {sys.path}")
 
-			import Engine
-			Engine.log_info("Python Path verified!")
+			import z1
+			z1.log_info("Python Path verified!")
 		)");
 		}
 		catch (py::error_already_set& e) {

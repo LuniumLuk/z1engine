@@ -1,6 +1,8 @@
 #include "z1engine.h"
 #include <vector>
 #include <string>
+#include "python/python_layer.h"
+#include "python/python_script.h"
 
 using namespace z1;
 
@@ -10,8 +12,8 @@ struct OurApp : Application {
 
 int main() {
 	// override content root and shader root for test environment
-	FileSystem::s_content_root = "../../content";
-	FileSystem::s_engine_root = "../../engine";
+	FileSystem::s_content_root = "content";
+	FileSystem::s_engine_root = "engine";
 
 	OurApp app;
 	app.init();
@@ -153,6 +155,30 @@ int main() {
 		}
 	}
 #endif
+
+	// Python Script Test
+	if (g_runtime_context.m_python_layer) {
+		std::cout << "Starting Python Script Test..." << std::endl;
+		g_runtime_context.m_python_layer->on_attach();
+
+		auto ent = scene->create_entity("PythonTestEntity");
+		ent->attach_script<PythonScript>("test_mover", "TestMover");
+
+		// Run update loop (Attach and Update)
+		scene->on_update(0.1f);
+
+		auto pos = ent->get_component<TransformComponent>().m_location;
+		std::cout << "PythonTestEntity Pos X: " << pos.x << std::endl;
+
+		if (pos.x > 0.05f) {
+			std::cout << "[SUCCESS] Python Script moved entity!" << std::endl;
+		}
+		else {
+			std::cout << "[FAILURE] Python Script did not move entity." << std::endl;
+		}
+
+		g_runtime_context.m_python_layer->on_detach();
+	}
 
 	scene->save();
 

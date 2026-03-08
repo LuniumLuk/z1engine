@@ -59,6 +59,33 @@ namespace z1 {
 					continue;
 				}
 			}
+
+			// scan for python scripts
+			for (auto& entry : fs::recursive_directory_iterator(root)) {
+				if (!entry.is_regular_file())
+					continue;
+
+				auto const& file = entry.path();
+				if (file.extension() != ".py")
+					continue;
+
+				Filepath path = fs::relative(file, root);
+				std::string path_str = path.generic_string();
+
+				// Ensure we don't duplicate existing assets (like yaml)
+				// m_path_to_guid_mapping contains full paths? No, let's check.
+				// m_path_to_guid_mapping stores relative path as key.
+				if (m_path_to_guid_mapping.find(path) != m_path_to_guid_mapping.end())
+					continue;
+
+				AssetMeta meta;
+				meta.guid = Guid::make(path_str);
+				meta.type = "script";
+				meta.path = path_str;
+				meta.root = "content";
+
+				register_asset(meta, root);
+			}
 		}
 
 		{
