@@ -170,7 +170,7 @@ vec3 get_normal_from_map(vec3 world_pos, vec3 normal, vec4 tangent, vec3 normal_
 		return normalize(TBN * normal_map);
 	}
 
-	// Case 2: no tangent — fallback using screen-space derivatives
+	// Case 2: no tangent - fallback using screen-space derivatives
 	vec3 dp1 = dFdx(world_pos);
 	vec3 dp2 = dFdy(world_pos);
 	vec2 duv1 = dFdx(v_texcoord0);
