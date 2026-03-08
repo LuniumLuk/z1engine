@@ -47,14 +47,14 @@ We encourage the **Conventional Commits** specification:
 
 ## Testing
 
-The project uses a per-file test structure. Tests are located in the `test/` directory.
+The project uses a per-file test structure. Tests are located in the `engine/test/` directory.
 
 1.  **Build Tests**: Building the `z1engine` solution will build all test projects (e.g., `test_render_graph`).
-2.  **Run Tests**: Execute the test binaries located in `build/Debug-windows-x86_64/` (or your build configuration).
+2.  **Run Tests**: Execute the test binaries located in `engine/bin/test/Debug/` (or your build configuration).
 
 Example:
 ```cmd
-build\Debug-windows-x86_64\test_math.exe
+engine\bin\test\Debug\test_math.exe
 ```
 
 ## Reporting Issues

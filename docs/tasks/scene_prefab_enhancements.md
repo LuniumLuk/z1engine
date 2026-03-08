@@ -13,9 +13,9 @@ This task focuses on enhancing the Entity panel, introducing a Prefab system, im
 **Important Directories:**
 - `dev/`: Build and maintenance scripts.
 - `docs/`: Project documentation.
-- `runtime/`: Engine core source code.
-- `editor/`: Editor application source code.
-- `test/`: Unit tests and test utilities.
+- `engine/runtime/`: Engine core source code.
+- `engine/editor/`: Editor application source code.
+- `engine/test/`: Unit tests and test utilities.
 - `asset/` & `content/`: Assets and resources.
 
 ## 2. Important Guidelines

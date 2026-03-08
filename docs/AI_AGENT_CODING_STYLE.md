@@ -5,7 +5,7 @@ Purpose
 - Keep rules minimal and prescriptive so automated agents make consistent, low-risk changes.
 
 Applies to
-- All source under: editor/, runtime/, engine/, bakery/, test/, utils/ (do NOT edit 3rdparty/ except when explicitly updating a vendor).
+- All source under: engine/ (including runtime, editor, bakery, test), utils/ (do NOT edit engine/3rdparty/ except when explicitly updating a vendor).
 
 General principles
 - Make the smallest possible change to satisfy a request. Avoid broad refactors.
@@ -36,8 +36,8 @@ API and ABI
 - Where APIs use an "API" macro (e.g., struct API VertexArray), maintain that macro on exported types.
 
 Includes and dependencies
-- Do not modify files under 3rdparty/ unless performing an explicit vendor update and documenting it.
-- When adding new third-party usage, prefer adding it via the existing 3rdparty/ folder and updating project/premake files only after confirmation from maintainers.
+- Do not modify files under engine/3rdparty/ unless performing an explicit vendor update and documenting it.
+- When adding new third-party usage, prefer adding it via the existing engine/3rdparty/ folder and updating project/premake files only after confirmation from maintainers.
 
 Memory and ownership
 - Follow existing ownership model—shared ownership via std::shared_ptr is common. When introducing unique ownership, prefer std::unique_ptr but follow local patterns.
@@ -45,7 +45,7 @@ Memory and ownership
 
 Logging, errors, and tests
 - Use existing logging utilities (CORE_DEBUG, spdlog usage in core/log) for diagnostic messages.
-- Add or update unit tests in test/ for any behavioral change; keep tests small and focused.
+- Add or update unit tests in engine/test/ for any behavioral change; keep tests small and focused.
 
 Comments and documentation
 - Use brief // single-line comments for clarifications. Avoid large block comments unless necessary.
@@ -58,7 +58,7 @@ Style enforcement checklist for AI agents (must be satisfied before committing)
 - [ ] Header files use #pragma once.
 - [ ] Type, method and member naming follow PascalCase, camelCase, and m_ prefix rules.
 - [ ] const placement uses "Type const&" and smart pointers passed by const&.
-- [ ] No edits to 3rdparty/ unless explicitly authorized and documented.
+- [ ] No edits to engine/3rdparty/ unless explicitly authorized and documented.
 - [ ] Include the Co-authored-by trailer in commit messages when the agent creates commits:
 
   Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

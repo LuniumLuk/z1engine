@@ -7,13 +7,13 @@ This document provides a high-level overview of the z1engine architecture, descr
 
 The engine is divided into three primary components:
 
-1.  **Runtime (`runtime/`)**: The core engine library containing all gameplay, rendering, and system logic. This is linked by both the Editor and the final game executable.
-2.  **Editor (`editor/`)**: The development environment for building scenes and inspecting entities. It runs the Runtime within an editor context.
-3.  **Bakery (`bakery/`)**: An offline asset processing tool that converts raw assets (textures, models) into optimized binary formats for the engine.
+1.  **Runtime (`engine/runtime/`)**: The core engine library containing all gameplay, rendering, and system logic. This is linked by both the Editor and the final game executable.
+2.  **Editor (`engine/editor/`)**: The development environment for building scenes and inspecting entities. It runs the Runtime within an editor context.
+3.  **Bakery (`engine/bakery/`)**: An offline asset processing tool that converts raw assets (textures, models) into optimized binary formats for the engine.
 
 ## runtime
 
-The `runtime` module is the heart of the engine. It is organized into several subsystems:
+The `runtime` module (source in `engine/runtime/source`) is the heart of the engine. It is organized into several subsystems:
 
 ### Core Loop (`core/`)
 -   **Application**: The entry point managing the main loop. It processes events and updates layers.
@@ -39,14 +39,14 @@ The `runtime` module is the heart of the engine. It is organized into several su
 
 ## editor
 
-The Editor is an application built on top of the Runtime.
+The Editor (source in `engine/editor/source`) is an application built on top of the Runtime.
 -   **Panels**: ImGui-based panels (Scene Hierarchy, Inspector, Content Browser) interact with the active `Scene`.
 -   **Editor Camera**: A specialized camera for navigating the scene in edit mode.
 -   **Gizmos**: Visual tools for manipulating objects (translation, rotation, scale).
 
 ## bakery
 
-The Bakery is a standalone CLI tool for asset processing.
+The Bakery (source in `engine/bakery/source`) is a standalone CLI tool for asset processing.
 -   **Pipeline**: It scans source assets (`.png`, `.gltf`, `.glsl`) and converts them to engine-ready binary files.
 -   **Importers**: Specific logic for each file type (e.g., `TextureImporter` compresses images, `MeshImporter` optimizes geometry).
 

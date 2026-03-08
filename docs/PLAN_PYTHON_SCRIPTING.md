@@ -8,21 +8,21 @@ The goal is to allow developers to attach Python scripts to entities in the scen
 ## 2. Architecture
 The system consists of the following components:
 
--   **PythonLayer (`runtime/source/python/python_layer.cpp`)**:
+-   **PythonLayer (`engine/runtime/source/python/python_layer.cpp`)**:
     -   Manages the Python Virtual Machine (VM) lifecycle.
     -   Initializes the interpreter with isolated configuration.
     -   Sets up `PYTHONHOME` to point to the embedded `pyenv` directory.
 
--   **z1 Module (`runtime/source/python/py_engine.cpp`)**:
+-   **z1 Module (`engine/runtime/source/python/py_engine.cpp`)**:
     -   A built-in Python module exposing engine types (`Entity`, `Transform`, `Vec3`).
     -   Provides logging utilities (`log_info`, `log_warn`, `log_error`).
 
--   **PythonScript Wrapper (`runtime/source/python/python_script.cpp`)**:
+-   **PythonScript Wrapper (`engine/runtime/source/python/python_script.cpp`)**:
     -   A C++ class that wraps a Python object instance.
     -   Implements the `ScriptBase` interface to forward engine events to Python.
     -   Handles instantiation of Python classes based on module and class names.
 
--   **Serialization (`runtime/source/scene/scene.cpp`)**:
+-   **Serialization (`engine/runtime/source/scene/scene.cpp`)**:
     -   `ScriptComponent` stores the module and class name.
     -   The scene serializer saves and loads these names to/from YAML.
 
@@ -64,7 +64,7 @@ entity->attach_script<PythonScript>("my_script_module", "MyScriptClass");
     -   Ensure `pyenv/Lib` contains the standard library (extracted from zip if necessary).
 
 ## 5. Testing
--   **Verification**: Run `test_scene_serialize.exe`.
+-   **Verification**: Run `engine\bin\test\Release\test_scene_serialize.exe`.
     -   It loads `content/scripts/test_mover.py`.
     -   It attaches `TestMover` to an entity.
     -   It verifies that the entity moves over time.

@@ -13,9 +13,9 @@ This template outlines the standard procedure for executing a new task in the `z
 **Important Directories:**
 - `dev/`: Build and maintenance scripts (e.g., `build_vs2026.bat`).
 - `docs/`: Project documentation.
-- `runtime/`: Engine core source code.
-- `editor/`: Editor application source code.
-- `test/`: Unit tests and test utilities.
+- `engine/runtime/`: Engine core source code.
+- `engine/editor/`: Editor application source code.
+- `engine/test/`: Unit tests and test utilities.
 - `asset/` & `content/`: Assets and resources.
 
 ## 2. Important Guidelines
@@ -56,7 +56,7 @@ If your task involves modifying or creating shaders (glsl), you **MUST** validat
 1.  Build the solution (this builds `shader_validator`).
 2.  Run the validator against your shader file:
     ```cmd
-    build\Release-windows-x86_64\shader_validator\shader_validator.exe path\to\your\shader.glsl
+    engine\bin\test\Release\shader_validator.exe path\to\your\shader.glsl
     ```
     *(Note: The compile script builds Release by default. Adjust path if using Debug)*
 
@@ -64,10 +64,10 @@ If your task involves modifying or creating shaders (glsl), you **MUST** validat
 
 -   Run existing tests if relevant:
     ```cmd
-    build\Release-windows-x86_64\test_math\test_math.exe
+    engine\bin\test\Release\test_math.exe
     ```
     *(Note: Adjust path for Debug if applicable)*
--   Create new tests in `test/` if adding new functionality.
+-   Create new tests in `engine/test/` if adding new functionality.
 
 ## 6. Implementation Notes
 

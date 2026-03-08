@@ -21,7 +21,7 @@ This document outlines the plan to refactor the `RendererForward` system in `z1e
 
 ## 3. Current State
 
-The `RendererForward` class (in `runtime/source/render/renderer/renderer_forward.cpp`) contains a large `draw` method that handles:
+The `RendererForward` class (in `engine/runtime/source/render/renderer/renderer_forward.cpp`) contains a large `draw` method that handles:
 1.  Resource management (history buffers).
 2.  Camera and projection matrix calculations (including TAA jitter).
 3.  Light data collection and upload.
@@ -126,16 +126,16 @@ If the task involves modifying or creating shaders (glsl), you **MUST** validate
 1.  Build the solution (this builds `shader_validator`).
 2.  Run the validator against your shader file:
     ```cmd
-    build\Release-windows-x86_64\shader_validator\shader_validator.exe path\to\your\shader.glsl
+    engine\bin\test\Release\shader_validator.exe path\to\your\shader.glsl
     ```
 
 ## 9. Testing
 
 -   Run existing tests if relevant:
     ```cmd
-    build\Release-windows-x86_64\test_math\test_math.exe
+    engine\bin\test\Release\test_math.exe
     ```
--   Create new tests in `test/` if adding new functionality.
+-   Create new tests in `engine/test/` if adding new functionality.
 
 ## 10. Considerations
 

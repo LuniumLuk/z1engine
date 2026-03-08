@@ -11,17 +11,19 @@ This guide provides instructions on how to build z1engine from source on Windows
 
 ## Repository Structure
 
--   `3rdparty/`: Bundled libraries (glfw, yaml-cpp, stb, tinyexr, lz4, etc.)
 -   `asset/`: Assets used by project
--   `bakery/`: Asset bakery / conversion tools
--   `build/`: Generated build artifacts
--   `build-int/`: Intermediate build artifacts
 -   `content/`: Runtime content
--   `editor/`: Editor app
+-   `dev/`: Build scripts
+-   `docs/`: Documentation
 -   `engine/`: Core engine code
+    -   `3rdparty/`: Bundled libraries (glfw, yaml-cpp, stb, tinyexr, lz4, etc.)
+    -   `bakery/`: Asset bakery / conversion tools
+    -   `bin/`: Generated build artifacts (executables)
+    -   `editor/`: Editor app source
+    -   `intermediate/`: Intermediate build artifacts
+    -   `runtime/`: Runtime library source
+    -   `test/`: Tests and test assets
 -   `release/`: Release packages
--   `runtime/`: Runtime/launcher
--   `test/`: Tests and test assets
 -   `utils/`: Helper tools (contains premake binary under utils/premake)
 
 ## Setup
@@ -48,7 +50,7 @@ This guide provides instructions on how to build z1engine from source on Windows
 2.  Select your build configuration (Debug, Release, Profile) and platform (x64).
 3.  Right-click the **z1engine** solution in Solution Explorer and select **Build Solution** (or press `Ctrl+Shift+B`).
 4.  The output binaries will be located in:
-    `build\<Configuration>-windows-x86_64\editor\` (e.g., `build\Debug-windows-x86_64\editor\editor.exe`)
+    `engine\bin\<Configuration>\` (e.g., `engine\bin\Debug\editor.exe`)
 
 ### Option 2: Command Line
 
@@ -64,7 +66,7 @@ This script automatically builds the `Debug` configuration by default.
 
 The main entry point is the **Editor**.
 
-1.  Navigate to the build output directory (e.g., `build\Debug-windows-x86_64\editor\`).
+1.  Navigate to the build output directory (e.g., `engine\bin\Debug\`).
 2.  Run `editor.exe`.
 3.  The editor should launch and load the default scene.
 

@@ -4,11 +4,11 @@ This task involves enhancing the Editor's usability and feature set, specificall
 
 ## 1. Key Resources
 
--   **Codebase**: `editor/source/`, `runtime/source/asset/`
+-   **Codebase**: `engine/editor/source/`, `engine/runtime/source/asset/`
 -   **Key Files**:
-    -   `editor/source/browser.h`: Content Browser UI and logic.
-    -   `editor/source/main.cpp`: Editor layout, Inspector (properties) panel.
-    -   `runtime/source/asset/asset_manager.cpp`: Asset management logic (move, remove).
+    -   `engine/editor/source/browser.h`: Content Browser UI and logic.
+    -   `engine/editor/source/main.cpp`: Editor layout, Inspector (properties) panel.
+    -   `engine/runtime/source/asset/asset_manager.cpp`: Asset management logic (move, remove).
 
 ## 2. Requirements
 
@@ -29,7 +29,7 @@ This task involves enhancing the Editor's usability and feature set, specificall
 ### 2.3 Drag-Drop Material Instance
 -   **Goal**: Enable dragging a Material Instance from the Content Browser and dropping it onto a Mesh primitive slot in the Inspector.
 -   **Implementation Details**:
-    -   Locate `show_properties` in `editor/source/main.cpp`.
+    -   Locate `show_properties` in `engine/editor/source/main.cpp`.
     -   Find the `StaticMeshComponent` and `SkeletalMeshComponent` sections.
     -   Add `accept_payload("ASSET_ITEM", ...)` logic to the material slots (similar to how `SpriteComponent` handles texture drops).
     -   Update the mesh primitive's material assignment upon drop.
@@ -68,5 +68,5 @@ This task involves enhancing the Editor's usability and feature set, specificall
 
 ## 4. Implementation Notes
 
--   **Refactoring**: `editor/source/main.cpp` is getting large. Consider extracting the Inspector/Properties panel into a separate class/file (e.g., `inspector.h/cpp`) if it makes the changes cleaner, though not strictly required for this task.
+-   **Refactoring**: `engine/editor/source/main.cpp` is getting large. Consider extracting the Inspector/Properties panel into a separate class/file (e.g., `inspector.h/cpp`) if it makes the changes cleaner, though not strictly required for this task.
 -   **Reference Counting**: Implementing a full dependency graph might be complex. A simple scan of *loaded* assets might be a sufficient first step for "Safe Delete".

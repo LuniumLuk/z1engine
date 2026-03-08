@@ -11,9 +11,9 @@ This document outlines the plan to implement skeletal mesh support and an animat
 - [Contributing Guide](../CONTRIBUTING.md)
 
 **Relevant Directories:**
-- `runtime/source/render/`: Renderer and shader logic.
-- `runtime/source/scene/`: ECS components and systems.
-- `bakery/source/`: Asset import pipeline (needs updates for skinning/animation data).
+- `engine/runtime/source/render/`: Renderer and shader logic.
+- `engine/runtime/source/scene/`: ECS components and systems.
+- `engine/bakery/source/`: Asset import pipeline (needs updates for skinning/animation data).
 - `asset/`: Place sample glTF files here for testing.
 
 ## 2. Goals
@@ -33,7 +33,7 @@ This document outlines the plan to implement skeletal mesh support and an animat
 -   Ensure `glm` quaternion math is available and understood.
 
 ### Phase 2: Asset Pipeline (Bakery)
--   Modify `MeshImporter` in `bakery/` to read:
+-   Modify `MeshImporter` in `engine/bakery/` to read:
     -   Bone weights (vec4) and indices (ivec4) per vertex.
     -   Skeleton hierarchy.
 -   Create `AnimationImporter` to read animation tracks from glTF.
@@ -56,7 +56,7 @@ This document outlines the plan to implement skeletal mesh support and an animat
     -   Output final bone matrices (Geometry Bind Pose * Inverse Bind Pose * Current Pose) for rendering.
 
 ### Phase 4: Rendering
--   Update `Vertex` struct in `runtime/` to include `weights` and `indices`.
+-   Update `Vertex` struct in `engine/runtime/` to include `weights` and `indices`.
 -   Update `Shader` to accept a uniform array or UBO for bone matrices (e.g., `u_BoneMatrices[100]`).
 -   Update Vertex Shader to apply skinning transformation:
     ```glsl
@@ -85,14 +85,14 @@ This document outlines the plan to implement skeletal mesh support and an animat
 1.  Build the solution.
 2.  Run the validator against the updated shader:
     ```cmd
-    build\Release-windows-x86_64\shader_validator\shader_validator.exe runtime\asset\shaders\skinning.glsl
+    engine\bin\test\Release\shader_validator.exe engine\content\shader\skinning.glsl
     ```
 
 ## 6. Testing
 
--   **Unit Tests**: Create `test/test_animation.cpp` to verify keyframe interpolation and matrix hierarchy logic.
+-   **Unit Tests**: Create `engine/test/test_animation.cpp` to verify keyframe interpolation and matrix hierarchy logic.
     ```cmd
-    build\Release-windows-x86_64\test_animation\test_animation.exe
+    engine\bin\test\Release\test_animation.exe
     ```
 -   **Visual Test**: Load a simple animated glTF (e.g., CesiumMan or a simple bending cylinder) in the Editor and verify movement.
 
