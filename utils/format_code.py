@@ -119,10 +119,10 @@ def main():
 
 	root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 	folders = [
-		os.path.join(root, 'engine'),
-		os.path.join(root, 'editor'),
-		os.path.join(root, 'runtime'),
-		os.path.join(root, 'test'),
+		os.path.join(root, 'engine/runtime'),
+		os.path.join(root, 'engine/content'),
+		os.path.join(root, 'engine/editor'),
+		os.path.join(root, 'engine/test'),
 	]
 	extensions = [e.strip() for e in args.extensions.split(',')]
 

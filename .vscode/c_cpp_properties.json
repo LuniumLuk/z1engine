@@ -3,18 +3,18 @@
 		{
 			"name": "Win32",
 			"includePath": [
-				"${workspaceFolder}/runtime/source",
-				"${workspaceFolder}/editor/source",
-				"${workspaceFolder}/bakery/source",
-				"${workspaceFolder}/3rdparty",
-				"${workspaceFolder}/3rdparty/glfw/include",
-				"${workspaceFolder}/3rdparty/glad/include",
-				"${workspaceFolder}/3rdparty/imgui",
-				"${workspaceFolder}/3rdparty/imguizmo",
-				"${workspaceFolder}/3rdparty/glm",
-				"${workspaceFolder}/3rdparty/entt",
-				"${workspaceFolder}/3rdparty/yaml-cpp/include",
-				"${workspaceFolder}/3rdparty/python314/include"
+				"${workspaceFolder}/engine/runtime/source",
+				"${workspaceFolder}/engine/editor/source",
+				"${workspaceFolder}/engine/bakery/source",
+				"${workspaceFolder}/engine/3rdparty",
+				"${workspaceFolder}/engine/3rdparty/glfw/include",
+				"${workspaceFolder}/engine/3rdparty/glad/include",
+				"${workspaceFolder}/engine/3rdparty/imgui",
+				"${workspaceFolder}/engine/3rdparty/imguizmo",
+				"${workspaceFolder}/engine/3rdparty/glm",
+				"${workspaceFolder}/engine/3rdparty/entt",
+				"${workspaceFolder}/engine/3rdparty/yaml-cpp/include",
+				"${workspaceFolder}/engine/3rdparty/python314/include"
 			],
 			"defines": [
 				"PLATFORM_WINDOWS",

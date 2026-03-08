@@ -19,35 +19,38 @@ workspace "z1engine"
 		"Release",
 	}
 
-	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+	-- outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+	outputdir = "%{cfg.buildcfg}" -- Only windows x86_64 is supported for now
 	enginedir = path.getabsolute("%{prj.name}")
 
 	function create_test(testname, filepath)
 		project(testname)
-			location "test/workspace"
+			location "%{wks.location}/engine/intermediate/test"
 			kind "ConsoleApp"
 			language "C++"
 			cppdialect "C++17"
-			targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
-			objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
+			staticruntime "on"
+			targetdir ("%{wks.location}/engine/bin/test/" .. outputdir)
+			objdir ("%{wks.location}/engine/intermediate/test")
+			debugdir ("%{wks.location}")
 			files { filepath }
 			defines { "YAML_CPP_STATIC_DEFINE" }
 			includedirs {
-				"runtime/source",
-				"3rdparty",
-				"3rdparty/glfw/include",
-				"3rdparty/glad/include",
-				"3rdparty/imgui",
-				"3rdparty/glm",
-				"3rdparty/entt",
-				"3rdparty/yaml-cpp/include",
-				"3rdparty/python314/include",
-				"bakery/source"
+				"engine/runtime/source",
+				"engine/3rdparty",
+				"engine/3rdparty/glfw/include",
+				"engine/3rdparty/glad/include",
+				"engine/3rdparty/imgui",
+				"engine/3rdparty/glm",
+				"engine/3rdparty/entt",
+				"engine/3rdparty/yaml-cpp/include",
+				"engine/3rdparty/python314/include",
+				"engine/bakery/source"
 			}
-			libdirs { "3rdparty/python314/lib" }
+			libdirs { "engine/3rdparty/python314/lib" }
 			links { "runtime", "python314" }
 			postbuildcommands {
-				"{COPYFILE} \"%{wks.location}3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
+				"{COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
 			}
 			filter "system:windows"
 				systemversion "latest"
@@ -64,17 +67,17 @@ workspace "z1engine"
 
 	group "dependency"
 
-		include "3rdparty/glfw"
-		include "3rdparty/glad"
-		include "3rdparty/imgui"
-		include "3rdparty/lz4"
-		include "3rdparty/yaml-cpp"
-		include "3rdparty/imguizmo"
-		include "bakery"
+		include "engine/3rdparty/glfw"
+		include "engine/3rdparty/glad"
+		include "engine/3rdparty/imgui"
+		include "engine/3rdparty/lz4"
+		include "engine/3rdparty/yaml-cpp"
+		include "engine/3rdparty/imguizmo"
+		include "engine/bakery"
 
 	group "test"
 
-		local testfiles = os.matchfiles("test/**.cpp")
+		local testfiles = os.matchfiles("engine/test/**.cpp")
 		for _, filepath in ipairs(testfiles) do
 			local testname = path.getbasename(filepath)
 			create_test(testname, filepath)
@@ -83,42 +86,42 @@ workspace "z1engine"
 	group ""
 
 	project "runtime"
-		location "runtime"
+		location "engine/runtime"
 		kind "StaticLib"
 		language "C++"
 		cppdialect "C++17"
 		staticruntime "on"
 
-		targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
-		objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
+		targetdir ("%{wks.location}/engine/bin/" .. outputdir)
+		objdir ("%{wks.location}/engine/intermediate")
 
 		pchheader "pch.h"
-		pchsource "runtime/source/pch.cpp"
+		pchsource "engine/runtime/source/pch.cpp"
 
 		defines { "YAML_CPP_STATIC_DEFINE" }
 
 		files
 		{
-			"%{prj.name}/source/**.h",
-			"%{prj.name}/source/**.cpp",
+			"engine/runtime/source/**.h",
+			"engine/runtime/source/**.cpp",
 		}
 
 		includedirs
 		{
-			"%{prj.name}/source",
-			"bakery/source",
-			"3rdparty",
-			"3rdparty/glfw/include",
-			"3rdparty/glad/include",
-			"3rdparty/imgui",
-			"3rdparty/imguizmo",
-			"3rdparty/glm",
-			"3rdparty/entt",
-			"3rdparty/yaml-cpp/include",
-			"3rdparty/python314/include",
+			"engine/runtime/source",
+			"engine/bakery/source",
+			"engine/3rdparty",
+			"engine/3rdparty/glfw/include",
+			"engine/3rdparty/glad/include",
+			"engine/3rdparty/imgui",
+			"engine/3rdparty/imguizmo",
+			"engine/3rdparty/glm",
+			"engine/3rdparty/entt",
+			"engine/3rdparty/yaml-cpp/include",
+			"engine/3rdparty/python314/include",
 		}
 
-		libdirs { "3rdparty/python314/lib" }
+		libdirs { "engine/3rdparty/python314/lib" }
 		links
 		{
 			"glfw",
@@ -168,49 +171,49 @@ workspace "z1engine"
 			optimize "on"
 
 	project "editor"
-		location "editor"
+		location "engine/editor"
 		kind "ConsoleApp"
 		language "C++"
 		cppdialect "C++17"
 		staticruntime "on"
 
-		targetdir ("%{wks.location}/build/" .. outputdir .. "/%{prj.name}")
-		objdir ("%{wks.location}/build-int/" .. outputdir .. "/%{prj.name}")
-		debugdir "%{wks.location}"
+		targetdir ("%{wks.location}/engine/bin/" .. outputdir)
+		objdir ("%{wks.location}/engine/intermediate")
+		debugdir ("%{wks.location}")
 
 		defines { "YAML_CPP_STATIC_DEFINE" }
 
 		files
 		{
-			"%{prj.name}/source/**.h",
-			"%{prj.name}/source/**.cpp"
+			"engine/editor/source/**.h",
+			"engine/editor/source/**.cpp"
 		}
 
 		includedirs
 		{
-			"runtime/source",
-			"editor/source",
-			"bakery/source",
-			"3rdparty",
-			"3rdparty/glfw/include",
-			"3rdparty/glad/include",
-			"3rdparty/imgui",
-			"3rdparty/imguizmo",
-			"3rdparty/glm",
-			"3rdparty/entt",
-			"3rdparty/yaml-cpp/include",
-			"3rdparty/python314/include",
+			"engine/runtime/source",
+			"engine/editor/source",
+			"engine/bakery/source",
+			"engine/3rdparty",
+			"engine/3rdparty/glfw/include",
+			"engine/3rdparty/glad/include",
+			"engine/3rdparty/imgui",
+			"engine/3rdparty/imguizmo",
+			"engine/3rdparty/glm",
+			"engine/3rdparty/entt",
+			"engine/3rdparty/yaml-cpp/include",
+			"engine/3rdparty/python314/include",
 		}
 
-		libdirs { "3rdparty/python314/lib" }
+		libdirs { "engine/3rdparty/python314/lib" }
 		links
 		{
 			"runtime", "python314"
 		}
 
 		postbuildcommands {
-			"{COPYFILE} \"%{wks.location}3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\"",
-			"{COPYFILE} \"%{wks.location}3rdparty/python314/python314.zip\" \"%{cfg.targetdir}\"",
+			"{COPYFILE} \"%{wks.location}engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\"",
+			"{COPYFILE} \"%{wks.location}engine/3rdparty/python314/python314.zip\" \"%{cfg.targetdir}\"",
 		}
 
 		filter "system:windows"

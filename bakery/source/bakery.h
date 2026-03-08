@@ -1,1 +1,0 @@
-#include "baker/image.h"

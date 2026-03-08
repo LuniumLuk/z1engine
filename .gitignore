@@ -431,8 +431,8 @@ FodyWeavers.xsd
 *.app
 
 # Output directories
-build
-build-int
+engine/bin
+engine/intermediate
 
 # Ignore all .vcxproj files
 *.vcxproj*
@@ -442,6 +442,7 @@ build-int
 *.meta.yaml
 cache
 content
+!engine/content
 
 screenshot*
 

@@ -44,5 +44,5 @@ def count_cpp_lines(target_directory, exclude_dirs=None):
 
 if __name__ == '__main__':
 	file_dir = os.path.dirname(os.path.abspath(__file__))
-	root_dir = os.path.abspath(os.path.join(file_dir, '..'))
-	count_cpp_lines(root_dir, exclude_dirs=['3rdparty', '.git', 'build'])
+	root_dir = os.path.abspath(os.path.join(file_dir, '../engine'))
+	count_cpp_lines(root_dir, exclude_dirs=['3rdparty', 'bin', 'intermediate'])
