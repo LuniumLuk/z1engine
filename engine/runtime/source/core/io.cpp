@@ -3,6 +3,8 @@
 
 namespace z1 {
 
+	Args g_args;
+
 	Filepath FileSystem::s_content_root = "content";
 	Filepath FileSystem::s_cache_root = "cache";
 	Filepath FileSystem::s_engine_root = "engine/content";
@@ -103,6 +105,20 @@ namespace z1 {
 
 		path = legal_path;
 		return !path.empty();
+	}
+
+	void Args::parse(int argc, char* argv[]) {
+		for (int i = 1; i < argc; ++i) {
+			std::string arg = argv[i];
+			size_t equal_pos = arg.find('=');
+			if (equal_pos != std::string::npos) {
+				std::string key = arg.substr(0, equal_pos);
+				std::string value = arg.substr(equal_pos + 1);
+				m_args[key] = value;
+			} else {
+				m_args[arg] = "";
+			}
+		}
 	}
 
 }

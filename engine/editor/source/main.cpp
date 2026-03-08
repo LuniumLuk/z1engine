@@ -64,6 +64,7 @@ EditorSettings load_editor_settings() {
 
 struct EditorLayer : Layer {
 	EditorLayer() {
+		m_one_frame = g_args.get<int>("one-frame", -1);
 		m_settings = load_editor_settings();
 		m_gui = std::make_shared<EditorGUI>(m_settings.curr_resolution);
 		m_browser = std::make_unique<ContentBrowser>();
@@ -273,6 +274,12 @@ struct EditorLayer : Layer {
 		//g_runtime_context.m_renderer_2d->draw(m_active_scene, m_gui->get_viewport_framebuffer());
 
 		g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
+
+		if (m_one_frame >= 0 && m_one_frame == m_frame_count) {
+			save_screenshot();
+			terminate();
+		}
+		m_frame_count += 1;
 	}
 
 	void on_event(Event& event) override {
@@ -369,6 +376,32 @@ struct EditorLayer : Layer {
 		m_active_scene->set_main_camera(camera);
 	}
 
+	void save_screenshot() {
+		auto& fb = m_gui->get_viewport_framebuffer();
+		uint32_t width = fb->get_width();
+		uint32_t height = fb->get_height();
+
+		// Allocate buffer for RGBA8 pixels
+		std::vector<unsigned char> pixels(width * height * 4);
+
+		fb->read_pixels(0, 0, 0, width, height, pixels.data());
+
+		// *** OPTIONAL: flip vertically for correct orientation ***
+		std::vector<unsigned char> flipped(width * height * 4);
+		for (uint32_t y = 0; y < height; ++y) {
+			std::memcpy(&flipped[y * width * 4], &pixels[(height - 1 - y) * width * 4], width * 4);
+		}
+
+		std::string filename = "screenshot.png";
+
+		// Save using stb_image_write (PNG)
+		if (!stbi_write_png(filename.c_str(), width, height, 4, flipped.data(), width * 4)) {
+			std::cerr << "Failed to write image!" << std::endl;
+		} else {
+			std::cout << "Saved: " << filename << std::endl;
+		}
+	}
+
 	void on_imgui_render() override {
 		m_gui->draw();
 
@@ -384,34 +417,7 @@ struct EditorLayer : Layer {
 			}
 
 			if (ImGui::Button("save screenshot")) {
-				auto& fb = m_gui->get_viewport_framebuffer();
-				uint32_t width = fb->get_width();
-				uint32_t height = fb->get_height();
-
-				// Allocate buffer for RGBA8 pixels
-				std::vector<unsigned char> pixels(width * height * 4);
-
-				fb->read_pixels(0, 0, 0, width, height, pixels.data());
-
-				// *** OPTIONAL: flip vertically for correct orientation ***
-				std::vector<unsigned char> flipped(width * height * 4);
-				for (uint32_t y = 0; y < height; ++y) {
-					std::memcpy(
-						&flipped[y * width * 4],
-						&pixels[(height - 1 - y) * width * 4],
-						width * 4
-					);
-				}
-
-				std::string filename = "screenshot.png";
-
-				// Save using stb_image_write (PNG)
-				if (!stbi_write_png(filename.c_str(), width, height, 4, flipped.data(), width * 4)) {
-					std::cerr << "Failed to write image!" << std::endl;
-				}
-				else {
-					std::cout << "Saved: " << filename << std::endl;
-				}
+				save_screenshot();
 			}
 
 			ImGui::DragFloat("light gizmo size", &m_settings.light_gizmo_size, 0.01f, 0.0f, 1.0f);
@@ -448,6 +454,8 @@ private:
 
 	int m_fps_counter = 0;
 	float m_fps_timer = 0.0;
+	int m_one_frame = -1;
+	int m_frame_count = 0;
 
 	void show_scene_graph() {
 		if (ImGui::Begin("scene")) {
@@ -1314,9 +1322,11 @@ struct EditorApp : Application {
 	};
 };
 
-int main() {
+int main(int argc, char* argv[]) {
 	auto start = std::chrono::high_resolution_clock::now();
 	std::cout << "hello world!\n";
+
+	g_args.parse(argc, argv);
 
 	EditorApp app;
 	app.init();
