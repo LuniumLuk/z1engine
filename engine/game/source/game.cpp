@@ -11,6 +11,13 @@ void GameLayer::on_attach() {
 		if (scene_guid.is_valid()) {
 			auto scene = Scene::load(scene_guid);
 			if (scene) {
+				auto const& cam = scene->get_main_camera();
+				if (!cam) {
+					CORE_ERROR("No main camera found in the scene!");
+					terminate();
+					return;
+				}
+
 				g_runtime_context.m_scene = scene;
 				return;
 			}
@@ -18,6 +25,7 @@ void GameLayer::on_attach() {
 	}
 
 	CORE_ERROR("failed to load scene from path: {0}", scene_path.generic_string());
+	terminate();
 }
 
 void GameLayer::on_update(float delta_time) {

@@ -159,7 +159,7 @@ namespace z1 {
 		// needs the template to delay the function instantiation until the full type definition
 		// of 'Entity' is accessible, allowing the function to work properly when the definition is known.
 		bool is_entity_valid() const {
-			return m_entity.lock()->is_valid();
+			return !m_entity.expired() && m_entity.lock()->is_valid();
 		}
 
 		bool is_valid() const {
@@ -181,18 +181,18 @@ namespace z1 {
 	struct API ScriptComponent {
 
 		struct ScriptData {
+			ScriptData() = default;
 			ScriptData(ScriptData const&) = delete;
 			ScriptData& operator=(ScriptData const&) = delete;
 
 			ScriptData(ScriptData &&) = default;
 			ScriptData& operator=(ScriptData &&) = default;
 
-			ScriptBase* instance = nullptr;
+			std::unique_ptr<ScriptBase> instance = nullptr;
 			std::function<void(ScriptData&)> attach_func = nullptr;
 			std::function<void(ScriptData&)> detach_func = nullptr;
 		};
 
-		bool m_is_destroyed = false;
 		std::weak_ptr<Entity> m_entity;
 		std::vector<ScriptData> m_scripts;
 
@@ -211,49 +211,47 @@ namespace z1 {
 					if (script.detach_func) {
 						script.detach_func(script);
 					}
-					else {
-						delete script.instance;
-					}
-					script.instance = nullptr;
+					script.instance.reset();
 				}
 			}
 			m_scripts.clear();
 		}
 
 		~ScriptComponent() {
-			if (!m_is_destroyed) {
-				detach_all();
-			}
+			detach_all();
 		}
 
 		template<typename ScriptType, typename... Args>
 		void bind(Args&&... args) {
 			ScriptData sd{};
 			auto params = std::make_tuple(std::forward<Args>(args)...);
-			sd.attach_func = [this, params = std::move(params)](ScriptData& d)
+
+			// CAPTURE FIX: Capture m_entity by value (weak_ptr copy), NOT 'this'
+			sd.attach_func = [entity = m_entity, params = std::move(params)](ScriptData& d) mutable
 				{
 					std::apply([&](auto&&... unpacked)
 						{
-							d.instance = new ScriptType(std::forward<decltype(unpacked)>(unpacked)...);
+							d.instance = std::make_unique<ScriptType>(std::forward<decltype(unpacked)>(unpacked)...);
 						}, params);
-					d.instance->m_entity = m_entity;
+					d.instance->m_entity = entity;
 					d.instance->on_attach();
 				};
 
 			sd.detach_func = [](ScriptData& d)
 				{
-					d.instance->on_detach();
-					delete d.instance;
+					if (d.instance) {
+						d.instance->on_detach();
+					}
 				};
 
-			m_scripts.emplace_back(std::forward<ScriptData>(sd));
+			m_scripts.emplace_back(std::move(sd));
 		}
 
 		template<typename ScriptType>
 		void unbind() {
 			auto it = std::find_if(m_scripts.begin(), m_scripts.end(),
 				[](ScriptData const& sd) {
-					return dynamic_cast<ScriptType*>(sd.instance) != nullptr;
+					return dynamic_cast<ScriptType*>(sd.instance.get()) != nullptr;
 				});
 
 			if (it != m_scripts.end()) {

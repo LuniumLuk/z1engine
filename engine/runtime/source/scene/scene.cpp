@@ -28,7 +28,6 @@ namespace z1 {
 					script.detach_func(script);
 				}
 			}
-			script_comp.m_is_destroyed = true;
 		}
 
 		// when the scene is being destroyed, the weak_ptr to the scene in each entity will be expired
@@ -140,22 +139,76 @@ namespace z1 {
 	void Scene::on_update(float delta_time) {
 		PROFILE_FUNCTION();
 		AnimationSystem::update(this, delta_time);
+
+		// Collect entities first to avoid iterator invalidation if scripts modify the registry
 		auto view = m_registry.view<ScriptComponent>();
-		for (auto [entity, script_comp] : view.each()) {
-			for (auto it = script_comp.m_scripts.begin(); it != script_comp.m_scripts.end();) {
-				auto& script = *it;
-				if (!script.instance) {
-					script.attach_func(script);
+		std::vector<entt::entity> entities;
+		entities.reserve(view.size());
+		for (auto entity : view) {
+			entities.push_back(entity);
+		}
+
+		for (auto entity : entities) {
+			if (!m_registry.valid(entity)) continue;
+
+			// Initial check if component exists
+			if (!m_registry.all_of<ScriptComponent>(entity)) continue;
+
+			// Note: We cannot hold a reference to ScriptComponent across loop iterations
+			// because scripts might add/remove components, causing EnTT reallocation.
+			// We must re-fetch the component or be very careful.
+			// Since we iterate m_scripts by index, let's fetch size first, but size might change!
+			// So we loop safely.
+
+			// We need to fetch size at start of iteration, but handle dynamic changes?
+			// A simple loop index is safest if we re-fetch the component.
+
+			size_t i = 0;
+			while (true) {
+				// Re-fetch component on every iteration to handle pool reallocation
+				auto* comp = m_registry.try_get<ScriptComponent>(entity);
+				if (!comp) break; // Component removed
+
+				if (i >= comp->m_scripts.size()) break;
+
+				// Access via re-fetched pointer
+				auto& script_data = comp->m_scripts[i];
+
+				if (!script_data.instance) {
+					if (script_data.attach_func) {
+						script_data.attach_func(script_data);
+					}
 				}
-				if (script.instance) {
-					script.instance->on_update(delta_time);
-					if (!script.instance->is_valid()) {
-						script.detach_func(script);
-						it = script_comp.m_scripts.erase(it);
+
+				// Re-fetch again? attach_func might have caused realloc!
+				comp = m_registry.try_get<ScriptComponent>(entity);
+				if (!comp || i >= comp->m_scripts.size()) break;
+
+				auto& current_script = comp->m_scripts[i];
+
+				if (current_script.instance) {
+					current_script.instance->on_update(delta_time);
+
+					// Re-fetch again! on_update might have caused realloc!
+					comp = m_registry.try_get<ScriptComponent>(entity);
+					if (!comp || i >= comp->m_scripts.size()) break;
+
+					// Check validity
+					if (comp->m_scripts[i].instance && !comp->m_scripts[i].instance->is_valid()) {
+						if (comp->m_scripts[i].detach_func) {
+							comp->m_scripts[i].detach_func(comp->m_scripts[i]);
+						}
+						// Reset unique_ptr explicitly before erase (though erase does it too)
+						comp->m_scripts[i].instance.reset();
+						comp->m_scripts.erase(comp->m_scripts.begin() + i);
+						// i stays same
 					}
 					else {
-						++it;
+						++i;
 					}
+				}
+				else {
+					++i;
 				}
 			}
 		}
