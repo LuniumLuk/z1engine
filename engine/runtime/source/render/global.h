@@ -41,6 +41,8 @@ namespace z1 {
 		float     sm_ortho_size         = 40.0f;
 		// Animation
 		bool      anim_enabled          = true;
+		// Scripting
+		bool      script_enabled        = false;
 
 		void flush();
 		void bind();
@@ -92,5 +94,6 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, sm_far,                FF_Default)
 	REFLECTED_FIELD(GlobalSettings, sm_ortho_size,         FF_Default)
 	REFLECTED_FIELD(GlobalSettings, anim_enabled,          FF_Default)
+	REFLECTED_FIELD(GlobalSettings, script_enabled,        FF_Default)
 
 }

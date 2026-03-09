@@ -186,6 +186,9 @@ namespace z1 {
 
 				auto& current_script = comp->m_scripts[i];
 
+				if (!g_runtime_context.m_global->script_enabled)
+					break;
+
 				if (current_script.instance) {
 					current_script.instance->on_update(delta_time);
 

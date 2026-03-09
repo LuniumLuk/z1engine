@@ -19,6 +19,8 @@ void GameLayer::on_attach() {
 				}
 
 				g_runtime_context.m_scene = scene;
+				g_runtime_context.m_global->anim_enabled = true;
+				g_runtime_context.m_global->script_enabled = true;
 				return;
 			}
 		}
