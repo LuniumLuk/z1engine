@@ -31,6 +31,14 @@ namespace z1 {
 			CORE_ASSERT(false, "Failed to set Python Home");
 		}
 
+		// Configure pycache prefix to redirect .pyc files to a central location
+		std::wstring pycache_prefix = std::filesystem::absolute("./__pycache__").wstring();
+		status = PyConfig_SetString(&config, &config.pycache_prefix, pycache_prefix.c_str());
+		if (PyStatus_Exception(status)) {
+			PyConfig_Clear(&config);
+			CORE_ASSERT(false, "Failed to set pycache prefix");
+		}
+
 		// 3. Apply the configuration and initialize the interpreter
 		status = Py_InitializeFromConfig(&config);
 		if (PyStatus_Exception(status)) {
