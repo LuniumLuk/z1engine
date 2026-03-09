@@ -6,6 +6,7 @@
 #include "core/log.h"
 #include "core/io.h"
 #include "core/input.h"
+#include "scene/scene.h"
 #include "render/global.h"
 #include "render/resource.h"
 #include "render/graphics_context.h"
@@ -59,6 +60,9 @@ namespace z1 {
 		m_renderer_2d.reset();
 
 		RenderGraph::clear_cache();
+
+		if (m_scene)
+			m_scene.reset();
 
 		m_layer_stack.reset();
 		m_python_layer.reset();

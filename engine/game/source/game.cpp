@@ -11,7 +11,7 @@ void GameLayer::on_attach() {
 		if (scene_guid.is_valid()) {
 			auto scene = Scene::load(scene_guid);
 			if (scene) {
-				m_scene = scene;
+				g_runtime_context.m_scene = scene;
 				return;
 			}
 		}
@@ -21,12 +21,12 @@ void GameLayer::on_attach() {
 }
 
 void GameLayer::on_update(float delta_time) {
-	if (!m_scene)
+	if (!g_runtime_context.m_scene)
 		return;
 
-	m_scene->on_update(delta_time);
+	g_runtime_context.m_scene->on_update(delta_time);
 	g_runtime_context.m_renderer_forward->draw(
-		m_scene, g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
+		g_runtime_context.m_scene, g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 }
 
 void GameLayer::on_event(Event& event) {

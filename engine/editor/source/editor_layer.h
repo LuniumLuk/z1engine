@@ -51,7 +51,6 @@ struct EditorLayer : Layer {
 private:
 	EditorSettings m_settings;
 	std::shared_ptr<EditorGUI> m_gui;
-	std::shared_ptr<Scene> m_active_scene;
 	std::unique_ptr<ContentBrowser> m_browser;
 	bool m_picked_from_viewport = false;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;

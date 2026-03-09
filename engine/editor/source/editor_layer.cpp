@@ -98,7 +98,7 @@ EditorLayer::EditorLayer() {
 					load_scene();
 				}
 				if (ImGui::MenuItem("save")) {
-					m_active_scene->save();
+					g_runtime_context.m_scene->save();
 				}
 				if (ImGui::MenuItem("exit")) {
 					terminate();
@@ -109,7 +109,7 @@ EditorLayer::EditorLayer() {
 
 	m_gui->m_draw_viewport_func =
 		[&]() {
-			auto const& cam = m_active_scene->get_main_camera();
+			auto const& cam = g_runtime_context.m_scene->get_main_camera();
 			if (!cam) return;
 
 			auto view = cam->get_component<CameraComponent>().get_view();
@@ -123,10 +123,10 @@ EditorLayer::EditorLayer() {
 			// Visualize lights using ImGuizmo::DrawCubes
 			if (m_settings.show_light_gizmos) {
 				std::vector<glm::mat4> light_matrices;
-				auto light_view = m_active_scene->m_registry.view<TransformComponent const, LightComponent const>();
+				auto light_view = g_runtime_context.m_scene->m_registry.view<TransformComponent const, LightComponent const>();
 				for (auto [entity, transform, light] : light_view.each()) {
 					// Don't draw cube for selected entity to avoid clutter with the manipulator
-					if (m_selected_entity && m_selected_entity->get_component<TagComponent>().m_id == m_active_scene->m_registry.get<TagComponent>(entity).m_id) {
+					if (m_selected_entity && m_selected_entity->get_component<TagComponent>().m_id == g_runtime_context.m_scene->m_registry.get<TagComponent>(entity).m_id) {
 						continue;
 					}
 					glm::mat4 model = transform.get_world_transform();
@@ -141,7 +141,7 @@ EditorLayer::EditorLayer() {
 
 			// Visualize skeletons using ImGuizmo::DrawLines
 			if (m_settings.show_skeleton_guizmos) {
-				auto skel_view = m_active_scene->m_registry.view<TransformComponent const, AnimationComponent const, SkeletalMeshComponent const>();
+				auto skel_view = g_runtime_context.m_scene->m_registry.view<TransformComponent const, AnimationComponent const, SkeletalMeshComponent const>();
 				for (auto [entity, transform, anim, mesh_comp] : skel_view.each()) {
 					if (anim.global_bone_transforms.empty() || !mesh_comp.m_skeleton)
 						continue;
@@ -237,16 +237,16 @@ void EditorLayer::on_update(float delta_time) {
 	m_fps_counter += 1;
 	if (m_fps_timer >= 1.0) {
 		std::string title = "z1 engine";
-		title += " (" + m_active_scene->m_meta.name() + ")";
+		title += " (" + g_runtime_context.m_scene->m_meta.name() + ")";
 		title += " fps: " + std::to_string(m_fps_counter);
 
 		g_runtime_context.m_window->set_window_title(title);
 		m_fps_timer = 0.0;
 		m_fps_counter = 0;
 	}
-	m_active_scene->on_update(delta_time);
-	g_runtime_context.m_renderer_forward->draw(m_active_scene, m_gui->get_viewport_framebuffer());
-	//g_runtime_context.m_renderer_2d->draw(m_active_scene, m_gui->get_viewport_framebuffer());
+	g_runtime_context.m_scene->on_update(delta_time);
+	g_runtime_context.m_renderer_forward->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
+	//g_runtime_context.m_renderer_2d->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
 
 	g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 
@@ -284,7 +284,7 @@ bool EditorLayer::on_mouse_pressed(MouseButtonPressedEvent& event) {
 		if (m_gui->is_viewport_focused() && m_gui->is_viewport_hovered() && !m_is_using_gizmo) {
 			auto start = std::chrono::high_resolution_clock::now();
 
-			m_picking->render(m_active_scene);
+			m_picking->render(g_runtime_context.m_scene);
 
 			float x = 0.0f;
 			float y = 0.0f;
@@ -295,7 +295,7 @@ bool EditorLayer::on_mouse_pressed(MouseButtonPressedEvent& event) {
 				m_selected_entity = nullptr;
 			}
 			else {
-				m_selected_entity = m_active_scene->m_entities[object_id];
+				m_selected_entity = g_runtime_context.m_scene->m_entities[object_id];
 				m_picked_from_viewport = true;
 			}
 
@@ -311,44 +311,44 @@ bool EditorLayer::on_mouse_pressed(MouseButtonPressedEvent& event) {
 
 void EditorLayer::load_scene(std::shared_ptr<Scene> const& scene /*= nullptr*/) {
 	if (scene) {
-		m_active_scene = scene;
-		m_settings.last_opened_scene_guid = m_active_scene->m_meta.guid.value;
+		g_runtime_context.m_scene = scene;
+		m_settings.last_opened_scene_guid = g_runtime_context.m_scene->m_meta.guid.value;
 	}
 	else {
 		auto folder = m_browser->get_curr_dir();
 		auto path = g_runtime_context.m_asset_manager->next_path_available(folder / "new_scene");
-		m_active_scene = Scene::create(path);
-		if (!m_active_scene) {
+		g_runtime_context.m_scene = Scene::create(path);
+		if (!g_runtime_context.m_scene) {
 			return;
 		}
-		m_active_scene->save();
-		m_settings.last_opened_scene_guid = m_active_scene->m_meta.guid.value;
+		g_runtime_context.m_scene->save();
+		m_settings.last_opened_scene_guid = g_runtime_context.m_scene->m_meta.guid.value;
 	}
 
 	m_selected_entity = nullptr;
 
 	// setup editor viewport camera
-	auto camera = m_active_scene->create_transient_entity("[Editor] Viewport Camera");
+	auto camera = g_runtime_context.m_scene->create_transient_entity("[Editor] Viewport Camera");
 	auto& cam_comp = camera->add_component<CameraComponent>();
 	auto& trans_comp = camera->get_component<TransformComponent>();
 
-	if (m_active_scene->m_editor_camera_data.is_valid) {
-		cam_comp.m_aspect = m_active_scene->m_editor_camera_data.camera.m_aspect;
-		cam_comp.m_near = m_active_scene->m_editor_camera_data.camera.m_near;
-		cam_comp.m_far = m_active_scene->m_editor_camera_data.camera.m_far;
-		cam_comp.m_use_fixed_aspect = m_active_scene->m_editor_camera_data.camera.m_use_fixed_aspect;
-		cam_comp.m_intrinsic = m_active_scene->m_editor_camera_data.camera.m_intrinsic;
+	if (g_runtime_context.m_scene->m_editor_camera_data.is_valid) {
+		cam_comp.m_aspect = g_runtime_context.m_scene->m_editor_camera_data.camera.m_aspect;
+		cam_comp.m_near = g_runtime_context.m_scene->m_editor_camera_data.camera.m_near;
+		cam_comp.m_far = g_runtime_context.m_scene->m_editor_camera_data.camera.m_far;
+		cam_comp.m_use_fixed_aspect = g_runtime_context.m_scene->m_editor_camera_data.camera.m_use_fixed_aspect;
+		cam_comp.m_intrinsic = g_runtime_context.m_scene->m_editor_camera_data.camera.m_intrinsic;
 
-		trans_comp.m_location = m_active_scene->m_editor_camera_data.transform.m_location;
-		trans_comp.m_rotation = m_active_scene->m_editor_camera_data.transform.m_rotation;
-		trans_comp.m_scale = m_active_scene->m_editor_camera_data.transform.m_scale;
+		trans_comp.m_location = g_runtime_context.m_scene->m_editor_camera_data.transform.m_location;
+		trans_comp.m_rotation = g_runtime_context.m_scene->m_editor_camera_data.transform.m_rotation;
+		trans_comp.m_scale = g_runtime_context.m_scene->m_editor_camera_data.transform.m_scale;
 	}
 	else {
 		trans_comp.m_location = { 0.0f, 0.0f, 5.0f };
 	}
 
 	camera->attach_script<HoveringCameraCtrlScript>(m_gui);
-	m_active_scene->set_main_camera(camera);
+	g_runtime_context.m_scene->set_main_camera(camera);
 }
 
 void EditorLayer::save_screenshot() {
@@ -414,9 +414,9 @@ void EditorLayer::on_imgui_render() {
 }
 
 void EditorLayer::use_editor_camera() {
-	for (auto& ent : m_active_scene->m_transient_entities) {
+	for (auto& ent : g_runtime_context.m_scene->m_transient_entities) {
 		if (ent && ent->has_component<CameraComponent>() && ent->get_component<TagComponent>().m_tag.find("[Editor] Viewport Camera") != std::string::npos) {
-			m_active_scene->set_main_camera(ent);
+			g_runtime_context.m_scene->set_main_camera(ent);
 			return;
 		}
 	}
@@ -424,7 +424,7 @@ void EditorLayer::use_editor_camera() {
 
 void EditorLayer::show_scene_graph() {
 	if (ImGui::Begin("scene")) {
-		ImGui::Text("entities in scene: %llu", m_active_scene->get_entity_count());
+		ImGui::Text("entities in scene: %llu", g_runtime_context.m_scene->get_entity_count());
 		ImGui::Separator();
 
 		std::unordered_map<TransformComponent*, Entity*> transform_to_entity;
@@ -432,14 +432,14 @@ void EditorLayer::show_scene_graph() {
 		std::vector<std::shared_ptr<Entity>> roots;
 
 		// 1. Map transforms to entities
-		for (auto const& ent : m_active_scene->m_entities) {
+		for (auto const& ent : g_runtime_context.m_scene->m_entities) {
 			if (ent) {
 				transform_to_entity[&ent->get_component<TransformComponent>()] = ent.get();
 			}
 		}
 
 		// 2. Build hierarchy
-		for (auto const& ent : m_active_scene->m_entities) {
+		for (auto const& ent : g_runtime_context.m_scene->m_entities) {
 			if (!ent) continue;
 			auto& tc = ent->get_component<TransformComponent>();
 			if (tc.m_parent) {
@@ -490,7 +490,7 @@ void EditorLayer::show_scene_graph() {
 					Entity* source_ptr = *(Entity**)payload->Data;
 					// Find shared_ptr for source
 					std::shared_ptr<Entity> source_entity;
-					for (auto& e : m_active_scene->m_entities) {
+					for (auto& e : g_runtime_context.m_scene->m_entities) {
 						if (e.get() == source_ptr) {
 							source_entity = e;
 							break;
@@ -527,7 +527,7 @@ void EditorLayer::show_scene_graph() {
 					if (meta && meta->type == "prefab") {
 						auto prefab = Prefab::load(meta->guid);
 						if (prefab) {
-							auto new_entities = prefab->instantiate(m_active_scene);
+							auto new_entities = prefab->instantiate(g_runtime_context.m_scene);
 							for (auto& new_entity : new_entities) {
 								new_entity->get_component<TransformComponent>().set_parent(&entity->get_component<TransformComponent>());
 							}
@@ -541,7 +541,7 @@ void EditorLayer::show_scene_graph() {
 			if (ImGui::BeginPopupContextItem()) {
 				if (ImGui::MenuItem("Delete")) {
 					if (m_selected_entity == entity) m_selected_entity = nullptr;
-					m_active_scene->destroy_entity(entity);
+					g_runtime_context.m_scene->destroy_entity(entity);
 				}
 				ImGui::EndPopup();
 			}
@@ -567,7 +567,7 @@ void EditorLayer::show_scene_graph() {
 				if (meta && meta->type == "prefab") {
 					auto prefab = Prefab::load(meta->guid);
 					if (prefab) {
-						prefab->instantiate(m_active_scene);
+						prefab->instantiate(g_runtime_context.m_scene);
 					}
 				}
 			}
@@ -577,7 +577,7 @@ void EditorLayer::show_scene_graph() {
 		// Right click on empty space to create entity
 		if (ImGui::BeginPopupContextWindow(0, ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
 			if (ImGui::MenuItem("create empty entity")) {
-				m_active_scene->create_entity("new entity");
+				g_runtime_context.m_scene->create_entity("new entity");
 			}
 			ImGui::EndPopup();
 		}
@@ -941,7 +941,7 @@ void EditorLayer::show_properties() {
 					}
 					if (ImGui::RadioButton("is primary", camera.m_is_primary)) {
 						if (!camera.m_is_primary) {
-							m_active_scene->set_main_camera(m_selected_entity);
+							g_runtime_context.m_scene->set_main_camera(m_selected_entity);
 						}
 					}
 				}
@@ -1201,7 +1201,7 @@ void EditorLayer::show_asset_info() {
 		}
 		else if (m_selected_asset->type == "static mesh") {
 			if (ImGui::Button("add to scene")) {
-				auto ent = m_active_scene->create_entity(m_selected_asset->name());
+				auto ent = g_runtime_context.m_scene->create_entity(m_selected_asset->name());
 				ent->add_component<StaticMeshComponent>(
 					g_runtime_context.m_asset_manager->get<StaticMesh>(m_selected_asset->guid)
 				);
@@ -1209,7 +1209,7 @@ void EditorLayer::show_asset_info() {
 		}
 		else if (m_selected_asset->type == "skeletal mesh") {
 			if (ImGui::Button("add to scene")) {
-				auto ent = m_active_scene->create_entity(m_selected_asset->name());
+				auto ent = g_runtime_context.m_scene->create_entity(m_selected_asset->name());
 				ent->add_component<SkeletalMeshComponent>(
 					g_runtime_context.m_asset_manager->get<SkeletalMesh>(m_selected_asset->guid));
 			}
@@ -1218,7 +1218,7 @@ void EditorLayer::show_asset_info() {
 			if (ImGui::Button("instantiate in scene")) {
 				auto prefab = Prefab::load(m_selected_asset->guid);
 				if (prefab) {
-					prefab->instantiate(m_active_scene);
+					prefab->instantiate(g_runtime_context.m_scene);
 				}
 			}
 		}

@@ -222,10 +222,17 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 		.def("on_update", &PyScript::on_update)
 		.def("on_detach", &PyScript::on_detach);
 
+	py::class_<Scene, std::shared_ptr<Scene>>(m, "Scene")
+		.def(py::init<>())
+		.def("create_entity", &Scene::create_entity);
+
 	// Allow access to GlobalSettings via z1.globals
 	m.def("__getattr__", [](const std::string &name) -> py::object {
 		if (name == "globals") {
 			return py::cast(z1::g_runtime_context.m_global.get(), py::return_value_policy::reference);
+		}
+		if (name == "scene") {
+			return py::cast(z1::g_runtime_context.m_scene.get(), py::return_value_policy::reference);
 		}
 		throw py::attribute_error("module 'z1' has no attribute '" + name + "'");
 	});

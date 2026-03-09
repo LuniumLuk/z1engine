@@ -151,4 +151,9 @@ class Script:
 	@property
 	def entity(self) -> Optional[Entity]: ...
 
+class Scene:
+	def __init__(self) -> None: ...
+	def create_entity(self, name: str) -> Entity: ...
+
 globals: GlobalSettings
+scene: Scene
