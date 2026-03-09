@@ -170,13 +170,13 @@ namespace z1 {
 	static _REFLECT_REGISTER_##type _REFLECT_REGISTER_INSTANCE_##type; \
 	struct API type
 
-#define REFLECT_ENUM(type, ...)                                        \
-	template<> struct z1::EnumInfoResolver<type> {                     \
-		static const z1::EnumInfo* get() {                             \
-			static z1::EnumInfo info = { #type, { __VA_ARGS__ } };     \
-			return &info;                                              \
-		}                                                              \
-	};
+#define REFLECT_ENUM(type, value) \
+	struct _REFLECT_REGISTER_ENUM_##type##_##value { \
+		_REFLECT_REGISTER_ENUM_##type##_##value() { \
+			z1::EnumRegistry::instance().register_item<type>(#type, #value, type::value); \
+		} \
+	}; \
+	static _REFLECT_REGISTER_ENUM_##type##_##value _REFLECT_REGISTER_INSTANCE_ENUM_##type##_##value;
 
 #define REFLECTED_FIELD(type, field, ...)                              \
 	struct CONCAT3(_REFLECT_REGISTER_, type, _##field) {               \

@@ -11,9 +11,9 @@ namespace z1 {
 		Spot = 2
 	};
 
-	REFLECT_ENUM(LightType, { "Directional", (int)LightType::Directional },
-							{ "Point", (int)LightType::Point },
-							{ "Spot", (int)LightType::Spot })
+	REFLECT_ENUM(LightType, Directional)
+	REFLECT_ENUM(LightType, Point)
+	REFLECT_ENUM(LightType, Spot)
 
 	REFLECTED_STRUCT(LightComponent) {
 		LightType m_type = LightType::Directional; // 0: Directional, 1: Point, 2: Spot

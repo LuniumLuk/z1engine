@@ -41,28 +41,13 @@ def extract_struct_body(content, struct_name):
 	return ""
 
 def extract_enum_items(content, enum_name):
-	# Find start
-	pattern = r'REFLECT_ENUM\s*\(\s*' + enum_name + r'\s*,'
-	match = re.search(pattern, content)
-	if not match: return []
-
-	start_idx = match.end()
-	# Read until closing parenthesis of REFLECT_ENUM
-	# Need to balance parenthesis
-	count = 1
-	i = start_idx
-	while i < len(content) and count > 0:
-		if content[i] == '(': count += 1
-		elif content[i] == ')': count -= 1
-		i += 1
-
-	if count == 0:
-		items_str = content[start_idx : i-1]
-		# Parse items: { "Name", Value }, ...
-		# Simple regex: \{ "(\w+)", ([^}]+) \}
-		item_re = re.compile(r'\{\s*"(\w+)"\s*,\s*([^}]+)\s*\}')
-		return item_re.findall(items_str)
-	return []
+	# Find all REFLECT_ENUM(enum_name, Value)
+	# Matches: REFLECT_ENUM(LightType, Directional)
+	# Using re.escape for enum_name just in case, though it's alphanumeric usually
+	pattern = r'REFLECT_ENUM\s*\(\s*' + re.escape(enum_name) + r'\s*,\s*(\w+)\s*\)'
+	matches = re.findall(pattern, content)
+	# Return list of (name, value_expr). Value expr is unused/implicit.
+	return [(m, "") for m in matches]
 
 def get_header_files(root):
 	files = []

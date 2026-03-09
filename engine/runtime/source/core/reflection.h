@@ -150,10 +150,44 @@ namespace z1 {
 		}
 	};
 
+	struct EnumRegistry {
+		static EnumRegistry& instance() {
+			static EnumRegistry r;
+			return r;
+		}
+
+		template<typename T>
+		void register_item(std::string const& type_name, std::string const& name, T value) {
+			size_t hash = typeid(T).hash_code();
+			if (m_enums.find(hash) == m_enums.end()) {
+				m_enums[hash].name = type_name;
+			}
+			auto& items = m_enums[hash].items;
+			for (auto const& item : items) {
+				if (item.name == name) {
+					return;
+				}
+			}
+			items.push_back({ name, (int)value });
+		}
+
+		template<typename T>
+		const EnumInfo* get() const {
+			auto it = m_enums.find(typeid(T).hash_code());
+			if (it != m_enums.end()) {
+				return &it->second;
+			}
+			return nullptr;
+		}
+
+	private:
+		std::unordered_map<size_t, EnumInfo> m_enums;
+	};
+
 	template<typename T>
 	struct EnumInfoResolver {
 		static const EnumInfo* get() {
-			return nullptr;
+			return EnumRegistry::instance().get<T>();
 		}
 	};
 
