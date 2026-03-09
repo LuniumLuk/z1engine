@@ -303,6 +303,14 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	code.append('\t\t.def("on_attach", &PyScript::on_attach)')
 	code.append('\t\t.def("on_update", &PyScript::on_update)')
 	code.append('\t\t.def("on_detach", &PyScript::on_detach);')
+	code.append("")
+	code.append('\t// Allow access to GlobalSettings via z1.globals')
+	code.append('\tm.def("__getattr__", [](const std::string &name) -> py::object {')
+	code.append('\t\tif (name == "globals") {')
+	code.append('\t\t\treturn py::cast(z1::g_runtime_context.m_global.get(), py::return_value_policy::reference);')
+	code.append('\t\t}')
+	code.append('\t\tthrow py::attribute_error("module \'z1\' has no attribute \'" + name + "\'");')
+	code.append('\t});')
 
 	code.append("}")
 	code.append("")
@@ -454,6 +462,9 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 	code.append("\tdef on_detach(self) -> None: ...")
 	code.append("\t@property")
 	code.append("\tdef entity(self) -> Optional[Entity]: ...")
+	code.append("")
+
+	code.append("globals: GlobalSettings")
 	code.append("")
 
 	return "\n".join(code)
