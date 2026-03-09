@@ -28,6 +28,7 @@ namespace z1 {
 					script.detach_func(script);
 				}
 			}
+			script_comp.m_is_destroyed = true;
 		}
 
 		// when the scene is being destroyed, the weak_ptr to the scene in each entity will be expired
@@ -70,18 +71,38 @@ namespace z1 {
 	void Scene::destroy_entity(std::shared_ptr<Entity> const& entity) {
 		if (!entity || !entity->is_valid()) return;
 
-		auto it = std::find(m_entities.begin(), m_entities.end(), entity);
-		if (it != m_entities.end()) {
-			m_entities.erase(it);
-			m_is_dirty = true;
-			return;
-		}
+		entity->m_is_destroyed = true;
+		m_pending_destroy_entities.push_back(entity);
+	}
 
-		auto it_transient = std::find(m_transient_entities.begin(), m_transient_entities.end(), entity);
-		if (it_transient != m_transient_entities.end()) {
-			m_transient_entities.erase(it_transient);
-			// m_is_dirty = true; // transient entities don't affect scene dirtiness?
+	void Scene::flush_pending_destroy_entities() {
+		for (auto& entity : m_pending_destroy_entities) {
+			if (!entity) continue;
+
+			// Manually detach scripts first to ensure they can run cleanup logic
+			// while the entity and its components are still valid.
+			//if (entity->has_component<ScriptComponent>()) {
+			//	entity->get_component<ScriptComponent>().detach_all();
+			//}
+
+			// Force destruction of the underlying entity in the registry
+			// This ensures components are destroyed even if Python holds a shared_ptr
+			m_registry.destroy(entity->m_handle);
+
+			auto it = std::find(m_entities.begin(), m_entities.end(), entity);
+			if (it != m_entities.end()) {
+				m_entities.erase(it);
+				m_is_dirty = true;
+				continue;
+			}
+
+			auto it_transient = std::find(m_transient_entities.begin(), m_transient_entities.end(), entity);
+			if (it_transient != m_transient_entities.end()) {
+				m_transient_entities.erase(it_transient);
+				// m_is_dirty = true; // transient entities don't affect scene dirtiness?
+			}
 		}
+		m_pending_destroy_entities.clear();
 	}
 
 	std::shared_ptr<Entity> Scene::cast_to_entity(entt::entity handle) const {
@@ -138,6 +159,8 @@ namespace z1 {
 				}
 			}
 		}
+
+		flush_pending_destroy_entities();
 	}
 
 	std::shared_ptr<Scene> Scene::create(Filepath const& path) {

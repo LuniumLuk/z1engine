@@ -98,7 +98,7 @@ namespace z1 {
 		}
 
 		bool is_valid() const {
-			return !m_scene.expired() && m_scene.lock()->m_registry.valid(m_handle);
+			return !m_is_destroyed && !m_scene.expired() && m_scene.lock()->m_registry.valid(m_handle);
 		}
 
 		template<typename T, typename... Args>

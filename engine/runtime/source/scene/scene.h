@@ -50,6 +50,8 @@ namespace z1 {
 
 		std::shared_ptr<Entity> get_main_camera() const;
 
+		void flush_pending_destroy_entities();
+
 		//static bool serialize(Filepath const& path, std::shared_ptr<Scene> const& asset);
 		//static std::shared_ptr<Scene> deserialize(Filepath const& path);
 
@@ -67,6 +69,8 @@ namespace z1 {
 		entt::registry m_registry;
 		std::vector<std::shared_ptr<Entity>> m_entities;
 		std::vector<std::shared_ptr<Entity>> m_transient_entities;
+
+		std::vector<std::shared_ptr<Entity>> m_pending_destroy_entities;
 
 	private:
 		friend struct Entity;

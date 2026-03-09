@@ -192,6 +192,7 @@ namespace z1 {
 			std::function<void(ScriptData&)> detach_func = nullptr;
 		};
 
+		bool m_is_destroyed = false;
 		std::weak_ptr<Entity> m_entity;
 		std::vector<ScriptData> m_scripts;
 
@@ -202,6 +203,27 @@ namespace z1 {
 
 		ScriptComponent(std::weak_ptr<Entity> const& entity) noexcept
 			: m_entity(entity) {
+		}
+
+		void detach_all() {
+			for (auto& script : m_scripts) {
+				if (script.instance) {
+					if (script.detach_func) {
+						script.detach_func(script);
+					}
+					else {
+						delete script.instance;
+					}
+					script.instance = nullptr;
+				}
+			}
+			m_scripts.clear();
+		}
+
+		~ScriptComponent() {
+			if (!m_is_destroyed) {
+				detach_all();
+			}
 		}
 
 		template<typename ScriptType, typename... Args>
