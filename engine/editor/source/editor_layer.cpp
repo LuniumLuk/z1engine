@@ -1,8 +1,46 @@
 #include "editor_layer.h"
 
+void EditorSettings::save() {
+	YAML::Emitter yaml;
+	yaml << YAML::BeginMap;
+	yaml << YAML::Key << "last_opened_scene_guid" << YAML::Value << last_opened_scene_guid;
+	yaml << YAML::Key << "show_light_gizmos" << YAML::Value << show_light_gizmos;
+	yaml << YAML::Key << "light_gizmo_size" << YAML::Value << light_gizmo_size;
+	yaml << YAML::Key << "curr_resolution" << YAML::Value << curr_resolution;
+	yaml << YAML::Key << "show_skeleton_guizmos" << YAML::Value << show_skeleton_guizmos;
+	yaml << YAML::Key << "skeleton_gizmo_size" << YAML::Value << skeleton_gizmo_size;
+	yaml << YAML::EndMap;
+
+	std::ofstream fout("editor_settings.yaml");
+	fout << yaml.c_str();
+}
+
+void EditorSettings::load() {
+	if (!fs::exists("editor_settings.yaml"))
+		return;
+
+	try {
+		YAML::Node yaml = YAML::LoadFile("editor_settings.yaml");
+		if (yaml["last_opened_scene_guid"])
+			last_opened_scene_guid = yaml["last_opened_scene_guid"].as<std::string>();
+		if (yaml["show_light_gizmos"])
+			show_light_gizmos = yaml["show_light_gizmos"].as<bool>();
+		if (yaml["light_gizmo_size"])
+			light_gizmo_size = yaml["light_gizmo_size"].as<float>();
+		if (yaml["curr_resolution"])
+			curr_resolution = yaml["curr_resolution"].as<uint32_t>();
+		if (yaml["show_skeleton_guizmos"])
+			show_skeleton_guizmos = yaml["show_skeleton_guizmos"].as<bool>();
+		if (yaml["skeleton_gizmo_size"])
+			skeleton_gizmo_size = yaml["skeleton_gizmo_size"].as<float>();
+	} catch (...) {
+		std::cout << "failed to load editor settings" << std::endl;
+	}
+}
+
 EditorLayer::EditorLayer() {
 	m_one_frame = g_args.get<int>("one-frame", -1);
-	m_settings = load_editor_settings();
+	m_settings.load();
 	m_gui = std::make_shared<EditorGUI>(m_settings.curr_resolution);
 	m_browser = std::make_unique<ContentBrowser>();
 	m_browser->m_on_asset_opened =
@@ -187,7 +225,7 @@ EditorLayer::EditorLayer() {
 
 EditorLayer::~EditorLayer() {
 	m_settings.curr_resolution = m_gui->m_current_resolution;
-	save_editor_settings(m_settings);
+	m_settings.save();
 }
 
 void EditorLayer::on_attach() {
@@ -362,6 +400,9 @@ void EditorLayer::on_imgui_render() {
 		ImGui::DragFloat("skeleton gizmo size", &m_settings.skeleton_gizmo_size, 0.01f, 0.0f, 1.0f);
 		ImGui::Checkbox("show skeleton gizmos", &m_settings.show_skeleton_guizmos);
 
+		if (ImGui::Button("use editor camera")) {
+			use_editor_camera();
+		}
 	}
 	ImGui::End();
 
@@ -370,6 +411,15 @@ void EditorLayer::on_imgui_render() {
 	show_properties();
 	show_settings();
 	m_browser->draw();
+}
+
+void EditorLayer::use_editor_camera() {
+	for (auto& ent : m_active_scene->m_transient_entities) {
+		if (ent && ent->has_component<CameraComponent>() && ent->get_component<TagComponent>().m_tag.find("[Editor] Viewport Camera") != std::string::npos) {
+			m_active_scene->set_main_camera(ent);
+			return;
+		}
+	}
 }
 
 void EditorLayer::show_scene_graph() {

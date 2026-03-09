@@ -1,6 +1,7 @@
 #include <iostream>
 #include "z1engine.h"
 #include "editor_layer.h"
+#include "game.h"
 
 using namespace z1;
 
@@ -24,8 +25,15 @@ int main(int argc, char* argv[]) {
 
 	g_args.parse(argc, argv);
 
-	EditorApp app;
-	app.init();
+	Application* app = nullptr;
+	if (g_args.get<bool>("game", false)) {
+		app = new GameApp();
+	}
+	else {
+		app = new EditorApp();
+	}
+
+	app->init();
 
 	auto end = std::chrono::high_resolution_clock::now();
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -34,7 +42,8 @@ int main(int argc, char* argv[]) {
 
 	std::cout << "app launch (ms): " << ms << "\n";
 
-	app.run();
+	app->run();
+	delete app;
 
 	return 0;
 }

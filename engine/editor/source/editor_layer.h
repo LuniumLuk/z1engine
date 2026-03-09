@@ -28,61 +28,25 @@ struct EditorSettings {
 	uint32_t curr_resolution = 0;
 	bool show_skeleton_guizmos = true;
 	float skeleton_gizmo_size = 0.1f;
+
+	void save();
+	void load();
 };
-
-inline void save_editor_settings(EditorSettings const& settings) {
-	YAML::Emitter yaml;
-	yaml << YAML::BeginMap;
-	yaml << YAML::Key << "last_opened_scene_guid" << YAML::Value << settings.last_opened_scene_guid;
-	yaml << YAML::Key << "show_light_gizmos" << YAML::Value << settings.show_light_gizmos;
-	yaml << YAML::Key << "light_gizmo_size" << YAML::Value << settings.light_gizmo_size;
-	yaml << YAML::Key << "curr_resolution" << YAML::Value << settings.curr_resolution;
-	yaml << YAML::Key << "show_skeleton_guizmos" << YAML::Value << settings.show_skeleton_guizmos;
-	yaml << YAML::Key << "skeleton_gizmo_size" << YAML::Value << settings.skeleton_gizmo_size;
-	yaml << YAML::EndMap;
-
-	std::ofstream fout("editor_settings.yaml");
-	fout << yaml.c_str();
-}
-
-inline EditorSettings load_editor_settings() {
-	EditorSettings settings;
-	if (!fs::exists("editor_settings.yaml")) return settings;
-
-	try {
-		YAML::Node yaml = YAML::LoadFile("editor_settings.yaml");
-		if (yaml["last_opened_scene_guid"]) settings.last_opened_scene_guid = yaml["last_opened_scene_guid"].as<std::string>();
-		if (yaml["show_light_gizmos"]) settings.show_light_gizmos = yaml["show_light_gizmos"].as<bool>();
-		if (yaml["light_gizmo_size"]) settings.light_gizmo_size = yaml["light_gizmo_size"].as<float>();
-		if (yaml["curr_resolution"]) settings.curr_resolution = yaml["curr_resolution"].as<uint32_t>();
-		if (yaml["show_skeleton_guizmos"]) settings.show_skeleton_guizmos = yaml["show_skeleton_guizmos"].as<bool>();
-		if (yaml["skeleton_gizmo_size"]) settings.skeleton_gizmo_size = yaml["skeleton_gizmo_size"].as<float>();
-	}
-	catch (...) {
-		std::cout << "failed to load editor settings" << std::endl;
-	}
-	return settings;
-}
 
 struct EditorLayer : Layer {
 	EditorLayer();
 	~EditorLayer();
 
 	void on_attach() override;
-
 	void on_update(float delta_time) override;
-
 	void on_event(Event& event) override;
+	void on_imgui_render() override;
 
 	bool on_key_pressed(KeyPressedEvent& event);
-
 	bool on_mouse_pressed(MouseButtonPressedEvent& event);
 
 	void load_scene(std::shared_ptr<Scene> const& scene = nullptr);
-
 	void save_screenshot();
-
-	void on_imgui_render() override;
 
 private:
 	EditorSettings m_settings;
@@ -106,6 +70,7 @@ private:
 	int m_one_frame = -1;
 	int m_frame_count = 0;
 
+	void use_editor_camera();
 	void show_scene_graph();
 
 	template<typename T, typename... Args>

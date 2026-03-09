@@ -122,6 +122,7 @@ def main():
 		os.path.join(root, 'engine/runtime'),
 		os.path.join(root, 'engine/content'),
 		os.path.join(root, 'engine/editor'),
+		os.path.join(root, 'engine/game'),
 		os.path.join(root, 'engine/test'),
 	]
 	extensions = [e.strip() for e in args.extensions.split(',')]

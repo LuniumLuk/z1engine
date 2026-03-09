@@ -8,7 +8,7 @@ namespace z1 {
 
 	struct API Application {
 		Application();
-		~Application();
+		virtual ~Application();
 
 		virtual void init() {};
 		void run();
