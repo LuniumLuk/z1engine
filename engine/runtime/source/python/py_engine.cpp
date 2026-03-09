@@ -13,6 +13,7 @@
 #include "scene/component/sprite.h"
 
 #include "pybind11/embed.h"
+#include "pybind11/stl.h"
 namespace py = pybind11;
 
 using namespace z1;
@@ -123,9 +124,11 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 	py::class_<SpriteComponent>(m, "Sprite")
 		.def(py::init<>())
 		.def_readwrite("color", &SpriteComponent::m_color)
+		.def_readwrite("texture", &SpriteComponent::m_texture)
 		.def_readwrite("tiling_scale", &SpriteComponent::m_tiling_scale)
 		.def_readwrite("tiling_offset", &SpriteComponent::m_tiling_offset)
-		.def_readwrite("texcoords", &SpriteComponent::m_texcoords);
+		.def_readwrite("texcoords", &SpriteComponent::m_texcoords)
+		.def_readwrite("extras", &SpriteComponent::m_extras);
 
 	py::class_<StaticMeshComponent>(m, "StaticMesh");
 

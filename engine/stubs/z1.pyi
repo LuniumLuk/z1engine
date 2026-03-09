@@ -97,9 +97,11 @@ class SkyLight:
 
 class Sprite:
 	color: Vec4
+	texture: Any
 	tiling_scale: Vec2
 	tiling_offset: Vec2
 	texcoords: Vec2
+	extras: Vec2
 	def __init__(self) -> None: ...
 
 class StaticMesh:

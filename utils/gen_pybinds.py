@@ -147,6 +147,7 @@ def generate_cpp_bindings(sorted_structs, fields, struct_headers, has_default_ct
 
 	code.append("")
 	code.append('#include "pybind11/embed.h"')
+	code.append('#include "pybind11/stl.h"')
 	code.append("namespace py = pybind11;")
 	code.append("")
 	code.append("using namespace z1;")
@@ -293,6 +294,12 @@ def map_cpp_type_to_python(cpp_type):
 		return "Vec4"
 	if "std::vector" in cpp_type:
 		match = re.search(r'std::vector<(.+)>', cpp_type)
+		if match:
+			inner = map_cpp_type_to_python(match.group(1))
+			return f"List[{inner}]"
+		return "List[Any]"
+	if "std::array" in cpp_type:
+		match = re.search(r'std::array<([^,]+),.+>', cpp_type)
 		if match:
 			inner = map_cpp_type_to_python(match.group(1))
 			return f"List[{inner}]"
