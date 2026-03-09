@@ -39,6 +39,9 @@ class Vec4:
 
 class Entity:
 	def is_valid(self) -> bool: ...
+	def add_static_mesh(self, path: str) -> None: ...
+	def add_skeletal_mesh(self, path: str) -> None: ...
+	def add_camera(self) -> None: ...
 	@property
 	def animation(self) -> Optional[Animation]: ...
 	@property
@@ -80,7 +83,7 @@ class LightType(Enum):
 	Spot = 2
 
 class Animation:
-	animation_asset: Any
+	animation_asset: Optional[Any]
 	current_time: float
 	speed: float
 	loop: bool
@@ -131,7 +134,7 @@ class SkeletalMesh:
 	pass
 
 class SkyLight:
-	texture: Any
+	texture: Optional[Any]
 	rotation: float
 	intensity: float
 	mip_level: float
@@ -139,11 +142,11 @@ class SkyLight:
 
 class Sprite:
 	color: Vec4
-	texture: Any
+	texture: Optional[Any]
 	tiling_scale: Vec2
 	tiling_offset: Vec2
-	texcoords: Vec2
-	extras: Vec2
+	texcoords: List[Vec2]
+	extras: List[Vec2]
 	def __init__(self) -> None: ...
 
 class StaticMesh:

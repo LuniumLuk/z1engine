@@ -31,7 +31,7 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 		.def(py::init<>())
 		.def_readwrite("x", &glm::vec2::x)
 		.def_readwrite("y", &glm::vec2::y)
-		.def("__repr__", [](const glm::vec2& v) {
+		.def("__repr__", [](glm::vec2 const& v) {
 			return "Vec2(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ")";
 		});
 
@@ -41,7 +41,7 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 		.def_readwrite("x", &glm::vec3::x)
 		.def_readwrite("y", &glm::vec3::y)
 		.def_readwrite("z", &glm::vec3::z)
-		.def("__repr__", [](const glm::vec3& v) {
+		.def("__repr__", [](glm::vec3 const& v) {
 			return "Vec3(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ")";
 		});
 
@@ -52,14 +52,41 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 		.def_readwrite("y", &glm::vec4::y)
 		.def_readwrite("z", &glm::vec4::z)
 		.def_readwrite("w", &glm::vec4::w)
-		.def("__repr__", [](const glm::vec4& v) {
+		.def("__repr__", [](glm::vec4 const& v) {
 			return "Vec4(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ", " + std::to_string(v.w) + ")";
 		});
 
 	// Bind Entity
 	// Note: Component properties are added in bind_generated
 	auto entity_cls = py::class_<Entity, std::shared_ptr<Entity>>(m, "Entity");
-	entity_cls.def("is_valid", &Entity::is_valid);
+	entity_cls
+		.def("is_valid", &Entity::is_valid)
+		.def("add_static_mesh", [](Entity& self, std::string const& path) {
+			if (!self.has_component<StaticMeshComponent>()) {
+				auto mesh = g_runtime_context.m_asset_manager->get<StaticMesh>(path);
+				self.add_component<StaticMeshComponent>(mesh);
+			}
+			else {
+				CLIENT_WARN("Entity already has a StaticMeshComponent, skipping add_static_mesh");
+			}
+		})
+		.def("add_skeletal_mesh", [](Entity& self, std::string const& path) {
+			if (!self.has_component<SkeletalMeshComponent>()) {
+				auto mesh = g_runtime_context.m_asset_manager->get<SkeletalMesh>(path);
+				self.add_component<SkeletalMeshComponent>(mesh);
+			}
+			else {
+				CLIENT_WARN("Entity already has a SkeletalMeshComponent, skipping add_static_mesh");
+			}
+		})
+		.def("add_camera", [](Entity& self) {
+			if (!self.has_component<CameraComponent>()) {
+				self.add_component<CameraComponent>();
+			}
+			else {
+				CLIENT_WARN("Entity already has a CameraComponent, skipping add_camera");
+			}
+		});
 
 	// Helper class for Python to inherit from (mocking ScriptBase)
 	struct PyScript {

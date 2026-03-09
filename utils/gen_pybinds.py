@@ -136,7 +136,7 @@ def generate_bindings(structs, enums, fields, struct_headers, enum_headers):
 			# Extract body
 			# Use balanced brace parser
 			struct_bodies[s] = extract_struct_body(content, s)
-   
+
 	for e in sorted_enums:
 		path = enum_headers[e]
 		with open(path, 'r', encoding='utf-8') as f:
@@ -151,7 +151,7 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	includes = set()
 	includes.add('#include "pch.h"')
 	includes.add('#include "z1engine.h"')
-	
+
 	# Generate relative include paths for each struct
 	for s in sorted_structs:
 		if s in struct_headers:
@@ -179,7 +179,7 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	if '#include "z1engine.h"' in includes:
 		code.append('#include "z1engine.h"')
 		includes.remove('#include "z1engine.h"')
-	
+
 	sorted_includes = sorted(list(includes))
 	for inc in sorted_includes:
 		code.append(inc)
@@ -190,7 +190,7 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	code.append("namespace py = pybind11;")
 	code.append("using namespace z1;")
 	code.append("")
-	
+
 	# Generate binding function
 	code.append("void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& entity_cls) {")
 
@@ -235,7 +235,7 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 			code.append(f'\t}}, py::return_value_policy::reference);')
 
 	code.append("")
-	
+
 	# Allow access to GlobalSettings via z1.globals
 	# This uses the m_global pointer from runtime context
 	code.append('\t// Allow access to GlobalSettings via z1.globals or z1.global')
@@ -270,20 +270,7 @@ def map_cpp_type_to_python(cpp_type, known_enums=None):
 	if known_enums and cpp_type in known_enums:
 		return cpp_type
 
-	if cpp_type in ["int", "uint32_t", "size_t", "long", "short", "int32_t", "int64_t"]:
-		return "int"
-	if cpp_type in ["float", "double"]:
-		return "float"
-	if cpp_type == "bool":
-		return "bool"
-	if cpp_type == "std::string":
-		return "str"
-	if "glm::vec2" in cpp_type:
-		return "Vec2"
-	if "glm::vec3" in cpp_type:
-		return "Vec3"
-	if "glm::vec4" in cpp_type:
-		return "Vec4"
+	# Containers first!
 	if "std::vector" in cpp_type:
 		match = re.search(r'std::vector<(.+)>', cpp_type)
 		if match:
@@ -300,8 +287,24 @@ def map_cpp_type_to_python(cpp_type, known_enums=None):
 		match = re.search(r'std::shared_ptr<(.+)>', cpp_type)
 		if match:
 			inner = map_cpp_type_to_python(match.group(1), known_enums)
-			return inner
-		return "Any"
+			return f"Optional[{inner}]"
+		return "Optional[Any]"
+
+	# Basic types
+	if cpp_type in ["int", "uint32_t", "size_t", "long", "short", "int32_t", "int64_t"]:
+		return "int"
+	if cpp_type in ["float", "double"]:
+		return "float"
+	if cpp_type == "bool":
+		return "bool"
+	if cpp_type == "std::string":
+		return "str"
+	if "glm::vec2" in cpp_type:
+		return "Vec2"
+	if "glm::vec3" in cpp_type:
+		return "Vec3"
+	if "glm::vec4" in cpp_type:
+		return "Vec4"
 
 	if cpp_type.endswith("Component"):
 		return strip_struct_name(cpp_type)
@@ -317,13 +320,13 @@ def parse_manual_bindings(file_path):
 
 	classes = {} # name -> {'methods': [], 'fields': [], 'inits': []}
 	var_to_class = {} # variable_name -> class_name
-	
+
 	# We process line by line to handle chaining somewhat correctly
-	# but we also need to handle multiline statements. 
+	# but we also need to handle multiline statements.
 	# For simplicity, let's assume standard formatting from the file we just wrote.
-	
+
 	current_class = None
-	
+
 	lines = content.split('\n')
 	for line in lines:
 		line = line.strip()
@@ -357,13 +360,13 @@ def parse_manual_bindings(file_path):
 		if def_match:
 			var_name = def_match.group('var')
 			method_name = def_match.group('name')
-			
+
 			target_class = None
 			if var_name and var_name in var_to_class:
 				target_class = var_to_class[var_name]
 			elif line.startswith('.'):
 				target_class = current_class
-			
+
 			if target_class:
 				classes[target_class]['methods'].append(method_name)
 			continue
@@ -373,30 +376,42 @@ def parse_manual_bindings(file_path):
 		if prop_match:
 			var_name = prop_match.group('var')
 			prop_name = prop_match.group('name')
-			
+
 			target_class = None
 			if var_name and var_name in var_to_class:
 				target_class = var_to_class[var_name]
 			elif line.startswith('.'):
 				target_class = current_class
-			
+
 			if target_class:
 				classes[target_class]['fields'].append(prop_name)
 			continue
-			
+
 	return classes
+
+MANUAL_METHOD_OVERRIDES = {
+	"Entity": {
+		"add_static_mesh": "\tdef add_static_mesh(self, path: str) -> None: ...",
+		"add_skeletal_mesh": "\tdef add_skeletal_mesh(self, path: str) -> None: ...",
+		"add_camera": "\tdef add_camera(self) -> None: ...",
+	},
+	"Scene": {
+		"create_entity": "\tdef create_entity(self, name: str) -> Entity: ...",
+		"destroy_entity": "\tdef destroy_entity(self, entity: Entity) -> None: ...",
+	}
+}
 
 def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, has_default_ctor, enum_items):
 	# Parse Manual Bindings from C++
 	manual_classes = parse_manual_bindings(MANUAL_BINDINGS_FILE)
-	
+
 	code = []
 	code.append("# This file is automatically generated by utils/gen_pybinds.py")
 	code.append("# Do not modify this file directly.")
 	code.append("from typing import Any, overload, ClassVar, List, Optional")
 	code.append("from enum import Enum")
 	code.append("")
-	
+
 	code.append("def log_info(msg: str) -> None: ...")
 	code.append("def log_warn(msg: str) -> None: ...")
 	code.append("def log_error(msg: str) -> None: ...")
@@ -405,7 +420,7 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 	# Generate Manual Classes Stubs
 	for cls_name, data in manual_classes.items():
 		code.append(f"class {cls_name}:")
-		
+
 		# Fields
 		for f in data['fields']:
 			# Try to guess type for common fields
@@ -413,10 +428,10 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 			if cls_name.startswith("Vec") and f in ["x", "y", "z", "w"]:
 				ftype = "float"
 			code.append(f"\t{f}: {ftype}")
-			
+
 		if not data['fields'] and not data['methods'] and not data['inits']:
 			pass
-			
+
 		# Inits
 		if data['inits']:
 			for args in data['inits']:
@@ -432,13 +447,14 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 
 		# Methods
 		for m in data['methods']:
+			# Check manual overrides first
+			if cls_name in MANUAL_METHOD_OVERRIDES and m in MANUAL_METHOD_OVERRIDES[cls_name]:
+				code.append(MANUAL_METHOD_OVERRIDES[cls_name][m])
+				continue
+
 			# Special handling for known methods
 			if m == "is_valid":
 				code.append(f"\tdef {m}(self) -> bool: ...")
-			elif m == "create_entity":
-				code.append(f"\tdef {m}(self, name: str) -> Entity: ...")
-			elif m == "destroy_entity":
-				code.append(f"\tdef {m}(self, entity: Entity) -> None: ...")
 			elif m == "on_update":
 				code.append(f"\tdef {m}(self, delta: float) -> None: ...")
 			elif m.startswith("on_"):
@@ -451,13 +467,13 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 		# Inject generated entity body marker if it's Entity class
 		if cls_name == "Entity":
 			code.append("\t# __GENERATED_ENTITY_BODY__")
-			
+
 		if cls_name == "Script":
 			code.append("\t@property")
 			code.append("\tdef entity(self) -> Optional[Entity]: ...")
 
 		code.append("")
-	
+
 	code.append("# --- GENERATED CONTENT BELOW ---")
 
 
@@ -498,7 +514,7 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 			prop_name = re.sub(r'(?<!^)(?=[A-Z])', '_', py_name).lower()
 			entity_props.append(f"\t@property")
 			entity_props.append(f"\tdef {prop_name}(self) -> Optional[{py_name}]: ...")
-	
+
 	# Inject Entity properties into the Manual Entity class if present
 	# We look for "# __GENERATED_ENTITY_BODY__" in the code and replace it
 	injected = False
@@ -507,7 +523,7 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 			code[i] = "\n".join(entity_props)
 			injected = True
 			break
-	
+
 	if not injected:
 		# Fallback if marker not found
 		code.append("# WARNING: Entity properties not injected (marker not found)")
