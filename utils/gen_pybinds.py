@@ -306,7 +306,8 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	code.append("")
 	code.append('\tpy::class_<Scene, std::shared_ptr<Scene>>(m, "Scene")')
 	code.append('\t\t.def(py::init<>())')
-	code.append('\t\t.def("create_entity", &Scene::create_entity);')
+	code.append('\t\t.def("create_entity", &Scene::create_entity)')
+	code.append('\t\t.def("destroy_entity", &Scene::destroy_entity);')
 	code.append("")
 	code.append('\t// Allow access to GlobalSettings via z1.globals')
 	code.append('\tm.def("__getattr__", [](const std::string &name) -> py::object {')
@@ -474,6 +475,7 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 	code.append("class Scene:")
 	code.append("\tdef __init__(self) -> None: ...")
 	code.append("\tdef create_entity(self, name: str) -> Entity: ...")
+	code.append("\tdef destroy_entity(self, entity: Entity) -> None: ...")
 	code.append("")
 
 	code.append("globals: GlobalSettings")

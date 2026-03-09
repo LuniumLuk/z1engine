@@ -224,7 +224,8 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 
 	py::class_<Scene, std::shared_ptr<Scene>>(m, "Scene")
 		.def(py::init<>())
-		.def("create_entity", &Scene::create_entity);
+		.def("create_entity", &Scene::create_entity)
+		.def("destroy_entity", &Scene::destroy_entity);
 
 	// Allow access to GlobalSettings via z1.globals
 	m.def("__getattr__", [](const std::string &name) -> py::object {
