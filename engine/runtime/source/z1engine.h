@@ -44,6 +44,8 @@
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
 
+#include "python/python_script.h"
+
 #include "animation/animation.h"
 #include "animation/skeleton.h"
 

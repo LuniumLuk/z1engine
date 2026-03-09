@@ -61,10 +61,9 @@ namespace z1 {
 
 		RenderGraph::clear_cache();
 
+		m_layer_stack.reset();
 		if (m_scene)
 			m_scene.reset();
-
-		m_layer_stack.reset();
 		m_python_layer.reset();
 		m_imgui_layer.reset();
 

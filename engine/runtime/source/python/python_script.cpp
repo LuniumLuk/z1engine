@@ -49,6 +49,7 @@ namespace z1 {
 
 	void PythonScript::on_detach() {
 		if (m_instance.is_none()) return;
+		if (!m_instance.ptr()) return;
 
 		try {
 			if (pybind11::hasattr(m_instance, "on_detach")) {

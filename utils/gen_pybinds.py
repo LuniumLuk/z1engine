@@ -461,6 +461,8 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 				code.append(f"\tdef {m}(self) -> None: ...")
 			elif m == "__repr__":
 				code.append(f"\tdef {m}(self) -> str: ...")
+			elif m == "add_script":
+				code.append(f"\tdef {m}(self, module: str, cls: str) -> None: ...")
 			else:
 				code.append(f"\tdef {m}(self, *args: Any, **kwargs: Any) -> Any: ...")
 

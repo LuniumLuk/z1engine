@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "z1engine.h"
-#include "render/global.h"
 
 #include "pybind11/embed.h"
 #include "pybind11/stl.h"
@@ -85,6 +84,11 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 			}
 			else {
 				CLIENT_WARN("Entity already has a CameraComponent, skipping add_camera");
+			}
+		})
+		.def("add_script", [](Entity& self, std::string const& module, std::string const& cls) {
+			if (!self.has_component<ScriptComponent>()) {
+				self.attach_script<PythonScript>(module, cls);
 			}
 		});
 

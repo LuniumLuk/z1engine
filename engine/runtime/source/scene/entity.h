@@ -45,10 +45,9 @@ namespace z1 {
 		~Entity() {
 			// when m_is_destroyed is true, the scene is being destroyed
 			// thus we should not try to access the scene and the registry
-			if (m_is_destroyed) {
+			if (m_is_destroyed || !is_valid()) {
 				return;
 			}
-			CORE_ASSERT(is_valid(), "Entity is invalid!");
 			CORE_INFO("destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
 			m_scene.lock()->m_registry.destroy(m_handle);
 		}
