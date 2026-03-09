@@ -5,13 +5,21 @@ import re
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ENGINE_ROOT = os.path.join(SCRIPT_DIR, "..", "engine", "runtime", "source")
 STUBS_DIR = os.path.join(SCRIPT_DIR, "..", "engine", "stubs")
-OUTPUT_FILE = os.path.join(ENGINE_ROOT, "python", "py_engine.cpp")
+OUTPUT_FILE = os.path.join(ENGINE_ROOT, "python", "py_engine.gen.cpp") # GENERATED FILE
 STUB_FILE = os.path.join(STUBS_DIR, "z1.pyi")
+MANUAL_BINDINGS_FILE = os.path.join(ENGINE_ROOT, "python", "py_engine.cpp")
 
 # Regex patterns
 REFLECTED_STRUCT_RE = re.compile(r'REFLECTED_STRUCT\s*\(\s*(\w+)\s*\)')
 REFLECTED_FIELD_RE = re.compile(r'REFLECTED_FIELD\s*\(\s*(\w+)\s*,\s*(\w+)\s*,')
 REFLECT_ENUM_RE = re.compile(r'REFLECT_ENUM\s*\(\s*(\w+)\s*,')
+
+# Manual bindings parsing patterns
+PY_CLASS_RE = re.compile(r'(?:auto\s+(?P<var>\w+)\s*=\s*)?py::class_<.*?>(?:\s*\(.*?\))?\s*\(\s*\w+\s*,\s*"(?P<name>\w+)"\)')
+PY_INIT_RE = re.compile(r'\.def\s*\(\s*py::init<(?P<args>.*?)>\s*\(\)\s*\)')
+PY_DEF_RE = re.compile(r'(?:(?P<var>\w+)\.|^[\t ]*\.)def\s*\(\s*"(?P<name>\w+)"')
+PY_PROP_RE = re.compile(r'(?:(?P<var>\w+)\.|^[\t ]*\.)def_(?:readwrite|property(?:_readonly)?)\s*\(\s*"(?P<name>\w+)"')
+
 
 def extract_struct_body(content, struct_name):
 	# Find start of struct
@@ -143,7 +151,7 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	includes = set()
 	includes.add('#include "pch.h"')
 	includes.add('#include "z1engine.h"')
-
+	
 	# Generate relative include paths for each struct
 	for s in sorted_structs:
 		if s in struct_headers:
@@ -165,17 +173,13 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	code.append("")
 
 	# Write includes
-	# pch.h must be first
 	code.append('#include "pch.h"')
 	if '#include "pch.h"' in includes:
 		includes.remove('#include "pch.h"')
-
-	# z1engine.h next
 	if '#include "z1engine.h"' in includes:
 		code.append('#include "z1engine.h"')
 		includes.remove('#include "z1engine.h"')
-
-	# Sort remaining includes
+	
 	sorted_includes = sorted(list(includes))
 	for inc in sorted_includes:
 		code.append(inc)
@@ -184,59 +188,11 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	code.append('#include "pybind11/embed.h"')
 	code.append('#include "pybind11/stl.h"')
 	code.append("namespace py = pybind11;")
-	code.append("")
 	code.append("using namespace z1;")
 	code.append("")
-	code.append("void ForceLinkPythonEngine() {}")
-	code.append("")
-	code.append("static void log_info_py(std::string const& msg) { CLIENT_INFO(msg); }")
-	code.append("static void log_warn_py(std::string const& msg) { CLIENT_WARN(msg); }")
-	code.append("static void log_error_py(std::string const& msg) { CLIENT_ERROR(msg); }")
-	code.append("")
-
-	code.append("// This macro \"creates\" the 'z1' module inside the Python VM")
-	code.append("PYBIND11_EMBEDDED_MODULE(z1, m) {")
-	code.append('\tCORE_INFO("Initializing z1 Python module");')
-	code.append('\tm.doc() = "z1 Engine API";')
-	code.append('\tm.def("log_info", &log_info_py);')
-	code.append('\tm.def("log_warn", &log_warn_py);')
-	code.append('\tm.def("log_error", &log_error_py);')
-	code.append("")
-
-	# Bind GLM
-	code.append("\t// Bind GLM")
-	code.append('\tpy::class_<glm::vec2>(m, "Vec2")')
-	code.append('\t\t.def(py::init<float, float>())')
-	code.append('\t\t.def(py::init<>())')
-	code.append('\t\t.def_readwrite("x", &glm::vec2::x)')
-	code.append('\t\t.def_readwrite("y", &glm::vec2::y)')
-	code.append('\t\t.def("__repr__", [](const glm::vec2& v) {')
-	code.append('\t\t\treturn "Vec2(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ")";')
-	code.append('\t\t});')
-	code.append("")
-
-	code.append('\tpy::class_<glm::vec3>(m, "Vec3")')
-	code.append('\t\t.def(py::init<float, float, float>())')
-	code.append('\t\t.def(py::init<>())')
-	code.append('\t\t.def_readwrite("x", &glm::vec3::x)')
-	code.append('\t\t.def_readwrite("y", &glm::vec3::y)')
-	code.append('\t\t.def_readwrite("z", &glm::vec3::z)')
-	code.append('\t\t.def("__repr__", [](const glm::vec3& v) {')
-	code.append('\t\t\treturn "Vec3(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ")";')
-	code.append('\t\t});')
-	code.append("")
-
-	code.append('\tpy::class_<glm::vec4>(m, "Vec4")')
-	code.append('\t\t.def(py::init<float, float, float, float>())')
-	code.append('\t\t.def(py::init<>())')
-	code.append('\t\t.def_readwrite("x", &glm::vec4::x)')
-	code.append('\t\t.def_readwrite("y", &glm::vec4::y)')
-	code.append('\t\t.def_readwrite("z", &glm::vec4::z)')
-	code.append('\t\t.def_readwrite("w", &glm::vec4::w)')
-	code.append('\t\t.def("__repr__", [](const glm::vec4& v) {')
-	code.append('\t\t\treturn "Vec4(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ", " + std::to_string(v.w) + ")";')
-	code.append('\t\t});')
-	code.append("")
+	
+	# Generate binding function
+	code.append("void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& entity_cls) {")
 
 	# Bind Enums
 	code.append("\t// Bind Enums")
@@ -264,54 +220,27 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 		code[-1] += ";"
 		code.append("")
 
-	# Bind Entity (Manual)
-	code.append("\t// Bind Entity")
-	code.append('\tpy::class_<Entity, std::shared_ptr<Entity>>(m, "Entity")')
-
-	# Auto-generate properties for all components
+	# Auto-generate properties for Entity
+	code.append("\t// Entity component properties")
 	for s in sorted_structs:
 		if s.endswith("Component"):
 			py_name = strip_struct_name(s)
 			prop_name = re.sub(r'(?<!^)(?=[A-Z])', '_', py_name).lower()
 
-			# Special case for TransformComponent to match previous "transform" property which was lowercase
-			# Actually snake case of "Transform" is "transform"
-			# Snake case of "SkeletalMesh" is "skeletal_mesh"
+			code.append(f'\tentity_cls.def_property_readonly("{prop_name}", [](Entity& e) -> {s}* {{')
+			code.append(f'\t\tif (e.has_component<{s}>()) {{')
+			code.append(f'\t\t\treturn &e.get_component<{s}>();')
+			code.append(f'\t\t}}')
+			code.append(f'\t\treturn nullptr;')
+			code.append(f'\t}}, py::return_value_policy::reference);')
 
-			code.append(f'\t\t.def_property_readonly("{prop_name}", [](Entity& e) -> {s}* {{')
-			code.append(f'\t\t\tif (e.has_component<{s}>()) {{')
-			code.append(f'\t\t\t\treturn &e.get_component<{s}>();')
-			code.append(f'\t\t\t}}')
-			code.append(f'\t\t\treturn nullptr;')
-			code.append(f'\t\t}}, py::return_value_policy::reference)')
-
-	code.append('\t\t.def("is_valid", &Entity::is_valid);')
 	code.append("")
-
-	# Bind Script (Manual)
-	code.append("\t// Helper class for Python to inherit from (mocking ScriptBase)")
-	code.append("\tstruct PyScript {")
-	code.append("\t\tvirtual void on_attach() {}")
-	code.append("\t\tvirtual void on_update(float) {}")
-	code.append("\t\tvirtual void on_detach() {}")
-	code.append("\t\tvirtual ~PyScript() = default;")
-	code.append("\t};")
-	code.append("")
-	code.append("\t// Bind Script Base Class for Python to inherit")
-	code.append('\tpy::class_<PyScript>(m, "Script")')
-	code.append('\t\t.def(py::init<>())')
-	code.append('\t\t.def("on_attach", &PyScript::on_attach)')
-	code.append('\t\t.def("on_update", &PyScript::on_update)')
-	code.append('\t\t.def("on_detach", &PyScript::on_detach);')
-	code.append("")
-	code.append('\tpy::class_<Scene, std::shared_ptr<Scene>>(m, "Scene")')
-	code.append('\t\t.def(py::init<>())')
-	code.append('\t\t.def("create_entity", &Scene::create_entity)')
-	code.append('\t\t.def("destroy_entity", &Scene::destroy_entity);')
-	code.append("")
-	code.append('\t// Allow access to GlobalSettings via z1.globals')
+	
+	# Allow access to GlobalSettings via z1.globals
+	# This uses the m_global pointer from runtime context
+	code.append('\t// Allow access to GlobalSettings via z1.globals or z1.global')
 	code.append('\tm.def("__getattr__", [](const std::string &name) -> py::object {')
-	code.append('\t\tif (name == "globals") {')
+	code.append('\t\tif (name == "globals" || name == "global") {')
 	code.append('\t\t\treturn py::cast(z1::g_runtime_context.m_global.get(), py::return_value_policy::reference);')
 	code.append('\t\t}')
 	code.append('\t\tif (name == "scene") {')
@@ -379,58 +308,167 @@ def map_cpp_type_to_python(cpp_type, known_enums=None):
 
 	return "Any"
 
+def parse_manual_bindings(file_path):
+	if not os.path.exists(file_path):
+		return []
+
+	with open(file_path, 'r', encoding='utf-8') as f:
+		content = f.read()
+
+	classes = {} # name -> {'methods': [], 'fields': [], 'inits': []}
+	var_to_class = {} # variable_name -> class_name
+	
+	# We process line by line to handle chaining somewhat correctly
+	# but we also need to handle multiline statements. 
+	# For simplicity, let's assume standard formatting from the file we just wrote.
+	
+	current_class = None
+	
+	lines = content.split('\n')
+	for line in lines:
+		line = line.strip()
+		if not line: continue
+		if line.startswith('//'): continue
+
+		# Check for class definition
+		class_match = PY_CLASS_RE.search(line)
+		if class_match:
+			var_name = class_match.group('var')
+			class_name = class_match.group('name')
+			current_class = class_name
+			classes[class_name] = {'methods': [], 'fields': [], 'inits': []}
+			if var_name:
+				var_to_class[var_name] = class_name
+			continue
+
+		# Check for init
+		init_match = PY_INIT_RE.search(line)
+		if init_match:
+			# If it's chained (starts with dot), it applies to current_class
+			if line.startswith('.'):
+				if current_class:
+					args_str = init_match.group('args')
+					args = [a.strip() for a in args_str.split(',')] if args_str else []
+					classes[current_class]['inits'].append(args)
+			continue
+
+		# Check for methods
+		def_match = PY_DEF_RE.search(line)
+		if def_match:
+			var_name = def_match.group('var')
+			method_name = def_match.group('name')
+			
+			target_class = None
+			if var_name and var_name in var_to_class:
+				target_class = var_to_class[var_name]
+			elif line.startswith('.'):
+				target_class = current_class
+			
+			if target_class:
+				classes[target_class]['methods'].append(method_name)
+			continue
+
+		# Check for properties/fields
+		prop_match = PY_PROP_RE.search(line)
+		if prop_match:
+			var_name = prop_match.group('var')
+			prop_name = prop_match.group('name')
+			
+			target_class = None
+			if var_name and var_name in var_to_class:
+				target_class = var_to_class[var_name]
+			elif line.startswith('.'):
+				target_class = current_class
+			
+			if target_class:
+				classes[target_class]['fields'].append(prop_name)
+			continue
+			
+	return classes
+
 def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, has_default_ctor, enum_items):
+	# Parse Manual Bindings from C++
+	manual_classes = parse_manual_bindings(MANUAL_BINDINGS_FILE)
+	
 	code = []
 	code.append("# This file is automatically generated by utils/gen_pybinds.py")
 	code.append("# Do not modify this file directly.")
 	code.append("from typing import Any, overload, ClassVar, List, Optional")
 	code.append("from enum import Enum")
 	code.append("")
-
+	
 	code.append("def log_info(msg: str) -> None: ...")
 	code.append("def log_warn(msg: str) -> None: ...")
 	code.append("def log_error(msg: str) -> None: ...")
 	code.append("")
 
+	# Generate Manual Classes Stubs
+	for cls_name, data in manual_classes.items():
+		code.append(f"class {cls_name}:")
+		
+		# Fields
+		for f in data['fields']:
+			# Try to guess type for common fields
+			ftype = "Any"
+			if cls_name.startswith("Vec") and f in ["x", "y", "z", "w"]:
+				ftype = "float"
+			code.append(f"\t{f}: {ftype}")
+			
+		if not data['fields'] and not data['methods'] and not data['inits']:
+			pass
+			
+		# Inits
+		if data['inits']:
+			for args in data['inits']:
+				arg_str = "self"
+				for i, arg_type in enumerate(args):
+					if not arg_type: continue
+					py_type = map_cpp_type_to_python(arg_type)
+					arg_str += f", arg{i}: {py_type}"
+				code.append(f"\t@overload")
+				code.append(f"\tdef __init__({arg_str}) -> None: ...")
+		elif cls_name == "Script": # Script needs implicit init
+			code.append("\tdef __init__(self) -> None: ...")
+
+		# Methods
+		for m in data['methods']:
+			# Special handling for known methods
+			if m == "is_valid":
+				code.append(f"\tdef {m}(self) -> bool: ...")
+			elif m == "create_entity":
+				code.append(f"\tdef {m}(self, name: str) -> Entity: ...")
+			elif m == "destroy_entity":
+				code.append(f"\tdef {m}(self, entity: Entity) -> None: ...")
+			elif m == "on_update":
+				code.append(f"\tdef {m}(self, delta: float) -> None: ...")
+			elif m.startswith("on_"):
+				code.append(f"\tdef {m}(self) -> None: ...")
+			elif m == "__repr__":
+				code.append(f"\tdef {m}(self) -> str: ...")
+			else:
+				code.append(f"\tdef {m}(self, *args: Any, **kwargs: Any) -> Any: ...")
+
+		# Inject generated entity body marker if it's Entity class
+		if cls_name == "Entity":
+			code.append("\t# __GENERATED_ENTITY_BODY__")
+			
+		if cls_name == "Script":
+			code.append("\t@property")
+			code.append("\tdef entity(self) -> Optional[Entity]: ...")
+
+		code.append("")
+	
+	code.append("# --- GENERATED CONTENT BELOW ---")
+
+
+	# Generate Enums
 	for e in sorted_enums:
 		code.append(f"class {e}(Enum):")
 		for i, (name, val) in enumerate(enum_items[e]):
 			code.append(f"\t{name} = {i}")
 		code.append("")
 
-	code.append("class Vec2:")
-	code.append("\tx: float")
-	code.append("\ty: float")
-	code.append("\t@overload")
-	code.append("\tdef __init__(self) -> None: ...")
-	code.append("\t@overload")
-	code.append("\tdef __init__(self, x: float, y: float) -> None: ...")
-	code.append("\tdef __repr__(self) -> str: ...")
-	code.append("")
-
-	code.append("class Vec3:")
-	code.append("\tx: float")
-	code.append("\ty: float")
-	code.append("\tz: float")
-	code.append("\t@overload")
-	code.append("\tdef __init__(self) -> None: ...")
-	code.append("\t@overload")
-	code.append("\tdef __init__(self, x: float, y: float, z: float) -> None: ...")
-	code.append("\tdef __repr__(self) -> str: ...")
-	code.append("")
-
-	code.append("class Vec4:")
-	code.append("\tx: float")
-	code.append("\ty: float")
-	code.append("\tz: float")
-	code.append("\tw: float")
-	code.append("\t@overload")
-	code.append("\tdef __init__(self) -> None: ...")
-	code.append("\t@overload")
-	code.append("\tdef __init__(self, x: float, y: float, z: float, w: float) -> None: ...")
-	code.append("\tdef __repr__(self) -> str: ...")
-	code.append("")
-
+	# Generate Structs
 	for s in sorted_structs:
 		py_name = strip_struct_name(s)
 		code.append(f"class {py_name}:")
@@ -452,31 +490,27 @@ def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, h
 
 		code.append("")
 
-	code.append("class Entity:")
+	# Generate Entity properties
+	entity_props = []
 	for s in sorted_structs:
 		if s.endswith("Component"):
 			py_name = strip_struct_name(s)
 			prop_name = re.sub(r'(?<!^)(?=[A-Z])', '_', py_name).lower()
-			code.append("\t@property")
-			code.append(f"\tdef {prop_name}(self) -> Optional[{py_name}]: ...")
-
-	code.append("\tdef is_valid(self) -> bool: ...")
-	code.append("")
-
-	code.append("class Script:")
-	code.append("\tdef __init__(self) -> None: ...")
-	code.append("\tdef on_attach(self) -> None: ...")
-	code.append("\tdef on_update(self, delta_time: float) -> None: ...")
-	code.append("\tdef on_detach(self) -> None: ...")
-	code.append("\t@property")
-	code.append("\tdef entity(self) -> Optional[Entity]: ...")
-	code.append("")
-
-	code.append("class Scene:")
-	code.append("\tdef __init__(self) -> None: ...")
-	code.append("\tdef create_entity(self, name: str) -> Entity: ...")
-	code.append("\tdef destroy_entity(self, entity: Entity) -> None: ...")
-	code.append("")
+			entity_props.append(f"\t@property")
+			entity_props.append(f"\tdef {prop_name}(self) -> Optional[{py_name}]: ...")
+	
+	# Inject Entity properties into the Manual Entity class if present
+	# We look for "# __GENERATED_ENTITY_BODY__" in the code and replace it
+	injected = False
+	for i in range(len(code)):
+		if "# __GENERATED_ENTITY_BODY__" in code[i]:
+			code[i] = "\n".join(entity_props)
+			injected = True
+			break
+	
+	if not injected:
+		# Fallback if marker not found
+		code.append("# WARNING: Entity properties not injected (marker not found)")
 
 	code.append("globals: GlobalSettings")
 	code.append("scene: Scene")
