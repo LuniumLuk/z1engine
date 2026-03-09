@@ -170,6 +170,14 @@ namespace z1 {
 	static _REFLECT_REGISTER_##type _REFLECT_REGISTER_INSTANCE_##type; \
 	struct API type
 
+#define REFLECT_ENUM(type, ...)                                        \
+	template<> struct z1::EnumInfoResolver<type> {                     \
+		static const z1::EnumInfo* get() {                             \
+			static z1::EnumInfo info = { #type, { __VA_ARGS__ } };     \
+			return &info;                                              \
+		}                                                              \
+	};
+
 #define REFLECTED_FIELD(type, field, ...)                              \
 	struct CONCAT3(_REFLECT_REGISTER_, type, _##field) {               \
 		CONCAT3(_REFLECT_REGISTER_, type, _##field)() {                \
@@ -181,6 +189,7 @@ namespace z1 {
 				__VA_ARGS__                                            \
 			};                                                         \
 			field_info.container = z1::ContainerInfoResolver<std::remove_cv_t<std::remove_reference_t<decltype(((type*)0)->field)>>>::get(); \
+			field_info.enum_info = z1::EnumInfoResolver<std::remove_cv_t<std::remove_reference_t<decltype(((type*)0)->field)>>>::get(); \
 			TypeRegistry::instance().register_field(#type, field_info);\
 		}                                                              \
 	};                                                                 \

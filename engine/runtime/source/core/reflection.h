@@ -23,6 +23,16 @@ namespace z1 {
 		FF_Default          = FF_Visible | FF_Editable | FF_Serializable | FF_Copiable,
 	};
 
+	struct EnumItem {
+		std::string name;
+		int value;
+	};
+
+	struct EnumInfo {
+		std::string name;
+		std::vector<EnumItem> items;
+	};
+
 	struct ContainerInfo
 	{
 		bool is_array;
@@ -30,6 +40,7 @@ namespace z1 {
 		void* (*get)(void* instance, size_t index);
 		void (*resize)(void* instance, size_t new_size);
 		const std::type_info* element_type;
+		const EnumInfo* element_enum_info;
 	};
 
 	struct FieldInfo
@@ -43,6 +54,7 @@ namespace z1 {
 		// e.g. "type=slider;min=0;max=100;step=1"
 		std::string widget;
 		const ContainerInfo* container = nullptr;
+		const EnumInfo* enum_info = nullptr;
 
 		template<typename T, typename C>
 		T& get(C* instance) const {
@@ -116,7 +128,8 @@ namespace z1 {
 				[](const void* instance) { return reinterpret_cast<const std::vector<T, Alloc>*>(instance)->size(); },
 				[](void* instance, size_t index) { return reinterpret_cast<void*>(&(*reinterpret_cast<std::vector<T, Alloc>*>(instance))[index]); },
 				[](void* instance, size_t new_size) { reinterpret_cast<std::vector<T, Alloc>*>(instance)->resize(new_size); },
-				&typeid(T)
+				&typeid(T),
+				EnumInfoResolver<T>::get()
 			};
 			return &info;
 		}
@@ -130,9 +143,17 @@ namespace z1 {
 				[](const void* instance) { return N; },
 				[](void* instance, size_t index) { return reinterpret_cast<void*>(&(*reinterpret_cast<std::array<T, N>*>(instance))[index]); },
 				nullptr,
-				&typeid(T)
+				&typeid(T),
+				EnumInfoResolver<T>::get()
 			};
 			return &info;
+		}
+	};
+
+	template<typename T>
+	struct EnumInfoResolver {
+		static const EnumInfo* get() {
+			return nullptr;
 		}
 	};
 

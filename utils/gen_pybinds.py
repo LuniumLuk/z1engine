@@ -11,6 +11,7 @@ STUB_FILE = os.path.join(STUBS_DIR, "z1.pyi")
 # Regex patterns
 REFLECTED_STRUCT_RE = re.compile(r'REFLECTED_STRUCT\s*\(\s*(\w+)\s*\)')
 REFLECTED_FIELD_RE = re.compile(r'REFLECTED_FIELD\s*\(\s*(\w+)\s*,\s*(\w+)\s*,')
+REFLECT_ENUM_RE = re.compile(r'REFLECT_ENUM\s*\(\s*(\w+)\s*,')
 
 def extract_struct_body(content, struct_name):
 	# Find start of struct
@@ -39,6 +40,30 @@ def extract_struct_body(content, struct_name):
 		return content[brace_idx+1 : i-1]
 	return ""
 
+def extract_enum_items(content, enum_name):
+	# Find start
+	pattern = r'REFLECT_ENUM\s*\(\s*' + enum_name + r'\s*,'
+	match = re.search(pattern, content)
+	if not match: return []
+
+	start_idx = match.end()
+	# Read until closing parenthesis of REFLECT_ENUM
+	# Need to balance parenthesis
+	count = 1
+	i = start_idx
+	while i < len(content) and count > 0:
+		if content[i] == '(': count += 1
+		elif content[i] == ')': count -= 1
+		i += 1
+
+	if count == 0:
+		items_str = content[start_idx : i-1]
+		# Parse items: { "Name", Value }, ...
+		# Simple regex: \{ "(\w+)", ([^}]+) \}
+		item_re = re.compile(r'\{\s*"(\w+)"\s*,\s*([^}]+)\s*\}')
+		return item_re.findall(items_str)
+	return []
+
 def get_header_files(root):
 	files = []
 	for dirpath, dirnames, filenames in os.walk(root):
@@ -49,8 +74,10 @@ def get_header_files(root):
 
 def parse_files(files):
 	structs = set()
+	enums = set()
 	fields = {}  # struct_name -> list of field_names
 	struct_headers = {} # struct_name -> header_path
+	enum_headers = {} # enum_name -> header_path
 
 	for filepath in files:
 		with open(filepath, 'r', encoding='utf-8') as f:
@@ -62,6 +89,12 @@ def parse_files(files):
 			structs.add(s)
 			struct_headers[s] = filepath
 
+		# Find enums
+		found_enums = REFLECT_ENUM_RE.findall(content)
+		for e in found_enums:
+			enums.add(e)
+			enum_headers[e] = filepath
+
 		# Find fields
 		found_fields = REFLECTED_FIELD_RE.findall(content)
 		for s, f in found_fields:
@@ -72,8 +105,10 @@ def parse_files(files):
 	# Filter out false positives from macro definitions
 	if "type" in structs:
 		structs.remove("type")
+	if "type" in enums:
+		enums.remove("type")
 
-	return structs, fields, struct_headers
+	return structs, enums, fields, struct_headers, enum_headers
 
 def strip_struct_name(name):
 	if name.endswith("Component"):
@@ -85,13 +120,15 @@ def strip_field_name(name):
 		return name[2:]
 	return name
 
-def generate_bindings(structs, fields, struct_headers):
+def generate_bindings(structs, enums, fields, struct_headers, enum_headers):
 	# Sort for deterministic output
 	sorted_structs = sorted(list(structs))
+	sorted_enums = sorted(list(enums))
 
 	# Check for default constructors and extract bodies
 	has_default_ctor = {}
 	struct_bodies = {}
+	enum_items = {} # enum_name -> list of (name, value_expr)
 
 	for s in sorted_structs:
 		path = struct_headers[s]
@@ -106,11 +143,17 @@ def generate_bindings(structs, fields, struct_headers):
 			# Extract body
 			# Use balanced brace parser
 			struct_bodies[s] = extract_struct_body(content, s)
+   
+	for e in sorted_enums:
+		path = enum_headers[e]
+		with open(path, 'r', encoding='utf-8') as f:
+			content = f.read()
+			enum_items[e] = extract_enum_items(content, e)
 
-	return generate_cpp_bindings(sorted_structs, fields, struct_headers, has_default_ctor), \
-		   generate_python_stubs(sorted_structs, fields, struct_bodies, has_default_ctor)
+	return generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, enum_headers, has_default_ctor, enum_items), \
+		   generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, has_default_ctor, enum_items)
 
-def generate_cpp_bindings(sorted_structs, fields, struct_headers, has_default_ctor):
+def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, enum_headers, has_default_ctor, enum_items):
 	# Collect includes
 	includes = set()
 	includes.add('#include "pch.h"')
@@ -120,6 +163,13 @@ def generate_cpp_bindings(sorted_structs, fields, struct_headers, has_default_ct
 	for s in sorted_structs:
 		if s in struct_headers:
 			path = struct_headers[s]
+			rel_path = os.path.relpath(path, ENGINE_ROOT).replace("\\", "/")
+			includes.add(f'#include "{rel_path}"')
+
+	# Generate relative include paths for each enum
+	for e in sorted_enums:
+		if e in enum_headers:
+			path = enum_headers[e]
 			rel_path = os.path.relpath(path, ENGINE_ROOT).replace("\\", "/")
 			includes.add(f'#include "{rel_path}"')
 
@@ -203,6 +253,15 @@ def generate_cpp_bindings(sorted_structs, fields, struct_headers, has_default_ct
 	code.append('\t\t});')
 	code.append("")
 
+	# Bind Enums
+	code.append("\t// Bind Enums")
+	for e in sorted_enums:
+		code.append(f'\tpy::enum_<{e}>(m, "{e}")')
+		for name, val in enum_items[e]:
+			code.append(f'\t\t.value("{name}", {e}::{name})')
+		code.append(f'\t\t.export_values();')
+		code.append("")
+
 	# Generated Bindings
 	code.append("\t// Generated Bindings")
 	for s in sorted_structs:
@@ -274,9 +333,12 @@ def get_field_type(struct_body, field_name):
 		return match.group('type').strip()
 	return "Any"
 
-def map_cpp_type_to_python(cpp_type):
+def map_cpp_type_to_python(cpp_type, known_enums=None):
 	cpp_type = cpp_type.replace("const", "").strip()
 	cpp_type = cpp_type.replace("&", "").strip()
+
+	if known_enums and cpp_type in known_enums:
+		return cpp_type
 
 	if cpp_type in ["int", "uint32_t", "size_t", "long", "short", "int32_t", "int64_t"]:
 		return "int"
@@ -295,19 +357,19 @@ def map_cpp_type_to_python(cpp_type):
 	if "std::vector" in cpp_type:
 		match = re.search(r'std::vector<(.+)>', cpp_type)
 		if match:
-			inner = map_cpp_type_to_python(match.group(1))
+			inner = map_cpp_type_to_python(match.group(1), known_enums)
 			return f"List[{inner}]"
 		return "List[Any]"
 	if "std::array" in cpp_type:
 		match = re.search(r'std::array<([^,]+),.+>', cpp_type)
 		if match:
-			inner = map_cpp_type_to_python(match.group(1))
+			inner = map_cpp_type_to_python(match.group(1), known_enums)
 			return f"List[{inner}]"
 		return "List[Any]"
 	if "std::shared_ptr" in cpp_type:
 		match = re.search(r'std::shared_ptr<(.+)>', cpp_type)
 		if match:
-			inner = map_cpp_type_to_python(match.group(1))
+			inner = map_cpp_type_to_python(match.group(1), known_enums)
 			return inner
 		return "Any"
 
@@ -316,7 +378,7 @@ def map_cpp_type_to_python(cpp_type):
 
 	return "Any"
 
-def generate_python_stubs(sorted_structs, fields, struct_bodies, has_default_ctor):
+def generate_python_stubs(sorted_structs, sorted_enums, fields, struct_bodies, has_default_ctor, enum_items):
 	code = []
 	code.append("# This file is automatically generated by utils/gen_pybinds.py")
 	code.append("# Do not modify this file directly.")
@@ -328,6 +390,12 @@ def generate_python_stubs(sorted_structs, fields, struct_bodies, has_default_cto
 	code.append("def log_warn(msg: str) -> None: ...")
 	code.append("def log_error(msg: str) -> None: ...")
 	code.append("")
+
+	for e in sorted_enums:
+		code.append(f"class {e}(Enum):")
+		for i, (name, val) in enumerate(enum_items[e]):
+			code.append(f"\t{name} = {i}")
+		code.append("")
 
 	code.append("class Vec2:")
 	code.append("\tx: float")
@@ -372,7 +440,7 @@ def generate_python_stubs(sorted_structs, fields, struct_bodies, has_default_cto
 			for f in fields[s]:
 				py_field = strip_field_name(f)
 				cpp_type = get_field_type(struct_bodies.get(s, ""), f)
-				py_type = map_cpp_type_to_python(cpp_type)
+				py_type = map_cpp_type_to_python(cpp_type, sorted_enums)
 				code.append(f"\t{py_field}: {py_type}")
 
 		if not has_fields and not has_default_ctor.get(s, False):
@@ -408,16 +476,18 @@ def generate_python_stubs(sorted_structs, fields, struct_bodies, has_default_cto
 def main():
 	print(f"Scanning {ENGINE_ROOT}...")
 	files = get_header_files(ENGINE_ROOT)
-	structs, fields, struct_headers = parse_files(files)
+	structs, enums, fields, struct_headers, enum_headers = parse_files(files)
 
 	if "type" in structs:
 		structs.remove("type")
 
-	print(f"Found {len(structs)} structs.")
+	print(f"Found {len(structs)} structs and {len(enums)} enums.")
 	for s in sorted(list(structs)):
 		print(f"  - {s}")
+	for e in sorted(list(enums)):
+		print(f"  - {e}")
 
-	cpp_content, stub_content = generate_bindings(structs, fields, struct_headers)
+	cpp_content, stub_content = generate_bindings(structs, enums, fields, struct_headers, enum_headers)
 
 	print(f"Writing to {OUTPUT_FILE}...")
 	with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:

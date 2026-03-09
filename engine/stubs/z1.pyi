@@ -7,6 +7,11 @@ def log_info(msg: str) -> None: ...
 def log_warn(msg: str) -> None: ...
 def log_error(msg: str) -> None: ...
 
+class LightType(Enum):
+	Directional = 0
+	Point = 1
+	Spot = 2
+
 class Vec2:
 	x: float
 	y: float
@@ -76,7 +81,7 @@ class GlobalSettings:
 	def __init__(self) -> None: ...
 
 class Light:
-	type: int
+	type: LightType
 	color: Vec3
 	intensity: float
 	range: float

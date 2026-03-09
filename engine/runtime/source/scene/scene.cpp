@@ -324,7 +324,7 @@ namespace z1 {
 			if (entity_yaml["light"]) {
 				auto const& light_yaml = entity_yaml["light"];
 				auto& light = entity->add_component<LightComponent>();
-				light.m_type = light_yaml["type"].as<int>();
+				light.m_type = (LightType)light_yaml["type"].as<int>();
 				light.m_color = light_yaml["color"].as<glm::vec3>();
 				light.m_intensity = light_yaml["intensity"].as<float>();
 				light.m_range = light_yaml["range"].as<float>();
@@ -556,7 +556,7 @@ namespace z1 {
 				auto const& light = entity->get_component<LightComponent>();
 				yaml << YAML::Key << "light" << YAML::Value;
 				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "type" << YAML::Value << light.m_type;
+				yaml << YAML::Key << "type" << YAML::Value << (int)light.m_type;
 				yaml << YAML::Key << "color" << YAML::Value << light.m_color;
 				yaml << YAML::Key << "intensity" << YAML::Value << light.m_intensity;
 				yaml << YAML::Key << "range" << YAML::Value << light.m_range;

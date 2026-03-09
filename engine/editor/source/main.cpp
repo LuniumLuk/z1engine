@@ -704,9 +704,34 @@ private:
 		}                                                                  \
 	});
 
-	void show_value(void* ptr, std::type_info const& type, std::string const& name, FieldInfo const& field) {
+	void show_value(void* ptr, std::type_info const& type, std::string const& name, FieldInfo const& field, const EnumInfo* enum_info = nullptr) {
 		std::string widget_name = "##" + name;
 		ImGui::SetNextItemWidth(-1.0f);
+
+		if (enum_info) {
+			int& value = *reinterpret_cast<int*>(ptr);
+			std::string current_item_name = "Unknown";
+			for (auto const& item : enum_info->items) {
+				if (item.value == value) {
+					current_item_name = item.name;
+					break;
+				}
+			}
+
+			if (ImGui::BeginCombo(widget_name.c_str(), current_item_name.c_str())) {
+				for (auto const& item : enum_info->items) {
+					bool is_selected = (value == item.value);
+					if (ImGui::Selectable(item.name.c_str(), is_selected)) {
+						value = item.value;
+					}
+					if (is_selected) {
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+			return;
+		}
 
 		if (type == typeid(bool)) {
 			bool& value = *reinterpret_cast<bool*>(ptr);
@@ -820,14 +845,14 @@ private:
 					std::string elem_name = field.name + "[" + std::to_string(i) + "]";
 					ImGui::Text(std::to_string(i).c_str());
 					ImGui::SameLine();
-					show_value(elem_ptr, *field.container->element_type, elem_name, field);
+					show_value(elem_ptr, *field.container->element_type, elem_name, field, field.container->element_enum_info);
 				}
 				ImGui::Unindent();
 			}
 		}
 		else {
 			ImGui::Text(field.name.c_str());
-			show_value(ptr, *field.type, field.name, field);
+			show_value(ptr, *field.type, field.name, field, field.enum_info);
 		}
 
 		if (!editable)

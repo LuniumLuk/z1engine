@@ -11,8 +11,12 @@ namespace z1 {
 		Spot = 2
 	};
 
+	REFLECT_ENUM(LightType, { "Directional", (int)LightType::Directional },
+							{ "Point", (int)LightType::Point },
+							{ "Spot", (int)LightType::Spot })
+
 	REFLECTED_STRUCT(LightComponent) {
-		int m_type = (int)LightType::Directional; // 0: Directional, 1: Point, 2: Spot
+		LightType m_type = LightType::Directional; // 0: Directional, 1: Point, 2: Spot
 		glm::vec3 m_color = { 1.0f, 1.0f, 1.0f };
 		float m_intensity = 1.0f;
 		float m_range = 10.0f;
@@ -22,13 +26,13 @@ namespace z1 {
 
 		LightComponent() = default;
 		LightComponent(LightType type, glm::vec3 const& color, float intensity)
-			: m_type((int)type), m_color(color), m_intensity(intensity) {}
+			: m_type(type), m_color(color), m_intensity(intensity) {}
 
 		DISABLE_COPY(LightComponent)
 
 	};
 
-	REFLECTED_FIELD(LightComponent, m_type, FF_Default, "[drag]min=0,max=2")
+	REFLECTED_FIELD(LightComponent, m_type, FF_Default)
 	REFLECTED_FIELD(LightComponent, m_color, FF_Default, "[color]")
 	REFLECTED_FIELD(LightComponent, m_intensity, FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(LightComponent, m_range, FF_Default, "[drag]min=0.0")

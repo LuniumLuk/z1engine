@@ -63,6 +63,13 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 			return "Vec4(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ", " + std::to_string(v.w) + ")";
 		});
 
+	// Bind Enums
+	py::enum_<LightType>(m, "LightType")
+		.value("Directional", LightType::Directional)
+		.value("Point", LightType::Point)
+		.value("Spot", LightType::Spot)
+		.export_values();
+
 	// Generated Bindings
 	py::class_<AnimationComponent>(m, "Animation")
 		.def_readwrite("animation_asset", &AnimationComponent::animation_asset)
