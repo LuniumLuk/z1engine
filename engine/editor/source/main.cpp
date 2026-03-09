@@ -704,21 +704,12 @@ private:
 		}                                                                  \
 	});
 
-	void show_type_field(void* instance, FieldInfo const& field) {
-		bool const visible = (field.flag & FF_Visible) != 0;
-		bool const editable = (field.flag & FF_Editable) != 0;
-		if (!visible && !editable)
-			return;
-
-		ImGui::Text(field.name.c_str());
-		std::string widget_name = "##" + field.name;
+	void show_value(void* ptr, std::type_info const& type, std::string const& name, FieldInfo const& field) {
+		std::string widget_name = "##" + name;
 		ImGui::SetNextItemWidth(-1.0f);
 
-		if (!editable)
-			ImGui::BeginDisabled();
-
-		if (*field.type == typeid(bool)) {
-			bool& value = field.get<bool>(instance);
+		if (type == typeid(bool)) {
+			bool& value = *reinterpret_cast<bool*>(ptr);
 			if (field.is_widget_type("radio")) {
 				if (ImGui::RadioButton(widget_name.c_str(), value)) {
 					value = !value;
@@ -728,48 +719,47 @@ private:
 				ImGui::Checkbox(widget_name.c_str(), &value);
 			}
 		}
-		else if (*field.type == typeid(float)) {
-			float& value = field.get<float>(instance);
+		else if (type == typeid(float)) {
+			float& value = *reinterpret_cast<float*>(ptr);
 			SHOW_FLOAT_FIELD(, &value)
 		}
-		else if (*field.type == typeid(int)) {
-			int& value = field.get<int>(instance);
+		else if (type == typeid(int)) {
+			int& value = *reinterpret_cast<int*>(ptr);
 			int min = field.get_widget_value<int>("min", -10000);
 			int max = field.get_widget_value<int>("max", 10000);
 			int step = field.get_widget_value<int>("step", 1);
 			if (field.is_widget_type("slider")) {
 				ImGui::SliderInt(widget_name.c_str(), &value, min, max);
 			}
-		else if (field.is_widget_type("drag")) {
+			else if (field.is_widget_type("drag")) {
 				ImGui::DragInt(widget_name.c_str(), &value, (float)step, min, max);
 			}
 			else {
 				ImGui::InputInt(widget_name.c_str(), &value, step);
 			}
 		}
-		else if (*field.type == typeid(glm::vec2)) {
-			glm::vec2& value = field.get<glm::vec2>(instance);
+		else if (type == typeid(glm::vec2)) {
+			glm::vec2& value = *reinterpret_cast<glm::vec2*>(ptr);
 			SHOW_FLOAT_FIELD(2, &value[0])
 		}
-		else if (*field.type == typeid(glm::vec3)) {
-			glm::vec3& value = field.get<glm::vec3>(instance);
+		else if (type == typeid(glm::vec3)) {
+			glm::vec3& value = *reinterpret_cast<glm::vec3*>(ptr);
 			SHOW_FLOAT_FIELD_WITH_COLOR(3, &value[0])
 		}
-		else if (*field.type == typeid(glm::vec4)) {
-			glm::vec4& value = field.get<glm::vec4>(instance);
+		else if (type == typeid(glm::vec4)) {
+			glm::vec4& value = *reinterpret_cast<glm::vec4*>(ptr);
 			SHOW_FLOAT_FIELD_WITH_COLOR(4, &value[0])
 		}
-		else if (*field.type == typeid(std::string)) {
-			std::string& value = field.get<std::string>(instance);
+		else if (type == typeid(std::string)) {
+			std::string& value = *reinterpret_cast<std::string*>(ptr);
 			static char str_buffer[256] = {};
 			strcpy_s(str_buffer, value.c_str());
 			if (ImGui::InputText(widget_name.c_str(), str_buffer, IM_ARRAYSIZE(str_buffer))) {
 				value = std::string(str_buffer);
 			}
 		}
-		else if (*field.type == typeid(std::shared_ptr<Texture2D>)) {
-			std::shared_ptr<Texture2D>& value = field.get<std::shared_ptr<Texture2D>>(instance);
-			ImGui::Text(widget_name.c_str());
+		else if (type == typeid(std::shared_ptr<Texture2D>)) {
+			std::shared_ptr<Texture2D>& value = *reinterpret_cast<std::shared_ptr<Texture2D>*>(ptr);
 			ImGui::Indent();
 			if (value) {
 				auto w = value->m_image->get_description().m_width;
@@ -782,9 +772,8 @@ private:
 			ACCEPT_PAYLOAD(Texture2D, "texture2d")
 			ImGui::Unindent();
 		}
-		else if (*field.type == typeid(std::shared_ptr<Animation>)) {
-			std::shared_ptr<Animation>& value = field.get<std::shared_ptr<Animation>>(instance);
-			ImGui::Text(widget_name.c_str());
+		else if (type == typeid(std::shared_ptr<Animation>)) {
+			std::shared_ptr<Animation>& value = *reinterpret_cast<std::shared_ptr<Animation>*>(ptr);
 			ImGui::Indent();
 			if (value) {
 				ImGui::Text("guid: %s", value->m_meta.guid.value.c_str());
@@ -797,6 +786,48 @@ private:
 			}
 			ACCEPT_PAYLOAD(Animation, "animation")
 			ImGui::Unindent();
+		}
+	}
+
+	void show_type_field(void* instance, FieldInfo const& field) {
+		bool const visible = (field.flag & FF_Visible) != 0;
+		bool const editable = (field.flag & FF_Editable) != 0;
+		if (!visible && !editable)
+			return;
+
+		void* ptr = (uint8_t*)instance + field.offset;
+
+		if (!editable)
+			ImGui::BeginDisabled();
+
+		if (field.container) {
+			if (ImGui::CollapsingHeader(field.name.c_str())) {
+				ImGui::Indent();
+				size_t size = field.container->size(ptr);
+
+				if (!field.container->is_array && editable) {
+					int new_size = (int)size;
+					if (ImGui::InputInt("size", &new_size)) {
+						if (new_size >= 0) {
+							field.container->resize(ptr, new_size);
+						}
+					}
+					size = field.container->size(ptr); // update size after resize
+				}
+
+				for (size_t i = 0; i < size; ++i) {
+					void* elem_ptr = field.container->get(ptr, i);
+					std::string elem_name = field.name + "[" + std::to_string(i) + "]";
+					ImGui::Text(std::to_string(i).c_str());
+					ImGui::SameLine();
+					show_value(elem_ptr, *field.container->element_type, elem_name, field);
+				}
+				ImGui::Unindent();
+			}
+		}
+		else {
+			ImGui::Text(field.name.c_str());
+			show_value(ptr, *field.type, field.name, field);
 		}
 
 		if (!editable)
@@ -834,52 +865,7 @@ private:
 				}
 
 				if (m_selected_entity->has_component<SpriteComponent>()) {
-					if (ImGui::CollapsingHeader("SpriteComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
-						auto& sprite = m_selected_entity->get_component<SpriteComponent>();
-						show_type_fields(&sprite, "SpriteComponent");
-
-						ImGui::Text("texture");
-						ImGui::Indent();
-
-						if (sprite.m_texture) {
-							auto w = sprite.m_texture->m_image->get_description().m_width;
-							auto h = sprite.m_texture->m_image->get_description().m_height;
-							ImGui::Image(sprite.m_texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-						}
-						else {
-							ImGui::Text("No Texture");
-						}
-						accept_payload("ASSET_ITEM",
-							[&](void* data) {
-								AssetMeta* meta = *(AssetMeta**)data;
-								if (meta->type == "texture2d") {
-									sprite.m_texture = Texture2D::load(meta->guid);
-								}
-							}
-						);
-
-						if (sprite.m_texture) {
-							auto w = sprite.m_texture->m_image->get_description().m_width;
-							auto h = sprite.m_texture->m_image->get_description().m_height;
-							ImGui::Text("guid: %s", sprite.m_texture->m_meta.guid.value.c_str());
-							ImGui::Text("width: %d", w);
-							ImGui::Text("height: %d", h);
-							ImGui::Text("depth: %d", sprite.m_texture->m_image->get_description().m_depth);
-							ImGui::Text("format: %s", get_image_format_name(sprite.m_texture->m_image->get_description().m_format).c_str());
-							ImGui::Text("sampler Mode: %s", get_sampler_mode_name(sprite.m_texture->m_image->get_description().m_sampler_mode).c_str());
-							ImGui::Text("wrap Mode: %s", get_wrap_mode_name(sprite.m_texture->m_image->get_description().m_wrap_mode).c_str());
-							ImGui::RadioButton("mipmap", sprite.m_texture->m_image->get_description().m_mipmap);
-						}
-						ImGui::Unindent();
-
-						ImGui::Text("texcoords");
-						ImGui::Indent();
-						for (int i = 0; i < 4; ++i) {
-							ImGui::DragFloat2(("texcoord " + std::to_string(i)).c_str(), &sprite.m_texcoords[i][0], 0.01f);
-						}
-						ImGui::Unindent();
-					}
-
+					SHOW_COMPONENT(SpriteComponent)
 				}
 
 				if (m_selected_entity->has_component<StaticMeshComponent>()) {

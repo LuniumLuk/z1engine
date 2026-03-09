@@ -2,8 +2,11 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
+#include <type_traits>
 
 namespace z1 {
 
@@ -20,6 +23,15 @@ namespace z1 {
 		FF_Default          = FF_Visible | FF_Editable | FF_Serializable | FF_Copiable,
 	};
 
+	struct ContainerInfo
+	{
+		bool is_array;
+		size_t (*size)(const void* instance);
+		void* (*get)(void* instance, size_t index);
+		void (*resize)(void* instance, size_t new_size);
+		const std::type_info* element_type;
+	};
+
 	struct FieldInfo
 	{
 		std::string name;
@@ -30,6 +42,7 @@ namespace z1 {
 		// widget string for editor customization
 		// e.g. "type=slider;min=0;max=100;step=1"
 		std::string widget;
+		const ContainerInfo* container = nullptr;
 
 		template<typename T, typename C>
 		T& get(C* instance) const {
@@ -86,6 +99,41 @@ namespace z1 {
 
 	private:
 		std::unordered_map<std::string, TypeInfo> m_types;
+	};
+
+	template<typename T>
+	struct ContainerInfoResolver {
+		static const ContainerInfo* get() {
+			return nullptr;
+		}
+	};
+
+	template<typename T, typename Alloc>
+	struct ContainerInfoResolver<std::vector<T, Alloc>> {
+		static const ContainerInfo* get() {
+			static ContainerInfo info{
+				false,
+				[](const void* instance) { return reinterpret_cast<const std::vector<T, Alloc>*>(instance)->size(); },
+				[](void* instance, size_t index) { return reinterpret_cast<void*>(&(*reinterpret_cast<std::vector<T, Alloc>*>(instance))[index]); },
+				[](void* instance, size_t new_size) { reinterpret_cast<std::vector<T, Alloc>*>(instance)->resize(new_size); },
+				&typeid(T)
+			};
+			return &info;
+		}
+	};
+
+	template<typename T, size_t N>
+	struct ContainerInfoResolver<std::array<T, N>> {
+		static const ContainerInfo* get() {
+			static ContainerInfo info{
+				true,
+				[](const void* instance) { return N; },
+				[](void* instance, size_t index) { return reinterpret_cast<void*>(&(*reinterpret_cast<std::array<T, N>*>(instance))[index]); },
+				nullptr,
+				&typeid(T)
+			};
+			return &info;
+		}
 	};
 
 }

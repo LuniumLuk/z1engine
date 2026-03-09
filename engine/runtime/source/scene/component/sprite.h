@@ -17,6 +17,7 @@ namespace z1 {
 			{ 1.0f, 1.0f },
 			{ 0.0f, 1.0f },
 		} };
+		std::vector<glm::vec2> m_extras;
 
 		SpriteComponent() = default;
 		SpriteComponent(glm::vec4 const& color) noexcept
@@ -37,8 +38,10 @@ namespace z1 {
 	};
 
 	REFLECTED_FIELD(SpriteComponent, m_color,         FF_Default, "[color]")
+	REFLECTED_FIELD(SpriteComponent, m_texture,       FF_Default)
 	REFLECTED_FIELD(SpriteComponent, m_tiling_scale,  FF_Default, "[drag]min=0.0")
 	REFLECTED_FIELD(SpriteComponent, m_tiling_offset, FF_Default, "[drag]")
 	REFLECTED_FIELD(SpriteComponent, m_texcoords,     FF_Default)
+	REFLECTED_FIELD(SpriteComponent, m_extras,        FF_Default)
 
 }

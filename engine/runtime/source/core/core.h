@@ -173,13 +173,15 @@ namespace z1 {
 #define REFLECTED_FIELD(type, field, ...)                              \
 	struct CONCAT3(_REFLECT_REGISTER_, type, _##field) {               \
 		CONCAT3(_REFLECT_REGISTER_, type, _##field)() {                \
-			TypeRegistry::instance().register_field(#type, {           \
+			FieldInfo field_info = {                                   \
 				#field,                                                \
 				offsetof(type, field),                                 \
 				sizeof(((type*)0)->field),                             \
 				&typeid(((type*)0)->field),                            \
 				__VA_ARGS__                                            \
-			});                                                        \
+			};                                                         \
+			field_info.container = z1::ContainerInfoResolver<std::remove_cv_t<std::remove_reference_t<decltype(((type*)0)->field)>>>::get(); \
+			TypeRegistry::instance().register_field(#type, field_info);\
 		}                                                              \
 	};                                                                 \
 	static CONCAT3(_REFLECT_REGISTER_, type, _##field) CONCAT3(_REFLECT_REGISTER_INSTANCE_, type, _##field);
