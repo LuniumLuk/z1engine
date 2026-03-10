@@ -124,6 +124,14 @@ namespace z1 {
 #define REGISTER_SCRIPT(ScriptType) \
 	std::string get_script_name() const override { return #ScriptType; }
 
+	enum struct ScriptState : int {
+		None,
+		Attached,
+		Started,
+		Destroyed,
+		Detached,
+	};
+
 	struct API ScriptBase {
 
 		virtual void on_attach() = 0;
@@ -174,10 +182,12 @@ namespace z1 {
 		}
 
 	private:
+		friend struct ScriptSystem;
 		friend struct ScriptComponent;
 		friend struct PythonScript;
 		std::weak_ptr<Entity> m_entity;
 		bool m_is_valid = true;
+		ScriptState m_state = ScriptState::None;
 
 	};
 

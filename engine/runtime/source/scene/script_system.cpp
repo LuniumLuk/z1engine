@@ -9,9 +9,6 @@ namespace z1 {
 	void ScriptSystem::update(Scene* scene, float dt) {
 		PROFILE_FUNCTION();
 
-		if (!g_runtime_context.m_global->script_enabled)
-			return;
-
 		// Collect entities first to avoid iterator invalidation if scripts modify the registry
 		auto view = scene->m_registry.view<ScriptComponent>();
 		std::vector<entt::entity> entities;
@@ -47,13 +44,22 @@ namespace z1 {
 				auto& script_data = comp->m_scripts[i];
 
 				if (!script_data.instance) {
-					if (script_data.attach_func) {
-						script_data.attach_func(script_data);
-					}
+					DEBUG_CHECK(script_data.attach_func);
+					script_data.attach_func(script_data);
+
+					DEBUG_CHECK(script_data.instance);
+					script_data.instance->m_state = ScriptState::Attached;
+				}
+
+				// We want the attach func to be called even if script system is disabled, because it might be
+				// needed for editor scripts to function properly.
+				if (!g_runtime_context.m_global->script_enabled)
+					break;
+
+				if (script_data.instance->m_state == ScriptState::Attached) {
 					// Check if instance was created and call on_start
-					if (script_data.instance) {
-						script_data.instance->on_start();
-					}
+					script_data.instance->on_start();
+					script_data.instance->m_state = ScriptState::Started;
 				}
 
 				// Re-fetch again? attach_func might have caused realloc!
@@ -77,9 +83,11 @@ namespace z1 {
 					auto& current = comp->m_scripts[i];
 					if (current.instance && !current.instance->is_valid()) {
 						current.instance->on_destroy(); // Call on_destroy before detach
+						current.instance->m_state = ScriptState::Destroyed;
 
 						if (current.detach_func) {
 							current.detach_func(current);
+							current.instance->m_state = ScriptState::Detached;
 						}
 						// Reset unique_ptr explicitly before erase
 						current.instance.reset();
