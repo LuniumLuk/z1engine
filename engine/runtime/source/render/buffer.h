@@ -9,7 +9,7 @@ namespace z1 {
 
 	struct Shader;
 
-	enum struct API BufferUsage {
+	enum struct API BufferUsage : int {
 		Static = 0,
 		Dynamic,
 		Stream,

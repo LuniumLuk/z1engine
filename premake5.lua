@@ -5,7 +5,7 @@ newoption {
 
 workspace "z1engine"
 	architecture "x64"
-	startproject "editor"
+	startproject "game"
 	configurations { "Debug", "Release", "Profile" }
 
 	filter { "action:vs2022", "options:vs2026" }

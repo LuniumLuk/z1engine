@@ -74,7 +74,7 @@ namespace z1 {
 			Value default_value = {};
 		};
 
-		enum struct AlphaMode {
+		enum struct AlphaMode : int {
 			Opaque = 0,
 			Mask,
 			Blend

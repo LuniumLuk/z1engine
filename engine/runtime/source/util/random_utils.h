@@ -4,9 +4,7 @@
 
 namespace z1 {
 
-	class Random
-	{
-	public:
+	struct Random {
 		// returns a random float in [min, max)
 		static float rfloat(float min = 0.0f, float max = 1.0f)
 		{

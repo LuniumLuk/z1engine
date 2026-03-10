@@ -25,7 +25,7 @@ namespace z1 {
 			X(Sampler2DArray, 4,         1           ) \
 			X(SamplerCube,    4,         1           )
 
-	enum struct API DataType {
+	enum struct API DataType : int {
 #define X(name, size, count) name,
 		DATA_TYPE_LIST
 #undef X

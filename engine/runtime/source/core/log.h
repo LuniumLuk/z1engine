@@ -6,7 +6,7 @@
 
 namespace z1 {
 
-	enum struct API LogLevel {
+	enum struct API LogLevel : int {
 		Trace = 0,
 		Debug,
 		Info,

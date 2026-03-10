@@ -5,7 +5,7 @@
 
 namespace z1 {
 
-	enum struct API PrimitiveType {
+	enum struct API PrimitiveType : int {
 		Points,
 		LineStrip,
 		Lines,

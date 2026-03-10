@@ -6,8 +6,7 @@
 
 namespace z1 {
 
-	class AnimationSystem {
-	public:
+	struct AnimationSystem {
 		static void update(Scene* scene, float dt);
 	};
 

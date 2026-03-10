@@ -6,8 +6,8 @@
 namespace z1 {
 	struct GraphicsContext;
 
-	enum struct LoadOp { Load, Clear, DontCare };
-	enum struct StoreOp { Store, DontCare };
+	enum struct LoadOp : int { Load, Clear, DontCare };
+	enum struct StoreOp : int { Store, DontCare };
 
 	struct RenderTargetDesc {
 		LoadOp load_op = LoadOp::Load;

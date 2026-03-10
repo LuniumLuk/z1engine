@@ -14,7 +14,7 @@ namespace z1 {
 	X(VertexArray)     \
 
 #define X(name) name,
-	enum struct API ResourceType {
+	enum struct API ResourceType : int {
 		RESOURCE_TYPES
 	};
 #undef X

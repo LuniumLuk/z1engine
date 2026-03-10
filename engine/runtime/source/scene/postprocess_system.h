@@ -4,8 +4,7 @@
 
 namespace z1 {
 
-	class PostProcessSystem {
-	public:
+	struct PostProcessSystem {
 		static void update(Scene* scene);
 	};
 }

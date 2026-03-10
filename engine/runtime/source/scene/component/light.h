@@ -5,7 +5,7 @@
 
 namespace z1 {
 
-	enum class LightType : int {
+	enum struct LightType : int {
 		Directional = 0,
 		Point = 1,
 		Spot = 2

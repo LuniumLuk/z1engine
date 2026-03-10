@@ -5,7 +5,7 @@
 
 namespace z1 {
 
-	enum struct API EventType {
+	enum struct API EventType : int {
 		None = 0,
 		WindowClose, WindowResize, WindowFocus, WindowLostFocus, WindowMoved,
 		KeyPressed, KeyReleased, KeyTyped,

@@ -15,7 +15,7 @@ namespace z1 {
 	X(ImageCubeArray)   \
 
 #define X(a) a,
-	enum struct API ImageType {
+	enum struct API ImageType : int {
 		DATA_TYPE_LIST
 	};
 #undef X
@@ -38,7 +38,7 @@ namespace z1 {
 	X(DepthStencil)     \
 
 #define X(a) a,
-	enum struct API ImageFormat {
+	enum struct API ImageFormat : int {
 		DATA_TYPE_LIST
 	};
 #undef X
@@ -58,7 +58,7 @@ namespace z1 {
 	X(Nearest)          \
 
 #define X(a) a,
-	enum struct API SamplerMode {
+	enum struct API SamplerMode : int {
 		DATA_TYPE_LIST
 	};
 #undef X
@@ -80,7 +80,7 @@ namespace z1 {
 	X(ClampToBorder)    \
 
 #define X(a) a,
-	enum struct API WrapMode {
+	enum struct API WrapMode : int {
 		DATA_TYPE_LIST
 	};
 #undef X

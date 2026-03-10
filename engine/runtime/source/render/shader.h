@@ -10,7 +10,7 @@ namespace z1 {
 	bool file_is_shader(Filepath const& path) noexcept;
 
 	struct API ShaderModule {
-		enum struct Stage {
+		enum struct Stage : int {
 			None = 0,
 			Geometry,
 			Vertex,

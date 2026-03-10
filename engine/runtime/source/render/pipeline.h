@@ -7,7 +7,7 @@
 
 namespace z1 {
 
-	enum struct API BlendFactor {
+	enum struct API BlendFactor : int {
 		Zero = 0,
 		One,
 		SrcColor,
@@ -20,7 +20,7 @@ namespace z1 {
 		OneMinusDstAlpha,
 	};
 
-	enum struct API CullMode {
+	enum struct API CullMode : int {
 		None = 0,
 		Front,
 		Back,
