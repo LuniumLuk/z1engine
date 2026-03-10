@@ -110,6 +110,11 @@ namespace z1 {
 	void Args::parse(int argc, char* argv[]) {
 		for (int i = 1; i < argc; ++i) {
 			std::string arg = argv[i];
+			if (arg.size() < 2 || arg.substr(0, 2) != "--") {
+				CORE_WARN("format not correct: {0}, must start with --", arg);
+				continue;
+			}
+			arg = arg.substr(2);
 			size_t equal_pos = arg.find('=');
 			if (equal_pos != std::string::npos) {
 				std::string key = arg.substr(0, equal_pos);
