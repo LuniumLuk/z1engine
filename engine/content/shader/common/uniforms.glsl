@@ -44,3 +44,6 @@ layout(std140) uniform Lights {
 	vec4 u_lights_count;
 	Light u_lights[16];
 };
+
+uniform float u_alpha_cutoff;
+uniform int u_alpha_mode; // 0: opaque, 1: mask, 2: blend

@@ -17,6 +17,12 @@
 
 	void main() {
 		vec4 color = v_color * texture(s_base_color, v_texcoord0);
+		if (u_alpha_mode == 0) {
+			color.a = 1.0;
+		}
+		else if (u_alpha_mode == 1) {
+			if (color.a < u_alpha_cutoff) discard;
+		}
 		frag_color = phone_shading(normalize(v_normal), v_world_position, color, get_shadow());
 	}
 }

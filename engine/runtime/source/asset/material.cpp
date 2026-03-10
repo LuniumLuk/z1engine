@@ -89,7 +89,7 @@ namespace z1 {
 
 		iss >> name;
 		if (m_variables.find(name) == m_variables.end()) {
-			CORE_WARN("reflected variable: {0} not found in shader variables!", name);
+			CORE_WARN("reflected variable: {0} not found in shader {1}!", name, m_pipeline_desc.shader->get_path());
 			return;
 		}
 

@@ -649,103 +649,16 @@ namespace z1 {
 			// mat.doubleSided;
 
 			// base material for material instance
-			auto base = g_runtime_context.m_asset_manager->get<Material>(Guid::make("material/M_pbr"));
+			auto base_material_guid = Guid::make("material/M_pbr");
 
 			// Check for KHR_materials_pbrSpecularGlossiness
 			bool has_specular_glossiness = false;
 			if (mat.extensions.find("KHR_materials_pbrSpecularGlossiness") != mat.extensions.end()) {
 				has_specular_glossiness = true;
-				base = g_runtime_context.m_asset_manager->get<Material>(Guid::make("material/M_pbr_sg"));
+				base_material_guid = Guid::make("material/M_pbr_sg");
 			}
 
-			if (mat.doubleSided) {
-				// Clone material to modify pipeline state
-				auto new_mat = std::make_shared<Material>(base->m_pipeline_desc);
-				new_mat->m_pipeline_desc.cull_mode = CullMode::None;
-				new_mat->m_double_sided = true;
-				new_mat->m_variables = base->m_variables;
-				new_mat->m_pipeline = Pipeline::build(new_mat->m_pipeline_desc);
-
-				// Register new material asset?
-				// For now, let's keep it in memory or unique to this import?
-				// MaterialInstance needs a shared_ptr<Material>.
-				// If we don't register it, it won't be saved/loaded by GUID.
-				// But we are creating a unique material per variance.
-				// This is getting complex for a simple import.
-				// Let's just modify the instance's material pointer to point to a new material.
-				// But we need to save this new material to disk if we want persistence.
-
-				// Alternative: Create M_pbr_double_sided, M_pbr_blend, etc.
-				// Or dynamically create and save "M_pbr_variance_X"
-
-				// For this task, let's dynamically create a new material asset relative to the import path.
-				AssetMeta new_meta = base->m_meta;
-				new_meta.guid = Guid::generate();
-				new_meta.path = settings.path / (name + "_Mat");
-				new_mat->m_meta = new_meta;
-
-				legalize_path(new_meta.path);
-				g_runtime_context.m_asset_manager->register_asset(new_meta, FileSystem::s_content_root);
-				// We need to save it too.
-				new_mat->save();
-
-				base = new_mat;
-			}
-
-			if (mat.alphaMode == "MASK") {
-				if (base->m_alpha_mode != Material::AlphaMode::Mask) {
-					// Clone if not already cloned
-					if (base->m_meta.guid == Guid::make("material/M_pbr") || base->m_meta.guid == Guid::make("material/M_pbr_sg")) {
-						auto new_mat = std::make_shared<Material>(base->m_pipeline_desc);
-						new_mat->m_variables = base->m_variables;
-						new_mat->m_pipeline_desc = base->m_pipeline_desc; // copy
-
-						AssetMeta new_meta = base->m_meta;
-						new_meta.guid = Guid::generate();
-						new_meta.path = settings.path / (name + "_Mat");
-						new_mat->m_meta = new_meta;
-
-						legalize_path(new_meta.path);
-						g_runtime_context.m_asset_manager->register_asset(new_meta, FileSystem::s_content_root);
-						base = new_mat;
-					}
-
-					base->m_alpha_mode = Material::AlphaMode::Mask;
-					base->m_alpha_cutoff = (float)mat.alphaCutoff;
-					// Mask usually doesn't need blending, just discard in shader.
-				}
-			}
-			else if (mat.alphaMode == "BLEND") {
-				if (base->m_alpha_mode != Material::AlphaMode::Blend) {
-					if (base->m_meta.guid == Guid::make("material/M_pbr") || base->m_meta.guid == Guid::make("material/M_pbr_sg")) {
-						auto new_mat = std::make_shared<Material>(base->m_pipeline_desc);
-						new_mat->m_variables = base->m_variables;
-						new_mat->m_pipeline_desc = base->m_pipeline_desc;
-
-						AssetMeta new_meta = base->m_meta;
-						new_meta.guid = Guid::generate();
-						new_meta.path = settings.path / (name + "_Mat");
-						new_mat->m_meta = new_meta;
-
-						legalize_path(new_meta.path);
-						g_runtime_context.m_asset_manager->register_asset(new_meta, FileSystem::s_content_root);
-						base = new_mat;
-					}
-
-					base->m_alpha_mode = Material::AlphaMode::Blend;
-					base->m_pipeline_desc.blend = true;
-					// Standard alpha blending
-					base->m_pipeline_desc.src_blend_factor = BlendFactor::SrcAlpha;
-					base->m_pipeline_desc.dst_blend_factor = BlendFactor::OneMinusSrcAlpha;
-					base->m_pipeline = Pipeline::build(base->m_pipeline_desc);
-				}
-			}
-
-			// Save the base material if we modified/created it
-			if (base->m_meta.guid != Guid::make("material/M_pbr") && base->m_meta.guid != Guid::make("material/M_pbr_sg")) {
-				base->save();
-			}
-
+			auto base = g_runtime_context.m_asset_manager->get<Material>(base_material_guid);
 			auto mi = MaterialInstance::create(settings.path / name, base);
 
 			if (has_specular_glossiness) {
@@ -818,9 +731,17 @@ namespace z1 {
 			handle_texture(mi, mat, loaded_textures, "emissiveTexture", "s_emissive", "u_emissive_uv_set");
 			handle_texture(mi, mat, loaded_textures, "occlusionTexture", "s_occlusion", "u_occlusion_uv_set");
 
+			// default to opaque
+			mi->m_override_variables["u_alpha_mode"].default_value.valid = true;
+			mi->m_override_variables["u_alpha_mode"].default_value.ivec[0] = 0;
 			if (mat.alphaMode == "MASK") {
+				mi->m_override_variables["u_alpha_mode"].default_value.ivec[0] = 1;
+
 				mi->m_override_variables["u_alpha_cutoff"].default_value.valid = true;
 				mi->m_override_variables["u_alpha_cutoff"].default_value.vec[0] = (float)mat.alphaCutoff;
+			}
+			else if (mat.alphaMode == "BLEND") {
+				mi->m_override_variables["u_alpha_mode"].default_value.ivec[0] = 2;
 			}
 
 			mi->save();

@@ -74,12 +74,6 @@ namespace z1 {
 			Value default_value = {};
 		};
 
-		enum struct AlphaMode : int {
-			Opaque = 0,
-			Mask,
-			Blend
-		};
-
 		Material(Pipeline::Description const& pipeline_desc);
 
 		static std::shared_ptr<Material> create(Filepath const& path, Pipeline::Description const& pipeline_desc);
@@ -89,10 +83,6 @@ namespace z1 {
 		Pipeline::Description m_pipeline_desc;
 		std::unordered_map<std::string, Variable> m_variables;
 		std::shared_ptr<Pipeline> m_pipeline;
-
-		AlphaMode m_alpha_mode = AlphaMode::Opaque;
-		float m_alpha_cutoff = 0.5f;
-		bool m_double_sided = false;
 
 	private:
 		void parse_reflection_line(const std::string& line);

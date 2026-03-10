@@ -6,9 +6,9 @@
 ///  ...
 // }
 
-// u_projview      [invisible] // mat4, set by the engine
-u_model         [invisible] // mat4, set by the engine
-// u_sun_direction [invisible] // vec3, set by the engine
-// u_sun_intensity [invisible] // vec3, set by the engine
-// u_cam_position  [invisible] // vec3, set by the engine
-u_shadow_map     [invisible] // sampler2DArray, set by the engine
+	u_model          [invisible] // mat4, set by the engine
+
+	u_shadow_map     [invisible] // sampler2DArray, set by the engine
+
+	u_alpha_cutoff   = float 0.5
+	u_alpha_mode     = int 0 // 0: opaque, 1: mask, 2: blend
