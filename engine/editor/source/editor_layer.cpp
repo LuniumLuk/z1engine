@@ -139,6 +139,58 @@ EditorLayer::EditorLayer() {
 				}
 			}
 
+			// Visualize PostProcess Volumes
+			{
+				auto pp_view = g_runtime_context.m_scene->m_registry.view<TransformComponent const, PostprocessVolumeComponent const>();
+				for (auto [entity, transform, pp] : pp_view.each()) {
+					if (!pp.enabled) continue;
+
+					glm::mat4 model = transform.get_world_transform();
+					glm::vec3 corners[8] = {
+						{ -0.5f, -0.5f, -0.5f }, { 0.5f, -0.5f, -0.5f }, { 0.5f, 0.5f, -0.5f }, { -0.5f, 0.5f, -0.5f },
+						{ -0.5f, -0.5f, 0.5f }, { 0.5f, -0.5f, 0.5f }, { 0.5f, 0.5f, 0.5f }, { -0.5f, 0.5f, 0.5f }
+					};
+
+					glm::vec3 world_corners[8];
+					for (int i = 0; i < 8; ++i) {
+						world_corners[i] = glm::vec3(model * glm::vec4(corners[i], 1.0f));
+					}
+
+					int edges[12][2] = {
+						{0,1}, {1,2}, {2,3}, {3,0},
+						{4,5}, {5,6}, {6,7}, {7,4},
+						{0,4}, {1,5}, {2,6}, {3,7}
+					};
+
+					auto draw_list = ImGui::GetWindowDrawList();
+					glm::mat4 view_proj = proj * view;
+
+					for (int i = 0; i < 12; ++i) {
+						glm::vec3 p1 = world_corners[edges[i][0]];
+						glm::vec3 p2 = world_corners[edges[i][1]];
+
+						glm::vec4 cp1 = view_proj * glm::vec4(p1, 1.0f);
+						glm::vec4 cp2 = view_proj * glm::vec4(p2, 1.0f);
+
+						if (cp1.w > 0.1f && cp2.w > 0.1f) {
+							glm::vec3 ndc1 = glm::vec3(cp1) / cp1.w;
+							glm::vec3 ndc2 = glm::vec3(cp2) / cp2.w;
+
+							ImVec2 sp1 = {
+								(ndc1.x + 1.0f) * 0.5f * present_size.x + image_min.x,
+								(1.0f - ndc1.y) * 0.5f * present_size.y + image_min.y
+							};
+							ImVec2 sp2 = {
+								(ndc2.x + 1.0f) * 0.5f * present_size.x + image_min.x,
+								(1.0f - ndc2.y) * 0.5f * present_size.y + image_min.y
+							};
+
+							draw_list->AddLine(sp1, sp2, IM_COL32(0, 255, 255, 255), 2.0f);
+						}
+					}
+				}
+			}
+
 			// Visualize skeletons using ImGuizmo::DrawLines
 			if (m_settings.show_skeleton_guizmos) {
 				auto skel_view = g_runtime_context.m_scene->m_registry.view<TransformComponent const, AnimationComponent const, SkeletalMeshComponent const>();
@@ -839,9 +891,11 @@ void EditorLayer::show_properties() {
 			if (m_selected_entity->has_component<LightComponent>()) {
 				SHOW_COMPONENT(LightComponent)
 			}
-
 			if (m_selected_entity->has_component<SpriteComponent>()) {
 				SHOW_COMPONENT(SpriteComponent)
+			}
+			if (m_selected_entity->has_component<PostprocessVolumeComponent>()) {
+				SHOW_COMPONENT(PostprocessVolumeComponent)
 			}
 
 			if (m_selected_entity->has_component<StaticMeshComponent>()) {
@@ -1021,6 +1075,7 @@ void EditorLayer::show_properties() {
 				component_context_menu<ScriptComponent>("script component", m_selected_entity, m_selected_entity);
 				component_context_menu<SkyLightComponent>("skylight component", m_selected_entity);
 				component_context_menu<AnimationComponent>("animation component", m_selected_entity);
+				component_context_menu<PostprocessVolumeComponent>("postprocess volume component", m_selected_entity);
 				ImGui::EndPopup();
 			}
 		}

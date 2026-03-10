@@ -29,6 +29,7 @@
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
 #include "scene/component/animation.h"
+#include "scene/component/postprocess_volume.h"
 
 #include "render/global.h"
 #include "render/graphics_context.h"

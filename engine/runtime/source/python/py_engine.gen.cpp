@@ -9,6 +9,7 @@
 #include "scene/component/camera.h"
 #include "scene/component/light.h"
 #include "scene/component/mesh.h"
+#include "scene/component/postprocess_volume.h"
 #include "scene/component/sky_light.h"
 #include "scene/component/sprite.h"
 
@@ -75,6 +76,26 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("outer_cone", &LightComponent::m_outer_cone)
 		.def_readwrite("cast_shadow", &LightComponent::m_cast_shadow);
 
+	py::class_<PostprocessVolumeComponent>(m, "PostprocessVolume")
+		.def_readwrite("enabled", &PostprocessVolumeComponent::enabled)
+		.def_readwrite("is_global", &PostprocessVolumeComponent::is_global)
+		.def_readwrite("priority", &PostprocessVolumeComponent::priority)
+		.def_readwrite("blend_distance", &PostprocessVolumeComponent::blend_distance)
+		.def_readwrite("override_exposure", &PostprocessVolumeComponent::override_exposure)
+		.def_readwrite("exposure", &PostprocessVolumeComponent::exposure)
+		.def_readwrite("override_gamma", &PostprocessVolumeComponent::override_gamma)
+		.def_readwrite("gamma", &PostprocessVolumeComponent::gamma)
+		.def_readwrite("override_tint", &PostprocessVolumeComponent::override_tint)
+		.def_readwrite("tint", &PostprocessVolumeComponent::tint)
+		.def_readwrite("override_bloom_enabled", &PostprocessVolumeComponent::override_bloom_enabled)
+		.def_readwrite("bloom_enabled", &PostprocessVolumeComponent::bloom_enabled)
+		.def_readwrite("override_bloom_threshold", &PostprocessVolumeComponent::override_bloom_threshold)
+		.def_readwrite("bloom_threshold", &PostprocessVolumeComponent::bloom_threshold)
+		.def_readwrite("override_bloom_intensity", &PostprocessVolumeComponent::override_bloom_intensity)
+		.def_readwrite("bloom_intensity", &PostprocessVolumeComponent::bloom_intensity)
+		.def_readwrite("override_bloom_knee", &PostprocessVolumeComponent::override_bloom_knee)
+		.def_readwrite("bloom_knee", &PostprocessVolumeComponent::bloom_knee);
+
 	py::class_<SkeletalMeshComponent>(m, "SkeletalMesh");
 
 	py::class_<SkyLightComponent>(m, "SkyLight")
@@ -121,6 +142,12 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 	entity_cls.def_property_readonly("light", [](Entity& e) -> LightComponent* {
 		if (e.has_component<LightComponent>()) {
 			return &e.get_component<LightComponent>();
+		}
+		return nullptr;
+	}, py::return_value_policy::reference);
+	entity_cls.def_property_readonly("postprocess_volume", [](Entity& e) -> PostprocessVolumeComponent* {
+		if (e.has_component<PostprocessVolumeComponent>()) {
+			return &e.get_component<PostprocessVolumeComponent>();
 		}
 		return nullptr;
 	}, py::return_value_policy::reference);

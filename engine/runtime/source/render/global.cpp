@@ -9,6 +9,25 @@ namespace z1 {
 		m_global_buffer = UniformBuffer::create(nullptr, sizeof(GlobalConstants), BufferUsage::Dynamic);
 	}
 
+	void GlobalSettings::set_override_postprocess(
+		float     exposure,
+		float     gamma,
+		glm::vec4 tint,
+		bool      bloom_enabled,
+		float     bloom_threshold,
+		float     bloom_intensity,
+		float     bloom_knee
+	) {
+		m_has_pp_override = true;
+		m_pp_override.pp_exposure = exposure;
+		m_pp_override.pp_gamma = gamma;
+		m_pp_override.pp_tint = tint;
+		m_pp_override.pp_bloom_enabled = bloom_enabled;
+		m_pp_override.pp_bloom_threshold = bloom_threshold;
+		m_pp_override.pp_bloom_intensity = bloom_intensity;
+		m_pp_override.pp_bloom_knee = bloom_knee;
+	}
+
 	void GlobalSettings::flush() {
 		m_data.projview = projview;
 		m_data.prev_projview = prev_projview;
@@ -21,16 +40,34 @@ namespace z1 {
 		m_data.cam_position = glm::vec4(cam_position, 0.0f);
 		m_data.taa_enabled = (float)taa_enabled;
 		m_data.taa_blend = taa_blend;
-		m_data.pp_exposure = pp_exposure;
-		m_data.pp_gamma = pp_gamma;
-		m_data.pp_tint = pp_tint;
-		m_data.pp_bloom_enabled = (float)pp_bloom_enabled;
-		m_data.pp_bloom_threshold = pp_bloom_threshold;
-		m_data.pp_bloom_intensity = pp_bloom_intensity;
-		m_data.pp_bloom_knee = pp_bloom_knee;
+
+		if (m_has_pp_override) {
+			m_data.pp_exposure = m_pp_override.pp_exposure;
+			m_data.pp_gamma = m_pp_override.pp_gamma;
+			m_data.pp_tint = m_pp_override.pp_tint;
+			m_data.pp_bloom_enabled = (float)m_pp_override.pp_bloom_enabled;
+			m_data.pp_bloom_threshold = m_pp_override.pp_bloom_threshold;
+			m_data.pp_bloom_intensity = m_pp_override.pp_bloom_intensity;
+			m_data.pp_bloom_knee = m_pp_override.pp_bloom_knee;
+		}
+		else {
+			m_data.pp_exposure = pp_exposure;
+			m_data.pp_gamma = pp_gamma;
+			m_data.pp_tint = pp_tint;
+			m_data.pp_bloom_enabled = (float)pp_bloom_enabled;
+			m_data.pp_bloom_threshold = pp_bloom_threshold;
+			m_data.pp_bloom_intensity = pp_bloom_intensity;
+			m_data.pp_bloom_knee = pp_bloom_knee;
+		}
+
 		m_data.sun_ambient = sun_ambient_color * sun_ambient_intensity;
 
 		m_global_buffer->write(&m_data);
+	}
+
+	void GlobalSettings::reset_override() {
+		// Reset override flag so next frame we start fresh (unless set_override is called again)
+		m_has_pp_override = false;
 	}
 
 	void GlobalSettings::bind() {

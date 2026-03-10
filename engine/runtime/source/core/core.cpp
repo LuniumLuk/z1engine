@@ -7,6 +7,7 @@
 #include "core/io.h"
 #include "core/input.h"
 #include "scene/scene.h"
+#include "scene/script_system.h"
 #include "render/global.h"
 #include "render/resource.h"
 #include "render/graphics_context.h"
@@ -54,6 +55,9 @@ namespace z1 {
 
 	void RuntimeContext::shutdown() {
 		m_window->clear_event_callbacks();
+
+		if (m_scene)
+			ScriptSystem::shutdown(m_scene.get());
 
 		m_global.reset();
 		m_renderer_forward.reset();

@@ -94,6 +94,8 @@ class Entity:
 	@property
 	def light(self) -> Optional[Light]: ...
 	@property
+	def postprocess_volume(self) -> Optional[PostprocessVolume]: ...
+	@property
 	def skeletal_mesh(self) -> Optional[SkeletalMesh]: ...
 	@property
 	def sky_light(self) -> Optional[SkyLight]: ...
@@ -191,6 +193,26 @@ class Light:
 	outer_cone: float
 	cast_shadow: bool
 	def __init__(self) -> None: ...
+
+class PostprocessVolume:
+	enabled: bool
+	is_global: bool
+	priority: float
+	blend_distance: float
+	override_exposure: bool
+	exposure: float
+	override_gamma: bool
+	gamma: float
+	override_tint: bool
+	tint: Vec4
+	override_bloom_enabled: bool
+	bloom_enabled: bool
+	override_bloom_threshold: bool
+	bloom_threshold: float
+	override_bloom_intensity: bool
+	bloom_intensity: float
+	override_bloom_knee: bool
+	bloom_knee: float
 
 class SkeletalMesh:
 	pass

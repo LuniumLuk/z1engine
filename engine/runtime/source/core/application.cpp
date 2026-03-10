@@ -9,6 +9,7 @@
 #include "python/python_layer.h"
 #include "event/application_event.h"
 #include "render/graphics_context.h"
+#include "render/global.h"
 
 namespace z1 {
 
@@ -61,6 +62,7 @@ namespace z1 {
 			g_runtime_context.m_graphics_context->end_frame();
 			g_runtime_context.m_graphics_context->swap_buffers();
 			g_runtime_context.m_timer->update();
+			g_runtime_context.m_global->reset_override();
 		}
 		g_runtime_context.m_graphics_context->finish();
 		PROFILE_END_SESSION();

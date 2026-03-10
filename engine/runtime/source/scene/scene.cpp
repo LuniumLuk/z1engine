@@ -6,8 +6,11 @@
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
 #include "scene/component/light.h"
+#include "scene/component/sky_light.h"
+#include "scene/component/postprocess_volume.h"
 #include "scene/component/animation.h"
 #include "scene/animation_system.h"
+#include "scene/postprocess_system.h"
 #include "scene/script_system.h"
 #include "python/python_script.h"
 #include "core/core.h"
@@ -149,6 +152,7 @@ namespace z1 {
 
 		AnimationSystem::update(this, delta_time);
 		ScriptSystem::update(this, delta_time);
+		PostProcessSystem::update(this);
 	}
 
 	std::shared_ptr<Scene> Scene::create(Filepath const& path) {
@@ -355,6 +359,38 @@ namespace z1 {
 				skylight.m_intensity = skylight_yaml["intensity"].as<float>();
 				skylight.m_rotation = skylight_yaml["rotation"].as<float>();
 				skylight.m_mip_level = skylight_yaml["mip_level"].as<float>();
+			}
+
+			// PostprocessVolumeComponent
+			if (entity_yaml["postprocess_volume"]) {
+				auto const& pp_yaml = entity_yaml["postprocess_volume"];
+				auto& pp = entity->add_component<PostprocessVolumeComponent>();
+
+				pp.enabled = pp_yaml["enabled"].as<bool>();
+				pp.is_global = pp_yaml["is_global"].as<bool>();
+				pp.priority = pp_yaml["priority"].as<float>();
+				pp.blend_distance = pp_yaml["blend_distance"].as<float>();
+
+				pp.override_exposure = pp_yaml["override_exposure"].as<bool>();
+				pp.exposure = pp_yaml["exposure"].as<float>();
+
+				pp.override_gamma = pp_yaml["override_gamma"].as<bool>();
+				pp.gamma = pp_yaml["gamma"].as<float>();
+
+				pp.override_tint = pp_yaml["override_tint"].as<bool>();
+				pp.tint = pp_yaml["tint"].as<glm::vec4>();
+
+				pp.override_bloom_enabled = pp_yaml["override_bloom_enabled"].as<bool>();
+				pp.bloom_enabled = pp_yaml["bloom_enabled"].as<bool>();
+
+				pp.override_bloom_threshold = pp_yaml["override_bloom_threshold"].as<bool>();
+				pp.bloom_threshold = pp_yaml["bloom_threshold"].as<float>();
+
+				pp.override_bloom_intensity = pp_yaml["override_bloom_intensity"].as<bool>();
+				pp.bloom_intensity = pp_yaml["bloom_intensity"].as<float>();
+
+				pp.override_bloom_knee = pp_yaml["override_bloom_knee"].as<bool>();
+				pp.bloom_knee = pp_yaml["bloom_knee"].as<float>();
 			}
 
 			// AnimationComponent
@@ -592,6 +628,41 @@ namespace z1 {
 				yaml << YAML::Key << "rotation" << YAML::Value << light.m_rotation;
 				yaml << YAML::Key << "intensity" << YAML::Value << light.m_intensity;
 				yaml << YAML::Key << "mip_level" << YAML::Value << light.m_mip_level;
+				yaml << YAML::EndMap;
+			}
+
+			// PostprocessVolumeComponent
+			if (entity->has_component<PostprocessVolumeComponent>()) {
+				auto const& pp = entity->get_component<PostprocessVolumeComponent>();
+				yaml << YAML::Key << "postprocess_volume" << YAML::Value;
+				yaml << YAML::BeginMap;
+
+				yaml << YAML::Key << "enabled" << YAML::Value << pp.enabled;
+				yaml << YAML::Key << "is_global" << YAML::Value << pp.is_global;
+				yaml << YAML::Key << "priority" << YAML::Value << pp.priority;
+				yaml << YAML::Key << "blend_distance" << YAML::Value << pp.blend_distance;
+
+				yaml << YAML::Key << "override_exposure" << YAML::Value << pp.override_exposure;
+				yaml << YAML::Key << "exposure" << YAML::Value << pp.exposure;
+
+				yaml << YAML::Key << "override_gamma" << YAML::Value << pp.override_gamma;
+				yaml << YAML::Key << "gamma" << YAML::Value << pp.gamma;
+
+				yaml << YAML::Key << "override_tint" << YAML::Value << pp.override_tint;
+				yaml << YAML::Key << "tint" << YAML::Value << pp.tint;
+
+				yaml << YAML::Key << "override_bloom_enabled" << YAML::Value << pp.override_bloom_enabled;
+				yaml << YAML::Key << "bloom_enabled" << YAML::Value << pp.bloom_enabled;
+
+				yaml << YAML::Key << "override_bloom_threshold" << YAML::Value << pp.override_bloom_threshold;
+				yaml << YAML::Key << "bloom_threshold" << YAML::Value << pp.bloom_threshold;
+
+				yaml << YAML::Key << "override_bloom_intensity" << YAML::Value << pp.override_bloom_intensity;
+				yaml << YAML::Key << "bloom_intensity" << YAML::Value << pp.bloom_intensity;
+
+				yaml << YAML::Key << "override_bloom_knee" << YAML::Value << pp.override_bloom_knee;
+				yaml << YAML::Key << "bloom_knee" << YAML::Value << pp.bloom_knee;
+
 				yaml << YAML::EndMap;
 			}
 

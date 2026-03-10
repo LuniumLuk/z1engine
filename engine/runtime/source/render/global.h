@@ -44,12 +44,37 @@ namespace z1 {
 		// Scripting
 		bool      script_enabled        = false;
 
+		// Post-processing Volume support
+		void set_override_postprocess(
+			float     pp_exposure,
+			float     pp_gamma,
+			glm::vec4 pp_tint,
+			bool      pp_bloom_enabled,
+			float     pp_bloom_threshold,
+			float     pp_bloom_intensity,
+			float     pp_bloom_knee
+		);
+
 		void flush();
+		void reset_override();
 		void bind();
 		void unbind();
 		uint32_t get_binding() const;
 
 	private:
+
+		struct PostProcessState {
+			float     pp_exposure;
+			float     pp_gamma;
+			glm::vec4 pp_tint;
+			bool      pp_bloom_enabled;
+			float     pp_bloom_threshold;
+			float     pp_bloom_intensity;
+			float     pp_bloom_knee;
+		};
+
+		bool m_has_pp_override = false;
+		PostProcessState m_pp_override = {};
 
 		std::shared_ptr<UniformBuffer> m_global_buffer = nullptr;
 

@@ -99,4 +99,31 @@ namespace z1 {
 		scene->flush_pending_destroy_entities();
 	}
 
+	void ScriptSystem::shutdown(Scene* scene) {
+		PROFILE_FUNCTION();
+
+		// Collect entities first to avoid iterator invalidation if scripts modify the registry
+		auto view = scene->m_registry.view<ScriptComponent>();
+		std::vector<entt::entity> entities;
+		entities.reserve(view.size());
+		for (auto entity : view) {
+			entities.push_back(entity);
+		}
+
+		for (auto entity : entities) {
+			if (!scene->m_registry.valid(entity))
+				continue;
+
+			// Initial check if component exists
+			if (!scene->m_registry.all_of<ScriptComponent>(entity))
+				continue;
+
+			auto* comp = scene->m_registry.try_get<ScriptComponent>(entity);
+			if (!comp)
+				continue; // Component removed
+
+			comp->detach_all();
+		}
+	}
+
 }
