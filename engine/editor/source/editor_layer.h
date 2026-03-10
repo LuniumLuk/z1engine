@@ -90,7 +90,7 @@ private:
 
 	void show_value(void* ptr, std::type_info const& type, std::string const& name, FieldInfo const& field, const EnumInfo* enum_info = nullptr);
 	void show_type_field(void* instance, FieldInfo const& field);
-	void show_type_fields(void* instance, const std::string& name);
+	void show_type_fields(void* instance, const std::string& name, bool group = false);
 
 	void show_properties();;
 	void show_asset_info();

@@ -862,12 +862,30 @@ void EditorLayer::show_type_field(void* instance, FieldInfo const& field) {
 		ImGui::EndDisabled();
 }
 
-void EditorLayer::show_type_fields(void* instance, const std::string& name) {
+void EditorLayer::show_type_fields(void* instance, const std::string& name, bool group /*= false*/) {
 	auto const info = TypeRegistry::instance().get(name);
 	if (!info) return;
 
-	for (auto& field : info->fields) {
-		show_type_field(instance, field);
+	if (group) {
+		std::unordered_map<std::string, std::vector<const FieldInfo*>> groups;
+		for (auto& field : info->fields) {
+			std::string group_name = field.get_widget_value<std::string>("group", "other");
+			groups[group_name].push_back(&field);
+		}
+		for (auto& [group_name, fields] : groups) {
+			if (ImGui::CollapsingHeader(group_name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+				ImGui::Indent();
+				for (auto& field : fields) {
+					show_type_field(instance, *field);
+				}
+				ImGui::Unindent();
+			}
+		}
+	}
+	else {
+		for (auto& field : info->fields) {
+			show_type_field(instance, field);
+		}
 	}
 }
 
@@ -1299,7 +1317,7 @@ void EditorLayer::show_asset_info() {
 
 void EditorLayer::show_settings() {
 	if (ImGui::Begin("settings")) {
-		show_type_fields(g_runtime_context.m_global.get(), TYPE_NAME(GlobalSettings));
+		show_type_fields(g_runtime_context.m_global.get(), TYPE_NAME(GlobalSettings), true);
 	}
 	ImGui::End();
 }
