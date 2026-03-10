@@ -64,14 +64,15 @@ namespace z1 {
 			py::exec(R"(
 				import sys
 				import os
-				print(f"Python Home: {sys.prefix}")
+				# print(f"Python Home: {sys.prefix}")
 				sys.path.append(os.path.abspath("./content"))
-				print(f"Searching in: {sys.path}")
+				# print(f"Searching in: {sys.path}")
 
 				import z1
-				z1.log_info("Python Path verified!")
+				z1.log_info("python module import verified!")
 			)");
-		} catch (py::error_already_set& e) {
+		}
+		catch (py::error_already_set& e) {
 			CORE_ERROR("Python Error: {0}", e.what());
 		}
 	}

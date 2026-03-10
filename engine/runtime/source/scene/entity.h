@@ -48,7 +48,7 @@ namespace z1 {
 			if (m_is_destroyed || !is_valid()) {
 				return;
 			}
-			CORE_INFO("destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
+			CORE_DEBUG("destroying entity {} ({})", get_component<TagComponent>().m_tag, static_cast<uint32_t>(m_handle));
 			m_scene.lock()->m_registry.destroy(m_handle);
 		}
 

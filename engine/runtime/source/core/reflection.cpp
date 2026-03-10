@@ -11,7 +11,7 @@ namespace z1 {
 	void TypeRegistry::register_type(std::string const& name) {
 		if (m_types.find(name) == m_types.end()) {
 			m_types[name] = { name, {} };
-			CORE_INFO("registered type '{}'", name);
+			CORE_DEBUG("registered type '{}'", name);
 		}
 	}
 
@@ -29,7 +29,7 @@ namespace z1 {
 				[](FieldInfo const& lhs, FieldInfo const& rhs) {
 					return lhs.offset < rhs.offset;
 				});
-			CORE_INFO("registered field '{}' in type '{}'", field.name, name);
+			CORE_DEBUG("registered field '{}' in type '{}'", field.name, name);
 		}
 	}
 

@@ -29,7 +29,7 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 
 // This macro "creates" the 'z1' module inside the Python VM
 PYBIND11_EMBEDDED_MODULE(z1, m) {
-	CORE_INFO("Initializing z1 Python module");
+	CORE_INFO("initializing z1 python module");
 	m.doc() = "z1 Engine API";
 	m.def("log_info", &log_info_py);
 	m.def("log_warn", &log_warn_py);

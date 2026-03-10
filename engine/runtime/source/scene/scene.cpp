@@ -47,7 +47,7 @@ namespace z1 {
 
 	std::shared_ptr<Entity> Scene::create_entity_impl(std::string const& name) {
 		entt::entity handle = m_registry.create();
-		CORE_INFO("creating entity {} ({})", name, static_cast<uint32_t>(handle));
+		CORE_DEBUG("creating entity {} ({})", name, static_cast<uint32_t>(handle));
 		auto entity = std::make_shared<Entity>(handle, shared_from_this());
 		entity->add_component<TagComponent>(name, static_cast<uint32_t>(m_entities.size()));
 		entity->add_component<TransformComponent>();
@@ -154,7 +154,7 @@ namespace z1 {
 
 		auto const& root = FileSystem::s_content_root;
 		if (g_runtime_context.m_asset_manager->register_asset(scene->m_meta, root)) {
-			CORE_INFO("created new scene: {}", path.generic_string());
+			CORE_DEBUG("created new scene: {}", path.generic_string());
 		}
 		else {
 			scene.reset();
