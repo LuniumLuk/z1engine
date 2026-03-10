@@ -1,9 +1,20 @@
 #include "pch.h"
 #include "z1engine.h"
 
+#include "event/event.h"
+#include "event/key_event.h"
+#include "event/mouse_event.h"
+#include "event/application_event.h"
+
 #include "pybind11/embed.h"
-#include "pybind11/stl.h"
 namespace py = pybind11;
+
+#include <vector>
+#include <map>
+
+namespace z1 {
+	void register_python_event_listener(EventType type, py::object callback);
+}
 
 using namespace z1;
 
@@ -22,7 +33,61 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 	m.doc() = "z1 Engine API";
 	m.def("log_info", &log_info_py);
 	m.def("log_warn", &log_warn_py);
-	m.def("log_error", &log_error_py);
+	// Bind Event System
+	py::enum_<EventType>(m, "EventType")
+		.value("WindowClose", EventType::WindowClose)
+		.value("WindowResize", EventType::WindowResize)
+		.value("WindowFocus", EventType::WindowFocus)
+		.value("WindowLostFocus", EventType::WindowLostFocus)
+		.value("WindowMoved", EventType::WindowMoved)
+		.value("KeyPressed", EventType::KeyPressed)
+		.value("KeyReleased", EventType::KeyReleased)
+		.value("KeyTyped", EventType::KeyTyped)
+		.value("MouseButtonPressed", EventType::MouseButtonPressed)
+		.value("MouseButtonReleased", EventType::MouseButtonReleased)
+		.value("MouseMoved", EventType::MouseMoved)
+		.value("MouseScrolled", EventType::MouseScrolled)
+		.export_values();
+
+	py::class_<Event>(m, "Event")
+		.def("get_event_type", &Event::get_event_type)
+		.def("get_name", &Event::get_name)
+		.def("__repr__", &Event::to_string);
+
+	py::class_<KeyEvent, Event>(m, "KeyEvent")
+		.def_property_readonly("key_code", &KeyEvent::get_keycode);
+
+	py::class_<KeyPressedEvent, KeyEvent>(m, "KeyPressedEvent")
+		.def_property_readonly("repeat_count", &KeyPressedEvent::get_repeat_count);
+
+	py::class_<KeyReleasedEvent, KeyEvent>(m, "KeyReleasedEvent");
+
+	py::class_<KeyTypedEvent, KeyEvent>(m, "KeyTypedEvent")
+		.def_property_readonly("key_code", &KeyTypedEvent::get_keycode);
+
+	py::class_<MouseButtonEvent, Event>(m, "MouseButtonEvent")
+		.def_property_readonly("mouse_button", &MouseButtonEvent::get_button);
+
+	py::class_<MouseButtonPressedEvent, MouseButtonEvent>(m, "MouseButtonPressedEvent");
+	py::class_<MouseButtonReleasedEvent, MouseButtonEvent>(m, "MouseButtonReleasedEvent");
+
+	py::class_<MouseMovedEvent, Event>(m, "MouseMovedEvent")
+		.def_property_readonly("x", &MouseMovedEvent::get_x)
+		.def_property_readonly("y", &MouseMovedEvent::get_y);
+
+	py::class_<MouseScrollEvent, Event>(m, "MouseScrollEvent")
+		.def_property_readonly("x_offset", &MouseScrollEvent::get_x_offset)
+		.def_property_readonly("y_offset", &MouseScrollEvent::get_y_offset);
+
+	py::class_<WindowResizeEvent, Event>(m, "WindowResizeEvent")
+		.def_property_readonly("width", &WindowResizeEvent::get_width)
+		.def_property_readonly("height", &WindowResizeEvent::get_height);
+
+	py::class_<WindowCloseEvent, Event>(m, "WindowCloseEvent");
+
+
+	m.def("register_event_listener", &register_python_event_listener);
+
 
 	// Bind GLM
 	py::class_<glm::vec2>(m, "Vec2")

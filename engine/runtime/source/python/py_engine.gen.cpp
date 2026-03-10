@@ -62,7 +62,8 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("sm_near", &GlobalSettings::sm_near)
 		.def_readwrite("sm_far", &GlobalSettings::sm_far)
 		.def_readwrite("sm_ortho_size", &GlobalSettings::sm_ortho_size)
-		.def_readwrite("anim_enabled", &GlobalSettings::anim_enabled);
+		.def_readwrite("anim_enabled", &GlobalSettings::anim_enabled)
+		.def_readwrite("script_enabled", &GlobalSettings::script_enabled);
 
 	py::class_<LightComponent>(m, "Light")
 		.def(py::init<>())

@@ -5,6 +5,10 @@
 #include "core/window.h"
 #include "core/application.h"
 
+#include "event/key_event.h"
+#include "event/mouse_event.h"
+#include "event/application_event.h"
+
 #include "pybind11/embed.h"
 namespace py = pybind11;
 
@@ -13,6 +17,12 @@ namespace py = pybind11;
 extern void ForceLinkPythonEngine();
 
 namespace z1 {
+
+	static std::multimap<EventType, py::object> s_python_event_listeners;
+
+	void register_python_event_listener(EventType type, py::object callback) {
+		s_python_event_listeners.insert({ type, callback });
+	}
 
 	PythonLayer::PythonLayer() : Layer("Python layer") {
 		// temporary test space for python script runner
@@ -68,6 +78,7 @@ namespace z1 {
 
 	PythonLayer::~PythonLayer() {
 		CORE_DEBUG("shutting down PythonLayer ...");
+		s_python_event_listeners.clear();
 		// Cleanup manually at the end of the program
 		Py_Finalize();
 	}
@@ -109,6 +120,21 @@ namespace z1 {
 		m_running = false;
 		if (m_console_thread->joinable()) {
 			m_console_thread->join();
+		}
+	}
+
+	void PythonLayer::on_event(Event& event) {
+		auto range = s_python_event_listeners.equal_range(event.get_event_type());
+		for (auto it = range.first; it != range.second; ++it) {
+			try {
+				// We need to cast event to specific type for python binding to work correctly?
+				// Actually, pybind11 handles polymorphism if bound correctly.
+				// Since Event is polymorphic base, passing &event should work if bindings are set up.
+				it->second(&event);
+			}
+			catch (py::error_already_set& e) {
+				CORE_ERROR("Python Event Listener Error: {0}", e.what());
+			}
 		}
 	}
 

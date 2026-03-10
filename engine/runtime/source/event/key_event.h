@@ -21,7 +21,7 @@ namespace z1 {
 		KeyPressedEvent(int keycode, int repeat)
 			: KeyEvent(keycode), m_repeat_count(repeat) {}
 
-		int GetRepeatCount() const { return m_repeat_count; }
+		int get_repeat_count() const { return m_repeat_count; }
 
 		std::string to_string() const override {
 			std::stringstream ss;

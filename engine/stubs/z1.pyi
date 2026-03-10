@@ -6,6 +6,50 @@ from enum import Enum
 def log_info(msg: str) -> None: ...
 def log_warn(msg: str) -> None: ...
 def log_error(msg: str) -> None: ...
+def log_info(*args: Any, **kwargs: Any) -> Any: ...
+def log_warn(*args: Any, **kwargs: Any) -> Any: ...
+def register_event_listener(type: EventType, callback: Any) -> None: ...
+
+class Event:
+	def get_event_type(self, *args: Any, **kwargs: Any) -> Any: ...
+	def get_name(self, *args: Any, **kwargs: Any) -> Any: ...
+	def __repr__(self) -> str: ...
+
+class KeyEvent:
+	key_code: Any
+
+class KeyPressedEvent:
+	repeat_count: Any
+
+class KeyReleasedEvent:
+	pass
+
+class KeyTypedEvent:
+	key_code: Any
+
+class MouseButtonEvent:
+	mouse_button: Any
+
+class MouseButtonPressedEvent:
+	pass
+
+class MouseButtonReleasedEvent:
+	pass
+
+class MouseMovedEvent:
+	x: Any
+	y: Any
+
+class MouseScrollEvent:
+	x_offset: Any
+	y_offset: Any
+
+class WindowResizeEvent:
+	width: Any
+	height: Any
+
+class WindowCloseEvent:
+	pass
 
 class Vec2:
 	x: float
@@ -78,6 +122,20 @@ class Scene:
 	def destroy_entity(self, entity: Entity) -> None: ...
 
 # --- GENERATED CONTENT BELOW ---
+class EventType(Enum):
+	WindowClose = 0
+	WindowResize = 1
+	WindowFocus = 2
+	WindowLostFocus = 3
+	WindowMoved = 4
+	KeyPressed = 5
+	KeyReleased = 6
+	KeyTyped = 7
+	MouseButtonPressed = 8
+	MouseButtonReleased = 9
+	MouseMoved = 10
+	MouseScrolled = 11
+
 class LightType(Enum):
 	Directional = 0
 	Point = 1
@@ -119,6 +177,7 @@ class GlobalSettings:
 	sm_far: float
 	sm_ortho_size: float
 	anim_enabled: bool
+	script_enabled: bool
 	def __init__(self) -> None: ...
 
 class Light:

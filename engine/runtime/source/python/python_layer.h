@@ -14,6 +14,8 @@ namespace z1 {
 		void on_attach() override;
 		void on_detach() override;
 
+		void on_event(Event& event) override;
+
 		void on_update(float) override;
 
 	private:
