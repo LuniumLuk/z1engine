@@ -139,6 +139,14 @@ namespace z1 {
 
 	void Scene::on_update(float delta_time) {
 		PROFILE_FUNCTION();
+
+		// Save previous frame's transform for TAA/Motion Blur
+		auto view = m_registry.view<TransformComponent>();
+		for (auto entity : view) {
+			auto& tc = view.get<TransformComponent>(entity);
+			tc.m_prev_world_transform = tc.get_world_transform();
+		}
+
 		AnimationSystem::update(this, delta_time);
 		ScriptSystem::update(this, delta_time);
 	}

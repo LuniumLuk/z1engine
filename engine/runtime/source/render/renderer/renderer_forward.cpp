@@ -340,7 +340,7 @@ namespace z1 {
 					continue;
 				}
 
-				draw_list.static_meshes.push_back({ transform.get_world_transform(), &mesh });
+				draw_list.static_meshes.push_back({ transform.get_world_transform(), transform.m_prev_world_transform, &mesh });
 				stats.visible_objects++;
 			}
 		}
@@ -363,7 +363,7 @@ namespace z1 {
 					stats.culled_objects++;
 					continue;
 				}
-				draw_list.skeletal_meshes.push_back({ transform.get_world_transform(), &mesh, anim_comp });
+				draw_list.skeletal_meshes.push_back({ transform.get_world_transform(), transform.m_prev_world_transform, &mesh, anim_comp });
 				stats.visible_objects++;
 			}
 		}
@@ -622,6 +622,7 @@ namespace z1 {
 
 				for (auto const& item : draw_list.static_meshes) {
 					s->set_uniform("u_model", &item.transform);
+					s->set_uniform("u_prev_model", &item.prev_transform);
 					item.mesh->m_mesh->draw();
 				}
 
@@ -629,6 +630,7 @@ namespace z1 {
 					has_skinning = 0;
 					use_prev_bones = 0;
 					s->set_uniform("u_model", &item.transform);
+					s->set_uniform("u_prev_model", &item.prev_transform);
 
 					if (item.anim) {
 						if (item.anim->bone_ubo) {

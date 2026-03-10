@@ -18,11 +18,13 @@ namespace z1 {
 
 	struct VisibleStaticMesh {
 		glm::mat4 transform;
+		glm::mat4 prev_transform;
 		StaticMeshComponent const* mesh;
 	};
 
 	struct VisibleSkeletalMesh {
 		glm::mat4 transform;
+		glm::mat4 prev_transform;
 		SkeletalMeshComponent const* mesh;
 		AnimationComponent const* anim;
 	};

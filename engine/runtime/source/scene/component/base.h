@@ -42,6 +42,7 @@ namespace z1 {
 		glm::vec3 m_rotation{ 0.0f, 0.0f, 0.0f }; // in degrees (pitch, yaw, roll)
 		glm::vec3 m_scale{ 1.0f, 1.0f, 1.0f };
 		TransformComponent* m_parent = nullptr;
+		glm::mat4 m_prev_world_transform{ 1.0f };
 
 		TransformComponent() = default;
 		TransformComponent(glm::vec3 const& location, glm::vec3 const& rotation, glm::vec3 const& scale) noexcept
