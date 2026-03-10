@@ -126,7 +126,9 @@ namespace z1 {
 	struct API ScriptBase {
 
 		virtual void on_attach() = 0;
+		virtual void on_start() {}
 		virtual void on_update(float delta_time) = 0;
+		virtual void on_destroy() {}
 		virtual void on_detach() = 0;
 
 		virtual std::string get_script_name() const { return "unregistered"; }

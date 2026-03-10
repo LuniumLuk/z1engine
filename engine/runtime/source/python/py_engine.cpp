@@ -160,7 +160,9 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 	// Helper class for Python to inherit from (mocking ScriptBase)
 	struct PyScript {
 		virtual void on_attach() {}
+		virtual void on_start() {}
 		virtual void on_update(float) {}
+		virtual void on_destroy() {}
 		virtual void on_detach() {}
 		virtual ~PyScript() = default;
 	};
@@ -169,7 +171,9 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 	py::class_<PyScript>(m, "Script")
 		.def(py::init<>())
 		.def("on_attach", &PyScript::on_attach)
+		.def("on_start", &PyScript::on_start)
 		.def("on_update", &PyScript::on_update)
+		.def("on_destroy", &PyScript::on_destroy)
 		.def("on_detach", &PyScript::on_detach);
 
 	py::class_<Scene, std::shared_ptr<Scene>>(m, "Scene")

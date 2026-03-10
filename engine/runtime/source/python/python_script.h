@@ -10,7 +10,9 @@ namespace z1 {
 		~PythonScript();
 
 		void on_attach() override;
+		void on_start() override;
 		void on_update(float delta_time) override;
+		void on_destroy() override;
 		void on_detach() override;
 
 		std::string get_script_name() const override;

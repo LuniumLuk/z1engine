@@ -26,11 +26,26 @@ namespace z1 {
 			}
 
 			if (pybind11::hasattr(m_instance, "on_attach")) {
-				m_instance.attr("on_attach")();
+				auto func = m_instance.attr("on_attach");
+				if (!func.is_none()) func();
 			}
 		}
 		catch (pybind11::error_already_set& e) {
 			CORE_ERROR("Python Error (on_attach): {0}", e.what());
+		}
+	}
+
+	void PythonScript::on_start() {
+		if (m_instance.is_none()) return;
+
+		try {
+			if (pybind11::hasattr(m_instance, "on_start")) {
+				auto func = m_instance.attr("on_start");
+				if (!func.is_none()) func();
+			}
+		}
+		catch (pybind11::error_already_set& e) {
+			CORE_ERROR("Python Error (on_start): {0}", e.what());
 		}
 	}
 
@@ -39,7 +54,8 @@ namespace z1 {
 
 		try {
 			if (pybind11::hasattr(m_instance, "on_update")) {
-				m_instance.attr("on_update")(delta_time);
+				auto func = m_instance.attr("on_update");
+				if (!func.is_none()) func(delta_time);
 			}
 		}
 		catch (pybind11::error_already_set& e) {
@@ -47,13 +63,28 @@ namespace z1 {
 		}
 	}
 
+	void PythonScript::on_destroy() {
+		if (m_instance.is_none()) return;
+
+		try {
+			if (pybind11::hasattr(m_instance, "on_destroy")) {
+				auto func = m_instance.attr("on_destroy");
+				if (!func.is_none()) func();
+			}
+		}
+		catch (pybind11::error_already_set& e) {
+			CORE_ERROR("Python Error (on_destroy): {0}", e.what());
+		}
+	}
+
 	void PythonScript::on_detach() {
 		if (m_instance.is_none()) return;
-		if (!m_instance.ptr()) return;
+		// if (!m_instance.ptr()) return; // m_instance.is_none() already checks this
 
 		try {
 			if (pybind11::hasattr(m_instance, "on_detach")) {
-				m_instance.attr("on_detach")();
+				auto func = m_instance.attr("on_detach");
+				if (!func.is_none()) func();
 			}
 		}
 		catch (pybind11::error_already_set& e) {

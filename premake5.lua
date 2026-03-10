@@ -50,7 +50,7 @@ workspace "z1engine"
 			libdirs { "engine/3rdparty/python314/lib" }
 			links { "runtime", "python314" }
 			postbuildcommands {
-				"{COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
+				"if not exist \"%{cfg.targetdir}/python314.dll\" {COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
 			}
 			filter "system:windows"
 				systemversion "latest"
