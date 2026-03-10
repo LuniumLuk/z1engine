@@ -56,9 +56,6 @@ namespace z1 {
 	void RuntimeContext::shutdown() {
 		m_window->clear_event_callbacks();
 
-		if (m_scene)
-			ScriptSystem::shutdown(m_scene.get());
-
 		m_global.reset();
 		m_renderer_forward.reset();
 		m_renderer_2d.reset();

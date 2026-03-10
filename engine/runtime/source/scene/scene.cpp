@@ -25,14 +25,7 @@ namespace z1 {
 	Scene::Scene() {}
 
 	Scene::~Scene() {
-		auto view = m_registry.view<ScriptComponent>();
-		for (auto [entity, script_comp] : view.each()) {
-			for (auto& script : script_comp.m_scripts) {
-				if (script.instance) {
-					script.detach_func(script);
-				}
-			}
-		}
+		ScriptSystem::shutdown(this);
 
 		// when the scene is being destroyed, the weak_ptr to the scene in each entity will be expired
 		// that is when calling m_scene.lock() in Entity::get_component<EntityPtr>() will return nullptr
