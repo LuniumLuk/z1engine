@@ -12,11 +12,7 @@
 namespace z1 {
 
 	struct API PerFrameConst {
-		//glm::mat4 projview;
 		glm::mat4 model;
-		//glm::vec3 cam_position;
-		//glm::vec3 sun_direction;
-		//glm::vec3 sun_intensity;
 		uint32_t global_binding;
 		uint32_t lights_binding;
 		uint32_t shadow_map_binding;
@@ -33,7 +29,59 @@ namespace z1 {
 		constexpr uint32_t DepthTest = 1 << 2;
 		constexpr uint32_t DepthWrite = 1 << 3;
 		constexpr uint32_t CullModeMask = 0x3 << 4; // 0=None, 1=Front, 2=Back
-		constexpr uint32_t BlendMask = 0x1 << 6;     // 0=Off, 1=On (SrcAlpha, OneMinusSrcAlpha)
+		constexpr uint32_t BlendMask = 0x1 << 6;    // 0=Off, 1=On (SrcAlpha, OneMinusSrcAlpha)
+
+		constexpr uint32_t Default = 0; // Opaque, no depth test, no depth write, back cull, no blend
+		constexpr uint32_t Scene = DepthTest | DepthWrite | (static_cast<uint32_t>(CullMode::Back) << 4);
+
+		inline AlphaMode get_alpha_mode(uint32_t flags) {
+			return static_cast<AlphaMode>(flags & AlphaModeMask);
+		}
+		inline bool get_depth_test(uint32_t flags) {
+			return (flags & DepthTest) != 0;
+		}
+		inline bool get_depth_write(uint32_t flags) {
+			return (flags & DepthWrite) != 0;
+		}
+		inline CullMode get_cull_mode(uint32_t flags) {
+			return static_cast<CullMode>((flags & CullModeMask) >> 4);
+		}
+		inline bool get_blend(uint32_t flags) {
+			return (flags & BlendMask) != 0;
+		}
+
+		inline void set_alpha_mode(uint32_t& flags, AlphaMode mode) {
+			flags &= ~AlphaModeMask; // Clear existing alpha mode bits
+			flags |= (static_cast<uint32_t>(mode) & AlphaModeMask); // Set new alpha mode
+		}
+		inline void set_depth_test(uint32_t& flags, bool enable) {
+			if (enable) {
+				flags |= DepthTest;
+			}
+			else {
+				flags &= ~DepthTest;
+			}
+		}
+		inline void set_depth_write(uint32_t& flags, bool enable) {
+			if (enable) {
+				flags |= DepthWrite;
+			}
+			else {
+				flags &= ~DepthWrite;
+			}
+		}
+		inline void set_cull_mode(uint32_t& flags, CullMode mode) {
+			flags &= ~CullModeMask; // Clear existing cull mode bits
+			flags |= (static_cast<uint32_t>(mode) << 4) & CullModeMask; // Set new cull mode
+		}
+		inline void set_blend(uint32_t& flags, bool enable) {
+			if (enable) {
+				flags |= BlendMask;
+			}
+			else {
+				flags &= ~BlendMask;
+			}
+		}
 	}
 
 	struct API Material : Asset<Material> {
@@ -88,27 +136,19 @@ namespace z1 {
 			Value default_value = {};
 		};
 
-		Material(Pipeline::Description const& pipeline_desc);
+		Material(uint32_t flags, std::shared_ptr<Shader> const& shader);
 
-		static std::shared_ptr<Material> create(Filepath const& path, Pipeline::Description const& pipeline_desc);
+		static std::shared_ptr<Material> create(Filepath const& path, uint32_t flags, std::shared_ptr<Shader> const& shader);
 		static std::shared_ptr<Material> load(Guid const& guid);
 		void save() const;
 
-		Pipeline::Description m_pipeline_desc;
-		std::unordered_map<std::string, Variable> m_variables;
-
-		// Pipeline pooling
-		std::shared_ptr<Pipeline> m_pipeline; // Default pipeline
-		std::unordered_map<uint32_t, std::shared_ptr<Pipeline>> m_pipeline_pool;
 		uint32_t m_flags = 0;
 
-		AlphaMode m_alpha_mode = AlphaMode::Opaque;
-		float m_alpha_cutoff = 0.5f;
-		bool m_double_sided = false;
+		std::shared_ptr<Shader> m_shader;
+		std::unordered_map<std::string, Variable> m_variables;
 
+		std::unordered_map<uint32_t, std::shared_ptr<Pipeline>> m_pipeline_pool;
 		std::shared_ptr<Pipeline> get_pipeline(uint32_t flags);
-		static uint32_t get_flags_from_pipeline_desc(Pipeline::Description const& desc, AlphaMode alpha_mode, bool double_sided);
-		static void apply_flags_to_pipeline_desc(Pipeline::Description& desc, uint32_t flags);
 
 	private:
 		void parse_reflection_line(const std::string& line);
@@ -120,12 +160,14 @@ namespace z1 {
 		MaterialInstance(std::shared_ptr<Material> const& material);
 
 		void bind(PerFrameConst const& per_frame) const;
-		void bind_uniforms(std::shared_ptr<Shader> const& shader, PerFrameConst const& per_frame) const;
 		void unbind() const;
 
 		static std::shared_ptr<MaterialInstance> create(Filepath const& path, std::shared_ptr<Material> const& material);
 		static std::shared_ptr<MaterialInstance> load(Guid const& guid);
 		void save() const;
+
+		std::shared_ptr<Pipeline> get_pipeline() const { return m_material->get_pipeline(get_flags()); }
+		std::shared_ptr<Shader> get_shader() const {return m_material->m_shader; }
 
 		std::shared_ptr<Material> m_material;
 		std::unordered_map<std::string, Material::Variable> m_override_variables;
@@ -134,8 +176,26 @@ namespace z1 {
 		uint32_t m_override_mask = 0;
 
 		uint32_t get_flags() const;
-		void set_flag(uint32_t flag, bool enable);
-		void set_alpha_mode(AlphaMode mode);
+
+		bool has_uniform(std::string const& name) const {
+			return m_material->m_variables.find(name) != m_material->m_variables.end();
+		}
+
+		void bind_uniform(std::shared_ptr<Shader> const& shader, std::string const& material_name) const;
+		void bind_uniform(std::shared_ptr<Shader> const& shader, std::string const& material_name, std::string const& shader_name) const;
+
+		void set_int(std::string const& name, int val);
+		void set_ivec2(std::string const& name, glm::ivec2 const& val);
+		void set_ivec3(std::string const& name, glm::ivec3 const& val);
+		void set_ivec4(std::string const& name, glm::ivec4 const& val);
+
+		void set_float(std::string const& name, float val);
+		void set_vec2(std::string const& name, glm::vec2 const& val);
+		void set_vec3(std::string const& name, glm::vec3 const& val);
+		void set_vec4(std::string const& name, glm::vec4 const& val);
+
+		void set_texture2d(std::string const& name, std::shared_ptr<Texture2D> const& tex);
+
 	};
 
 }

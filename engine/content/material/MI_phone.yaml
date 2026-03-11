@@ -4,4 +4,6 @@ meta:
   path: material/MI_phone
   extra: ~
 material: material/M_phone
+override_flags: 0
+override_mask: 0
 overrides: []

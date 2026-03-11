@@ -175,6 +175,7 @@ namespace z1 {
 		{
 			Pipeline::Description desc{};
 			desc.depth_test = true;
+			desc.depth_write = true;
 			desc.blend = true;
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/velocity");
 			m_pipeline_velocity = Pipeline::build(desc);
@@ -225,6 +226,7 @@ namespace z1 {
 		{
 			Pipeline::Description desc{};
 			desc.depth_test = true;
+			desc.depth_write = true;
 			desc.cull_mode = CullMode::Back;
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/shadow");
 			m_pipeline_shadow = Pipeline::build(desc);
@@ -499,24 +501,40 @@ namespace z1 {
 								mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 							}
 
-							int alpha_mode = 0; // Opaque
+							std::shared_ptr<Image2D> alpha_img = nullptr;
+							AlphaMode alpha_mode = AlphaMode::Opaque;
 							if (mi) {
-								uint32_t flags = mi->get_flags();
-								// Check for Blend (bit 1 set)
-								if ((flags & 2) == 2) continue; // Skip Blend
+								alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
+								if (alpha_mode == AlphaMode::Blend)
+									continue;
 
-								// Check for Mask (bit 0 set)
-								if ((flags & 3) == 1) {
-									alpha_mode = 1;
-									mi->bind_uniforms(s, per_frame);
+								if (alpha_mode == AlphaMode::Mask) {
+									if (mi->has_uniform("s_base_color")) {
+										auto& value = mi->m_override_variables["s_base_color"].default_value;
+										if (value.valid)
+											alpha_img = value.tex2D->m_image;
+									}
+									else if (mi->has_uniform("s_diffuse")) {
+										auto& value = mi->m_override_variables["s_diffuse"].default_value;
+										if (value.valid)
+											alpha_img = value.tex2D->m_image;
+									}
 								}
 							}
 
-							s->set_uniform("u_alpha_mode", &alpha_mode);
+							mi->bind_uniform(s, "u_alpha_mode");
+							mi->bind_uniform(s, "u_alpha_cutoff");
+							mi->bind_uniform(s, "u_base_color_uv_set", "u_alpha_uv_set");
+
+							if (alpha_img)
+								alpha_img->bind(s, "s_alpha");
 
 							prim.m_vertex_array->bind();
 							prim.m_vertex_array->draw(prim.m_primitive_type);
 							prim.m_vertex_array->unbind();
+
+							if (alpha_img)
+								alpha_img->unbind();
 						}
 					}
 
@@ -548,24 +566,38 @@ namespace z1 {
 								mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 							}
 
-							int alpha_mode = 0; // Opaque
+							std::shared_ptr<Image2D> alpha_img = nullptr;
+							AlphaMode alpha_mode = AlphaMode::Opaque;
 							if (mi) {
-								uint32_t flags = mi->get_flags();
-								// Check for Blend (bit 1 set)
-								if ((flags & 2) == 2) continue; // Skip Blend
+								alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
+								if (alpha_mode == AlphaMode::Blend)
+									continue;
 
-								// Check for Mask (bit 0 set)
-								if ((flags & 3) == 1) {
-									alpha_mode = 1;
-									mi->bind_uniforms(s, per_frame);
+								if (alpha_mode == AlphaMode::Mask) {
+									if (mi->has_uniform("s_base_color")) {
+										auto& value = mi->m_override_variables["s_base_color"].default_value;
+										if (value.valid)
+											alpha_img = value.tex2D->m_image;
+									} else if (mi->has_uniform("s_diffuse")) {
+										auto& value = mi->m_override_variables["s_diffuse"].default_value;
+										if (value.valid)
+											alpha_img = value.tex2D->m_image;
+									}
 								}
 							}
 
-							s->set_uniform("u_alpha_mode", &alpha_mode);
+							mi->bind_uniform(s, "u_alpha_mode");
+							mi->bind_uniform(s, "u_alpha_cutoff");
+
+							if (alpha_img)
+								alpha_img->bind(s, "s_alpha");
 
 							prim.m_vertex_array->bind();
 							prim.m_vertex_array->draw(prim.m_primitive_type);
 							prim.m_vertex_array->unbind();
+
+							if (alpha_img)
+								alpha_img->unbind();
 						}
 
 						if (has_skinning)
@@ -602,9 +634,9 @@ namespace z1 {
 				// Pass 1: Opaque and Mask
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
-					// Filter for Opaque (0) and Mask (1). Bit 1 (value 2) is 0.
-					// Mask: 2 (0x2), Value: 0 (0x0)
-					item.mesh->m_mesh->draw(per_frame, m_default_material, 2, 0);
+					item.mesh->m_mesh->draw(per_frame, m_default_material, [](uint32_t flags) {
+						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
+					});
 				}
 
 				for (auto const& item : draw_list.skeletal_meshes) {
@@ -614,7 +646,9 @@ namespace z1 {
 					}
 
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, 2, 0);
+					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, [](uint32_t flags) {
+						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
+					});
 				}
 
 				// Pass 2: Blend
@@ -629,7 +663,9 @@ namespace z1 {
 
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material, 2, 2);
+					item.mesh->m_mesh->draw(per_frame, m_default_material, [](uint32_t flags) {
+						return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
+					});
 				}
 
 				for (auto const& item : draw_list.skeletal_meshes) {
@@ -639,7 +675,9 @@ namespace z1 {
 					}
 
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, 2, 2);
+					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, [](uint32_t flags) {
+						return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
+					});
 				}
 
 				auto sky_view = scene->m_registry.view<SkyLightComponent const>();

@@ -579,7 +579,7 @@ namespace z1 {
 			meta.extra["wrap_mode"] = (int)wrap_mode;
 			meta.extra["hdr"] = false;
 
-			legalize_path(meta.path);
+			meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
 			if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 				continue;
 			}
@@ -618,21 +618,41 @@ namespace z1 {
 		int tex_coord = 0;
 		if (mat.values.find(gltf_name) != mat.values.end()) {
 			auto const& guid = loaded_textures[mat.values[gltf_name].TextureIndex()];
-			mi->m_override_variables[shader_name].default_value.valid = true;
-			mi->m_override_variables[shader_name].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+			mi->set_texture2d(shader_name, g_runtime_context.m_asset_manager->get<Texture2D>(guid));
 			tex_coord = mat.values[gltf_name].TextureTexCoord();
 		}
 		if (mat.additionalValues.find(gltf_name) != mat.additionalValues.end()) {
 			auto const& guid = loaded_textures[mat.additionalValues[gltf_name].TextureIndex()];
-			mi->m_override_variables[shader_name].default_value.valid = true;
-			mi->m_override_variables[shader_name].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+			mi->set_texture2d(shader_name, g_runtime_context.m_asset_manager->get<Texture2D>(guid));
 			tex_coord = mat.additionalValues[gltf_name].TextureTexCoord();
 		}
 
 		if (!uv_name.empty()) {
-			mi->m_override_variables[uv_name].default_value.valid = true;
-			mi->m_override_variables[uv_name].default_value.ivec[0] = tex_coord;
+			mi->set_int(uv_name, tex_coord);
 		}
+	}
+
+	static glm::vec3 make_vec3(tinygltf::Value const& val) {
+		return glm::vec3(
+			static_cast<float>(val.Get(0).Get<double>()),
+			static_cast<float>(val.Get(1).Get<double>()),
+			static_cast<float>(val.Get(2).Get<double>()));
+	}
+
+	static glm::vec4 make_vec4(tinygltf::Value const& val) {
+		return glm::vec4(
+			static_cast<float>(val.Get(0).Get<double>()),
+			static_cast<float>(val.Get(1).Get<double>()),
+			static_cast<float>(val.Get(2).Get<double>()),
+			static_cast<float>(val.Get(3).Get<double>()));
+	}
+
+	static glm::vec4 make_vec4(tinygltf::ColorValue const& val) {
+		return glm::vec4(
+			static_cast<float>(val[0]),
+			static_cast<float>(val[1]),
+			static_cast<float>(val[2]),
+			static_cast<float>(val[3]));
 	}
 
 	static void import_materials(
@@ -668,34 +688,25 @@ namespace z1 {
 				if (ext.Has("diffuseTexture")) {
 					int index = ext.Get("diffuseTexture").Get("index").Get<int>();
 					auto const& guid = loaded_textures[index];
-					mi->m_override_variables["s_diffuse"].default_value.valid = true;
-					mi->m_override_variables["s_diffuse"].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+					mi->set_texture2d("s_diffuse", g_runtime_context.m_asset_manager->get<Texture2D>(guid));
 				}
 				if (ext.Has("specularGlossinessTexture")) {
 					int index = ext.Get("specularGlossinessTexture").Get("index").Get<int>();
 					auto const& guid = loaded_textures[index];
-					mi->m_override_variables["s_specular_glossiness"].default_value.valid = true;
-					mi->m_override_variables["s_specular_glossiness"].default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(guid);
+					mi->set_texture2d("s_specular_glossiness", g_runtime_context.m_asset_manager->get<Texture2D>(guid));
 				}
 
 				// Handle factors
 				if (ext.Has("diffuseFactor")) {
 					auto const& factor = ext.Get("diffuseFactor");
-					mi->m_override_variables["u_diffuse_factor"].default_value.valid = true;
-					for (int i = 0; i < 4; ++i) {
-						mi->m_override_variables["u_diffuse_factor"].default_value.vec[i] = static_cast<float>(factor.Get(i).Get<double>());
-					}
+					mi->set_vec4("u_diffuse_factor", make_vec4(factor));
 				}
 				if (ext.Has("specularFactor")) {
 					auto const& factor = ext.Get("specularFactor");
-					mi->m_override_variables["u_specular_factor"].default_value.valid = true;
-					for (int i = 0; i < 3; ++i) {
-						mi->m_override_variables["u_specular_factor"].default_value.vec[i] = static_cast<float>(factor.Get(i).Get<double>());
-					}
+					mi->set_vec3("u_specular_factor", make_vec3(factor));
 				}
 				if (ext.Has("glossinessFactor")) {
-					mi->m_override_variables["u_glossiness_factor"].default_value.valid = true;
-					mi->m_override_variables["u_glossiness_factor"].default_value.vec[0] = static_cast<float>(ext.Get("glossinessFactor").Get<double>());
+					mi->set_float("u_glossiness_factor", static_cast<float>(ext.Get("glossinessFactor").Get<double>()));
 				}
 			}
 			else {
@@ -704,26 +715,19 @@ namespace z1 {
 				handle_texture(mi, mat, loaded_textures, "metallicRoughnessTexture", "s_metallic_roughness", "u_metallic_roughness_uv_set");
 
 				if (mat.values.find("baseColorFactor") != mat.values.end()) {
-					mi->m_override_variables["u_base_color_factor"].default_value.valid = true;
-					for (int i = 0; i < 4; ++i) {
-						mi->m_override_variables["u_base_color_factor"].default_value.vec[i] = static_cast<float>(mat.values["baseColorFactor"].ColorFactor()[i]);
-					}
+					mi->set_vec4("u_base_color_factor", make_vec4(mat.values["baseColorFactor"].ColorFactor()));
 				}
 				if (mat.values.find("roughnessFactor") != mat.values.end()) {
-					mi->m_override_variables["u_roughness_factor"].default_value.valid = true;
-					mi->m_override_variables["u_roughness_factor"].default_value.vec[0] = static_cast<float>(mat.values["roughnessFactor"].Factor());
+					mi->set_float("u_roughness_factor", static_cast<float>(mat.values["roughnessFactor"].Factor()));
 				}
-				else if (mi->m_override_variables.find("s_metallic_roughness") != mi->m_override_variables.end()) {
-					mi->m_override_variables["u_roughness_factor"].default_value.valid = true;
-					mi->m_override_variables["u_roughness_factor"].default_value.vec[0] = 1.0f;
+				else if (mi->has_uniform("s_metallic_roughness")) {
+					mi->set_float("u_roughness_factor", 1.0f);
 				}
 				if (mat.values.find("metallicFactor") != mat.values.end()) {
-					mi->m_override_variables["u_metallic_factor"].default_value.valid = true;
-					mi->m_override_variables["u_metallic_factor"].default_value.vec[0] = static_cast<float>(mat.values["metallicFactor"].Factor());
+					mi->set_float("u_metallic_factor", static_cast<float>(mat.values["metallicFactor"].Factor()));
 				}
-				else if (mi->m_override_variables.find("s_metallic_roughness") != mi->m_override_variables.end()) {
-					mi->m_override_variables["u_metallic_factor"].default_value.valid = true;
-					mi->m_override_variables["u_metallic_factor"].default_value.vec[0] = 1.0f;
+				else if (mi->has_uniform("s_metallic_roughness")) {
+					mi->set_float("u_metallic_factor", 1.0f);
 				}
 			}
 
@@ -731,17 +735,19 @@ namespace z1 {
 			handle_texture(mi, mat, loaded_textures, "emissiveTexture", "s_emissive", "u_emissive_uv_set");
 			handle_texture(mi, mat, loaded_textures, "occlusionTexture", "s_occlusion", "u_occlusion_uv_set");
 
-			// default to opaque
-			mi->m_override_variables["u_alpha_mode"].default_value.valid = true;
-			mi->m_override_variables["u_alpha_mode"].default_value.ivec[0] = 0;
-			if (mat.alphaMode == "MASK") {
-				mi->m_override_variables["u_alpha_mode"].default_value.ivec[0] = 1;
 
-				mi->m_override_variables["u_alpha_cutoff"].default_value.valid = true;
-				mi->m_override_variables["u_alpha_cutoff"].default_value.vec[0] = (float)mat.alphaCutoff;
+			// default to opaque
+			MaterialFlags::set_alpha_mode(mi->m_override_flags, AlphaMode::Opaque);
+			mi->m_override_mask |= MaterialFlags::AlphaModeMask;
+			mi->set_int("u_alpha_mode", 0);
+			if (mat.alphaMode == "MASK") {
+				MaterialFlags::set_alpha_mode(mi->m_override_flags, AlphaMode::Mask);
+				mi->set_int("u_alpha_mode", 1);
+				mi->set_float("u_alpha_mode", (float)mat.alphaCutoff);
 			}
 			else if (mat.alphaMode == "BLEND") {
-				mi->m_override_variables["u_alpha_mode"].default_value.ivec[0] = 2;
+				MaterialFlags::set_alpha_mode(mi->m_override_flags, AlphaMode::Blend);
+				mi->set_int("u_alpha_mode", 2);
 			}
 
 			mi->save();
@@ -852,7 +858,7 @@ namespace z1 {
 		meta.type = "skeleton";
 		meta.path = settings.path / name;
 
-		legalize_path(meta.path);
+		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return {};
 		}
@@ -996,7 +1002,7 @@ namespace z1 {
 		meta.type = "animation";
 		meta.path = settings.path / name;
 
-		legalize_path(meta.path);
+		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return;
 		}
@@ -1157,7 +1163,7 @@ namespace z1 {
 			fout << yaml.c_str();
 			fout.close();
 
-			legalize_path(prefab_meta.path);
+			prefab_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(prefab_meta.path);
 			if (g_runtime_context.m_asset_manager->register_asset(prefab_meta, FileSystem::s_content_root)) {
 				ret.assets.push_back(prefab_meta);
 				ret.files.push_back(physical_path);

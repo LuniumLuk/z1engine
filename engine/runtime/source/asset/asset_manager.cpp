@@ -297,6 +297,12 @@ namespace z1 {
 		return m_path_to_guid_mapping.find(path) != m_path_to_guid_mapping.end();
 	}
 
+	Filepath AssetManager::legalize_import_path(Filepath const& path) const {
+		Filepath ret = path;
+		legalize_path(ret);
+		return next_path_available(ret);
+	}
+
 	Filepath AssetManager::next_path_available(Filepath const& path) const {
 		if (!has_path(path)) {
 			return path;

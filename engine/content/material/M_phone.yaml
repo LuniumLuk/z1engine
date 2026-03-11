@@ -3,10 +3,5 @@ meta:
   type: material
   path: material/M_phone
   extra: ~
-pipeline:
-  depth_test: true
-  blend: false
-  src_blend_factor: 6
-  dst_blend_factor: 7
-  cull_mode: 2
-  shader: shader/phone
+flags: 44
+shader: shader/phone

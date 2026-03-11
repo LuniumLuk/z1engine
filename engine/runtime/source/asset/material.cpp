@@ -22,13 +22,11 @@ namespace z1 {
 		return DataType::None; // unknown type
 	}
 
-	Material::Material(Pipeline::Description const& pipeline_desc)
-		: m_pipeline_desc(pipeline_desc) {
+	Material::Material(uint32_t flags, std::shared_ptr<Shader> const& shader)
+		: m_flags(flags)
+		, m_shader(shader) {
 
-		m_pipeline = Pipeline::build(pipeline_desc);
-		auto const& shader = m_pipeline->m_shader;
-
-		for (auto& uniform : shader->get_uniforms()) {
+		for (auto& uniform : m_shader->get_uniforms()) {
 			if (uniform.m_location == INVALID_LOCATION) continue;
 			if (uniform.m_type == DataType::None) continue;
 
@@ -50,7 +48,7 @@ namespace z1 {
 		}
 
 		// parse reflections from shader file
-		Filepath path = shader->get_path();
+		Filepath path = m_shader->get_path();
 		auto code = g_runtime_context.m_file_system->read_file(path);
 		size_t pos = 0;
 
@@ -77,25 +75,6 @@ namespace z1 {
 		// we ignore uniform blocks, since most of the material variables
 		// are just uniforms (OpenGL), or push constants (Vulkan)
 		// in most case, the uniform blocks are used in engine internally
-
-		m_flags = get_flags_from_pipeline_desc(m_pipeline_desc, m_alpha_mode, m_double_sided);
-	}
-
-	uint32_t Material::get_flags_from_pipeline_desc(Pipeline::Description const& desc, AlphaMode alpha_mode, bool double_sided) {
-		uint32_t flags = 0;
-		flags |= (static_cast<uint32_t>(alpha_mode) & MaterialFlags::AlphaModeMask);
-		if (desc.depth_test) flags |= MaterialFlags::DepthTest;
-		if (alpha_mode != AlphaMode::Blend) flags |= MaterialFlags::DepthWrite;
-
-		int cull_val = static_cast<int>(desc.cull_mode);
-		if (double_sided) cull_val = static_cast<int>(CullMode::None);
-		flags |= (cull_val << 4) & MaterialFlags::CullModeMask;
-
-		if (desc.blend) flags |= MaterialFlags::BlendMask;
-		// Force blend enable for Blend mode
-		if (alpha_mode == AlphaMode::Blend) flags |= MaterialFlags::BlendMask;
-
-		return flags;
 	}
 
 	std::shared_ptr<Pipeline> Material::get_pipeline(uint32_t flags) {
@@ -103,23 +82,26 @@ namespace z1 {
 			return m_pipeline_pool[flags];
 		}
 
-		Pipeline::Description desc = m_pipeline_desc; // Copy base description
+		Pipeline::Description desc{};
+		desc.shader = m_shader;
 
-		// Apply flags overrides
-		desc.depth_test = (flags & MaterialFlags::DepthTest) != 0;
-		desc.depth_write = (flags & MaterialFlags::DepthWrite) != 0;
+		desc.depth_test = MaterialFlags::get_depth_test(flags);
+		desc.depth_write = MaterialFlags::get_depth_write(flags);
+		desc.cull_mode = MaterialFlags::get_cull_mode(flags);
 
-		int cull_val = (flags & MaterialFlags::CullModeMask) >> 4;
-		desc.cull_mode = static_cast<CullMode>(cull_val);
+		//desc.blend = (flags & MaterialFlags::BlendMask) != 0;
 
-		desc.blend = (flags & MaterialFlags::BlendMask) != 0;
-
-		if (desc.blend) {
+		auto alpha_mode = MaterialFlags::get_alpha_mode(flags);
+		switch (alpha_mode) {
+		case AlphaMode::Opaque:
+		case AlphaMode::Mask:
+			desc.blend = false;
+			break;
+		case AlphaMode::Blend:
+			desc.blend = true;
 			desc.src_blend_factor = BlendFactor::SrcAlpha;
 			desc.dst_blend_factor = BlendFactor::OneMinusSrcAlpha;
-		} else {
-			desc.src_blend_factor = BlendFactor::One;
-			desc.dst_blend_factor = BlendFactor::Zero;
+			break;
 		}
 
 		auto pipeline = Pipeline::build(desc);
@@ -137,7 +119,7 @@ namespace z1 {
 
 		iss >> name;
 		if (m_variables.find(name) == m_variables.end()) {
-			CORE_WARN("reflected variable: {0} not found in shader {1}!", name, m_pipeline_desc.shader->get_path());
+			CORE_WARN("reflected variable: {0} not found in shader {1}!", name, m_shader->get_path());
 			return;
 		}
 
@@ -247,44 +229,12 @@ namespace z1 {
 		pipeline->bind();
 
 		auto const& shader = pipeline->m_shader;
-		bind_uniforms(shader, per_frame);
-	}
-
-	void MaterialInstance::bind_uniforms(std::shared_ptr<Shader> const& shader, PerFrameConst const& per_frame) const {
 		shader->set_uniform_block_binding("Global", per_frame.global_binding);
 		shader->set_uniform_block_binding("Lights", per_frame.lights_binding);
 		shader->set_uniform("u_model", &per_frame.model);
+
 		for (auto const& [name, var] : m_override_variables) {
-			if (!var.visible || var.location == INVALID_LOCATION) continue;
-
-			auto* value = &var.default_value;
-			if (!var.default_value.valid) {
-				value = &m_material->m_variables[name].default_value;
-			}
-
-			switch (var.type) {
-			case DataType::Int:
-			case DataType::Int2:
-			case DataType::Int3:
-			case DataType::Int4:
-				shader->set_uniform(name, value->ivec);
-				break;
-			case DataType::Float:
-			case DataType::Float2:
-			case DataType::Float3:
-			case DataType::Float4:
-				shader->set_uniform(name, value->vec);
-				break;
-			case DataType::Sampler2D:
-				if (value->tex2D) {
-					value->tex2D->m_image->bind(shader, name);
-				}
-				break;
-			default:
-				DEBUG_CHECK(false);
-				CORE_WARN("unsupported material variable type: {0}", get_data_type_name(var.type));
-				break;
-			}
+			bind_uniform(shader, name);
 		}
 	}
 
@@ -296,6 +246,117 @@ namespace z1 {
 		}
 		return flags;
 	}
+
+	void MaterialInstance::bind_uniform(std::shared_ptr<Shader> const& shader, std::string const& material_name) const {
+		bind_uniform(shader, material_name, material_name);
+	}
+
+	void MaterialInstance::bind_uniform(
+		std::shared_ptr<Shader> const& shader,
+		std::string const& material_name,
+		std::string const& shader_name) const {
+
+		if (!has_uniform(material_name))
+			return;
+
+		auto const& var = m_override_variables.at(material_name);
+		if (!var.visible || var.location == INVALID_LOCATION)
+			return;
+
+		auto* value = &var.default_value;
+		if (!value->valid) {
+			value = &m_material->m_variables[material_name].default_value;
+		}
+
+		switch (var.type) {
+		case DataType::Int:
+		case DataType::Int2:
+		case DataType::Int3:
+		case DataType::Int4:
+			shader->set_uniform(shader_name, value->ivec);
+			break;
+		case DataType::Float:
+		case DataType::Float2:
+		case DataType::Float3:
+		case DataType::Float4:
+			shader->set_uniform(shader_name, value->vec);
+			break;
+		case DataType::Sampler2D:
+			if (value->tex2D) {
+				value->tex2D->m_image->bind(shader, shader_name);
+			}
+			break;
+		default:
+			DEBUG_CHECK(false);
+			CORE_WARN("unsupported material variable type: {0}", get_data_type_name(var.type));
+			break;
+		}
+	}
+
+#define SET_UNIFORM_COMMON(name)                                \
+		if (!has_uniform(name))                                 \
+			return;                                             \
+		auto& value = m_override_variables[name].default_value; \
+		value.valid = true
+
+	void MaterialInstance::set_int(std::string const& name, int val) {
+		SET_UNIFORM_COMMON(name);
+		value.ivec[0] = val;
+	}
+
+	void MaterialInstance::set_ivec2(std::string const& name, glm::ivec2 const& val) {
+		SET_UNIFORM_COMMON(name);
+		value.ivec[0] = val[0];
+		value.ivec[1] = val[1];
+	}
+
+	void MaterialInstance::set_ivec3(std::string const& name, glm::ivec3 const& val) {
+		SET_UNIFORM_COMMON(name);
+		value.ivec[0] = val[0];
+		value.ivec[1] = val[1];
+		value.ivec[2] = val[2];
+	}
+
+	void MaterialInstance::set_ivec4(std::string const& name, glm::ivec4 const& val) {
+		SET_UNIFORM_COMMON(name);
+		value.ivec[0] = val[0];
+		value.ivec[1] = val[1];
+		value.ivec[2] = val[2];
+		value.ivec[3] = val[3];
+	}
+
+	void MaterialInstance::set_float(std::string const& name, float val) {
+		SET_UNIFORM_COMMON(name);
+		value.vec[0] = val;
+	}
+
+	void MaterialInstance::set_vec2(std::string const& name, glm::vec2 const& val) {
+		SET_UNIFORM_COMMON(name);
+		value.vec[0] = val[0];
+		value.vec[1] = val[1];
+	}
+
+	void MaterialInstance::set_vec3(std::string const& name, glm::vec3 const& val) {
+		SET_UNIFORM_COMMON(name);
+		value.vec[0] = val[0];
+		value.vec[1] = val[1];
+		value.vec[2] = val[2];
+	}
+
+	void MaterialInstance::set_vec4(std::string const& name, glm::vec4 const& val) {
+		SET_UNIFORM_COMMON(name);
+		value.vec[0] = val[0];
+		value.vec[1] = val[1];
+		value.vec[2] = val[2];
+		value.vec[3] = val[3];
+	}
+
+	void MaterialInstance::set_texture2d(std::string const& name, std::shared_ptr<Texture2D> const& tex) {
+		SET_UNIFORM_COMMON(name);
+		value.tex2D = tex;
+	}
+
+#undef SET_UNIFORM_COMMON
 
 	void MaterialInstance::unbind() const {
 		for (auto const& [name, var] : m_override_variables) {
@@ -310,15 +371,17 @@ namespace z1 {
 				value->tex2D->m_image->unbind();
 			}
 		}
-		m_material->m_pipeline->unbind();
+		auto pipeline = m_material->get_pipeline(get_flags());
+		pipeline->unbind();
 	}
 
-	std::shared_ptr<Material> Material::create(Filepath const& path, Pipeline::Description const& pipeline_desc) {
-		auto mat = std::make_shared<Material>(pipeline_desc);
+	std::shared_ptr<Material> Material::create(Filepath const& path, uint32_t flags, std::shared_ptr<Shader> const& shader) {
+		auto mat = std::make_shared<Material>(flags, shader);
 		mat->m_meta.guid = Guid::generate();
 		mat->m_meta.type = "material";
 		mat->m_meta.path = path;
 		auto const& root = FileSystem::s_content_root;
+		mat->m_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(mat->m_meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(mat->m_meta, root)) {
 			return nullptr;
 		}
@@ -334,27 +397,15 @@ namespace z1 {
 		}
 
 		YAML::Node node = YAML::LoadFile((file.concat(".yaml")).string());
-		auto pipeline_node = node["pipeline"];
-		Pipeline::Description pipeline_desc{};
-		pipeline_desc.depth_test = pipeline_node["depth_test"].as<bool>();
-		pipeline_desc.blend = pipeline_node["blend"].as<bool>();
-		pipeline_desc.src_blend_factor = static_cast<BlendFactor>(pipeline_node["src_blend_factor"].as<int>());
-		pipeline_desc.dst_blend_factor = static_cast<BlendFactor>(pipeline_node["dst_blend_factor"].as<int>());
-		pipeline_desc.cull_mode = static_cast<CullMode>(pipeline_node["cull_mode"].as<int>());
-		pipeline_desc.shader = g_runtime_context.m_asset_manager->get<Shader>(Guid::make(pipeline_node["shader"].as<std::string>()));
-		if (!pipeline_desc.shader) {
+
+		auto flags = node["flags"].as<uint32_t>();
+		auto shader = g_runtime_context.m_asset_manager->get<Shader>(Guid::make(node["shader"].as<std::string>()));
+		if (!shader) {
 			CORE_ERROR("failed to load material: {0}, shader not found!", guid);
 			return nullptr;
 		}
 
-		auto mat = std::make_shared<Material>(pipeline_desc);
-		if (node["alpha_mode"]) mat->m_alpha_mode = static_cast<AlphaMode>(node["alpha_mode"].as<int>());
-		if (node["alpha_cutoff"]) mat->m_alpha_cutoff = node["alpha_cutoff"].as<float>();
-		if (node["double_sided"]) mat->m_double_sided = node["double_sided"].as<bool>();
-
-		// Re-calculate flags after loading properties
-		mat->m_flags = get_flags_from_pipeline_desc(mat->m_pipeline_desc, mat->m_alpha_mode, mat->m_double_sided);
-
+		auto mat = std::make_shared<Material>(flags, shader);
 		mat->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		return mat;
 	}
@@ -367,39 +418,11 @@ namespace z1 {
 		YAML::Emitter out;
 		out << YAML::BeginMap;
 		out << YAML::Key << "meta" << YAML::Value << m_meta;
-		out << YAML::Key << "pipeline" << YAML::Value;
-		out << YAML::BeginMap;
-		out << YAML::Key << "depth_test" << YAML::Value << m_pipeline_desc.depth_test;
-		out << YAML::Key << "blend" << YAML::Value << m_pipeline_desc.blend;
-		out << YAML::Key << "src_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.src_blend_factor);
-		out << YAML::Key << "dst_blend_factor" << YAML::Value << static_cast<int>(m_pipeline_desc.dst_blend_factor);
-		out << YAML::Key << "cull_mode" << YAML::Value << static_cast<int>(m_pipeline_desc.cull_mode);
-		out << YAML::Key << "shader" << YAML::Value << m_pipeline_desc.shader->m_guid;
+		out << YAML::Key << "flags" << YAML::Value << m_flags;
+		out << YAML::Key << "shader" << YAML::Value << m_shader->m_guid;
 		out << YAML::EndMap;
 
 		save_yaml(file, out);
-	}
-
-	void MaterialInstance::set_flag(uint32_t flag, bool value) {
-		if (value) {
-			m_override_flags |= flag;
-		}
-		else {
-			m_override_flags &= ~flag;
-		}
-		m_override_mask |= flag;
-	}
-
-	void MaterialInstance::set_alpha_mode(AlphaMode mode) {
-		uint32_t offset = MaterialFlags::AlphaModeMask; // This seems wrong in original code, offset is usually shift count
-		// Let's check MaterialFlags definition in material.h
-		// constexpr uint32_t AlphaModeMask = 0x3;
-		// It is at bit 0.
-
-		uint32_t mask = MaterialFlags::AlphaModeMask;
-		m_override_flags &= ~mask;
-		m_override_flags |= (static_cast<uint32_t>(mode) & mask);
-		m_override_mask |= mask;
 	}
 
 	std::shared_ptr<MaterialInstance> MaterialInstance::create(Filepath const& path, std::shared_ptr<Material> const& material) {
@@ -408,6 +431,7 @@ namespace z1 {
 		mi->m_meta.type = "material instance";
 		mi->m_meta.path = path;
 		auto const& root = FileSystem::s_content_root;
+		mi->m_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(mi->m_meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(mi->m_meta, root)) {
 			return nullptr;
 		}
@@ -431,6 +455,10 @@ namespace z1 {
 		}
 
 		auto mi = std::make_shared<MaterialInstance>(material);
+
+		mi->m_override_flags = node["override_flags"].as<uint32_t>();
+		mi->m_override_mask = node["override_mask"].as<uint32_t>();
+
 		for (auto const& var_node : node["overrides"]) {
 			std::string name = var_node["name"].as<std::string>();
 			if (mi->m_override_variables.find(name) == mi->m_override_variables.end()) {
@@ -504,6 +532,8 @@ namespace z1 {
 		out << YAML::BeginMap;
 		out << YAML::Key << "meta" << YAML::Value << m_meta;
 		out << YAML::Key << "material" << YAML::Value << m_material->m_meta.guid;
+		out << YAML::Key << "override_flags" << YAML::Value << m_override_flags;
+		out << YAML::Key << "override_mask" << YAML::Value << m_override_mask;
 		out << YAML::Key << "overrides" << YAML::Value;
 		out << YAML::BeginSeq;
 		for (auto const& [name, var] : m_override_variables) {

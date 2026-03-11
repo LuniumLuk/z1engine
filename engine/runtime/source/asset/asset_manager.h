@@ -45,6 +45,7 @@ namespace z1 {
 
 		bool has_asset(Guid const& guid) const;
 		bool has_path(Filepath const& path) const;
+		Filepath legalize_import_path(Filepath const& path) const;
 		Filepath next_path_available(Filepath const& path) const;
 		AssetMeta get_meta(Guid const& guid) const;
 		bool move_asset(Guid const& guid, Filepath const& new_path);
@@ -78,6 +79,7 @@ namespace z1 {
 			}
 
 			if (m_guid_to_file_mapping.find(guid) == m_guid_to_file_mapping.end()) {
+				DEBUG_CHECK(false);
 				CORE_ERROR("failed to find asset with guid: {0}", guid);
 				return nullptr;
 			}

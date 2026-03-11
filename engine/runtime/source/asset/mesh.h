@@ -8,6 +8,8 @@
 
 namespace z1 {
 
+	using MaterialFlagsFilter = std::function<bool(uint32_t)>;
+
 	struct API StaticMesh : Asset<StaticMesh> {
 		using IndexType = uint32_t;
 		struct VertexData {
@@ -99,13 +101,13 @@ namespace z1 {
 		void draw(
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material,
-			uint32_t mask,
-			uint32_t value) const;
+			MaterialFlagsFilter filter = nullptr) const;
 
 		void draw_primitive(
 			size_t index,
 			PerFrameConst const& per_frame,
-			std::shared_ptr<MaterialInstance> const& default_material = nullptr) const;
+			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
+			MaterialFlagsFilter filter = nullptr) const;
 
 		std::vector<Primitive> m_primitives;
 
@@ -195,14 +197,14 @@ namespace z1 {
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material,
 			std::shared_ptr<UniformBuffer> const& bones,
-			uint32_t mask,
-			uint32_t value) const;
+			MaterialFlagsFilter filter = nullptr) const;
 
 		void draw_primitive(
 			size_t index,
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
-			std::shared_ptr<UniformBuffer> const& bones = nullptr) const;
+			std::shared_ptr<UniformBuffer> const& bones = nullptr,
+			MaterialFlagsFilter filter = nullptr) const;
 
 		void draw() const;
 

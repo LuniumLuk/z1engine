@@ -80,15 +80,18 @@ namespace z1 {
 		for (uint32_t i = 0; i < desc.color_attachments.size(); ++i) {
 			auto& attachment = desc.color_attachments[i];
 			if (attachment.load_op == LoadOp::Clear) {
+				glColorMaski(i, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glClearBufferfv(GL_COLOR, i, &attachment.clear_value[0]);
 			}
 		}
 
 		if (desc.depth_stencil_attachment.depth_load_op == LoadOp::Clear) {
+			glDepthMask(GL_TRUE);
 			glClearBufferfv(GL_DEPTH, 0, &desc.depth_stencil_attachment.clear_depth_value);
 		}
 
 		if (desc.depth_stencil_attachment.stencil_load_op == LoadOp::Clear) {
+			glStencilMask(0xff);
 			glClearBufferiv(GL_STENCIL, 0, (GLint*)&desc.depth_stencil_attachment.clear_stencil_value);
 		}
 

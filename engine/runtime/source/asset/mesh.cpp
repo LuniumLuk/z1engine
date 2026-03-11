@@ -134,28 +134,18 @@ namespace z1 {
 	void StaticMesh::draw(
 		PerFrameConst const& per_frame,
 		std::shared_ptr<MaterialInstance> const& default_material,
-		uint32_t mask,
-		uint32_t value) const {
+		MaterialFlagsFilter filter) const {
 		for (size_t i = 0; i < m_primitives.size(); ++i) {
 			auto const& prim = m_primitives[i];
-			std::shared_ptr<MaterialInstance> mi = nullptr;
-			if (prim.m_material.is_valid()) {
-				mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
-			}
-			else if (default_material) {
-				mi = default_material;
-			}
-
-			if (mi && (mi->get_flags() & mask) == value) {
-				draw_primitive(i, per_frame, default_material);
-			}
+			draw_primitive(i, per_frame, default_material, filter);
 		}
 	}
 
 	void StaticMesh::draw_primitive(
 		size_t index,
 		PerFrameConst const& per_frame,
-		std::shared_ptr<MaterialInstance> const& default_material) const {
+		std::shared_ptr<MaterialInstance> const& default_material,
+		MaterialFlagsFilter filter) const {
 		if (index >= m_primitives.size()) return;
 		auto const& prim = m_primitives[index];
 		std::shared_ptr<MaterialInstance> mi = nullptr;
@@ -166,15 +156,18 @@ namespace z1 {
 			mi = default_material;
 		}
 
+		if (filter && !filter(mi ? mi->get_flags() : MaterialFlags::Default))
+			return;
+
 		if (mi)
 			mi->bind(per_frame);
 
 		auto shadow_img = (g_runtime_context.m_renderer_forward ? g_runtime_context.m_renderer_forward->get_shadow_image() : nullptr);
-		bool const use_shadow_map = shadow_img && mi && mi->m_material && mi->m_material->m_pipeline && mi->m_material->m_pipeline->m_shader && mi->m_material->m_pipeline->m_shader->has_uniform("u_shadow_map");
+		bool const use_shadow_map = shadow_img && mi && mi->get_shader()->has_uniform("u_shadow_map");
 
 		// If renderer produced a shadow map, bind it to the material shader as u_shadow_map
 		if (use_shadow_map) {
-			shadow_img->bind(mi->m_material->m_pipeline->m_shader, "u_shadow_map");
+			shadow_img->bind(mi->get_shader(), "u_shadow_map");
 		}
 
 		prim.m_vertex_array->bind();
@@ -247,6 +240,7 @@ namespace z1 {
 		meta.guid = Guid::generate();
 		meta.type = "static mesh";
 		meta.path = path;
+		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
 
 		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;
@@ -386,21 +380,10 @@ namespace z1 {
 		PerFrameConst const& per_frame,
 		std::shared_ptr<MaterialInstance> const& default_material,
 		std::shared_ptr<UniformBuffer> const& bones,
-		uint32_t mask,
-		uint32_t value) const {
+		MaterialFlagsFilter filter) const {
 		for (size_t i = 0; i < m_primitives.size(); ++i) {
 			auto const& prim = m_primitives[i];
-			std::shared_ptr<MaterialInstance> mi = nullptr;
-			if (prim.m_material.is_valid()) {
-				mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
-			}
-			else if (default_material) {
-				mi = default_material;
-			}
-
-			if (mi && (mi->get_flags() & mask) == value) {
-				draw_primitive(i, per_frame, default_material, bones);
-			}
+			draw_primitive(i, per_frame, default_material, bones, filter);
 		}
 	}
 
@@ -408,7 +391,8 @@ namespace z1 {
 		size_t index,
 		PerFrameConst const& per_frame,
 		std::shared_ptr<MaterialInstance> const& default_material,
-		std::shared_ptr<UniformBuffer> const& bones) const {
+		std::shared_ptr<UniformBuffer> const& bones,
+		MaterialFlagsFilter filter) const {
 		if (index >= m_primitives.size()) return;
 		auto const& prim = m_primitives[index];
 		std::shared_ptr<MaterialInstance> mi = nullptr;
@@ -419,26 +403,26 @@ namespace z1 {
 			mi = default_material;
 		}
 
+		if (filter && !filter(mi ? mi->get_flags() : MaterialFlags::Default))
+			return;
+
 		int has_skinning = 0;
 		if (mi) {
 			mi->bind(per_frame);
-			if (mi->m_material && mi->m_material->m_pipeline && mi->m_material->m_pipeline->m_shader) {
-				int has_skinning = 0;
-				if (bones) {
-					has_skinning = 1;
-					bones->bind();
-					mi->m_material->m_pipeline->m_shader->set_uniform_block_binding("Bones", bones->get_binding());
-				}
-				mi->m_material->m_pipeline->m_shader->set_uniform("u_has_skinning", &has_skinning);
+			if (bones) {
+				has_skinning = 1;
+				bones->bind();
+				mi->get_shader()->set_uniform_block_binding("Bones", bones->get_binding());
 			}
+			mi->get_shader()->set_uniform("u_has_skinning", &has_skinning);
 		}
 
 		auto shadow_img = (g_runtime_context.m_renderer_forward ? g_runtime_context.m_renderer_forward->get_shadow_image() : nullptr);
-		bool const use_shadow_map = shadow_img && mi && mi->m_material && mi->m_material->m_pipeline && mi->m_material->m_pipeline->m_shader && mi->m_material->m_pipeline->m_shader->has_uniform("u_shadow_map");
+		bool const use_shadow_map = shadow_img && mi && mi->get_shader()->has_uniform("u_shadow_map");
 
 		// If renderer produced a shadow map, bind it to the material shader as u_shadow_map
 		if (use_shadow_map) {
-			shadow_img->bind(mi->m_material->m_pipeline->m_shader, "u_shadow_map");
+			shadow_img->bind(mi->get_shader(), "u_shadow_map");
 		}
 
 		prim.m_vertex_array->bind();
@@ -502,6 +486,7 @@ namespace z1 {
 		meta.guid = Guid::generate();
 		meta.type = "skeletal mesh";
 		meta.path = path;
+		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
 
 		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;
