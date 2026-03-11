@@ -1080,7 +1080,13 @@ namespace z1 {
 		std::string warn;
 
 		stbi_set_flip_vertically_on_load(true);
-		bool result = loader.LoadBinaryFromFile(&model, &err, &warn, settings.file.string());
+		bool result = false;
+		if (settings.file.extension() == ".glb") {
+			result = loader.LoadBinaryFromFile(&model, &err, &warn, settings.file.string());
+		}
+		else {
+			result = loader.LoadASCIIFromFile(&model, &err, &warn, settings.file.string());
+		}
 
 		if (!err.empty()) {
 			CORE_ERROR("failed to load static mesh: {0}", settings.file.generic_string());
