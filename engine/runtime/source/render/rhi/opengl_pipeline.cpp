@@ -42,6 +42,13 @@ namespace z1 {
 				glDisable(GL_DEPTH_TEST);
 			}
 
+			if (description.depth_write) {
+				glDepthMask(GL_TRUE);
+			}
+			else {
+				glDepthMask(GL_FALSE);
+			}
+
 			if (description.cull_mode == CullMode::None) {
 				glDisable(GL_CULL_FACE);
 			}

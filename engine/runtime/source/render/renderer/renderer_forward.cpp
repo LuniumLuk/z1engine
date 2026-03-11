@@ -483,10 +483,41 @@ namespace z1 {
 					int has_skinning = 0;
 					auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 					for (auto [entity, transform, mesh] : view.each()) {
+						if (!mesh.m_mesh) continue;
 						glm::mat4 model = transform.get_world_transform();
+
+						PerFrameConst per_frame{};
+						per_frame.model = model;
+						per_frame.global_binding = g->get_binding();
+
 						s->set_uniform("u_model", &model);
 						s->set_uniform("u_has_skinning", &has_skinning);
-						mesh.m_mesh->draw();
+
+						for (auto const& prim : mesh.m_mesh->m_primitives) {
+							std::shared_ptr<MaterialInstance> mi = nullptr;
+							if (prim.m_material.is_valid()) {
+								mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
+							}
+
+							int alpha_mode = 0; // Opaque
+							if (mi) {
+								uint32_t flags = mi->get_flags();
+								// Check for Blend (bit 1 set)
+								if ((flags & 2) == 2) continue; // Skip Blend
+
+								// Check for Mask (bit 0 set)
+								if ((flags & 3) == 1) {
+									alpha_mode = 1;
+									mi->bind_uniforms(s, per_frame);
+								}
+							}
+
+							s->set_uniform("u_alpha_mode", &alpha_mode);
+
+							prim.m_vertex_array->bind();
+							prim.m_vertex_array->draw(prim.m_primitive_type);
+							prim.m_vertex_array->unbind();
+						}
 					}
 
 					auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
@@ -494,6 +525,11 @@ namespace z1 {
 						if (!mesh.m_mesh)
 							continue;
 						glm::mat4 model = transform.get_world_transform();
+
+						PerFrameConst per_frame{};
+						per_frame.model = model;
+						per_frame.global_binding = g->get_binding();
+
 						s->set_uniform("u_model", &model);
 						has_skinning = 0;
 						if (scene->m_registry.all_of<AnimationComponent>(entity)) {
@@ -505,7 +541,33 @@ namespace z1 {
 							}
 						}
 						s->set_uniform("u_has_skinning", &has_skinning);
-						mesh.m_mesh->draw();
+
+						for (auto const& prim : mesh.m_mesh->m_primitives) {
+							std::shared_ptr<MaterialInstance> mi = nullptr;
+							if (prim.m_material.is_valid()) {
+								mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
+							}
+
+							int alpha_mode = 0; // Opaque
+							if (mi) {
+								uint32_t flags = mi->get_flags();
+								// Check for Blend (bit 1 set)
+								if ((flags & 2) == 2) continue; // Skip Blend
+
+								// Check for Mask (bit 0 set)
+								if ((flags & 3) == 1) {
+									alpha_mode = 1;
+									mi->bind_uniforms(s, per_frame);
+								}
+							}
+
+							s->set_uniform("u_alpha_mode", &alpha_mode);
+
+							prim.m_vertex_array->bind();
+							prim.m_vertex_array->draw(prim.m_primitive_type);
+							prim.m_vertex_array->unbind();
+						}
+
 						if (has_skinning)
 							scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
 					}
@@ -537,9 +599,12 @@ namespace z1 {
 				m_lights_buffer->bind();
 				per_frame.lights_binding = m_lights_buffer->get_binding();
 
+				// Pass 1: Opaque and Mask
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material);
+					// Filter for Opaque (0) and Mask (1). Bit 1 (value 2) is 0.
+					// Mask: 2 (0x2), Value: 0 (0x0)
+					item.mesh->m_mesh->draw(per_frame, m_default_material, 2, 0);
 				}
 
 				for (auto const& item : draw_list.skeletal_meshes) {
@@ -549,7 +614,32 @@ namespace z1 {
 					}
 
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material, bones);
+					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, 2, 0);
+				}
+
+				// Pass 2: Blend
+				// Filter for Blend (2). Bit 1 (value 2) is 1 (value 2).
+				// Mask: 2 (0x2), Value: 2 (0x2)
+
+				// We need to change render state for blend pass if needed, but Material pipeline handles blend state.
+				// However, we might want to sort back-to-front here?
+				// Assuming draw_list is sorted by distance for blend objects?
+				// The renderer doesn't seem to sort by distance yet in add_main_pass.
+				// But let's just do the split first.
+
+				for (auto const& item : draw_list.static_meshes) {
+					per_frame.model = item.transform;
+					item.mesh->m_mesh->draw(per_frame, m_default_material, 2, 2);
+				}
+
+				for (auto const& item : draw_list.skeletal_meshes) {
+					std::shared_ptr<UniformBuffer> bones = nullptr;
+					if (item.anim) {
+						bones = item.anim->bone_ubo;
+					}
+
+					per_frame.model = item.transform;
+					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, 2, 2);
 				}
 
 				auto sky_view = scene->m_registry.view<SkyLightComponent const>();

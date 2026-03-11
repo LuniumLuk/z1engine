@@ -77,6 +77,54 @@ namespace z1 {
 		// we ignore uniform blocks, since most of the material variables
 		// are just uniforms (OpenGL), or push constants (Vulkan)
 		// in most case, the uniform blocks are used in engine internally
+
+		m_flags = get_flags_from_pipeline_desc(m_pipeline_desc, m_alpha_mode, m_double_sided);
+	}
+
+	uint32_t Material::get_flags_from_pipeline_desc(Pipeline::Description const& desc, AlphaMode alpha_mode, bool double_sided) {
+		uint32_t flags = 0;
+		flags |= (static_cast<uint32_t>(alpha_mode) & MaterialFlags::AlphaModeMask);
+		if (desc.depth_test) flags |= MaterialFlags::DepthTest;
+		if (alpha_mode != AlphaMode::Blend) flags |= MaterialFlags::DepthWrite;
+
+		int cull_val = static_cast<int>(desc.cull_mode);
+		if (double_sided) cull_val = static_cast<int>(CullMode::None);
+		flags |= (cull_val << 4) & MaterialFlags::CullModeMask;
+
+		if (desc.blend) flags |= MaterialFlags::BlendMask;
+		// Force blend enable for Blend mode
+		if (alpha_mode == AlphaMode::Blend) flags |= MaterialFlags::BlendMask;
+
+		return flags;
+	}
+
+	std::shared_ptr<Pipeline> Material::get_pipeline(uint32_t flags) {
+		if (m_pipeline_pool.find(flags) != m_pipeline_pool.end()) {
+			return m_pipeline_pool[flags];
+		}
+
+		Pipeline::Description desc = m_pipeline_desc; // Copy base description
+
+		// Apply flags overrides
+		desc.depth_test = (flags & MaterialFlags::DepthTest) != 0;
+		desc.depth_write = (flags & MaterialFlags::DepthWrite) != 0;
+
+		int cull_val = (flags & MaterialFlags::CullModeMask) >> 4;
+		desc.cull_mode = static_cast<CullMode>(cull_val);
+
+		desc.blend = (flags & MaterialFlags::BlendMask) != 0;
+
+		if (desc.blend) {
+			desc.src_blend_factor = BlendFactor::SrcAlpha;
+			desc.dst_blend_factor = BlendFactor::OneMinusSrcAlpha;
+		} else {
+			desc.src_blend_factor = BlendFactor::One;
+			desc.dst_blend_factor = BlendFactor::Zero;
+		}
+
+		auto pipeline = Pipeline::build(desc);
+		m_pipeline_pool[flags] = pipeline;
+		return pipeline;
 	}
 
 	void Material::parse_reflection_line(const std::string& line) {
@@ -195,8 +243,14 @@ namespace z1 {
 	}
 
 	void MaterialInstance::bind(PerFrameConst const& per_frame) const {
-		m_material->m_pipeline->bind();
-		auto const& shader = m_material->m_pipeline->m_shader;
+		auto pipeline = m_material->get_pipeline(get_flags());
+		pipeline->bind();
+
+		auto const& shader = pipeline->m_shader;
+		bind_uniforms(shader, per_frame);
+	}
+
+	void MaterialInstance::bind_uniforms(std::shared_ptr<Shader> const& shader, PerFrameConst const& per_frame) const {
 		shader->set_uniform_block_binding("Global", per_frame.global_binding);
 		shader->set_uniform_block_binding("Lights", per_frame.lights_binding);
 		shader->set_uniform("u_model", &per_frame.model);
@@ -232,6 +286,15 @@ namespace z1 {
 				break;
 			}
 		}
+	}
+
+	uint32_t MaterialInstance::get_flags() const {
+		uint32_t flags = m_material->m_flags;
+		// Apply overrides
+		if (m_override_mask) {
+			flags = (flags & ~m_override_mask) | (m_override_flags & m_override_mask);
+		}
+		return flags;
 	}
 
 	void MaterialInstance::unbind() const {
@@ -285,6 +348,13 @@ namespace z1 {
 		}
 
 		auto mat = std::make_shared<Material>(pipeline_desc);
+		if (node["alpha_mode"]) mat->m_alpha_mode = static_cast<AlphaMode>(node["alpha_mode"].as<int>());
+		if (node["alpha_cutoff"]) mat->m_alpha_cutoff = node["alpha_cutoff"].as<float>();
+		if (node["double_sided"]) mat->m_double_sided = node["double_sided"].as<bool>();
+
+		// Re-calculate flags after loading properties
+		mat->m_flags = get_flags_from_pipeline_desc(mat->m_pipeline_desc, mat->m_alpha_mode, mat->m_double_sided);
+
 		mat->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		return mat;
 	}
@@ -308,6 +378,28 @@ namespace z1 {
 		out << YAML::EndMap;
 
 		save_yaml(file, out);
+	}
+
+	void MaterialInstance::set_flag(uint32_t flag, bool value) {
+		if (value) {
+			m_override_flags |= flag;
+		}
+		else {
+			m_override_flags &= ~flag;
+		}
+		m_override_mask |= flag;
+	}
+
+	void MaterialInstance::set_alpha_mode(AlphaMode mode) {
+		uint32_t offset = MaterialFlags::AlphaModeMask; // This seems wrong in original code, offset is usually shift count
+		// Let's check MaterialFlags definition in material.h
+		// constexpr uint32_t AlphaModeMask = 0x3;
+		// It is at bit 0.
+
+		uint32_t mask = MaterialFlags::AlphaModeMask;
+		m_override_flags &= ~mask;
+		m_override_flags |= (static_cast<uint32_t>(mode) & mask);
+		m_override_mask |= mask;
 	}
 
 	std::shared_ptr<MaterialInstance> MaterialInstance::create(Filepath const& path, std::shared_ptr<Material> const& material) {

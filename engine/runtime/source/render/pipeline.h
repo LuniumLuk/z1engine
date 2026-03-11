@@ -32,6 +32,7 @@ namespace z1 {
 		struct Description {
 			// depth
 			bool depth_test = false;
+			bool depth_write = false;
 
 			// blend
 			bool blend = false;

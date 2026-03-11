@@ -96,6 +96,12 @@ namespace z1 {
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr) const;
 
+		void draw(
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material,
+			uint32_t mask,
+			uint32_t value) const;
+
 		void draw_primitive(
 			size_t index,
 			PerFrameConst const& per_frame,
@@ -184,6 +190,13 @@ namespace z1 {
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
 			std::shared_ptr<UniformBuffer> const& bones = nullptr) const;
+
+		void draw(
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material,
+			std::shared_ptr<UniformBuffer> const& bones,
+			uint32_t mask,
+			uint32_t value) const;
 
 		void draw_primitive(
 			size_t index,

@@ -131,6 +131,27 @@ namespace z1 {
 		}
 	}
 
+	void StaticMesh::draw(
+		PerFrameConst const& per_frame,
+		std::shared_ptr<MaterialInstance> const& default_material,
+		uint32_t mask,
+		uint32_t value) const {
+		for (size_t i = 0; i < m_primitives.size(); ++i) {
+			auto const& prim = m_primitives[i];
+			std::shared_ptr<MaterialInstance> mi = nullptr;
+			if (prim.m_material.is_valid()) {
+				mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
+			}
+			else if (default_material) {
+				mi = default_material;
+			}
+
+			if (mi && (mi->get_flags() & mask) == value) {
+				draw_primitive(i, per_frame, default_material);
+			}
+		}
+	}
+
 	void StaticMesh::draw_primitive(
 		size_t index,
 		PerFrameConst const& per_frame,
@@ -358,6 +379,28 @@ namespace z1 {
 		std::shared_ptr<UniformBuffer> const& bones) const {
 		for (size_t i = 0; i < m_primitives.size(); ++i) {
 			draw_primitive(i, per_frame, default_material, bones);
+		}
+	}
+
+	void SkeletalMesh::draw(
+		PerFrameConst const& per_frame,
+		std::shared_ptr<MaterialInstance> const& default_material,
+		std::shared_ptr<UniformBuffer> const& bones,
+		uint32_t mask,
+		uint32_t value) const {
+		for (size_t i = 0; i < m_primitives.size(); ++i) {
+			auto const& prim = m_primitives[i];
+			std::shared_ptr<MaterialInstance> mi = nullptr;
+			if (prim.m_material.is_valid()) {
+				mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
+			}
+			else if (default_material) {
+				mi = default_material;
+			}
+
+			if (mi && (mi->get_flags() & mask) == value) {
+				draw_primitive(i, per_frame, default_material, bones);
+			}
 		}
 	}
 
