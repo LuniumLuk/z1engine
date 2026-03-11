@@ -83,8 +83,12 @@ workspace "z1engine"
 			create_test(testname, filepath)
 		end
 
-	group ""
+	group "engine"
 
-	include "engine/runtime"
-	include "engine/editor"
-	include "engine/game"
+		include "engine/runtime"
+		include "engine/editor"
+
+	group "executable"
+
+		include "engine/game"
+		include "engine/tool/shader_validator"

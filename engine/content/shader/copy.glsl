@@ -1,10 +1,10 @@
 @uniforms: {
-	#include <common/uniforms.glsl>
+	#include <common/uniforms.glslh>
 
 	uniform sampler2D u_input;
 }
 @stage: vert {
-	#include <common/quad.glsl>
+	#include <common/quad.glslh>
 }
 @stage: frag {
 	layout(location = 0) in vec2 v_uv;

@@ -1,11 +1,11 @@
 @uniforms: {
-	#include <common/uniforms.glsl>
+	#include <common/uniforms.glslh>
 }
 
 @stage: vert {
 #define SHADOW
 	uniform int u_csm_index;
-	#include <common/vert.glsl>
+	#include <common/vert.glslh>
 }
 
 @stage: frag {

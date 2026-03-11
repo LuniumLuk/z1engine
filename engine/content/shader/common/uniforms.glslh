@@ -2,7 +2,7 @@
 // just include this file in the front of @uniforms scope
 // like this:
 // @uniforms: {
-//   #include <common/uniforms.glsl>
+//   #include <common/uniforms.glslh>
 ///  ...
 // }
 

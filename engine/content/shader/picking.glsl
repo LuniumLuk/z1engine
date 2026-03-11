@@ -1,10 +1,10 @@
 @uniforms: {
-	#include <common/uniforms.glsl>
+	#include <common/uniforms.glslh>
 
 	layout(location = 2) uniform float u_object_id;
 }
 @stage: vert {
-	#include <common/vert.glsl>
+	#include <common/vert.glslh>
 }
 @stage: frag {
 	layout(location = 0) out vec4 frag_color;

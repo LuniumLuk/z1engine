@@ -1,8 +1,10 @@
+/* header */
+
 // this is a common fragment shader attributes for z1engine
 // just include this file in the front of @stage: frag scope
 // like this:
 // @stage: frag {
-//   #include <common/frag_attrs.glsl>
+//   #include <common/frag_attrs.glslh>
 ///  ...
 // }
 

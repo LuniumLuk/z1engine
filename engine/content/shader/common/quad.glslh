@@ -2,7 +2,7 @@
 // just include this file in the @stage: vert scope
 // like this:
 // @stage: vert {
-//   #include <common/quad.glsl>
+//   #include <common/quad.glslh>
 // }
 
 layout(location = 0) in vec2 a_position;

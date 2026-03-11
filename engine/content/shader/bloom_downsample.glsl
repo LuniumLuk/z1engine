@@ -1,12 +1,12 @@
 @uniforms: {
-	#include <common/uniforms.glsl>
+	#include <common/uniforms.glslh>
 
 	layout(location = 0) uniform sampler2D u_src_texture;
 	layout(location = 1) uniform vec2 u_src_resolution;
 	layout(location = 2) uniform int u_mip_level;
 }
 @stage: vert {
-	#include <common/quad.glsl>
+	#include <common/quad.glslh>
 }
 @stage: frag {
 	layout(location = 0) out vec3 upsample;

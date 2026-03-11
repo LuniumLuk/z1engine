@@ -245,11 +245,6 @@ bool validate_shader_file(fs::path const& path) {
 // Main
 // ----------------------------------------------------------------------------
 int main(int argc, char** argv) {
-	if (argc < 2) {
-		std::cout << "Usage: shader_validator <path_to_shader_file>" << std::endl;
-		return 1;
-	}
-
 	// Initialize GLFW (headless if possible, but we need context)
 	if (!glfwInit()) {
 		CORE_ERROR("Failed to initialize GLFW");
@@ -272,7 +267,24 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	bool success = validate_shader_file(argv[1]);
+	bool success = true;
+	if (argc < 2) {
+		std::cout << "Usage: shader_validator <path_to_shader_file>" << std::endl;
+		std::cout << "Now scan all shader files under engine/content/shader/ and validate them:" << std::endl;
+		std::cout << std::endl;
+
+		fs::path shader_dir = "engine/content/shader/";
+		for (const auto& entry : fs::recursive_directory_iterator(shader_dir, fs::directory_options::skip_permission_denied)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".glsl") {
+				bool file_success = validate_shader_file(entry.path());
+				success = success && file_success;
+				std::cout << std::endl;
+			}
+		}
+	}
+	else {
+		bool success = validate_shader_file(argv[1]);
+	}
 
 	glfwDestroyWindow(window);
 	glfwTerminate();

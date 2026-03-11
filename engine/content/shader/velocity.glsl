@@ -1,9 +1,9 @@
 @uniforms: {
-	#include <common/uniforms.glsl>
+	#include <common/uniforms.glslh>
 }
 @stage: vert {
 #define VELOCITY
-	#include <common/vert.glsl>
+	#include <common/vert.glslh>
 }
 @stage: frag {
 	layout(location = 6) in vec4 v_curr_clip;

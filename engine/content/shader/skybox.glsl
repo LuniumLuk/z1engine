@@ -1,5 +1,5 @@
 @uniforms: {
-	#include <common/uniforms.glsl>
+	#include <common/uniforms.glslh>
 	uniform sampler2D u_sky_texture;
 	uniform float u_rotation;
 	uniform float u_intensity;
