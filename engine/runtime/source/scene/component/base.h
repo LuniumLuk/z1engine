@@ -189,6 +189,9 @@ namespace z1 {
 		bool m_is_valid = true;
 		ScriptState m_state = ScriptState::None;
 
+		// when marked transient, the script will not be controlled by GlobalSettings::script_enabled
+		virtual bool is_transient() const { return false; }
+
 	};
 
 	struct API ScriptComponent {

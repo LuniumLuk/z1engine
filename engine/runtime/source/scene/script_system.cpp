@@ -53,7 +53,7 @@ namespace z1 {
 
 				// We want the attach func to be called even if script system is disabled, because it might be
 				// needed for editor scripts to function properly.
-				if (!g_runtime_context.m_global->script_enabled)
+				if (!g_runtime_context.m_global->script_enabled && !script_data.instance->is_transient())
 					break;
 
 				if (script_data.instance->m_state == ScriptState::Attached) {

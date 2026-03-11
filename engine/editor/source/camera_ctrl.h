@@ -10,6 +10,10 @@ struct CameraCtrlScript : ScriptBase {
 		: m_gui(gui) {
 	}
 
+	// these script are used by editor to control camera, so they should be transient and not affected by
+	// GlobalSettings::script_enabled
+	bool is_transient() const override { return true; }
+
 	void on_attach() override {
 		auto [mouse_x, mouse_y] = g_runtime_context.m_input_system->get_mouse_pos();
 		m_mouse_last_x = mouse_x;
@@ -27,7 +31,7 @@ struct CameraCtrlScript : ScriptBase {
 		m_mouse_last_x = mouse_x;
 		m_mouse_last_y = mouse_y;
 
-		if (!m_gui->is_viewport_focused() || !m_gui->is_viewport_hovered()) return false;
+		if (/*!m_gui->is_viewport_focused() || */!m_gui->is_viewport_hovered()) return false;
 
 		return true;
 	}

@@ -10,6 +10,7 @@ PickingSystem::PickingSystem(uint32_t w, uint32_t h) {
 	{
 		Pipeline::Description desc{};
 		desc.depth_test = true;
+		desc.depth_write = true;
 		desc.blend = false;
 		desc.cull_mode = CullMode::Back;
 		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/picking");
@@ -19,6 +20,7 @@ PickingSystem::PickingSystem(uint32_t w, uint32_t h) {
 	{
 		Pipeline::Description desc{};
 		desc.depth_test = true;
+		desc.depth_write = true;
 		desc.blend = false;
 		desc.cull_mode = CullMode::Back;
 		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/picking_sprite");
@@ -106,16 +108,6 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 
 		g_runtime_context.m_global->unbind();
 
-		//m_pipeline->m_shader->set_uniform("u_projview", &cam_projview);
-		//{
-		//	auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const, TagComponent const>();
-		//	for (auto [entity, transform, mesh, tag] : view.each()) {
-		//		float object_id = static_cast<float>(tag.m_id) + 1.0f;
-		//		m_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
-		//		m_pipeline->m_shader->set_uniform("u_object_id", &object_id);
-		//		mesh.m_mesh->draw();
-		//	}
-		//}
 		m_pipeline->unbind();
 
 		m_sprite_pipeline->bind();

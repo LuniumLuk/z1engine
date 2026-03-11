@@ -299,6 +299,7 @@ void EditorLayer::on_update(float delta_time) {
 	g_runtime_context.m_scene->on_update(delta_time);
 	g_runtime_context.m_renderer_forward->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
 	//g_runtime_context.m_renderer_2d->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
+	m_picking->render(g_runtime_context.m_scene);
 
 	g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 
@@ -333,7 +334,7 @@ bool EditorLayer::on_key_pressed(KeyPressedEvent& event) {
 
 bool EditorLayer::on_mouse_pressed(MouseButtonPressedEvent& event) {
 	if (event.get_button() == MOUSE_BUTTON_LEFT) {
-		if (m_gui->is_viewport_focused() && m_gui->is_viewport_hovered() && !m_is_using_gizmo) {
+		if (/*m_gui->is_viewport_focused() && */m_gui->is_viewport_hovered() && !m_is_using_gizmo) {
 			auto start = std::chrono::high_resolution_clock::now();
 
 			m_picking->render(g_runtime_context.m_scene);
