@@ -38,5 +38,5 @@ The changes MUST ensure the project remains buildable and the editor runtime is 
 - **THEN** the build MUST succeed without compilation errors.
 
 #### Scenario: Runtime Verification
-- **WHEN** the editor is launched with `engine\bin\Debug\game.exe --one-frame 10`
+- **WHEN** the editor is launched with `engine\bin\Debug\game.exe --one-frame=10`
 - **THEN** it MUST run for 10 frames and exit gracefully without crashing.
