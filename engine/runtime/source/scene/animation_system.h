@@ -2,7 +2,7 @@
 
 #include "scene/scene.h"
 
-#define MAX_BONES 144
+#define MAX_BONES 1024
 
 namespace z1 {
 
