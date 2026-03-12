@@ -5,6 +5,7 @@
 #include "render/shader.h"
 #include "asset/asset.h"
 #include "util/yaml.h"
+#include <type_traits>
 
 namespace z1 {
 
@@ -87,6 +88,9 @@ namespace z1 {
 			auto asset = AssetLoader<T>::load(guid);
 
 			map[guid] = asset;
+			if constexpr (std::is_base_of_v<AssetBase, T>) {
+				track_loaded_asset(guid, asset ? asset.get() : nullptr);
+			}
 			return asset;
 		}
 
@@ -94,6 +98,9 @@ namespace z1 {
 		void set(Guid const& guid, std::shared_ptr<T> const& asset) {
 			auto& map = storage<T>();
 			map[guid] = asset;
+			if constexpr (std::is_base_of_v<AssetBase, T>) {
+				track_loaded_asset(guid, asset ? asset.get() : nullptr);
+			}
 		}
 
 		Filepath get_file_from_guid(Guid const& guid) const {
@@ -125,6 +132,8 @@ namespace z1 {
 		bool register_asset(AssetMeta const& meta, Filepath const& root);
 		// check if guid is already registered, if not register it and return true
 		bool register_guid(Guid const& guid);
+
+		AssetBase* get_loaded_asset(Guid const& guid) const;
 
 		std::vector<AssetMeta> get_all_metas() const {
 			std::vector<AssetMeta> metas;
@@ -186,11 +195,14 @@ namespace z1 {
 		static Filepath s_content_root;
 		static std::vector<Filepath> s_shader_roots;
 		std::unordered_map<size_t, std::any> m_storages;
+		std::unordered_map<Guid, AssetBase*> m_loaded_assets;
 		std::unordered_map<Guid, AssetMeta> m_asset_metas;
 		std::unordered_set<Guid> m_guid_registry;
 		std::unordered_map<Guid, Filepath> m_guid_to_file_mapping;
 		std::unordered_map<Filepath, Guid> m_path_to_guid_mapping;
 		std::unique_ptr<AssetNode> m_asset_tree_root;
+
+		void track_loaded_asset(Guid const& guid, AssetBase* asset);
 
 		void insert_asset_node(AssetMeta const& meta);
 		void remove_asset_node(AssetMeta const& meta);

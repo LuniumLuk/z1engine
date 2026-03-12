@@ -27,6 +27,7 @@ namespace z1 {
 		m_guid_registry.clear();
 		m_guid_to_file_mapping.clear();
 		m_path_to_guid_mapping.clear();
+		m_loaded_assets.clear();
 		m_asset_tree_root = std::make_unique<AssetNode>();
 
 		{
@@ -171,6 +172,7 @@ namespace z1 {
 		m_asset_metas.erase(it);
 		m_guid_to_file_mapping.erase(guid);
 		m_path_to_guid_mapping.erase(meta.path);
+		m_loaded_assets.erase(guid);
 
 		return true;
 	}
@@ -254,7 +256,15 @@ namespace z1 {
 			return move_file(source, destination);
 		};
 
-		for (auto const& suffix : { std::string(""), std::string(".bin"), std::string(".yaml"), std::string(".meta.yaml") }) {
+		YAML::Node node = YAML::LoadFile((old_base.concat(".yaml")).string());
+		node["meta"]["path"] = normalized.generic_string();
+
+		for (auto const& suffix : {
+			std::string(""),
+			std::string(".bin"),
+			std::string(".yaml"),
+			std::string(".glsl"),
+			std::string(".meta.yaml") }) {
 			if (!move_with_suffix(suffix)) {
 				rollback();
 				return false;
@@ -266,10 +276,7 @@ namespace z1 {
 		yaml_file.replace_extension(".yaml");
 
 		YAML::Emitter emitter;
-		emitter << YAML::BeginMap;
-		emitter << YAML::Key << "meta" << YAML::Value << meta;
-		emitter << YAML::EndMap;
-
+		emitter << node;
 		if (!save_yaml(yaml_file, emitter)) {
 			meta.path = old_meta.path;
 			rollback();
@@ -283,6 +290,10 @@ namespace z1 {
 		m_guid_to_file_mapping[guid] = new_base;
 
 		insert_asset_node(meta);
+
+		if (auto* loaded_asset = get_loaded_asset(guid)) {
+			loaded_asset->m_meta.path = normalized;
+		}
 
 		// TODO: update meta in instance if it's currently loaded in memory
 
@@ -417,6 +428,23 @@ namespace z1 {
 			else {
 				break;
 			}
+		}
+	}
+
+	AssetBase* AssetManager::get_loaded_asset(Guid const& guid) const {
+		auto it = m_loaded_assets.find(guid);
+		if (it == m_loaded_assets.end()) {
+			return nullptr;
+		}
+		return it->second;
+	}
+
+	void AssetManager::track_loaded_asset(Guid const& guid, AssetBase* asset) {
+		if (asset) {
+			m_loaded_assets[guid] = asset;
+		}
+		else {
+			m_loaded_assets.erase(guid);
 		}
 	}
 
