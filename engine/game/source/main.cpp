@@ -19,13 +19,25 @@ struct EditorApp : Application {
 	};
 };
 
+LogLevel get_log_level(std::string const& level) {
+	if (level == "trace") return LogLevel::Trace;
+	if (level == "debug") return LogLevel::Debug;
+	if (level == "info") return LogLevel::Info;
+	if (level == "warn") return LogLevel::Warn;
+	if (level == "error") return LogLevel::Error;
+	if (level == "critical") return LogLevel::Critical;
+	return LogLevel::Info;
+}
+
 int main(int argc, char* argv[]) {
 	auto start = std::chrono::high_resolution_clock::now();
 	CLIENT_INFO("welcome to my sekai ... ^_^");
 
 	g_args.parse(argc, argv);
-	g_runtime_context.m_logger->set_core_log_level(LogLevel::Info);
-	g_runtime_context.m_logger->set_client_log_level(LogLevel::Info);
+
+	auto log_level = get_log_level(g_args.get<std::string>("log-level", "info"));
+	g_runtime_context.m_logger->set_core_log_level(log_level);
+	g_runtime_context.m_logger->set_client_log_level(log_level);
 
 	Application* app = nullptr;
 	if (g_args.get<bool>("game", false)) {

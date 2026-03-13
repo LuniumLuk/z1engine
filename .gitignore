@@ -448,3 +448,5 @@ screenshot*
 
 editor_settings.yaml
 profile*.json
+
+*.args.json

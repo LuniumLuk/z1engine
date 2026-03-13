@@ -10,6 +10,8 @@ namespace z1 {
 		switch (format) {
 		case ImageFormat::RGBA8: return GL_RGBA8;
 		case ImageFormat::RGBA32F: return GL_RGBA32F;
+		case ImageFormat::RGB16F: return GL_RGB16F;
+		case ImageFormat::RG16F: return GL_RG16F;
 		case ImageFormat::Depth: return GL_DEPTH_COMPONENT24;
 		case ImageFormat::DepthStencil: return GL_DEPTH24_STENCIL8;
 		}
@@ -21,6 +23,8 @@ namespace z1 {
 		switch (format) {
 		case ImageFormat::RGBA8: return GL_RGBA;
 		case ImageFormat::RGBA32F: return GL_RGBA;
+		case ImageFormat::RGB16F: return GL_RGB;
+		case ImageFormat::RG16F: return GL_RG;
 		case ImageFormat::Depth: return GL_DEPTH_COMPONENT;
 		case ImageFormat::DepthStencil: return GL_DEPTH_STENCIL;
 		}
@@ -32,6 +36,8 @@ namespace z1 {
 		switch (format) {
 		case ImageFormat::RGBA8: return GL_UNSIGNED_BYTE;
 		case ImageFormat::RGBA32F: return GL_FLOAT;
+		case ImageFormat::RGB16F: return GL_FLOAT;
+		case ImageFormat::RG16F: return GL_FLOAT;
 		case ImageFormat::Depth: return GL_FLOAT;
 		case ImageFormat::DepthStencil: return GL_UNSIGNED_INT_24_8;
 		}
@@ -72,6 +78,8 @@ namespace z1 {
 		switch (format) {
 		case ImageFormat::RGBA8: return 4;
 		case ImageFormat::RGBA32F: return 16;
+		case ImageFormat::RGB16F: return 6;
+		case ImageFormat::RG16F: return 4;
 		case ImageFormat::Depth: return 3;
 		case ImageFormat::DepthStencil: return 4;
 		}

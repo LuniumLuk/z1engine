@@ -35,8 +35,13 @@ void GameLayer::on_update(float delta_time) {
 		return;
 
 	g_runtime_context.m_scene->on_update(delta_time);
-	g_runtime_context.m_renderer_forward->draw(
-		g_runtime_context.m_scene, g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
+	if (g_runtime_context.m_global->render_mode == RenderMode::Deferred) {
+		g_runtime_context.m_renderer_deferred->draw(
+			g_runtime_context.m_scene, g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
+	} else {
+		g_runtime_context.m_renderer_forward->draw(
+			g_runtime_context.m_scene, g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
+	}
 }
 
 void GameLayer::on_event(Event& event) {

@@ -44,6 +44,7 @@
 #include "render/framebuffer.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
+#include "render/renderer/renderer_deferred.h"
 
 #include "python/python_script.h"
 

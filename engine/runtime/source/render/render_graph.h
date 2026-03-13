@@ -23,6 +23,7 @@ namespace z1 {
 			SamplerMode sampler_mode = SamplerMode::Linear,
 			WrapMode wrap_mode = WrapMode::Repeat);
 		RenderGraphNode& set_output(std::shared_ptr<Framebuffer> const& framebuffer);
+		RenderGraphNode& set_passthrough(std::string const& pass_name);
 		RenderGraphNode& set_pass_desc(RenderPass::Description const& desc);
 		RenderGraphNode& depends_on(std::string const& pass_name);
 
@@ -53,6 +54,7 @@ namespace z1 {
 		std::vector<std::string> m_manual_depends;
 		std::unordered_map<std::string, Framebuffer::Attachment> m_output_spec;
 		std::shared_ptr<Framebuffer> m_output;
+		std::string m_passthrough_pass;
 		RenderPass::Description m_pass_desc;
 
 		uint32_t m_width = 0;

@@ -297,7 +297,11 @@ void EditorLayer::on_update(float delta_time) {
 		m_fps_counter = 0;
 	}
 	g_runtime_context.m_scene->on_update(delta_time);
-	g_runtime_context.m_renderer_forward->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
+	if (g_runtime_context.m_global->render_mode == RenderMode::Deferred) {
+		g_runtime_context.m_renderer_deferred->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
+	} else {
+		g_runtime_context.m_renderer_forward->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
+	}
 	//g_runtime_context.m_renderer_2d->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
 	m_picking->render(g_runtime_context.m_scene);
 

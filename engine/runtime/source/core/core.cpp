@@ -14,6 +14,7 @@
 #include "render/render_graph.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
+#include "render/renderer/renderer_deferred.h"
 #include "asset/asset_manager.h"
 #include "3rdparty/imgui_layer.h"
 #include "python/python_layer.h"
@@ -43,6 +44,7 @@ namespace z1 {
 
 		m_renderer_2d = std::make_shared<Renderer2D>();
 		m_renderer_forward = std::make_shared<RendererForward>();
+		m_renderer_deferred = std::make_shared<RendererDeferred>();
 
 		m_global = std::make_shared<GlobalSettings>();
 	}
@@ -57,6 +59,7 @@ namespace z1 {
 		m_window->clear_event_callbacks();
 
 		m_global.reset();
+		m_renderer_deferred.reset();
 		m_renderer_forward.reset();
 		m_renderer_2d.reset();
 

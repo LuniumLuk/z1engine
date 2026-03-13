@@ -11,14 +11,29 @@
 #include "scene/component/sprite.h"
 #include "scene/component/light.h"
 #include "scene/component/animation.h"
-#include "render/renderer/renderer_forward.h"
+#include "render/renderer/renderer_deferred.h"
 #include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
 
 namespace z1 {
 
-	RendererForward::RendererForward() {
+	RendererDeferred::RendererDeferred() {
 		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(Guid::make("material/MI_phone"));
+
+		{
+			Pipeline::Description desc{};
+			desc.depth_test = true;
+			desc.depth_write = true;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/gbuffer");
+			m_pipeline_gbuffer = Pipeline::build(desc);
+		}
+
+		{
+			Pipeline::Description desc{};
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/deferred_lighting");
+			m_pipeline_deferred_lighting = Pipeline::build(desc);
+		}
 
 		{
 			Pipeline::Description desc{};
@@ -29,11 +44,11 @@ namespace z1 {
 		}
 	}
 
-	RendererForward::~RendererForward() {
+	RendererDeferred::~RendererDeferred() {
 
 	}
 
-	void RendererForward::draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer) {
+	void RendererDeferred::draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer) {
 		PROFILE_FUNCTION();
 
 		auto const width = framebuffer->get_width();
@@ -122,7 +137,9 @@ namespace z1 {
 
 		RenderGraph rg;
 		m_shared.add_shadow_pass(rg, scene);
-		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview);
+		add_gbuffer_pass(rg, draw_list, framebuffer);
+		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx);
+		add_forward_transparency_pass(rg, framebuffer, draw_list, scene);
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview);
 		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
 		m_shared.add_bloom_pass(rg, m_shared.m_history_colors[write_idx]);
@@ -136,30 +153,40 @@ namespace z1 {
 		g->prev_projview = projview;
 	}
 
-	void RendererForward::add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview) {
+	// G-buffer pass
+	// Renders opaque + masked geometry to a multi-render-target FBO:
+	//   RT0: position  (RGB16F)
+	//   RT1: normal    (RGB16F)
+	//   RT2: albedo    (RGBA8)
+	//   RT3: metallic-roughness (RG16F)
+	//   DS : depth
+
+	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer) {
 		RenderPass::Description desc;
-		desc.color_attachments.resize(1);
-		desc.color_attachments[0].load_op = LoadOp::Clear;
-		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+		desc.color_attachments.resize(4);
+		for (int i = 0; i < 4; i++) {
+			desc.color_attachments[i].load_op = LoadOp::Clear;
+			desc.color_attachments[i].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+		}
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
 		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
 
-		auto const width = framebuffer->get_width();
-		auto const height = framebuffer->get_height();
-
-		rg.add_pass("main")
+		rg.add_pass("gbuffer")
 			.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
-			.add_output("scene-depth", ImageFormat::Depth)
-			.execute([this, &draw_list, scene, history_uninitialized, read_idx, width, height, projview](RenderGraphNode& node, GraphicsContext& ctx) {
+			.add_output("gbuffer-position", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-normal", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-albedo", ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-metallic-roughness", ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-depth", ImageFormat::Depth)
+			.execute([this, &draw_list](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 
 				m_shared.m_lights_buffer->bind();
 				per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
 
-				// Pass 1: Opaque and Mask
+				// Render opaque and masked geometry only
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
 					item.mesh->m_mesh->draw(per_frame, m_default_material, [](uint32_t flags) {
@@ -178,8 +205,98 @@ namespace z1 {
 						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
 					});
 				}
+			});
+	}
 
-				// Pass 2: Blend
+	// Deferred lighting pass
+	// Fullscreen quad that reads G-buffer + shadow map + lights UBO
+	// and writes lit scene-color.
+
+	void RendererDeferred::add_deferred_lighting_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx) {
+		auto const width = framebuffer->get_width();
+		auto const height = framebuffer->get_height();
+
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::Clear;
+		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
+
+		rg.add_pass("deferred-lighting")
+			.set_resolution_as(framebuffer)
+			.set_pass_desc(desc)
+			.add_input("gbuffer-position")
+			.add_input("gbuffer-normal")
+			.add_input("gbuffer-albedo")
+			.add_input("gbuffer-metallic-roughness")
+			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
+			.add_output("scene-depth", ImageFormat::Depth)
+			.execute([this, history_uninitialized, read_idx, width, height](RenderGraphNode& node, GraphicsContext& ctx) {
+				m_pipeline_deferred_lighting->bind();
+				auto& s = m_pipeline_deferred_lighting->m_shader;
+
+				auto& g = g_runtime_context.m_global;
+				s->set_uniform_block_binding("Global", g->get_binding());
+
+				m_shared.m_lights_buffer->bind();
+				s->set_uniform_block_binding("Lights", m_shared.m_lights_buffer->get_binding());
+
+				// Bind shadow map
+				m_shared.m_shadow_image->bind();
+				s->set_uniform_binding("u_shadow_map", m_shared.m_shadow_image->get_binding());
+
+				// Bind G-buffer textures
+				s->set_uniform_binding("u_gbuffer_position", node.bind_input_index(0));
+				s->set_uniform_binding("u_gbuffer_normal", node.bind_input_index(1));
+				s->set_uniform_binding("u_gbuffer_albedo", node.bind_input_index(2));
+				s->set_uniform_binding("u_gbuffer_metallic_roughness", node.bind_input_index(3));
+
+				m_shared.m_quad->bind();
+				m_shared.m_quad->draw(PrimitiveType::Triangles);
+				m_shared.m_quad->unbind();
+
+				node.unbind_input_index(0);
+				node.unbind_input_index(1);
+				node.unbind_input_index(2);
+				node.unbind_input_index(3);
+				m_shared.m_shadow_image->unbind();
+
+				m_pipeline_deferred_lighting->unbind();
+
+				if (history_uninitialized) {
+					ctx.blit_attachment(
+						node.get_output(),
+						m_shared.m_history_colors[read_idx],
+						0, 0,
+						0, 0,
+						0, 0,
+						width, height);
+				}
+			});
+	}
+
+	// Forward transparency pass
+	// Blended objects cannot be deferred. Render them on top of the
+	// lit scene-color using normal forward shading + skybox.
+
+	void RendererDeferred::add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::Load;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
+
+		rg.add_pass("forward-transparency")
+			.set_resolution_as(framebuffer)
+			.set_pass_desc(desc)
+			.set_passthrough("deferred-lighting")
+			.execute([this, &draw_list, scene](RenderGraphNode& node, GraphicsContext& ctx) {
+				PerFrameConst per_frame{};
+				per_frame.global_binding = g_runtime_context.m_global->get_binding();
+
+				m_shared.m_lights_buffer->bind();
+				per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
+
+				// Render blended geometry
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
 					item.mesh->m_mesh->draw(per_frame, m_default_material, [](uint32_t flags) {
@@ -199,6 +316,7 @@ namespace z1 {
 					});
 				}
 
+				// Skybox
 				auto sky_view = scene->m_registry.view<SkyLightComponent const>();
 				for (auto [entity, sky] : sky_view.each()) {
 					if (sky.m_texture && sky.m_texture->m_image) {
@@ -225,17 +343,7 @@ namespace z1 {
 					}
 					break;
 				}
-
-				if (history_uninitialized) {
-					ctx.blit_attachment(
-						node.get_output(),
-						m_shared.m_history_colors[read_idx],
-						0, 0,
-						0, 0,
-						0, 0,
-						width, height);
-				}
-				});
+			});
 	}
 
 }

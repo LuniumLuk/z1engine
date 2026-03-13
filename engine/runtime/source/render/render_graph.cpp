@@ -43,6 +43,12 @@ namespace z1 {
 		return *this;
 	}
 
+	RenderGraphNode& RenderGraphNode::set_passthrough(std::string const& pass_name) {
+		m_manual_depends.push_back(pass_name);
+		m_passthrough_pass = pass_name;
+		return *this;
+	}
+
 	RenderGraphNode& RenderGraphNode::set_pass_desc(RenderPass::Description const& desc) {
 		m_pass_desc = desc;
 		return *this;
@@ -177,9 +183,10 @@ namespace z1 {
 		// pass #1: build DAG graph of nodes
 		int idx = 0;
 		std::unordered_map<std::string, int> name_to_id;
-		std::unordered_map<std::string, int> output_to_id;
+		std::unordered_map<std::string, std::vector<int>> output_to_ids;
 		for (auto& node : m_nodes) {
 			if (name_to_id.find(node.m_name) != name_to_id.end()) {
+				DEBUG_CHECK(false);
 				CORE_ERROR("RenderGraph: duplicate node name: {} found", node.m_name);
 				return;
 			}
@@ -188,28 +195,42 @@ namespace z1 {
 			// parse outputs
 			uint32_t attachment_idx = 0;
 			for (auto& [output, spec] : node.m_output_spec) {
-				if (output_to_id.find(output) != output_to_id.end()) {
+				if (output_to_ids.find(output) != output_to_ids.end()) {
+					DEBUG_CHECK(false);
 					CORE_ERROR("RenderGraph: duplicate output: {} found, node: {}", output, node.m_name);
 					return;
 				}
-				output_to_id[output] = idx;
+				output_to_ids[output] = { idx };
 				node.m_output_to_attachment_id[output] = attachment_idx;
 				attachment_idx += 1;
 			}
 			idx += 1;
 		}
 
+		// add passthrough nodes to output dependencies
+		for (auto& node : m_nodes) {
+			if (!node.m_passthrough_pass.empty()) {
+				auto const& src_pass = m_nodes[name_to_id[node.m_passthrough_pass]];
+				for (auto& [output, _] : src_pass.m_output_spec) {
+					output_to_ids[output].push_back(name_to_id[node.m_name]);
+				}
+			}
+		}
+
 		for (auto& node : m_nodes) {
 			// parse inputs
 			int input_idx = 0;
 			for (auto& input : node.m_inputs) {
-				if (output_to_id.find(input) == output_to_id.end()) {
+				if (output_to_ids.find(input) == output_to_ids.end()) {
+					DEBUG_CHECK(false);
 					CORE_ERROR("RenderGraph: input: {} not found, node: {}", input, node.m_name);
 					return;
 				}
-				node.m_depends.insert(output_to_id[input]);
+				for (int src_node_id : output_to_ids[input]) {
+					node.m_depends.insert(src_node_id);
+				}
 
-				int src_node_id = output_to_id[input];
+				int src_node_id = output_to_ids[input][0];
 				int attachment_id = m_nodes[src_node_id].m_output_to_attachment_id[input];
 				node.m_inputs_by_index[input_idx] = std::make_pair(&m_nodes[src_node_id], attachment_id);
 				node.m_inputs_by_name[input] = std::make_pair(&m_nodes[src_node_id], attachment_id);
@@ -220,6 +241,7 @@ namespace z1 {
 			// manual dependencies
 			for (auto& dep : node.m_manual_depends) {
 				if (name_to_id.find(dep) == name_to_id.end()) {
+					DEBUG_CHECK(false);
 					CORE_ERROR("RenderGraph: dependency: {} not found, node: {}", dep, node.m_name);
 					return;
 				}
@@ -237,12 +259,19 @@ namespace z1 {
 			if (node.m_output)
 				continue;
 
+			if (!node.m_passthrough_pass.empty()) {
+				// passthrought: inherit output from another node
+				continue;
+			}
+
 			if (node.m_width == 0 || node.m_height == 0) {
+				DEBUG_CHECK(false);
 				CORE_ERROR("RenderGraph: invalid resolution: {}x{}, node: {}", node.m_width, node.m_height, node.m_name);
 				return;
 			}
 
 			if (node.m_output_spec.empty()) {
+				DEBUG_CHECK(false);
 				CORE_ERROR("RenderGraph: output spec not specified, node: {}", node.m_name);
 				return;
 			}
@@ -266,6 +295,14 @@ namespace z1 {
 
 			node.m_output = Framebuffer::create(node.m_width, node.m_height, attachments);
 			s_cached_framebuffers[node.m_name] = node.m_output;
+		}
+
+		// pass #4: handle passthrough
+		for (auto& node : m_nodes) {
+			if (!node.m_passthrough_pass.empty()) {
+				// passthrought: inherit output from another node
+				node.m_output = m_nodes[name_to_id[node.m_passthrough_pass]].m_output;
+			}
 		}
 
 		// pass #4: build render passes and update w/h

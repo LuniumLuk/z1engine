@@ -8,6 +8,8 @@ namespace z1 {
 		switch (format) {
 		case ImageFormat::RGBA8:
 		case ImageFormat::RGBA32F:
+		case ImageFormat::RGB16F:
+		case ImageFormat::RG16F:
 			return GL_COLOR_ATTACHMENT0 + binding;
 		case ImageFormat::Depth:
 			return GL_DEPTH_ATTACHMENT;
@@ -84,6 +86,8 @@ namespace z1 {
 			switch (attachment.format) {
 			case ImageFormat::RGBA8:
 			case ImageFormat::RGBA32F:
+			case ImageFormat::RGB16F:
+			case ImageFormat::RG16F:
 				binding++;
 				break;
 			case ImageFormat::Depth:

@@ -8,6 +8,14 @@ namespace z1 {
 	struct Scene;
 	struct UniformBuffer;
 
+	enum struct API RenderMode : int {
+		Forward = 0,
+		Deferred = 1,
+	};
+
+	REFLECT_ENUM(RenderMode, Forward)
+	REFLECT_ENUM(RenderMode, Deferred)
+
 	REFLECTED_STRUCT(GlobalSettings) {
 
 		GlobalSettings();
@@ -43,6 +51,8 @@ namespace z1 {
 		bool      anim_enabled          = true;
 		// Scripting
 		bool      script_enabled        = false;
+		// Render mode
+		RenderMode render_mode          = RenderMode::Deferred;
 
 		// Post-processing Volume support
 		void set_override_postprocess(
@@ -120,5 +130,6 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, sm_ortho_size,         FF_Default, "group=shadow")
 	REFLECTED_FIELD(GlobalSettings, anim_enabled,          FF_Default, "group=system")
 	REFLECTED_FIELD(GlobalSettings, script_enabled,        FF_Default, "group=system")
+	REFLECTED_FIELD(GlobalSettings, render_mode,           FF_Default, "group=system")
 
 }

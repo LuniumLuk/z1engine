@@ -40,6 +40,7 @@ namespace z1 {
 	struct AssetManager;
 	struct Renderer2D;
 	struct RendererForward;
+	struct RendererDeferred;
 	struct GlobalSettings;
 	struct Scene;
 
@@ -61,6 +62,7 @@ namespace z1 {
 		std::shared_ptr<AssetManager> m_asset_manager;
 		std::shared_ptr<Renderer2D> m_renderer_2d;
 		std::shared_ptr<RendererForward> m_renderer_forward;
+		std::shared_ptr<RendererDeferred> m_renderer_deferred;
 		std::shared_ptr<GlobalSettings> m_global;
 		std::shared_ptr<Scene> m_scene;
 

@@ -34,6 +34,8 @@ namespace z1 {
 	X(None)             \
 	X(RGBA8)            \
 	X(RGBA32F)          \
+	X(RGB16F)           \
+	X(RG16F)            \
 	X(Depth)            \
 	X(DepthStencil)     \
 
