@@ -1,0 +1,22 @@
+entities:
+  - name: Colored Sprite
+    id: 1
+    transform:
+      location: [0, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [2, 2, 1]
+    sprite:
+      color: [1, 0.5, 0.2, 1]
+      texture: texture/T_white
+      tiling_scale: [1, 1]
+      tiling_offset: [0, 0]
+      texcoords:
+        - [0, 0]
+        - [1, 0]
+        - [1, 1]
+        - [0, 1]
+meta:
+  guid: b2c3d4e5-f6a5-4b9c-8d7e-6f5a4b3c2d1e
+  type: prefab
+  path: prefab/ColoredSprite.prefab
+  extra: ~

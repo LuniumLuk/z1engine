@@ -1,0 +1,37 @@
+entities:
+  - name: Smoke Particles
+    id: 1
+    transform:
+      location: [0, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+    particle:
+      max_particles: 300
+      emission_rate: 60
+      burst_count: 0
+      lifetime: [2, 4]
+      initial_speed: [0.5, 1.5]
+      direction: [0, 1, 0]
+      direction_spread: 0.8
+      gravity: [0, 0.5, 0]
+      damping: 0.05
+      initial_size: [0.1, 0.2]
+      size_over_life: [0.5, 1.5]
+      initial_color: [0.5, 0.5, 0.5, 0.6]
+      end_color: [0.5, 0.5, 0.5, 0]
+      texture: ~
+      blend_mode: 0
+      emitter_shape: 1
+      shape_radius: 0.15
+      shape_extents: [0.15, 0.15, 0.15]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: true
+      initial_rotation: [0, 360]
+      rotation_speed: [30, 90]
+meta:
+  guid: 10000003-0000-0000-0000-000000000003
+  type: prefab
+  path: prefab/SmokeParticles.prefab
+  extra: ~

@@ -12,6 +12,7 @@
 #include "scene/component/light.h"
 #include "scene/component/animation.h"
 #include "render/renderer/renderer_forward.h"
+#include "render/renderer/particle_renderer.h"
 #include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -27,6 +28,9 @@ namespace z1 {
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/skybox");
 			m_pipeline_skybox = Pipeline::build(desc);
 		}
+
+		// Initialize particle renderer
+		m_particle_renderer.init();
 	}
 
 	RendererForward::~RendererForward() {
@@ -123,6 +127,7 @@ namespace z1 {
 		RenderGraph rg;
 		m_shared.add_shadow_pass(rg, scene);
 		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview);
+		m_particle_renderer.add_particle_pass(rg, scene.get(), "main");
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview);
 		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
 		m_shared.add_bloom_pass(rg, m_shared.m_history_colors[write_idx]);

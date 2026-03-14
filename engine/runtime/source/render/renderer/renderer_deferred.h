@@ -1,6 +1,7 @@
 #pragma once
 
 #include "render/renderer/render_shared.h"
+#include "render/renderer/particle_renderer.h"
 
 namespace z1 {
 
@@ -20,6 +21,7 @@ namespace z1 {
 		void add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene);
 
 		RenderShared m_shared;
+		ParticleRenderer m_particle_renderer;
 		std::shared_ptr<MaterialInstance> m_default_material;
 		std::shared_ptr<Pipeline> m_pipeline_deferred_lighting;
 		std::shared_ptr<Pipeline> m_pipeline_skybox;

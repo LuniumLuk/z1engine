@@ -13,6 +13,7 @@
 #include "scene/component/light.h"
 #include "scene/component/animation.h"
 #include "render/renderer/renderer_deferred.h"
+#include "render/renderer/particle_renderer.h"
 #include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -35,6 +36,9 @@ namespace z1 {
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/deferred_skybox");
 			m_pipeline_skybox = Pipeline::build(desc);
 		}
+
+		// Initialize particle renderer
+		m_particle_renderer.init();
 	}
 
 	RendererDeferred::~RendererDeferred() {
@@ -133,6 +137,7 @@ namespace z1 {
 		add_gbuffer_pass(rg, draw_list, framebuffer, scene);
 		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx);
 		add_forward_transparency_pass(rg, framebuffer, draw_list, scene);
+		m_particle_renderer.add_particle_pass(rg, scene.get(), "forward-transparency");
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview);
 		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
 		m_shared.add_bloom_pass(rg, m_shared.m_history_colors[write_idx]);
