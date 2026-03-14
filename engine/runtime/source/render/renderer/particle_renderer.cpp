@@ -193,7 +193,7 @@ namespace z1 {
 
 					// Draw instanced: shared quad VAO + per-particle instance buffer
 					m_quad_vao->bind();
-					m_quad_vao->draw_instanced(PrimitiveType::Triangles, static_cast<uint32_t>(instances.size()), pc.m_runtime.m_vbo, 0, 1);
+					m_quad_vao->draw_instanced(PrimitiveType::Triangles, static_cast<uint32_t>(instances.size()), pc.m_runtime.m_vbo, 2, 1);
 					m_quad_vao->unbind();
 
 					// Unbind resources

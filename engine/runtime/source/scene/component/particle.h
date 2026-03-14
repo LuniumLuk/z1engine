@@ -22,6 +22,16 @@ namespace z1 {
 		Cone
 	};
 
+	// Reflect enums
+	REFLECT_ENUM(ParticleBlendMode, Alpha)
+	REFLECT_ENUM(ParticleBlendMode, Additive)
+	REFLECT_ENUM(ParticleBlendMode, Soft)
+
+	REFLECT_ENUM(EmitterShape, Point)
+	REFLECT_ENUM(EmitterShape, Sphere)
+	REFLECT_ENUM(EmitterShape, Box)
+	REFLECT_ENUM(EmitterShape, Cone)
+
 	struct Particle {
 		glm::vec3 position;
 		glm::vec3 velocity;
@@ -105,15 +115,5 @@ namespace z1 {
 	REFLECTED_FIELD(ParticleComponent, m_sort_by_depth,      FF_Default)
 	REFLECTED_FIELD(ParticleComponent, m_initial_rotation,   FF_Default, "[drag]")
 	REFLECTED_FIELD(ParticleComponent, m_rotation_speed,     FF_Default, "[drag]")
-
-	// Reflect enums
-	REFLECT_ENUM(ParticleBlendMode, Alpha)
-	REFLECT_ENUM(ParticleBlendMode, Additive)
-	REFLECT_ENUM(ParticleBlendMode, Soft)
-
-	REFLECT_ENUM(EmitterShape, Point)
-	REFLECT_ENUM(EmitterShape, Sphere)
-	REFLECT_ENUM(EmitterShape, Box)
-	REFLECT_ENUM(EmitterShape, Cone)
 
 }
