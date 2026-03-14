@@ -5,20 +5,82 @@
 #include <vector>
 #include <regex>
 #include <filesystem>
+#include <map>
 
 // Include GLAD and GLFW
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-// Macros replacement
-#define CORE_ERROR(...) { printf("ERROR: "); printf(__VA_ARGS__); printf("\n"); }
-#define CORE_WARN(...)  { printf("WARN:  "); printf(__VA_ARGS__); printf("\n"); }
-#define CORE_INFO(...)  { printf("INFO:  "); printf(__VA_ARGS__); printf("\n"); }
+// Macros replacement - with better formatting
+#define COLOR_RED     "\033[31m"
+#define COLOR_YELLOW  "\033[33m"
+#define COLOR_GREEN   "\033[32m"
+#define COLOR_CYAN    "\033[36m"
+#define COLOR_RESET   "\033[0m"
+#define COLOR_BOLD    "\033[1m"
+
+#define CORE_ERROR(...) { printf(COLOR_RED "[ERROR] " COLOR_RESET); printf(__VA_ARGS__); printf("\n"); }
+#define CORE_WARN(...)  { printf(COLOR_YELLOW "[WARN]  " COLOR_RESET); printf(__VA_ARGS__); printf("\n"); }
+#define CORE_INFO(...)  { printf(COLOR_CYAN "[INFO]  " COLOR_RESET); printf(__VA_ARGS__); printf("\n"); }
+#define CORE_SUCCESS(...) { printf(COLOR_GREEN COLOR_BOLD "[OK]    " COLOR_RESET); printf(__VA_ARGS__); printf("\n"); }
 #define PROFILE_FUNCTION()
 #define PROFILE_SCOPE(x)
 
 // Namespace alias
 namespace fs = std::filesystem;
+
+// Error collection
+struct ErrorInfo {
+	std::string file;
+	std::string variant;
+	std::string stage;
+	std::string message;
+};
+
+static std::vector<ErrorInfo> g_errors;
+
+// Add error to collection
+void add_error(const std::string& file, const std::string& variant, const std::string& stage, const std::string& message) {
+	g_errors.push_back({file, variant, stage, message});
+}
+
+// Print all collected errors in a formatted summary
+void print_error_summary() {
+	if (g_errors.empty()) {
+		return;
+	}
+
+	printf("\n");
+	printf("====================================================\n");
+	printf("                  COMPILATION ERRORS               \n");
+	printf("====================================================\n");
+	printf("\n");
+
+	// Group errors by file
+	std::map<std::string, std::vector<ErrorInfo>> errors_by_file;
+	for (const auto& err : g_errors) {
+		errors_by_file[err.file].push_back(err);
+	}
+
+	int error_count = 1;
+	for (const auto& [file, errors] : errors_by_file) {
+		printf(COLOR_RED "[FILE] %s" COLOR_RESET "\n", file.c_str());
+		for (const auto& err : errors) {
+			printf("  " COLOR_RED "[Error %d]" COLOR_RESET, error_count++);
+			if (!err.variant.empty()) {
+				printf(" Variant: %s", err.variant.c_str());
+			}
+			if (!err.stage.empty()) {
+				printf(" | Stage: %s", err.stage.c_str());
+			}
+			printf("\n");
+			printf("    %s\n", err.message.c_str());
+			printf("\n");
+		}
+	}
+
+	printf("Total errors: %zu\n\n", g_errors.size());
+}
 
 // ----------------------------------------------------------------------------
 // Utilities from string_utils.h
@@ -119,7 +181,7 @@ static Stage str_to_shader_stage(std::string const& stage) {
 	return Stage::None;
 }
 
-bool compile_shader_module(Stage stage, std::string const& src, GLuint& out_handle) {
+bool compile_shader_module(Stage stage, std::string const& src, GLuint& out_handle, const std::string& file = "", const std::string& variant = "", const std::string& stage_name = "") {
 	out_handle = glCreateShader(shader_stage_to_opengl_type(stage));
 	const char* src_data = src.data();
 	glShaderSource(out_handle, 1, &src_data, nullptr);
@@ -131,13 +193,19 @@ bool compile_shader_module(Stage stage, std::string const& src, GLuint& out_hand
 	if (!success) {
 		glGetShaderInfoLog(out_handle, 2048, nullptr, info_log);
 		CORE_ERROR("Shader Compilation Failed:\n%s", info_log);
+
+		// Collect error
+		if (!file.empty()) {
+			add_error(file, variant, stage_name, info_log);
+		}
+
 		glDeleteShader(out_handle);
 		return false;
 	}
 	return true;
 }
 
-bool link_program(const std::vector<GLuint>& shaders, GLuint& out_program) {
+bool link_program(const std::vector<GLuint>& shaders, GLuint& out_program, const std::string& file = "", const std::string& variant = "") {
 	out_program = glCreateProgram();
 	for (auto shader : shaders) {
 		glAttachShader(out_program, shader);
@@ -150,6 +218,12 @@ bool link_program(const std::vector<GLuint>& shaders, GLuint& out_program) {
 	if (!success) {
 		glGetProgramInfoLog(out_program, 2048, NULL, info_log);
 		CORE_ERROR("Program Linking Failed:\n%s", info_log);
+
+		// Collect error
+		if (!file.empty()) {
+			add_error(file, variant, "linking", info_log);
+		}
+
 		glDeleteProgram(out_program);
 		return false;
 	}
@@ -157,10 +231,15 @@ bool link_program(const std::vector<GLuint>& shaders, GLuint& out_program) {
 }
 
 bool validate_shader_file(fs::path const& path) {
-	CORE_INFO("Validating: %s", path.string().c_str());
+	printf("\n");
+	CORE_INFO("Validating shader: %s", path.string().c_str());
+	printf("  [FILE] %s\n", path.filename().string().c_str());
 
 	std::string code = read_file(path);
-	if (code.empty()) return false;
+	if (code.empty()) {
+		CORE_ERROR("Failed to read file or file is empty");
+		return false;
+	}
 
 	const char* uniform_token = "@uniforms:";
 	const char* stage_token = "@stage:";
@@ -205,6 +284,16 @@ bool validate_shader_file(fs::path const& path) {
 	size_t num_variants = variant_names.size();
 	size_t num_combos = 1u << num_variants; // 2^N
 
+	if (num_variants > 0) {
+		printf("  [VARIANTS] %zu (testing %zu combinations)\n", num_variants, num_combos);
+		printf("    Variant names: ");
+		for (size_t i = 0; i < variant_names.size(); ++i) {
+			if (i > 0) printf(", ");
+			printf("%s", variant_names[i].c_str());
+		}
+		printf("\n");
+	}
+
 	bool all_success = true;
 
 	for (size_t combo = 0; combo < num_combos; ++combo) {
@@ -222,7 +311,7 @@ bool validate_shader_file(fs::path const& path) {
 			}
 		}
 
-		CORE_INFO("  Variant combo [%zu/%zu]: %s", combo, num_combos - 1, combo_label.c_str());
+		printf("  [%zu/%zu] Testing variant: %s\n", combo + 1, num_combos, combo_label.c_str());
 
 		// Prepend variant defines to uniforms
 		std::string full_uniforms = variant_defines + uniforms;
@@ -250,6 +339,7 @@ bool validate_shader_file(fs::path const& path) {
 			auto src = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
 			src = full_uniforms + src;
 			src = process_includes(src, path.parent_path().string() + "/");
+			src = "#version 460 core\n" + src;
 
 			Stage stage = str_to_shader_stage(type);
 			if (stage == Stage::None) {
@@ -257,10 +347,11 @@ bool validate_shader_file(fs::path const& path) {
 				combo_success = false;
 			} else {
 				GLuint handle = 0;
-				if (compile_shader_module(stage, src, handle)) {
+				if (compile_shader_module(stage, src, handle, path.filename().string(), combo_label, type)) {
+					printf("      [OK] %s shader compiled successfully\n", type.c_str());
 					shader_handles.push_back(handle);
 				} else {
-					CORE_ERROR("  Failed to compile stage '%s' for variant: %s", type.c_str(), combo_label.c_str());
+					CORE_ERROR("  Failed to compile %s stage for variant: %s", type.c_str(), combo_label.c_str());
 					combo_success = false;
 				}
 			}
@@ -276,8 +367,8 @@ bool validate_shader_file(fs::path const& path) {
 
 		GLuint program = 0;
 		if (combo_success) {
-			if (link_program(shader_handles, program)) {
-				CORE_INFO("  OK: variant [%s] validated.", combo_label.c_str());
+			if (link_program(shader_handles, program, path.filename().string(), combo_label)) {
+				printf("      [OK] Program linked successfully\n");
 			} else {
 				CORE_ERROR("  Failed to link variant: %s", combo_label.c_str());
 				combo_success = false;
@@ -295,9 +386,9 @@ bool validate_shader_file(fs::path const& path) {
 
 	if (all_success) {
 		if (num_variants > 0) {
-			CORE_INFO("SUCCESS: All %zu variant combinations validated.", num_combos);
+			CORE_SUCCESS("All %zu variant combinations validated successfully!", num_combos);
 		} else {
-			CORE_INFO("SUCCESS: Shader validated successfully.");
+			CORE_SUCCESS("Shader validated successfully!");
 		}
 	}
 
@@ -332,22 +423,54 @@ int main(int argc, char** argv) {
 
 	bool success = true;
 	if (argc < 2) {
-		std::cout << "Usage: shader_validator <path_to_shader_file>" << std::endl;
-		std::cout << "Now scan all shader files under engine/content/shader/ and validate them:" << std::endl;
-		std::cout << std::endl;
+		printf("\n");
+		printf("====================================================\n");
+		printf("     SHADER VALIDATOR - Batch Mode                  \n");
+		printf("====================================================\n");
+		printf("Scanning all shader files under engine/content/shader/\n");
+		printf("\n");
+
+		int total_files = 0;
+		int failed_files = 0;
 
 		fs::path shader_dir = "engine/content/shader/";
-		fs::path exclude_dir = "engine/content/shader/include/";
+		fs::path exclude_dir = "include";
 		for (const auto& entry : fs::recursive_directory_iterator(shader_dir, fs::directory_options::skip_permission_denied)) {
 			if (entry.is_regular_file() && entry.path().extension() == ".glsl" && entry.path().string().find(exclude_dir.string()) == std::string::npos) {
+				total_files++;
 				bool file_success = validate_shader_file(entry.path());
+				if (!file_success) failed_files++;
 				success = success && file_success;
-				std::cout << std::endl;
 			}
 		}
+
+		printf("\n");
+		printf("====================================================\n");
+		printf("                   VALIDATION SUMMARY               \n");
+		printf("====================================================\n");
+		printf("Total files:   %d\n", total_files);
+		printf("Failed files:  %d\n", failed_files);
+		printf("Passed files:  %d\n", total_files - failed_files);
+		if (success) {
+			CORE_SUCCESS("All shader files validated successfully!");
+		} else {
+			CORE_ERROR("Some shader files failed validation");
+		}
+		printf("\n");
+
+		// Print detailed errors at the end
+		print_error_summary();
 	}
 	else {
-		bool success = validate_shader_file(argv[1]);
+		printf("\n");
+		printf("====================================================\n");
+		printf("     SHADER VALIDATOR - Single File Mode            \n");
+		printf("====================================================\n");
+		success = validate_shader_file(argv[1]);
+		printf("\n");
+
+		// Print detailed errors at the end
+		print_error_summary();
 	}
 
 	glfwDestroyWindow(window);

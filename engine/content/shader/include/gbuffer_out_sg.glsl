@@ -42,7 +42,7 @@ void main() {
 	float specular_lum = dot(specular_color, vec3(0.2126, 0.7152, 0.0722));
 	float diffuse_lum = dot(base_color, vec3(0.2126, 0.7152, 0.0722));
 	float metallic = clamp(specular_lum / (specular_lum + diffuse_lum + 0.001), 0.0, 1.0);
-	vec3 emissive = texture(s_emissive, get_uv(u_emissive_uv_set)).rgb;
+	vec3 emissive = texture(s_emissive, get_uv_sg(u_emissive_uv_set)).rgb;
 	emissive = pow(emissive, vec3(2.2)) * u_emissive_factor;
 
 	// Write G-buffer
