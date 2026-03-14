@@ -50,10 +50,10 @@ The deferred renderer reuses all shared infrastructure and adds:
 ### 5. New Shaders
 
 Under `engine/content/shader/`:
-- **`gbuffer.glsl`** -- G-buffer generation shader. Vertex stage reuses `#include <common/vert.glslh>`. Fragment stage writes to multiple render targets (position, normal, albedo, metallic-roughness) instead of computing lighting. Handles alpha mask discard via existing `u_alpha_mode`/`u_alpha_cutoff` uniforms.
-- **`deferred_lighting.glsl`** -- Deferred lighting shader. Vertex stage uses `#include <common/quad.glslh>`. Fragment stage samples G-buffer textures, then computes lighting reusing functions from `common/lighting.glslh` (`calculate_pbr_illumination`, `phone_shading`, `get_shadow`).
+- **`gbuffer.glsl`** -- G-buffer generation shader. Vertex stage reuses `#include <include/vert.glsl>`. Fragment stage writes to multiple render targets (position, normal, albedo, metallic-roughness) instead of computing lighting. Handles alpha mask discard via existing `u_alpha_mode`/`u_alpha_cutoff` uniforms.
+- **`deferred_lighting.glsl`** -- Deferred lighting shader. Vertex stage uses `#include <include/quad.glsl>`. Fragment stage samples G-buffer textures, then computes lighting reusing functions from `include/lighting.glsl` (`calculate_pbr_illumination`, `phone_shading`, `get_shadow`).
 
-Existing shared shader headers (`common/uniforms.glslh`, `common/lighting.glslh`, `common/vert.glslh`, `common/quad.glslh`) are reused without modification.
+Existing shared shader headers (`include/uniforms.glsl`, `include/lighting.glsl`, `include/vert.glsl`, `include/quad.glsl`) are reused without modification.
 
 ### 6. Pipeline Mode Selection
 
@@ -82,8 +82,8 @@ engine/runtime/source/render/
 engine/content/shader/
   gbuffer.glsl                   -- G-buffer generation
   deferred_lighting.glsl         -- deferred lighting pass
-  common/
-    lighting.glslh               -- unchanged, reused by deferred_lighting.glsl
+  include/
+    lighting.glsl               -- unchanged, reused by deferred_lighting.glsl
     ...                          -- unchanged
 ```
 

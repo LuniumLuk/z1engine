@@ -1,11 +1,11 @@
 @uniforms: {
-	#include <common/uniforms.glslh>
+	#include <include/uniforms.glsl>
 
 	layout(location = 0) uniform sampler2D u_scene;
 	layout(location = 1) uniform sampler2D u_bloom_texture;
 }
 @stage: vert {
-	#include <common/quad.glslh>
+	#include <include/quad.glsl>
 }
 @stage: frag {
 	layout(location = 0) out vec4 frag_color;

@@ -1,15 +1,15 @@
 // RETIRED: This standalone G-buffer shader is no longer used.
 // G-buffer output is now a variant of each surface shader (pbr.glsl, pbr_sg.glsl,
-// phone.glsl, unlit.glsl) via #ifdef VARIANT_GBUFFER and common/gbuffer_out*.glslh.
+// phone.glsl, unlit.glsl) via #ifdef VARIANT_GBUFFER and include/gbuffer_out*.glsl.
 // Kept as reference only.
 
 @uniforms: {
-	#include <common/uniforms.glslh>
-	#include <common/pbr_uniforms.glslh>
+	#include <include/uniforms.glsl>
+	#include <include/pbr_uniforms.glsl>
 }
 @reflections: {
-	#include <common/reflections.glslh>
-	#include <common/pbr_reflections.glslh>
+	#include <include/reflections.glsl>
+	#include <include/pbr_reflections.glsl>
 
 	s_base_color                = sampler2D texture/T_white
 	u_base_color_uv_set         = int 0
@@ -21,10 +21,10 @@
 	u_roughness_factor          = float 0.5
 }
 @stage: vert {
-	#include <common/vert.glslh>
+	#include <include/vert.glsl>
 }
 @stage: frag {
-	#include <common/frag_attrs.glslh>
+	#include <include/frag_attrs.glsl>
 
 	// G-buffer MRT outputs (frag_color is RT0 from frag_attrs at location 0)
 	layout(location = 1) out vec4 gbuffer_normal;

@@ -14,7 +14,7 @@ This task involves adding a Bloom post-processing effect to the `RendererForward
 - `engine/runtime/source/render/global.h`: Add bloom parameters to `GlobalSettings`.
 - `engine/runtime/source/render/renderer/renderer_forward.h`: Add bloom pipelines and textures.
 - `engine/runtime/source/render/renderer/renderer_forward.cpp`: Implement bloom pass logic.
-- `engine/content/shader/common/uniforms.glsl`: Update Global uniform block.
+- `engine/content/shader/include/uniforms.glsl`: Update Global uniform block.
 - `engine/content/shader/postprocessing.glsl`: Composite bloom result.
 
 **New Files:**
@@ -31,7 +31,7 @@ This task involves adding a Bloom post-processing effect to the `RendererForward
     -   `float pp_bloom_knee`
 -   Update `GlobalConstants` alignment structure.
 -   Register fields for reflection/UI.
--   Update `common/uniforms.glsl` to match the new layout.
+-   Update `include/uniforms.glsl` to match the new layout.
 
 ### 2.2 Create Shaders
 -   **Downsample Shader (`bloom_downsample.glsl`)**:

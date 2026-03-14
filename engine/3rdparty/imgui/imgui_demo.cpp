@@ -3524,7 +3524,7 @@ static void ShowDemoWindowPopups()
     {
         HelpMarker("\"Context\" functions are simple helpers to associate a Popup to a given Item or Window identifier.");
 
-        // BeginPopupContextItem() is a helper to provide common/simple popup behavior of essentially doing:
+        // BeginPopupContextItem() is a helper to provide include/simple popup behavior of essentially doing:
         //     if (id == 0)
         //         id = GetItemID(); // Use last item id
         //     if (IsItemHovered() && IsMouseReleased(ImGuiMouseButton_Right))

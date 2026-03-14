@@ -2,7 +2,7 @@
 // just include this file in the front of @reflections scope
 // like this:
 // @reflections: {
-//   #include <common/reflections.glslh>
+//   #include <include/reflections.glsl>
 ///  ...
 // }
 

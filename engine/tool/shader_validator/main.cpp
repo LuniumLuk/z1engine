@@ -337,8 +337,9 @@ int main(int argc, char** argv) {
 		std::cout << std::endl;
 
 		fs::path shader_dir = "engine/content/shader/";
+		fs::path exclude_dir = "engine/content/shader/include/";
 		for (const auto& entry : fs::recursive_directory_iterator(shader_dir, fs::directory_options::skip_permission_denied)) {
-			if (entry.is_regular_file() && entry.path().extension() == ".glsl") {
+			if (entry.is_regular_file() && entry.path().extension() == ".glsl" && entry.path().string().find(exclude_dir.string()) == std::string::npos) {
 				bool file_success = validate_shader_file(entry.path());
 				success = success && file_success;
 				std::cout << std::endl;

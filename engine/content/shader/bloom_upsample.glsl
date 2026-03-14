@@ -1,11 +1,11 @@
 @uniforms: {
-	#include <common/uniforms.glslh>
+	#include <include/uniforms.glsl>
 
 	layout(location = 0) uniform sampler2D u_src_texture;
 	layout(location = 1) uniform float u_filter_radius;
 }
 @stage: vert {
-	#include <common/quad.glslh>
+	#include <include/quad.glsl>
 }
 @stage: frag {
 	layout(location = 0) out vec3 upsample;

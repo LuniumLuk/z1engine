@@ -1,11 +1,11 @@
 @uniforms: {
-	#include <common/uniforms.glslh>
+	#include <include/uniforms.glsl>
 #define SPECULAR_GLOSSINESS
-	#include <common/pbr_uniforms.glslh>
+	#include <include/pbr_uniforms.glsl>
 }
 @reflections: {
-	#include <common/reflections.glslh>
-	#include <common/pbr_reflections.glslh>
+	#include <include/reflections.glsl>
+	#include <include/pbr_reflections.glsl>
 
 	s_diffuse                   = sampler2D texture/T_white
 	u_diffuse_factor            = vec4 1.0 1.0 1.0 1.0
@@ -20,21 +20,21 @@
 	VARIANT_VELOCITY
 }
 @stage: vert {
-	#include <common/vert.glslh>
+	#include <include/vert.glsl>
 }
 @stage: frag {
-	#include <common/frag_attrs.glslh>
+	#include <include/frag_attrs.glsl>
 
 #ifdef VARIANT_GBUFFER
-	#include <common/lighting.glslh>
-	#include <common/gbuffer_out_sg.glslh>
+	#include <include/lighting.glsl>
+	#include <include/gbuffer_out_sg.glsl>
 #elif defined(VARIANT_SHADOW)
-	#include <common/shadow_out_sg.glslh>
+	#include <include/shadow_out_sg.glsl>
 #elif defined(VARIANT_VELOCITY)
-	#include <common/velocity_out.glslh>
+	#include <include/velocity_out.glsl>
 #else
-	#include <common/lighting.glslh>
+	#include <include/lighting.glsl>
 #define SPECULAR_GLOSSINESS
-	#include <common/pbr_frag.glslh>
+	#include <include/pbr_frag.glsl>
 #endif
 }

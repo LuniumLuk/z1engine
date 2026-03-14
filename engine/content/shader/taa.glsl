@@ -1,12 +1,12 @@
 @uniforms: {
-	#include <common/uniforms.glslh>
+	#include <include/uniforms.glsl>
 
 	uniform sampler2D u_current_color;
 	uniform sampler2D u_history_color;
 	uniform sampler2D u_velocity;
 }
 @stage: vert {
-	#include <common/quad.glslh>
+	#include <include/quad.glsl>
 }
 @stage: frag {
 	layout(location = 0) in vec2 v_uv;

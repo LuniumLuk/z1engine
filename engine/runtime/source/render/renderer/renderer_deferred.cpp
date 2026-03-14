@@ -156,8 +156,8 @@ namespace z1 {
 
 	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer) {
 		RenderPass::Description desc;
-		desc.color_attachments.resize(4);
-		for (int i = 0; i < 4; i++) {
+		desc.color_attachments.resize(5);
+		for (int i = 0; i < 5; i++) {
 			desc.color_attachments[i].load_op = LoadOp::Clear;
 			desc.color_attachments[i].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
 		}

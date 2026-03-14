@@ -1189,7 +1189,7 @@ void EditorLayer::show_asset_info() {
 		}
 		else if (m_selected_asset->type == "material") {
 			auto mat = g_runtime_context.m_asset_manager->get<Material>(m_selected_asset->guid);
-			ImGui::Text("shader name: %s", mat->m_shader->get_name().c_str());
+			ImGui::Text("shader name: %s", mat->get_shader()->get_name().c_str());
 
 			ImGui::Text("variables");
 			for (auto& [name, var] : mat->m_variables) {
@@ -1227,7 +1227,7 @@ void EditorLayer::show_asset_info() {
 		else if (m_selected_asset->type == "material instance") {
 			auto mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(m_selected_asset->guid);
 			ImGui::Text("parent material: %s", mi->m_material->m_meta.path.generic_string().c_str());
-			ImGui::Text("shader name: %s", mi->m_material->m_shader->get_name().c_str());
+			ImGui::Text("shader name: %s", mi->m_material->get_shader()->get_name().c_str());
 
 			ImGui::Text("override variables");
 			for (auto& [name, var] : mi->m_override_variables) {

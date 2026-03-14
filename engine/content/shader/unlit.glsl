@@ -1,10 +1,10 @@
 @uniforms: {
-	#include <common/uniforms.glslh>
+	#include <include/uniforms.glsl>
 
 	uniform sampler2D s_base_color;
 }
 @reflections: {
-	#include <common/reflections.glslh>
+	#include <include/reflections.glsl>
 
 	s_base_color = sampler2D texture/T_white
 }
@@ -14,17 +14,17 @@
 	VARIANT_VELOCITY
 }
 @stage: vert {
-	#include <common/vert.glslh>
+	#include <include/vert.glsl>
 }
 @stage: frag {
-	#include <common/frag_attrs.glslh>
+	#include <include/frag_attrs.glsl>
 
 #ifdef VARIANT_GBUFFER
-	#include <common/gbuffer_out_unlit.glslh>
+	#include <include/gbuffer_out_unlit.glsl>
 #elif defined(VARIANT_SHADOW)
-	#include <common/shadow_out.glslh>
+	#include <include/shadow_out.glsl>
 #elif defined(VARIANT_VELOCITY)
-	#include <common/velocity_out.glslh>
+	#include <include/velocity_out.glsl>
 #else
 	void main() {
 		frag_color = v_color * texture(s_base_color, v_texcoord0);

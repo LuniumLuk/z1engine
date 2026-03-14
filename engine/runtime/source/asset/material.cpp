@@ -22,13 +22,16 @@ namespace z1 {
 		return DataType::None; // unknown type
 	}
 
-	Material::Material(uint32_t flags, std::shared_ptr<Shader> const& shader)
+	Material::Material(uint32_t flags, Guid const& shader_guid)
 		: m_flags(flags)
-		, m_shader(shader) {
+		, m_shader_guid(shader_guid) {
 
-		for (auto& uniform : m_shader->get_uniforms()) {
-			if (uniform.m_location == INVALID_LOCATION) continue;
-			if (uniform.m_type == DataType::None) continue;
+		auto shader = get_shader();
+		for (auto& uniform : shader->get_uniforms()) {
+			if (uniform.m_location == INVALID_LOCATION)
+				continue;
+			if (uniform.m_type == DataType::None)
+				continue;
 
 			Variable v{};
 			v.name = uniform.m_name;
@@ -48,7 +51,7 @@ namespace z1 {
 		}
 
 		// parse reflections from shader file
-		Filepath path = m_shader->get_path();
+		Filepath path = shader->get_path();
 		auto code = g_runtime_context.m_file_system->read_file(path);
 		size_t pos = 0;
 
@@ -77,30 +80,29 @@ namespace z1 {
 		// in most case, the uniform blocks are used in engine internally
 	}
 
+	std::shared_ptr<Shader> Material::get_shader(uint32_t variant_key) {
+		std::shared_ptr<Shader> shader;
+		auto it = m_variant_shaders.find(variant_key);
+		if (it != m_variant_shaders.end()) {
+			shader = it->second;
+		} else {
+			Filepath path = g_runtime_context.m_asset_manager->get_file_from_guid(m_shader_guid);
+			shader = Shader::create(path.concat(".glsl"), variant_key);
+			m_variant_shaders[variant_key] = shader;
+		}
+		return shader;
+	}
+
+
 	std::shared_ptr<Pipeline> Material::get_pipeline(uint32_t flags, uint32_t variant_key) {
 		uint64_t pool_key = (uint64_t(variant_key) << 32) | uint64_t(flags);
 		if (m_pipeline_pool.find(pool_key) != m_pipeline_pool.end()) {
 			return m_pipeline_pool[pool_key];
 		}
 
-		// Select the right shader for this variant
-		std::shared_ptr<Shader> shader;
-		if (variant_key == 0) {
-			shader = m_shader;
-		}
-		else {
-			auto it = m_variant_shaders.find(variant_key);
-			if (it != m_variant_shaders.end()) {
-				shader = it->second;
-			}
-			else {
-				shader = Shader::create(m_shader->get_path(), variant_key);
-				m_variant_shaders[variant_key] = shader;
-			}
-		}
-
 		Pipeline::Description desc{};
-		desc.shader = shader;
+		// Select the right shader for this variant
+		desc.shader = get_shader(variant_key);
 
 		desc.depth_test = MaterialFlags::get_depth_test(flags);
 		desc.depth_write = MaterialFlags::get_depth_write(flags);
@@ -136,7 +138,7 @@ namespace z1 {
 
 		iss >> name;
 		if (m_variables.find(name) == m_variables.end()) {
-			CORE_WARN("reflected variable: {0} not found in shader {1}!", name, m_shader->get_path());
+			CORE_WARN("reflected variable: {0} not found in shader {1}!", name, get_shader()->get_path());
 			return;
 		}
 
@@ -395,8 +397,8 @@ namespace z1 {
 		pipeline->unbind();
 	}
 
-	std::shared_ptr<Material> Material::create(Filepath const& path, uint32_t flags, std::shared_ptr<Shader> const& shader) {
-		auto mat = std::make_shared<Material>(flags, shader);
+	std::shared_ptr<Material> Material::create(Filepath const& path, uint32_t flags, Guid const& shader_guid) {
+		auto mat = std::make_shared<Material>(flags, shader_guid);
 		mat->m_meta.guid = Guid::generate();
 		mat->m_meta.type = "material";
 		mat->m_meta.path = path;
@@ -419,13 +421,13 @@ namespace z1 {
 		YAML::Node node = YAML::LoadFile((file.concat(".yaml")).string());
 
 		auto flags = node["flags"].as<uint32_t>();
-		auto shader = g_runtime_context.m_asset_manager->get<Shader>(Guid::make(node["shader"].as<std::string>()));
-		if (!shader) {
+		auto shader_guid = Guid::make(node["shader"].as<std::string>());
+		if (!shader_guid.is_valid() && g_runtime_context.m_asset_manager->has_asset(shader_guid)) {
 			CORE_ERROR("failed to load material: {0}, shader not found!", guid);
 			return nullptr;
 		}
 
-		auto mat = std::make_shared<Material>(flags, shader);
+		auto mat = std::make_shared<Material>(flags, shader_guid);
 		mat->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		return mat;
 	}
@@ -439,7 +441,7 @@ namespace z1 {
 		out << YAML::BeginMap;
 		out << YAML::Key << "meta" << YAML::Value << m_meta;
 		out << YAML::Key << "flags" << YAML::Value << m_flags;
-		out << YAML::Key << "shader" << YAML::Value << m_shader->m_guid;
+		out << YAML::Key << "shader" << YAML::Value << m_shader_guid;
 		out << YAML::EndMap;
 
 		save_yaml(file, out);

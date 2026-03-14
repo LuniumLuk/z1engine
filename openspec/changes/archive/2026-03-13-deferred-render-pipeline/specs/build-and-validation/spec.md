@@ -27,7 +27,7 @@ All new and modified shaders MUST pass the `shader_validator` tool, which compil
 - **AND** no existing shaders (e.g. `pbr.glsl`, `phone.glsl`, `shadow.glsl`, `velocity.glsl`, `taa.glsl`, `bloom_downsample.glsl`, `bloom_upsample.glsl`, `postprocessing.glsl`) MUST be broken by the changes.
 
 #### Scenario: Validate Modified Shared Headers
-- **WHEN** shared shader headers under `engine\content\shader\common\` are modified (e.g. `lighting.glslh`, `uniforms.glslh`)
+- **WHEN** shared shader headers under `engine\content\shader\common\` are modified (e.g. `lighting.glsl`, `uniforms.glsl`)
 - **THEN** all shaders that include those headers MUST still pass validation via the full scan (no-argument invocation above).
 
 ### Requirement: Runtime Stability

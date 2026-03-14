@@ -1,5 +1,5 @@
 @uniforms: {
-	#include <common/uniforms.glslh>
+	#include <include/uniforms.glsl>
 
 	uniform sampler2D u_gbuffer_position;
 	uniform sampler2D u_gbuffer_normal;
@@ -16,18 +16,18 @@
 	u_shadow_map                 [invisible]
 }
 @stage: vert {
-	#include <common/quad.glslh>
+	#include <include/quad.glsl>
 }
 @stage: frag {
 	layout(location = 0) out vec4 frag_color;
 	layout(location = 0) in vec2 v_uv;
 
-	// Provide variables that lighting.glslh's get_shadow() expects
+	// Provide variables that lighting.glsl's get_shadow() expects
 	vec3 v_world_position;
 	vec3 v_normal;
 	vec2 v_texcoord0;
 
-	#include <common/lighting.glslh>
+	#include <include/lighting.glsl>
 
 	void main() {
 		// Sample G-buffer

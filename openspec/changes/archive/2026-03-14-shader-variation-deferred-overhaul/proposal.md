@@ -54,14 +54,14 @@ The four surface shaders are modified to branch at the **fragment stage** based 
 **`pbr.glsl` and `pbr_sg.glsl`** -- Fragment stage:
 ```glsl
 @stage: frag {
-    #include <common/frag_attrs.glslh>
-    #include <common/lighting.glslh>
+    #include <include/frag_attrs.glsl>
+    #include <include/lighting.glsl>
 
 #ifdef VARIANT_GBUFFER
-    #include <common/gbuffer_out.glslh>
+    #include <include/gbuffer_out.glsl>
     // Calls gbuffer_write() which writes to MRT
 #else
-    #include <common/pbr_frag.glslh>
+    #include <include/pbr_frag.glsl>
     // Existing forward-lit output
 #endif
 }
@@ -70,11 +70,11 @@ The four surface shaders are modified to branch at the **fragment stage** based 
 **`phone.glsl`** -- Fragment stage:
 ```glsl
 @stage: frag {
-    #include <common/frag_attrs.glslh>
-    #include <common/lighting.glslh>
+    #include <include/frag_attrs.glsl>
+    #include <include/lighting.glsl>
 
 #ifdef VARIANT_GBUFFER
-    #include <common/gbuffer_out.glslh>
+    #include <include/gbuffer_out.glsl>
 #else
     // Existing Phong forward-lit main()
 #endif
@@ -83,12 +83,12 @@ The four surface shaders are modified to branch at the **fragment stage** based 
 
 **`unlit.glsl`** -- Fragment stage: Unlit materials write albedo to the G-buffer with metallic=0, roughness=1 and an emissive flag, or simply output color in forward mode.
 
-A new shared include `common/gbuffer_out.glslh` is created that contains:
+A new shared include `include/gbuffer_out.glsl` is created that contains:
 - MRT layout declarations (`layout(location = 1) out vec4 gbuffer_normal;` etc.)
 - A `main()` function (or inline block) that extracts material properties (base color, normal, metallic, roughness) from the material's uniforms/textures and writes them to the G-buffer render targets.
-- This replaces the current standalone `gbuffer.glsl` shader, which was a hardcoded PBR-only G-buffer writer. The logic from `gbuffer.glsl`'s fragment stage moves into `common/gbuffer_out.glslh` (for PBR metallic-roughness) and `common/gbuffer_out_sg.glslh` (for specular-glossiness, converting to metallic-roughness for the G-buffer).
+- This replaces the current standalone `gbuffer.glsl` shader, which was a hardcoded PBR-only G-buffer writer. The logic from `gbuffer.glsl`'s fragment stage moves into `include/gbuffer_out.glsl` (for PBR metallic-roughness) and `include/gbuffer_out_sg.glsl` (for specular-glossiness, converting to metallic-roughness for the G-buffer).
 
-The vertex stage is unchanged -- all surface shaders already use `#include <common/vert.glslh>` which handles skinning, world-space transform, and optional velocity/shadow outputs.
+The vertex stage is unchanged -- all surface shaders already use `#include <include/vert.glsl>` which handles skinning, world-space transform, and optional velocity/shadow outputs.
 
 ### 3. Update the Deferred Renderer to Use Material Shaders with Variants
 
@@ -120,12 +120,12 @@ The forward transparency pass and forward renderer set `variant_key = ShaderVari
 
 ### 4. Unify Shadow and Velocity Passes Under the Variation System
 
-The current shadow pass (`shadow.glsl`) and velocity pass (`velocity.glsl`) are standalone shaders with their own `#define SHADOW` and `#define VELOCITY` conventions in `common/vert.glslh`. These are migrated to the variation system:
+The current shadow pass (`shadow.glsl`) and velocity pass (`velocity.glsl`) are standalone shaders with their own `#define SHADOW` and `#define VELOCITY` conventions in `include/vert.glsl`. These are migrated to the variation system:
 
 - `shadow.glsl` is retired. Shadow rendering uses `per_frame.variant_key = ShaderVariant::Shadow`, which injects `#define VARIANT_SHADOW`. The surface shader vertex stage already handles `#ifdef SHADOW` for the sun projection; this is renamed to `#ifdef VARIANT_SHADOW`.
 - `velocity.glsl` is retired. Velocity rendering uses `per_frame.variant_key = ShaderVariant::Velocity`, injecting `#define VARIANT_VELOCITY`. The vertex stage already handles `#ifdef VELOCITY`; renamed to `#ifdef VARIANT_VELOCITY`.
 
-The fragment stages for shadow and velocity variants are added to the surface shaders via new shared includes (`common/shadow_out.glslh`, `common/velocity_out.glslh`), guarded by the respective variant defines.
+The fragment stages for shadow and velocity variants are added to the surface shaders via new shared includes (`include/shadow_out.glsl`, `include/velocity_out.glsl`), guarded by the respective variant defines.
 
 This means the shadow and velocity passes now correctly use each material's own alpha mask textures and skinning without needing special-case shader binding in `RenderShared`.
 
@@ -227,23 +227,23 @@ engine/content/shader/
   pbr_sg.glsl                  -- @variants: section added; fragment #ifdef VARIANT_GBUFFER branch added
   phone.glsl                   -- @variants: section added; fragment #ifdef VARIANT_GBUFFER branch added
   unlit.glsl                   -- @variants: section added; fragment #ifdef VARIANT_GBUFFER branch added
-  gbuffer.glsl                 -- RETIRED (logic moved to common/gbuffer_out.glslh)
+  gbuffer.glsl                 -- RETIRED (logic moved to include/gbuffer_out.glsl)
   shadow.glsl                  -- RETIRED (logic moved to surface shader variants)
   velocity.glsl                -- RETIRED (logic moved to surface shader variants)
   deferred_lighting.glsl       -- unchanged
-  common/
-    vert.glslh                 -- SHADOW -> VARIANT_SHADOW, VELOCITY -> VARIANT_VELOCITY
-    gbuffer_out.glslh          -- NEW: G-buffer MRT output for PBR metallic-roughness
-    gbuffer_out_sg.glslh       -- NEW: G-buffer MRT output for specular-glossiness (converts to MR)
-    gbuffer_out_phone.glslh    -- NEW: G-buffer MRT output for Phong (approximates MR)
-    gbuffer_out_unlit.glslh    -- NEW: G-buffer MRT output for unlit (emissive path)
-    shadow_out.glslh           -- NEW: Shadow fragment (alpha mask discard)
-    velocity_out.glslh         -- NEW: Velocity fragment (motion vector output)
-    uniforms.glslh             -- unchanged
-    lighting.glslh             -- unchanged
-    pbr_frag.glslh             -- unchanged
-    frag_attrs.glslh           -- unchanged
-    quad.glslh                 -- unchanged
+  include/
+    vert.glsl                 -- SHADOW -> VARIANT_SHADOW, VELOCITY -> VARIANT_VELOCITY
+    gbuffer_out.glsl          -- NEW: G-buffer MRT output for PBR metallic-roughness
+    gbuffer_out_sg.glsl       -- NEW: G-buffer MRT output for specular-glossiness (converts to MR)
+    gbuffer_out_phone.glsl    -- NEW: G-buffer MRT output for Phong (approximates MR)
+    gbuffer_out_unlit.glsl    -- NEW: G-buffer MRT output for unlit (emissive path)
+    shadow_out.glsl           -- NEW: Shadow fragment (alpha mask discard)
+    velocity_out.glsl         -- NEW: Velocity fragment (motion vector output)
+    uniforms.glsl             -- unchanged
+    lighting.glsl             -- unchanged
+    pbr_frag.glsl             -- unchanged
+    frag_attrs.glsl           -- unchanged
+    quad.glsl                 -- unchanged
 ```
 
 ## Impact
@@ -254,7 +254,7 @@ engine/content/shader/
 - **`render_shared.h/.cpp`**: Shadow and velocity passes set `variant_key` instead of binding standalone shaders.
 - **`mesh.cpp`**: `draw_primitive()` unchanged in interface but now respects the variant key passed through `PerFrameConst`.
 - **Surface shaders** (`pbr.glsl`, `pbr_sg.glsl`, `phone.glsl`, `unlit.glsl`): New `@variants:` declaration section. Fragment stage gains `#ifdef VARIANT_GBUFFER` / `#ifdef VARIANT_SHADOW` / `#ifdef VARIANT_VELOCITY` branches. Forward-lit path unchanged.
-- **`common/vert.glslh`**: `SHADOW` renamed to `VARIANT_SHADOW`, `VELOCITY` renamed to `VARIANT_VELOCITY`.
+- **`include/vert.glsl`**: `SHADOW` renamed to `VARIANT_SHADOW`, `VELOCITY` renamed to `VARIANT_VELOCITY`.
 - **`shader_validator` (`engine/tool/shader_validator/main.cpp`)**: Parses new `@variants:` section, enumerates all 2^N define combinations, compiles and links each. All combinations must pass. Shaders without `@variants:` validated as before (base variant only).
 - **Memory**: Each unique (shader_source, variant_key) pair compiles a separate GL program. With 4 surface shaders and 4 variants (none, gbuffer, shadow, velocity), this is up to 16 programs. Negligible memory overhead.
 

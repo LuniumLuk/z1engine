@@ -2,7 +2,7 @@
 // just include this file in the @stage: vert scope
 // like this:
 // @stage: vert {
-//   #include <common/vert.glslh>
+//   #include <include/vert.glsl>
 // }
 
 layout(location = 0) in vec3 a_position;

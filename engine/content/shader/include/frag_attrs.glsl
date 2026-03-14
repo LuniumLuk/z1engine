@@ -4,7 +4,7 @@
 // just include this file in the front of @stage: frag scope
 // like this:
 // @stage: frag {
-//   #include <common/frag_attrs.glslh>
+//   #include <include/frag_attrs.glsl>
 ///  ...
 // }
 

@@ -138,19 +138,20 @@ namespace z1 {
 			Value default_value = {};
 		};
 
-		Material(uint32_t flags, std::shared_ptr<Shader> const& shader);
+		Material(uint32_t flags, Guid const& shader_guid);
 
-		static std::shared_ptr<Material> create(Filepath const& path, uint32_t flags, std::shared_ptr<Shader> const& shader);
+		static std::shared_ptr<Material> create(Filepath const& path, uint32_t flags, Guid const& shader_guid);
 		static std::shared_ptr<Material> load(Guid const& guid);
 		void save() const;
 
 		uint32_t m_flags = 0;
 
-		std::shared_ptr<Shader> m_shader;
+		Guid m_shader_guid;
 		std::unordered_map<std::string, Variable> m_variables;
 
 		std::unordered_map<uint64_t, std::shared_ptr<Pipeline>> m_pipeline_pool;
 		std::unordered_map<uint32_t, std::shared_ptr<Shader>> m_variant_shaders;
+		std::shared_ptr<Shader> get_shader(uint32_t variant_key = 0);
 		std::shared_ptr<Pipeline> get_pipeline(uint32_t flags, uint32_t variant_key = 0);
 
 	private:
@@ -170,7 +171,7 @@ namespace z1 {
 		void save() const;
 
 		std::shared_ptr<Pipeline> get_pipeline(uint32_t variant_key = 0) const { return m_material->get_pipeline(get_flags(), variant_key); }
-		std::shared_ptr<Shader> get_shader() const {return m_material->m_shader; }
+		std::shared_ptr<Shader> get_shader(uint32_t variant_key = 0) const { return m_material->get_shader(variant_key); }
 
 		std::shared_ptr<Material> m_material;
 		std::unordered_map<std::string, Material::Variable> m_override_variables;
