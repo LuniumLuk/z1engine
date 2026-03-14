@@ -387,69 +387,69 @@ namespace z1 {
 
 				pp.override_bloom_knee = pp_yaml["override_bloom_knee"].as<bool>();
 				pp.bloom_knee = pp_yaml["bloom_knee"].as<float>();
-		}
-
-		// AnimationComponent
-		if (entity_yaml["animation"]) {
-			auto const& anim_yaml = entity_yaml["animation"];
-			auto& anim = entity->add_component<AnimationComponent>();
-			if (anim_yaml["animation"] && !anim_yaml["animation"].IsNull()) {
-				auto anim_guid = Guid::make(anim_yaml["animation"].as<std::string>());
-				anim.animation_asset = g_runtime_context.m_asset_manager->get<Animation>(anim_guid);
 			}
-			anim.speed = anim_yaml["speed"].as<float>();
-			anim.loop = anim_yaml["loop"].as<bool>();
-			anim.playing = anim_yaml["playing"].as<bool>();
-		}
 
-		// ParticleComponent
-		if (entity_yaml["particle"]) {
-			auto const& p = entity_yaml["particle"];
-			auto& pc = entity->add_component<ParticleComponent>();
-			pc.m_max_particles = p["max_particles"].as<uint32_t>();
-			pc.m_emission_rate = p["emission_rate"].as<float>();
-			pc.m_burst_count = p["burst_count"].as<uint32_t>();
-			pc.m_lifetime = p["lifetime"].as<glm::vec2>();
-			pc.m_initial_speed = p["initial_speed"].as<glm::vec2>();
-			pc.m_direction = p["direction"].as<glm::vec3>();
-			pc.m_direction_spread = p["direction_spread"].as<float>();
-			pc.m_gravity = p["gravity"].as<glm::vec3>();
-			pc.m_damping = p["damping"].as<float>();
-			pc.m_initial_size = p["initial_size"].as<glm::vec2>();
-			pc.m_size_over_life = p["size_over_life"].as<glm::vec2>();
-			pc.m_initial_color = p["initial_color"].as<glm::vec4>();
-			pc.m_end_color = p["end_color"].as<glm::vec4>();
-			if (p["texture"] && !p["texture"].IsNull()) {
-				auto tex_guid = Guid::make(p["texture"].as<std::string>());
-				pc.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
-			}
-			pc.m_blend_mode = static_cast<ParticleBlendMode>(p["blend_mode"].as<uint8_t>());
-			pc.m_emitter_shape = static_cast<EmitterShape>(p["emitter_shape"].as<uint8_t>());
-			pc.m_shape_radius = p["shape_radius"].as<float>();
-			pc.m_shape_extents = p["shape_extents"].as<glm::vec3>();
-			pc.m_world_space = p["world_space"].as<bool>();
-			pc.m_loop = p["loop"].as<bool>();
-			pc.m_playing = p["playing"].as<bool>();
-			pc.m_sort_by_depth = p["sort_by_depth"].as<bool>();
-			pc.m_initial_rotation = p["initial_rotation"].as<glm::vec2>();
-			pc.m_rotation_speed = p["rotation_speed"].as<glm::vec2>();
-		}
-
-		// ScriptComponent
-		if (entity_yaml["script_component"]) {
-			auto const& scripts_yaml = entity_yaml["script_component"];
-			for (auto const& script_entry : scripts_yaml) {
-				std::string script_full_name = script_entry.as<std::string>();
-				size_t last_dot = script_full_name.find_last_of('.');
-				if (last_dot != std::string::npos) {
-					std::string module_name = script_full_name.substr(0, last_dot);
-					std::string class_name = script_full_name.substr(last_dot + 1);
-					entity->attach_script<PythonScript>(module_name, class_name);
+			// AnimationComponent
+			if (entity_yaml["animation"]) {
+				auto const& anim_yaml = entity_yaml["animation"];
+				auto& anim = entity->add_component<AnimationComponent>();
+				if (anim_yaml["animation"] && !anim_yaml["animation"].IsNull()) {
+					auto anim_guid = Guid::make(anim_yaml["animation"].as<std::string>());
+					anim.animation_asset = g_runtime_context.m_asset_manager->get<Animation>(anim_guid);
 				}
-				else {
-					CORE_WARN("Invalid script name format: {}. Expected module.Class", script_full_name);
-				}
+				anim.speed = anim_yaml["speed"].as<float>();
+				anim.loop = anim_yaml["loop"].as<bool>();
+				anim.playing = anim_yaml["playing"].as<bool>();
 			}
+
+			// ParticleComponent
+			if (entity_yaml["particle"]) {
+				auto const& p = entity_yaml["particle"];
+				auto& pc = entity->add_component<ParticleComponent>();
+				if (p["max_particles"]) pc.m_max_particles = p["max_particles"].as<uint32_t>();
+				if (p["emission_rate"]) pc.m_emission_rate = p["emission_rate"].as<float>();
+				if (p["burst_count"]) pc.m_burst_count = p["burst_count"].as<uint32_t>();
+				if (p["lifetime"]) pc.m_lifetime = p["lifetime"].as<glm::vec2>();
+				if (p["initial_speed"]) pc.m_initial_speed = p["initial_speed"].as<glm::vec2>();
+				if (p["direction"]) pc.m_direction = p["direction"].as<glm::vec3>();
+				if (p["direction_spread"]) pc.m_direction_spread = p["direction_spread"].as<float>();
+				if (p["gravity"]) pc.m_gravity = p["gravity"].as<glm::vec3>();
+				if (p["damping"]) pc.m_damping = p["damping"].as<float>();
+				if (p["initial_size"]) pc.m_initial_size = p["initial_size"].as<glm::vec2>();
+				if (p["size_over_life"]) pc.m_size_over_life = p["size_over_life"].as<glm::vec2>();
+				if (p["initial_color"]) pc.m_initial_color = p["initial_color"].as<glm::vec4>();
+				if (p["end_color"]) pc.m_end_color = p["end_color"].as<glm::vec4>();
+				if (p["texture"] && !p["texture"].IsNull()) {
+					auto tex_guid = Guid::make(p["texture"].as<std::string>());
+					pc.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
+				}
+				if (p["blend_mode"]) pc.m_blend_mode = static_cast<ParticleBlendMode>(p["blend_mode"].as<uint8_t>());
+				if (p["emitter_shape"]) pc.m_emitter_shape = static_cast<EmitterShape>(p["emitter_shape"].as<uint8_t>());
+				if (p["shape_radius"]) pc.m_shape_radius = p["shape_radius"].as<float>();
+				if (p["shape_extents"]) pc.m_shape_extents = p["shape_extents"].as<glm::vec3>();
+				if (p["world_space"]) pc.m_world_space = p["world_space"].as<bool>();
+				if (p["loop"]) pc.m_loop = p["loop"].as<bool>();
+				if (p["playing"]) pc.m_playing = p["playing"].as<bool>();
+				if (p["sort_by_depth"]) pc.m_sort_by_depth = p["sort_by_depth"].as<bool>();
+				if (p["initial_rotation"]) pc.m_initial_rotation = p["initial_rotation"].as<glm::vec2>();
+				if (p["rotation_speed"]) pc.m_rotation_speed = p["rotation_speed"].as<glm::vec2>();
+			}
+
+			// ScriptComponent
+			if (entity_yaml["script_component"]) {
+				auto const& scripts_yaml = entity_yaml["script_component"];
+				for (auto const& script_entry : scripts_yaml) {
+					std::string script_full_name = script_entry.as<std::string>();
+					size_t last_dot = script_full_name.find_last_of('.');
+					if (last_dot != std::string::npos) {
+						std::string module_name = script_full_name.substr(0, last_dot);
+						std::string class_name = script_full_name.substr(last_dot + 1);
+						entity->attach_script<PythonScript>(module_name, class_name);
+					}
+					else {
+						CORE_WARN("Invalid script name format: {}. Expected module.Class", script_full_name);
+					}
+				}
 			}
 		}
 

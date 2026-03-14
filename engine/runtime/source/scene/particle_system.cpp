@@ -87,7 +87,7 @@ namespace z1 {
 		glm::vec3 const& emitter_position,
 		glm::mat4 const& emitter_rotation
 	) {
-		auto& p = pc.m_particles[index];
+		auto& p = pc.m_runtime.m_particles[index];
 
 		// Sample emitter shape
 		glm::vec3 local_pos = sample_emitter_shape(pc.m_emitter_shape, pc.m_shape_radius, pc.m_shape_extents);
@@ -117,7 +117,8 @@ namespace z1 {
 		p.color = pc.m_initial_color;
 
 		// Size
-		p.size = Random::rfloat(pc.m_initial_size.x, pc.m_initial_size.y);
+		p.birth_size = Random::rfloat(pc.m_initial_size.x, pc.m_initial_size.y);
+		p.size = p.birth_size;
 
 		// Rotation
 		p.rotation = Random::rfloat(pc.m_initial_rotation.x, pc.m_initial_rotation.y);
@@ -139,19 +140,31 @@ namespace z1 {
 			if (!pc.m_playing) continue;
 
 			// Initialize particle pool if needed
-			if (pc.m_particles.empty()) {
-				pc.m_particles.resize(pc.m_max_particles);
-				for (auto& p : pc.m_particles) {
-					p.alive = false;
+			if (pc.m_runtime.m_particles.empty()) {
+				pc.m_runtime.m_particles.resize(pc.m_max_particles);
+				pc.m_runtime.m_free_list.clear();
+				pc.m_runtime.m_free_list.reserve(pc.m_max_particles);
+				for (uint32_t i = pc.m_max_particles; i > 0; --i) {
+					pc.m_runtime.m_particles[i - 1].alive = false;
+					pc.m_runtime.m_free_list.push_back(i - 1);
 				}
 			}
 
 			// Resize if max_particles changed
-			if (pc.m_particles.size() != pc.m_max_particles) {
-				pc.m_particles.resize(pc.m_max_particles);
-				for (size_t i = 0; i < pc.m_particles.size(); ++i) {
-					if (pc.m_particles[i].lifetime == 0.0f) {
-						pc.m_particles[i].alive = false;
+			if (pc.m_runtime.m_particles.size() != pc.m_max_particles) {
+				pc.m_runtime.m_particles.resize(pc.m_max_particles);
+				pc.m_runtime.m_free_list.clear();
+				pc.m_runtime.m_free_list.reserve(pc.m_max_particles);
+				pc.m_runtime.m_alive_count = 0;
+				for (uint32_t i = pc.m_max_particles; i > 0; --i) {
+					auto& p = pc.m_runtime.m_particles[i - 1];
+					if (p.lifetime == 0.0f) {
+						p.alive = false;
+					}
+					if (!p.alive) {
+						pc.m_runtime.m_free_list.push_back(i - 1);
+					} else {
+						++pc.m_runtime.m_alive_count;
 					}
 				}
 			}
@@ -161,25 +174,22 @@ namespace z1 {
 			glm::mat4 emitter_rot = tc.get_local_rotation();
 
 			// Spawn new particles (continuous emission)
-			if (pc.m_emission_rate > 0.0f && pc.m_alive_count < pc.m_max_particles) {
-				pc.m_emission_accumulator += pc.m_emission_rate * dt;
-				uint32_t particles_to_spawn = static_cast<uint32_t>(pc.m_emission_accumulator);
-				pc.m_emission_accumulator -= particles_to_spawn;
+			if (pc.m_emission_rate > 0.0f && !pc.m_runtime.m_free_list.empty()) {
+				pc.m_runtime.m_emission_accumulator += pc.m_emission_rate * dt;
+				uint32_t particles_to_spawn = static_cast<uint32_t>(pc.m_runtime.m_emission_accumulator);
+				pc.m_runtime.m_emission_accumulator -= particles_to_spawn;
 
-				for (uint32_t i = 0; i < particles_to_spawn && pc.m_alive_count < pc.m_max_particles; ++i) {
-					// Find a dead particle slot
-					for (uint32_t j = 0; j < pc.m_particles.size(); ++j) {
-						if (!pc.m_particles[j].alive) {
-							spawn_particle(pc, j, emitter_pos, emitter_rot);
-							++pc.m_alive_count;
-							break;
-						}
-					}
+				for (uint32_t i = 0; i < particles_to_spawn && !pc.m_runtime.m_free_list.empty(); ++i) {
+					uint32_t slot = pc.m_runtime.m_free_list.back();
+					pc.m_runtime.m_free_list.pop_back();
+					spawn_particle(pc, slot, emitter_pos, emitter_rot);
+					++pc.m_runtime.m_alive_count;
 				}
 			}
 
 			// Simulate alive particles
-			for (auto& p : pc.m_particles) {
+			for (uint32_t pi = 0; pi < pc.m_runtime.m_particles.size(); ++pi) {
+				auto& p = pc.m_runtime.m_particles[pi];
 				if (!p.alive) continue;
 
 				p.age += dt;
@@ -187,7 +197,8 @@ namespace z1 {
 				// Check lifetime
 				if (p.age >= p.lifetime) {
 					p.alive = false;
-					--pc.m_alive_count;
+					--pc.m_runtime.m_alive_count;
+					pc.m_runtime.m_free_list.push_back(pi);
 					continue;
 				}
 
@@ -206,9 +217,8 @@ namespace z1 {
 				float t = p.age / p.lifetime;
 				p.color = glm::mix(pc.m_initial_color, pc.m_end_color, t);
 
-				// Interpolate size (assuming size_over_life is a multiplier range)
-				float size_at_birth = p.size;
-				p.size = size_at_birth * glm::mix(pc.m_size_over_life.x, pc.m_size_over_life.y, t);
+				// Interpolate size using stored birth size
+				p.size = p.birth_size * glm::mix(pc.m_size_over_life.x, pc.m_size_over_life.y, t);
 
 				// Update rotation
 				p.rotation += p.rotation_speed * dt;
@@ -220,7 +230,7 @@ namespace z1 {
 				if (camera_entity) {
 					auto& camera_comp = camera_entity->get_component<CameraComponent>();
 					glm::vec3 camera_pos = camera_comp.get_position();
-					std::sort(pc.m_particles.begin(), pc.m_particles.end(),
+					std::sort(pc.m_runtime.m_particles.begin(), pc.m_runtime.m_particles.end(),
 						[&](Particle const& a, Particle const& b) {
 							if (!a.alive) return false;
 							if (!b.alive) return true;
@@ -228,6 +238,14 @@ namespace z1 {
 							float dist_b = glm::distance(b.position, camera_pos);
 							return dist_a > dist_b; // back-to-front
 						});
+
+					// Rebuild free-list after sort (indices changed)
+					pc.m_runtime.m_free_list.clear();
+					for (uint32_t i = static_cast<uint32_t>(pc.m_runtime.m_particles.size()); i > 0; --i) {
+						if (!pc.m_runtime.m_particles[i - 1].alive) {
+							pc.m_runtime.m_free_list.push_back(i - 1);
+						}
+					}
 				}
 			}
 		}

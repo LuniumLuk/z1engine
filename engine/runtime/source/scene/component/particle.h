@@ -4,7 +4,6 @@
 #include "scene/component/base.h"
 #include "asset/texture.h"
 #include "render/buffer.h"
-#include "render/vertex_array.h"
 #include <glm/glm.hpp>
 #include <vector>
 
@@ -28,11 +27,21 @@ namespace z1 {
 		glm::vec3 velocity;
 		glm::vec4 color;
 		float size;
+		float birth_size;
 		float rotation;
 		float rotation_speed;
 		float age;
 		float lifetime;
 		bool alive;
+	};
+
+	struct ParticleRuntimeState {
+		std::vector<Particle> m_particles;
+		std::vector<uint32_t> m_free_list;
+		uint32_t m_alive_count = 0;
+		float m_emission_accumulator = 0.0f;
+		uint32_t m_total_emitted = 0;
+		std::shared_ptr<VertexBuffer> m_vbo;	// per-particle instance data
 	};
 
 	REFLECTED_STRUCT(ParticleComponent) : Requires<TransformComponent> {
@@ -62,14 +71,8 @@ namespace z1 {
 		glm::vec2 m_initial_rotation = glm::vec2(0.0f, 360.0f);
 		glm::vec2 m_rotation_speed = glm::vec2(0.0f, 0.0f);
 
-		// Runtime state (not reflected)
-		std::vector<Particle> m_particles;
-		uint32_t m_alive_count = 0;
-		float m_emission_accumulator = 0.0f;
-		uint32_t m_total_emitted = 0;
-		std::shared_ptr<VertexBuffer> m_vbo;
-		std::shared_ptr<VertexArray> m_vao;
-		std::shared_ptr<IndexBuffer> m_ibo;
+		// Runtime state (not reflected, not serialized)
+		ParticleRuntimeState m_runtime;
 
 		ParticleComponent() = default;
 		DISABLE_COPY(ParticleComponent)
