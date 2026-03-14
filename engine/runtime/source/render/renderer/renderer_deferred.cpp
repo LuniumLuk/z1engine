@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/global.h"
 #include "render/shader.h"
+#include "render/shader_variant.h"
 #include "render/framebuffer.h"
 #include "render/render_graph.h"
 #include "render/graphics_context.h"
@@ -19,14 +20,6 @@ namespace z1 {
 
 	RendererDeferred::RendererDeferred() {
 		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(Guid::make("material/MI_phone"));
-
-		{
-			Pipeline::Description desc{};
-			desc.depth_test = true;
-			desc.depth_write = true;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/gbuffer");
-			m_pipeline_gbuffer = Pipeline::build(desc);
-		}
 
 		{
 			Pipeline::Description desc{};
@@ -178,10 +171,12 @@ namespace z1 {
 			.add_output("gbuffer-normal", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-albedo", ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-metallic-roughness", ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-emissive", ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-depth", ImageFormat::Depth)
 			.execute([this, &draw_list](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
+				per_frame.variant_key = ShaderVariant::GBuffer;
 
 				m_shared.m_lights_buffer->bind();
 				per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
@@ -229,6 +224,7 @@ namespace z1 {
 			.add_input("gbuffer-normal")
 			.add_input("gbuffer-albedo")
 			.add_input("gbuffer-metallic-roughness")
+			.add_input("gbuffer-emissive")
 			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("scene-depth", ImageFormat::Depth)
 			.execute([this, history_uninitialized, read_idx, width, height](RenderGraphNode& node, GraphicsContext& ctx) {
@@ -250,6 +246,7 @@ namespace z1 {
 				s->set_uniform_binding("u_gbuffer_normal", node.bind_input_index(1));
 				s->set_uniform_binding("u_gbuffer_albedo", node.bind_input_index(2));
 				s->set_uniform_binding("u_gbuffer_metallic_roughness", node.bind_input_index(3));
+				s->set_uniform_binding("u_gbuffer_emissive", node.bind_input_index(4));
 
 				m_shared.m_quad->bind();
 				m_shared.m_quad->draw(PrimitiveType::Triangles);

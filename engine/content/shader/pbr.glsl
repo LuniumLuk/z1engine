@@ -15,12 +15,26 @@
 	u_metallic_factor           = float 0.5
 	u_roughness_factor          = float 0.5
 }
+@variants: {
+	VARIANT_GBUFFER
+	VARIANT_SHADOW
+	VARIANT_VELOCITY
+}
 @stage: vert {
 	#include <common/vert.glslh>
 }
 @stage: frag {
 	#include <common/frag_attrs.glslh>
-	#include <common/lighting.glslh>
 
+#if defined(VARIANT_GBUFFER)
+	#include <common/lighting.glslh>
+	#include <common/gbuffer_out.glslh>
+#elif defined(VARIANT_SHADOW)
+	#include <common/shadow_out.glslh>
+#elif defined(VARIANT_VELOCITY)
+	#include <common/velocity_out.glslh>
+#else
+	#include <common/lighting.glslh>
 	#include <common/pbr_frag.glslh>
+#endif
 }

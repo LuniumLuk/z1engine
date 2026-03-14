@@ -41,15 +41,7 @@ namespace z1 {
 			m_pipeline_postprocess = Pipeline::build(desc);
 		}
 
-		// Velocity pipeline
-		{
-			Pipeline::Description desc{};
-			desc.depth_test = true;
-			desc.depth_write = true;
-			desc.blend = true;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/velocity");
-			m_pipeline_velocity = Pipeline::build(desc);
-		}
+		// (Velocity pass now uses per-material shader variants)
 
 		// TAA pipeline
 		{
@@ -78,14 +70,8 @@ namespace z1 {
 			m_pipeline_bloom_upsample = Pipeline::build(desc);
 		}
 
-		// Shadow pipeline and framebuffer
+		// Shadow framebuffer (shadow pass now uses per-material shader variants)
 		{
-			Pipeline::Description desc{};
-			desc.depth_test = true;
-			desc.depth_write = true;
-			desc.cull_mode = CullMode::Back;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/shadow");
-			m_pipeline_shadow = Pipeline::build(desc);
 			const uint32_t shadow_res = 2048;
 			Framebuffer::Attachment attachment;
 			attachment.format = ImageFormat::Depth;
@@ -232,13 +218,8 @@ namespace z1 {
 					m_shadow_framebuffer->set_attachment_layer(0, cascade);
 				})
 				.execute([this, cascade, scene, &g](RenderGraphNode& node, GraphicsContext& ctx) {
-					m_pipeline_shadow->bind();
-					auto& s = m_pipeline_shadow->m_shader;
-					s->set_uniform_block_binding("Global", g->get_binding());
 
-					s->set_uniform("u_csm_index", &cascade);
-
-					int has_skinning = 0;
+					// -- Static meshes --
 					auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
 					for (auto [entity, transform, mesh] : view.each()) {
 						if (!mesh.m_mesh) continue;
@@ -247,119 +228,91 @@ namespace z1 {
 						PerFrameConst per_frame{};
 						per_frame.model = model;
 						per_frame.global_binding = g->get_binding();
+						per_frame.variant_key = ShaderVariant::Shadow;
 
-						s->set_uniform("u_model", &model);
-						s->set_uniform("u_has_skinning", &has_skinning);
+						int has_skinning = 0;
 
 						for (auto const& prim : mesh.m_mesh->m_primitives) {
 							std::shared_ptr<MaterialInstance> mi = nullptr;
 							if (prim.m_material.is_valid()) {
 								mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 							}
+							if (!mi) continue;
 
-							std::shared_ptr<Image2D> alpha_img = nullptr;
-							AlphaMode alpha_mode = AlphaMode::Opaque;
-							if (mi) {
-								alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
-								if (alpha_mode == AlphaMode::Blend)
-									continue;
+							AlphaMode alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
+							if (alpha_mode == AlphaMode::Blend)
+								continue;
 
-								if (alpha_mode == AlphaMode::Mask) {
-									if (mi->has_uniform("s_base_color")) {
-										auto& value = mi->m_override_variables["s_base_color"].default_value;
-										if (value.valid)
-											alpha_img = value.tex2D->m_image;
-									}
-									else if (mi->has_uniform("s_diffuse")) {
-										auto& value = mi->m_override_variables["s_diffuse"].default_value;
-										if (value.valid)
-											alpha_img = value.tex2D->m_image;
-									}
-								}
-							}
+							// Bind the material's shadow variant pipeline
+							// This compiles/caches the shadow variant of the material's shader
+							// and binds all material uniforms (including s_base_color for alpha mask)
+							mi->bind(per_frame);
+							auto const& s = mi->get_pipeline(ShaderVariant::Shadow)->m_shader;
 
-							mi->bind_uniform(s, "u_alpha_mode");
-							mi->bind_uniform(s, "u_alpha_cutoff");
-							mi->bind_uniform(s, "u_base_color_uv_set", "u_alpha_uv_set");
-
-							if (alpha_img)
-								alpha_img->bind(s, "s_alpha");
+							// Set shadow-pass-specific uniforms
+							s->set_uniform("u_csm_index", &cascade);
+							s->set_uniform("u_has_skinning", &has_skinning);
 
 							prim.m_vertex_array->bind();
 							prim.m_vertex_array->draw(prim.m_primitive_type);
 							prim.m_vertex_array->unbind();
 
-							if (alpha_img)
-								alpha_img->unbind();
+							mi->unbind();
 						}
 					}
 
+					// -- Skeletal meshes --
 					auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
 					for (auto [entity, transform, mesh] : view_skel.each()) {
-						if (!mesh.m_mesh)
-							continue;
+						if (!mesh.m_mesh) continue;
 						glm::mat4 model = transform.get_world_transform();
 
 						PerFrameConst per_frame{};
 						per_frame.model = model;
 						per_frame.global_binding = g->get_binding();
+						per_frame.variant_key = ShaderVariant::Shadow;
 
-						s->set_uniform("u_model", &model);
-						has_skinning = 0;
+						int has_skinning = 0;
 						if (scene->m_registry.all_of<AnimationComponent>(entity)) {
 							auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
 							if (anim.bone_ubo) {
 								has_skinning = 1;
 								anim.bone_ubo->bind();
-								s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
 							}
 						}
-						s->set_uniform("u_has_skinning", &has_skinning);
 
 						for (auto const& prim : mesh.m_mesh->m_primitives) {
 							std::shared_ptr<MaterialInstance> mi = nullptr;
 							if (prim.m_material.is_valid()) {
 								mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 							}
+							if (!mi) continue;
 
-							std::shared_ptr<Image2D> alpha_img = nullptr;
-							AlphaMode alpha_mode = AlphaMode::Opaque;
-							if (mi) {
-								alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
-								if (alpha_mode == AlphaMode::Blend)
-									continue;
+							AlphaMode alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
+							if (alpha_mode == AlphaMode::Blend)
+								continue;
 
-								if (alpha_mode == AlphaMode::Mask) {
-									if (mi->has_uniform("s_base_color")) {
-										auto& value = mi->m_override_variables["s_base_color"].default_value;
-										if (value.valid)
-											alpha_img = value.tex2D->m_image;
-									} else if (mi->has_uniform("s_diffuse")) {
-										auto& value = mi->m_override_variables["s_diffuse"].default_value;
-										if (value.valid)
-											alpha_img = value.tex2D->m_image;
-									}
-								}
+							mi->bind(per_frame);
+							auto const& s = mi->get_pipeline(ShaderVariant::Shadow)->m_shader;
+
+							s->set_uniform("u_csm_index", &cascade);
+							s->set_uniform("u_has_skinning", &has_skinning);
+							if (has_skinning) {
+								auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+								s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
 							}
-
-							mi->bind_uniform(s, "u_alpha_mode");
-							mi->bind_uniform(s, "u_alpha_cutoff");
-
-							if (alpha_img)
-								alpha_img->bind(s, "s_alpha");
 
 							prim.m_vertex_array->bind();
 							prim.m_vertex_array->draw(prim.m_primitive_type);
 							prim.m_vertex_array->unbind();
 
-							if (alpha_img)
-								alpha_img->unbind();
+							mi->unbind();
 						}
 
-						if (has_skinning)
+						if (has_skinning) {
 							scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
+						}
 					}
-					m_pipeline_shadow->unbind();
 				});
 		}
 	}
@@ -384,50 +337,91 @@ namespace z1 {
 				g->projview = projview;
 				g->flush();
 
-				m_pipeline_velocity->bind();
-				auto& s = m_pipeline_velocity->m_shader;
-				s->set_uniform_block_binding("Global", g->get_binding());
-
-				int has_skinning = 0;
-				int use_prev_bones = 0;
-				s->set_uniform("u_has_skinning", &has_skinning);
-				s->set_uniform("u_use_prev_bones", &use_prev_bones);
-
+				// -- Static meshes --
 				for (auto const& item : draw_list.static_meshes) {
-					s->set_uniform("u_model", &item.transform);
-					s->set_uniform("u_prev_model", &item.prev_transform);
-					item.mesh->m_mesh->draw();
+					PerFrameConst per_frame{};
+					per_frame.model = item.transform;
+					per_frame.global_binding = g->get_binding();
+					per_frame.variant_key = ShaderVariant::Velocity;
+
+					int has_skinning = 0;
+					int use_prev_bones = 0;
+
+					for (auto const& prim : item.mesh->m_mesh->m_primitives) {
+						std::shared_ptr<MaterialInstance> mi = nullptr;
+						if (prim.m_material.is_valid()) {
+							mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
+						}
+						if (!mi) continue;
+
+						mi->bind(per_frame);
+						auto const& s = mi->get_pipeline(ShaderVariant::Velocity)->m_shader;
+
+						// Set velocity-pass-specific uniforms
+						s->set_uniform("u_has_skinning", &has_skinning);
+						s->set_uniform("u_use_prev_bones", &use_prev_bones);
+						s->set_uniform("u_prev_model", &item.prev_transform);
+
+						prim.m_vertex_array->bind();
+						prim.m_vertex_array->draw(prim.m_primitive_type);
+						prim.m_vertex_array->unbind();
+
+						mi->unbind();
+					}
 				}
 
+				// -- Skeletal meshes --
 				for (auto const& item : draw_list.skeletal_meshes) {
-					has_skinning = 0;
-					use_prev_bones = 0;
-					s->set_uniform("u_model", &item.transform);
-					s->set_uniform("u_prev_model", &item.prev_transform);
+					PerFrameConst per_frame{};
+					per_frame.model = item.transform;
+					per_frame.global_binding = g->get_binding();
+					per_frame.variant_key = ShaderVariant::Velocity;
 
-					if (item.anim) {
-						if (item.anim->bone_ubo) {
-							has_skinning = 1;
-							item.anim->bone_ubo->bind();
+					int has_skinning = 0;
+					int use_prev_bones = 0;
+
+					if (item.anim && item.anim->bone_ubo) {
+						has_skinning = 1;
+						item.anim->bone_ubo->bind();
+					}
+
+					for (auto const& prim : item.mesh->m_mesh->m_primitives) {
+						std::shared_ptr<MaterialInstance> mi = nullptr;
+						if (prim.m_material.is_valid()) {
+							mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
+						}
+						if (!mi) continue;
+
+						mi->bind(per_frame);
+						auto const& s = mi->get_pipeline(ShaderVariant::Velocity)->m_shader;
+
+						s->set_uniform("u_has_skinning", &has_skinning);
+						s->set_uniform("u_use_prev_bones", &use_prev_bones);
+						s->set_uniform("u_prev_model", &item.prev_transform);
+
+						if (has_skinning) {
 							s->set_uniform_block_binding("Bones", item.anim->bone_ubo->get_binding());
 							if (g->anim_enabled && g->taa_animated && item.anim->prev_bone_ubo) {
 								item.anim->prev_bone_ubo->bind();
 								s->set_uniform_block_binding("PrevBones", item.anim->prev_bone_ubo->get_binding());
 								use_prev_bones = 1;
+								s->set_uniform("u_use_prev_bones", &use_prev_bones);
 							}
 						}
+
+						prim.m_vertex_array->bind();
+						prim.m_vertex_array->draw(prim.m_primitive_type);
+						prim.m_vertex_array->unbind();
+
+						mi->unbind();
 					}
-					s->set_uniform("u_has_skinning", &has_skinning);
-					s->set_uniform("u_use_prev_bones", &use_prev_bones);
-					item.mesh->m_mesh->draw();
+
 					if (has_skinning) {
 						item.anim->bone_ubo->unbind();
 						if (use_prev_bones)
 							item.anim->prev_bone_ubo->unbind();
 					}
 				}
-
-				m_pipeline_velocity->unbind();
 
 				g->projview = jittered_projview;
 				g->flush();

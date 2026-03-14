@@ -22,6 +22,7 @@ namespace z1 {
 	struct OpenGLShader : Shader {
 		OpenGLShader(std::initializer_list<OpenGLShaderModule*> shaders);
 		OpenGLShader(Filepath const& path);
+		OpenGLShader(Filepath const& path, uint32_t variant_key);
 		~OpenGLShader() override;
 
 		void bind() const override;

@@ -21,7 +21,6 @@ namespace z1 {
 
 		RenderShared m_shared;
 		std::shared_ptr<MaterialInstance> m_default_material;
-		std::shared_ptr<Pipeline> m_pipeline_gbuffer;
 		std::shared_ptr<Pipeline> m_pipeline_deferred_lighting;
 		std::shared_ptr<Pipeline> m_pipeline_skybox;
 

@@ -34,7 +34,7 @@ namespace z1 {
 		attach.format = format;
 		attach.sampler_mode = sampler_mode;
 		attach.wrap_mode = wrap_mode;
-		m_output_spec[name] = attach;
+		m_output_spec.push_back(std::make_pair(name, attach));
 		return *this;
 	}
 

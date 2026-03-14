@@ -1,3 +1,8 @@
+// RETIRED: This standalone G-buffer shader is no longer used.
+// G-buffer output is now a variant of each surface shader (pbr.glsl, pbr_sg.glsl,
+// phone.glsl, unlit.glsl) via #ifdef VARIANT_GBUFFER and common/gbuffer_out*.glslh.
+// Kept as reference only.
+
 @uniforms: {
 	#include <common/uniforms.glslh>
 	#include <common/pbr_uniforms.glslh>
@@ -25,6 +30,7 @@
 	layout(location = 1) out vec4 gbuffer_normal;
 	layout(location = 2) out vec4 gbuffer_albedo;
 	layout(location = 3) out vec4 gbuffer_metallic_roughness;
+	layout(location = 4) out vec4 gbuffer_emissive;
 
 	vec2 get_uv(int uv_set) {
 		if (uv_set == 1) return v_texcoord1;
@@ -75,6 +81,10 @@
 		float roughness = clamp(rm.x * u_roughness_factor, 0.04, 1.0);
 		float metallic  = rm.y * u_metallic_factor;
 
+		// Emissive
+		vec3 emissive = texture(s_emissive, get_uv(u_emissive_uv_set)).rgb;
+		emissive = pow(emissive, vec3(2.2)) * u_emissive_factor;
+
 		// Write G-buffer:
 		// RT0 (frag_color): world position + alpha
 		frag_color = vec4(v_world_position, alpha);
@@ -84,5 +94,7 @@
 		gbuffer_albedo = vec4(base_color_vec.rgb, alpha);
 		// RT3: metallic (R), roughness (G)
 		gbuffer_metallic_roughness = vec4(metallic, roughness, 0.0, 0.0);
+		// RT4: emissive
+		gbuffer_emissive = vec4(emissive, 0.0);
 	}
 }

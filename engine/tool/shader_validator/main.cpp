@@ -164,6 +164,7 @@ bool validate_shader_file(fs::path const& path) {
 
 	const char* uniform_token = "@uniforms:";
 	const char* stage_token = "@stage:";
+	const char* variant_token = "@variants:";
 	const size_t stage_token_len = strlen(stage_token);
 
 	std::string uniforms;
@@ -179,64 +180,126 @@ bool validate_shader_file(fs::path const& path) {
 		}
 	}
 
-	std::vector<GLuint> shader_handles;
+	// find variants
+	std::vector<std::string> variant_names;
+	pos = code.find(variant_token, 0);
+	if (pos != std::string::npos) {
+		size_t bracket_beg = code.find('{', pos);
+		size_t bracket_end = find_paired_brackets(code, bracket_beg);
+		if (bracket_beg != std::string::npos && bracket_end != std::string::npos) {
+			std::string variants_block = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
+			std::istringstream vstream(variants_block);
+			std::string vline;
+			while (std::getline(vstream, vline)) {
+				// trim whitespace
+				vline.erase(0, vline.find_first_not_of(" \t\r\n"));
+				vline.erase(vline.find_last_not_of(" \t\r\n") + 1);
+				if (!vline.empty()) {
+					variant_names.push_back(vline);
+				}
+			}
+		}
+	}
+
+	// Enumerate all variant combinations: 0 .. (2^N - 1)
+	size_t num_variants = variant_names.size();
+	size_t num_combos = 1u << num_variants; // 2^N
+
 	bool all_success = true;
 
-	// find stages
-	pos = 0;
-	pos = code.find(stage_token, pos);
-	while (pos != std::string::npos) {
-		size_t bracket_beg = code.find('{', pos);
-		size_t type_beg = pos + stage_token_len;
-		auto type = code.substr(type_beg, bracket_beg - type_beg);
-		// trim whitespace
-		type.erase(std::remove_if(type.begin(), type.end(), ::isspace), type.end());
-
-		size_t bracket_end = find_paired_brackets(code, bracket_beg);
-		if (bracket_beg == std::string::npos || bracket_end == std::string::npos) {
-			CORE_ERROR("Malformed brackets for stage %s", type.c_str());
-			all_success = false;
-			break;
-		}
-
-		auto src = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
-		src = uniforms + src;
-		src = process_includes(src, path.parent_path().string() + "/");
-
-		Stage stage = str_to_shader_stage(type);
-		if (stage == Stage::None) {
-			CORE_ERROR("Unknown stage type: %s", type.c_str());
-			all_success = false;
-		} else {
-			CORE_INFO("Compiling stage: %s", type.c_str());
-			GLuint handle = 0;
-			if (compile_shader_module(stage, src, handle)) {
-				shader_handles.push_back(handle);
-			} else {
-				all_success = false;
+	for (size_t combo = 0; combo < num_combos; ++combo) {
+		// Build variant defines string for this combination
+		std::string variant_defines;
+		std::string combo_label = "base";
+		if (combo != 0) {
+			combo_label = "";
+			for (size_t bit = 0; bit < num_variants; ++bit) {
+				if (combo & (1u << bit)) {
+					variant_defines += "#define " + variant_names[bit] + " 1\n";
+					if (!combo_label.empty()) combo_label += "+";
+					combo_label += variant_names[bit];
+				}
 			}
 		}
 
-		pos = code.find(stage_token, bracket_end + 1);
-	}
+		CORE_INFO("  Variant combo [%zu/%zu]: %s", combo, num_combos - 1, combo_label.c_str());
 
-	if (shader_handles.empty()) {
-		CORE_WARN("No shader stages found in %s", path.string().c_str());
-		return false;
-	}
+		// Prepend variant defines to uniforms
+		std::string full_uniforms = variant_defines + uniforms;
 
-	GLuint program = 0;
-	if (all_success) {
-		if (link_program(shader_handles, program)) {
-			CORE_INFO("SUCCESS: Shader validated successfully.");
-		} else {
+		std::vector<GLuint> shader_handles;
+		bool combo_success = true;
+
+		// find stages
+		pos = 0;
+		pos = code.find(stage_token, pos);
+		while (pos != std::string::npos) {
+			size_t bracket_beg = code.find('{', pos);
+			size_t type_beg = pos + stage_token_len;
+			auto type = code.substr(type_beg, bracket_beg - type_beg);
+			// trim whitespace
+			type.erase(std::remove_if(type.begin(), type.end(), ::isspace), type.end());
+
+			size_t bracket_end = find_paired_brackets(code, bracket_beg);
+			if (bracket_beg == std::string::npos || bracket_end == std::string::npos) {
+				CORE_ERROR("Malformed brackets for stage %s", type.c_str());
+				combo_success = false;
+				break;
+			}
+
+			auto src = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
+			src = full_uniforms + src;
+			src = process_includes(src, path.parent_path().string() + "/");
+
+			Stage stage = str_to_shader_stage(type);
+			if (stage == Stage::None) {
+				CORE_ERROR("Unknown stage type: %s", type.c_str());
+				combo_success = false;
+			} else {
+				GLuint handle = 0;
+				if (compile_shader_module(stage, src, handle)) {
+					shader_handles.push_back(handle);
+				} else {
+					CORE_ERROR("  Failed to compile stage '%s' for variant: %s", type.c_str(), combo_label.c_str());
+					combo_success = false;
+				}
+			}
+
+			pos = code.find(stage_token, bracket_end + 1);
+		}
+
+		if (shader_handles.empty()) {
+			CORE_WARN("No shader stages found in %s", path.string().c_str());
+			for (auto h : shader_handles) glDeleteShader(h);
+			return false;
+		}
+
+		GLuint program = 0;
+		if (combo_success) {
+			if (link_program(shader_handles, program)) {
+				CORE_INFO("  OK: variant [%s] validated.", combo_label.c_str());
+			} else {
+				CORE_ERROR("  Failed to link variant: %s", combo_label.c_str());
+				combo_success = false;
+			}
+		}
+
+		// Cleanup
+		for (auto h : shader_handles) glDeleteShader(h);
+		if (program) glDeleteProgram(program);
+
+		if (!combo_success) {
 			all_success = false;
 		}
 	}
 
-	// Cleanup
-	for (auto h : shader_handles) glDeleteShader(h);
-	if (program) glDeleteProgram(program);
+	if (all_success) {
+		if (num_variants > 0) {
+			CORE_INFO("SUCCESS: All %zu variant combinations validated.", num_combos);
+		} else {
+			CORE_INFO("SUCCESS: Shader validated successfully.");
+		}
+	}
 
 	return all_success;
 }

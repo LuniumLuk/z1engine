@@ -9,6 +9,7 @@ namespace z1 {
 
 #define BATCHED_RENDER
 
+	// deprecated
 	struct API Renderer2D {
 #ifdef BATCHED_RENDER
 		static const uint32_t s_max_quads_per_batch = 2048;

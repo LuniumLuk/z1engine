@@ -52,7 +52,7 @@ namespace z1 {
 		std::string m_name;
 		std::vector<std::string> m_inputs;
 		std::vector<std::string> m_manual_depends;
-		std::unordered_map<std::string, Framebuffer::Attachment> m_output_spec;
+		std::vector<std::pair<std::string, Framebuffer::Attachment>> m_output_spec;
 		std::shared_ptr<Framebuffer> m_output;
 		std::string m_passthrough_pass;
 		RenderPass::Description m_pass_desc;

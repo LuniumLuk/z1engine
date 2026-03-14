@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "render/rhi/opengl_shader.h"
+#include "render/shader_variant.h"
 #include "util/string_utils.h"
 #include "glad/glad.h"
 
@@ -113,8 +114,77 @@ namespace z1 {
 
 			src = uniforms + src;
 			src = process_includes(src, path.parent_path().generic_string() + "/");
+			src = "#version 460 core\n" + src;
 
 			CORE_DEBUG("loading shader stage [{0}] from file {1}", type, path.generic_string());
+			shaders.push_back(new OpenGLShaderModule(str_to_shader_stage(type), src));
+
+			pos = code.find(stage_token, bracket_end + 1);
+		}
+
+		m_handle = glCreateProgram();
+		link_shaders(shaders);
+
+		for (auto shader : shaders) {
+			delete shader;
+		}
+	}
+
+	OpenGLShader::OpenGLShader(Filepath const& path, uint32_t variant_key) {
+		m_path = path.generic_string();
+		m_name = path.filename().generic_string();
+
+		// Build variant define string from variant_key bits
+		std::string variant_defines;
+		constexpr uint32_t variant_bits[] = {
+			ShaderVariant::GBuffer,
+			ShaderVariant::Shadow,
+			ShaderVariant::Velocity,
+		};
+		for (auto bit : variant_bits) {
+			if (variant_key & bit) {
+				variant_defines += "#define ";
+				variant_defines += ShaderVariant::bit_name(bit);
+				variant_defines += " 1\n";
+			}
+		}
+
+		const char* uniform_token = "@uniforms:";
+		const size_t uniform_token_len = strlen(uniform_token);
+		const char* stage_token = "@stage:";
+		const size_t stage_token_len = strlen(stage_token);
+
+		std::vector<OpenGLShaderModule*> shaders;
+		std::string uniforms;
+		auto code = g_runtime_context.m_file_system->read_file(path);
+		size_t pos = 0;
+
+		// find uniforms
+		pos = code.find(uniform_token, pos);
+		if (pos != std::string::npos) {
+			size_t bracket_beg = code.find('{', pos);
+			size_t bracket_end = find_paired_brackets(code, bracket_beg);
+			uniforms = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
+		}
+
+		// Prepend variant defines so they are available in uniform blocks and stage code
+		uniforms = variant_defines + uniforms;
+
+		// find stages
+		pos = code.find(stage_token, pos);
+		while (pos != std::string::npos) {
+			size_t bracket_beg = code.find('{', pos);
+			size_t type_beg = pos + stage_token_len;
+			auto type = code.substr(type_beg, bracket_beg - type_beg);
+			type.erase(std::remove_if(type.begin(), type.end(), ::isspace), type.end());
+			size_t bracket_end = find_paired_brackets(code, bracket_beg);
+			auto src = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
+
+			src = uniforms + src;
+			src = process_includes(src, path.parent_path().generic_string() + "/");
+			src = "#version 460 core\n" + src;
+
+			CORE_DEBUG("loading shader stage [{0}] variant 0x{1:x} from file {2}", type, variant_key, path.generic_string());
 			shaders.push_back(new OpenGLShaderModule(str_to_shader_stage(type), src));
 
 			pos = code.find(stage_token, bracket_end + 1);
@@ -148,7 +218,10 @@ namespace z1 {
 	void OpenGLShader::set_uniform(std::string const& name, void const* data) {
 		PROFILE_FUNCTION();
 		auto it = m_uniform_indices.find(name);
-		DEBUG_CHECK(it != m_uniform_indices.end(), "uniform {0} not found!", name);
+		if (it == m_uniform_indices.end()) {
+			return;
+		}
+		//DEBUG_CHECK(it != m_uniform_indices.end(), "uniform {0} not found!", name);
 
 		uint32_t index = it->second;
 		switch (m_uniforms[index].m_type) {

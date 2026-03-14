@@ -1,6 +1,4 @@
 @uniforms: {
-	#version 460 core
-
 	layout(location = 0) uniform mat4 u_projview;
 	layout(location = 1) uniform sampler2D u_texture[32];
 }

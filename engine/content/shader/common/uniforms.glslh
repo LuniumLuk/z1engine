@@ -6,8 +6,6 @@
 ///  ...
 // }
 
-#version 460 core
-
 uniform mat4 u_model;
 
 // global constant buffer

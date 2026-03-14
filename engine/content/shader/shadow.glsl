@@ -1,3 +1,9 @@
+// RETIRED: This standalone shadow shader is no longer used.
+// Shadow rendering now uses per-material shader variants via
+// per_frame.variant_key = ShaderVariant::Shadow, which injects #define VARIANT_SHADOW.
+// Each surface shader includes common/shadow_out.glslh for alpha mask support.
+// Kept as reference only.
+
 @uniforms: {
 	#include <common/uniforms.glslh>
 }

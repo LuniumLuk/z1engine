@@ -1,8 +1,14 @@
+// RETIRED: This standalone velocity shader is no longer used.
+// Velocity rendering now uses per-material shader variants via
+// per_frame.variant_key = ShaderVariant::Velocity, which injects #define VARIANT_VELOCITY.
+// Each surface shader includes common/velocity_out.glslh.
+// Kept as reference only.
+
 @uniforms: {
 	#include <common/uniforms.glslh>
 }
 @stage: vert {
-#define VELOCITY
+#define VARIANT_VELOCITY
 	#include <common/vert.glslh>
 }
 @stage: frag {

@@ -118,6 +118,14 @@ namespace z1 {
 
 	void OpenGLFramebuffer::bind() const {
 		glBindFramebuffer(GL_FRAMEBUFFER, m_handle);
+		std::vector<GLuint> color_attachments;
+		for (uint32_t i = 0; i < m_attachment_ids.size(); ++i) {
+			if (i == m_depth_stencil_attachment_index)
+				continue;
+
+			color_attachments.push_back(m_attachment_ids[i]);
+		}
+		glDrawBuffers((GLsizei)color_attachments.size(), color_attachments.data());
 	}
 
 	void OpenGLFramebuffer::unbind() const {

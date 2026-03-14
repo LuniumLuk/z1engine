@@ -77,13 +77,30 @@ namespace z1 {
 		// in most case, the uniform blocks are used in engine internally
 	}
 
-	std::shared_ptr<Pipeline> Material::get_pipeline(uint32_t flags) {
-		if (m_pipeline_pool.find(flags) != m_pipeline_pool.end()) {
-			return m_pipeline_pool[flags];
+	std::shared_ptr<Pipeline> Material::get_pipeline(uint32_t flags, uint32_t variant_key) {
+		uint64_t pool_key = (uint64_t(variant_key) << 32) | uint64_t(flags);
+		if (m_pipeline_pool.find(pool_key) != m_pipeline_pool.end()) {
+			return m_pipeline_pool[pool_key];
+		}
+
+		// Select the right shader for this variant
+		std::shared_ptr<Shader> shader;
+		if (variant_key == 0) {
+			shader = m_shader;
+		}
+		else {
+			auto it = m_variant_shaders.find(variant_key);
+			if (it != m_variant_shaders.end()) {
+				shader = it->second;
+			}
+			else {
+				shader = Shader::create(m_shader->get_path(), variant_key);
+				m_variant_shaders[variant_key] = shader;
+			}
 		}
 
 		Pipeline::Description desc{};
-		desc.shader = m_shader;
+		desc.shader = shader;
 
 		desc.depth_test = MaterialFlags::get_depth_test(flags);
 		desc.depth_write = MaterialFlags::get_depth_write(flags);
@@ -105,7 +122,7 @@ namespace z1 {
 		}
 
 		auto pipeline = Pipeline::build(desc);
-		m_pipeline_pool[flags] = pipeline;
+		m_pipeline_pool[pool_key] = pipeline;
 		return pipeline;
 	}
 
@@ -225,12 +242,15 @@ namespace z1 {
 	}
 
 	void MaterialInstance::bind(PerFrameConst const& per_frame) const {
-		auto pipeline = m_material->get_pipeline(get_flags());
+		auto pipeline = m_material->get_pipeline(get_flags(), per_frame.variant_key);
 		pipeline->bind();
 
 		auto const& shader = pipeline->m_shader;
 		shader->set_uniform_block_binding("Global", per_frame.global_binding);
-		shader->set_uniform_block_binding("Lights", per_frame.lights_binding);
+		if (per_frame.variant_key == 0) {
+			// Only bind lighting-related uniforms for forward (non-variant) pass
+			shader->set_uniform_block_binding("Lights", per_frame.lights_binding);
+		}
 		shader->set_uniform("u_model", &per_frame.model);
 
 		for (auto const& [name, var] : m_override_variables) {

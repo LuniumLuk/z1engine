@@ -1,6 +1,4 @@
 @uniforms: {
-	#version 460 core
-
 	layout(location = 0) uniform mat4 u_projview;
 	layout(location = 1) uniform mat4 u_model;
 	layout(location = 2) uniform float u_object_id;

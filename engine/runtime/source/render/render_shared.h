@@ -6,6 +6,7 @@
 #include "render/pipeline.h"
 #include "render/vertex_array.h"
 #include "render/render_utils.h"
+#include "render/shader_variant.h"
 #include "scene/component/sky_light.h"
 #include <array>
 
@@ -44,11 +45,9 @@ namespace z1 {
 
 		std::shared_ptr<VertexArray> m_quad;
 		std::shared_ptr<Pipeline> m_pipeline_postprocess;
-		std::shared_ptr<Pipeline> m_pipeline_velocity;
 		std::shared_ptr<Pipeline> m_pipeline_taa;
 		std::shared_ptr<Pipeline> m_pipeline_bloom_downsample;
 		std::shared_ptr<Pipeline> m_pipeline_bloom_upsample;
-		std::shared_ptr<Pipeline> m_pipeline_shadow;
 		std::shared_ptr<Framebuffer> m_shadow_framebuffer;
 		std::shared_ptr<Image> m_shadow_image;
 		std::array<std::shared_ptr<Framebuffer>, 2> m_history_colors;

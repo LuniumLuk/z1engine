@@ -42,7 +42,7 @@ namespace z1 {
 		m_python_layer = std::make_shared<PythonLayer>();
 		m_layer_stack = std::make_shared<LayerStack>();
 
-		m_renderer_2d = std::make_shared<Renderer2D>();
+		//m_renderer_2d = std::make_shared<Renderer2D>();
 		m_renderer_forward = std::make_shared<RendererForward>();
 		m_renderer_deferred = std::make_shared<RendererDeferred>();
 
@@ -61,7 +61,7 @@ namespace z1 {
 		m_global.reset();
 		m_renderer_deferred.reset();
 		m_renderer_forward.reset();
-		m_renderer_2d.reset();
+		//m_renderer_2d.reset();
 
 		RenderGraph::clear_cache();
 

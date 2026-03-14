@@ -5,12 +5,14 @@
 	uniform sampler2D u_gbuffer_normal;
 	uniform sampler2D u_gbuffer_albedo;
 	uniform sampler2D u_gbuffer_metallic_roughness;
+	uniform sampler2D u_gbuffer_emissive;
 }
 @reflections: {
 	u_gbuffer_position           [invisible]
 	u_gbuffer_normal             [invisible]
 	u_gbuffer_albedo             [invisible]
 	u_gbuffer_metallic_roughness [invisible]
+	u_gbuffer_emissive           [invisible]
 	u_shadow_map                 [invisible]
 }
 @stage: vert {
@@ -42,6 +44,7 @@
 		vec2 mr = texture(u_gbuffer_metallic_roughness, v_uv).rg;
 		float metallic = mr.r;
 		float roughness = mr.g;
+		vec3 emissive = texture(u_gbuffer_emissive, v_uv).rgb;
 
 		// Set up variables expected by lighting functions
 		v_world_position = world_pos;
@@ -116,7 +119,7 @@
 		// Ambient
 		vec3 ambient = base_color * u_sun_ambient.rgb;
 
-		vec3 result = (ambient + L_diffuse) + L_specular;
+		vec3 result = (ambient + L_diffuse) + L_specular + emissive;
 		frag_color = vec4(result, alpha);
 
 		// NaN guard

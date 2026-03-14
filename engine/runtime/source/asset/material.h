@@ -7,6 +7,7 @@
 #include "render/pipeline.h"
 #include "render/resource.h"
 #include "render/shader.h"
+#include "render/shader_variant.h"
 #include "render/image.h"
 
 namespace z1 {
@@ -16,6 +17,7 @@ namespace z1 {
 		uint32_t global_binding;
 		uint32_t lights_binding;
 		uint32_t shadow_map_binding;
+		uint32_t variant_key = 0;
 	};
 
 	enum class AlphaMode : uint32_t {
@@ -147,8 +149,9 @@ namespace z1 {
 		std::shared_ptr<Shader> m_shader;
 		std::unordered_map<std::string, Variable> m_variables;
 
-		std::unordered_map<uint32_t, std::shared_ptr<Pipeline>> m_pipeline_pool;
-		std::shared_ptr<Pipeline> get_pipeline(uint32_t flags);
+		std::unordered_map<uint64_t, std::shared_ptr<Pipeline>> m_pipeline_pool;
+		std::unordered_map<uint32_t, std::shared_ptr<Shader>> m_variant_shaders;
+		std::shared_ptr<Pipeline> get_pipeline(uint32_t flags, uint32_t variant_key = 0);
 
 	private:
 		void parse_reflection_line(const std::string& line);
@@ -166,7 +169,7 @@ namespace z1 {
 		static std::shared_ptr<MaterialInstance> load(Guid const& guid);
 		void save() const;
 
-		std::shared_ptr<Pipeline> get_pipeline() const { return m_material->get_pipeline(get_flags()); }
+		std::shared_ptr<Pipeline> get_pipeline(uint32_t variant_key = 0) const { return m_material->get_pipeline(get_flags(), variant_key); }
 		std::shared_ptr<Shader> get_shader() const {return m_material->m_shader; }
 
 		std::shared_ptr<Material> m_material;

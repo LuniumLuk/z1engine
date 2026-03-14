@@ -110,6 +110,7 @@ namespace z1 {
 
 		virtual void* get_native_handle() const = 0;
 		static std::shared_ptr<Shader> create(Filepath const& path);
+		static std::shared_ptr<Shader> create(Filepath const& path, uint32_t variant_key);
 
 		std::string const& get_name() const { return m_name; }
 		std::string const& get_path() const { return m_path; }
