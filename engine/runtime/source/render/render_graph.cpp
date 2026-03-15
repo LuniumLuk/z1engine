@@ -96,6 +96,16 @@ namespace z1 {
 		return node->m_output->get_attachment_image(attachment_id);
 	}
 
+	std::shared_ptr<Framebuffer> RenderGraphNode::get_input_framebuffer_index(uint32_t index) {
+		auto [node, attachment_id] = m_inputs_by_index[index];
+		return node->m_output;
+	}
+
+	std::shared_ptr<Framebuffer> RenderGraphNode::get_input_framebuffer_name(std::string const& name) {
+		auto [node, attachment_id] = m_inputs_by_name[name];
+		return node->m_output;
+	}
+
 	void RenderGraphNode::unbind_input_index(uint32_t index) {
 		auto image = get_input_image_index(index);
 		image->unbind();

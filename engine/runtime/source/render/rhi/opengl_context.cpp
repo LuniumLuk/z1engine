@@ -10,6 +10,23 @@
 
 namespace z1 {
 
+	void glCheckError_(const char *file, int line) {
+		GLenum code;
+		while ((code = glGetError()) != GL_NO_ERROR) {
+			std::string error;
+			switch (code) {
+			case GL_INVALID_ENUM:                   error = "INVALID_ENUM"; break;
+			case GL_INVALID_VALUE:                  error = "INVALID_VALUE"; break;
+			case GL_INVALID_OPERATION:              error = "INVALID_OPERATION"; break;
+			case GL_STACK_OVERFLOW:                 error = "STACK_OVERFLOW"; break;
+			case GL_STACK_UNDERFLOW:                error = "STACK_UNDERFLOW"; break;
+			case GL_OUT_OF_MEMORY:                  error = "OUT_OF_MEMORY"; break;
+			case GL_INVALID_FRAMEBUFFER_OPERATION:  error = "INVALID_FRAMEBUFFER_OPERATION"; break;
+			}
+			CORE_ERROR("OpenGL Error: {0} | {1} ({2})", error, file, line);
+		}
+	}
+
 	OpenGLContext::OpenGLContext()
 		: m_window{ static_cast<GLFWwindow*>(g_runtime_context.m_window->get_native_window()) } {
 		CORE_ASSERT(m_window, "window handle is null!")
@@ -137,6 +154,12 @@ namespace z1 {
 		uint32_t dst_x, uint32_t dst_y,
 		uint32_t width, uint32_t height) {
 
+		DEBUG_CHECK(src->get_width() == dst->get_width() && src->get_height() == dst->get_height(), "blit_attachment requires src and dst to have the same dimensions!");
+		uint32_t w = width;
+		uint32_t h = height;
+		if (w == NUM_MAX) w = src->get_width();
+		if (h == NUM_MAX) h = src->get_height();
+
 		GLuint src_handle = (GLuint)reinterpret_cast<uintptr_t>(src->get_native_handle());
 		GLuint dst_handle = (GLuint)reinterpret_cast<uintptr_t>(dst->get_native_handle());
 
@@ -146,9 +169,10 @@ namespace z1 {
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_handle);
 		glDrawBuffer(GL_COLOR_ATTACHMENT0 + dst_attachment);
 
+		glColorMaski(dst_attachment, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glBlitFramebuffer(
-			src_x, src_y, width, height,
-			dst_x, dst_y, width, height,
+			src_x, src_y, w, h,
+			dst_x, dst_y, w, h,
 			GL_COLOR_BUFFER_BIT,
 			GL_NEAREST
 		);
@@ -161,18 +185,27 @@ namespace z1 {
 		uint32_t dst_x, uint32_t dst_y,
 		uint32_t width, uint32_t height) {
 
+		DEBUG_CHECK(src->get_width() == dst->get_width() && src->get_height() == dst->get_height(), "blit_attachment requires src and dst to have the same dimensions!");
+		uint32_t w = width;
+		uint32_t h = height;
+		if (w == NUM_MAX) w = src->get_width();
+		if (h == NUM_MAX) h = src->get_height();
+
 		GLuint src_handle = (GLuint)reinterpret_cast<uintptr_t>(src->get_native_handle());
 		GLuint dst_handle = (GLuint)reinterpret_cast<uintptr_t>(dst->get_native_handle());
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, src_handle);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_handle);
 
+		glDepthMask(GL_TRUE);
+		glStencilMask(0xff);
 		glBlitFramebuffer(
-			src_x, src_y, width, height,
-			dst_x, dst_y, width, height,
+			src_x, src_y, w, h,
+			dst_x, dst_y, w, h,
 			GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,
 			GL_NEAREST
 		);
+		glCheckError();
 	}
 
 }

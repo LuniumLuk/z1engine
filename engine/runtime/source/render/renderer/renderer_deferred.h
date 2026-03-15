@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render/render_shared.h"
+#include "render/renderer/render_shared.h"
 
 namespace z1 {
 
@@ -15,7 +15,7 @@ namespace z1 {
 		std::shared_ptr<Image> get_shadow_image() const { return m_shared.m_shadow_image; }
 
 	private:
-		void add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer);
+		void add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Scene> const& scene);
 		void add_deferred_lighting_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx);
 		void add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene);
 

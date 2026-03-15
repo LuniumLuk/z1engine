@@ -28,7 +28,7 @@ namespace z1 {
 		glm::vec4 sun_color             = { 1.f, 1.f, 1.f, 1.f };
 		float     sun_intensity         = 6.0f;
 		glm::vec4 sun_ambient_color     = { 1.f, 1.f, 1.f, 1.f };
-		float     sun_ambient_intensity = 0.0f;
+		float     sun_ambient_intensity = 0.25f;
 		glm::vec3 cam_position          = {};
 		// TAA
 		bool      taa_enabled           = true;

@@ -162,21 +162,9 @@ namespace z1 {
 		if (mi)
 			mi->bind(per_frame);
 
-		auto shadow_img = (g_runtime_context.m_renderer_forward ? g_runtime_context.m_renderer_forward->get_shadow_image() : nullptr);
-		bool const use_shadow_map = shadow_img && mi && mi->get_shader(per_frame.variant_key)->has_uniform("u_shadow_map");
-
-		// If renderer produced a shadow map, bind it to the material shader as u_shadow_map
-		if (use_shadow_map) {
-			shadow_img->bind(mi->get_shader(per_frame.variant_key), "u_shadow_map");
-		}
-
 		prim.m_vertex_array->bind();
 		prim.m_vertex_array->draw(prim.m_primitive_type);
 		prim.m_vertex_array->unbind();
-
-		if (use_shadow_map) {
-			shadow_img->unbind();
-		}
 
 		if (mi)
 			mi->unbind();
@@ -417,21 +405,9 @@ namespace z1 {
 			mi->get_shader(per_frame.variant_key)->set_uniform("u_has_skinning", &has_skinning);
 		}
 
-		auto shadow_img = (g_runtime_context.m_renderer_forward ? g_runtime_context.m_renderer_forward->get_shadow_image() : nullptr);
-		bool const use_shadow_map = shadow_img && mi && mi->get_shader(per_frame.variant_key)->has_uniform("u_shadow_map");
-
-		// If renderer produced a shadow map, bind it to the material shader as u_shadow_map
-		if (use_shadow_map) {
-			shadow_img->bind(mi->get_shader(per_frame.variant_key), "u_shadow_map");
-		}
-
 		prim.m_vertex_array->bind();
 		prim.m_vertex_array->draw(prim.m_primitive_type);
 		prim.m_vertex_array->unbind();
-
-		if (use_shadow_map) {
-			shadow_img->unbind();
-		}
 
 		if (has_skinning)
 			bones->unbind();

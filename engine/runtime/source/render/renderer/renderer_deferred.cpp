@@ -32,7 +32,7 @@ namespace z1 {
 			Pipeline::Description desc{};
 			desc.depth_test = true;
 			desc.cull_mode = CullMode::None;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/skybox");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/deferred_skybox");
 			m_pipeline_skybox = Pipeline::build(desc);
 		}
 	}
@@ -130,7 +130,7 @@ namespace z1 {
 
 		RenderGraph rg;
 		m_shared.add_shadow_pass(rg, scene);
-		add_gbuffer_pass(rg, draw_list, framebuffer);
+		add_gbuffer_pass(rg, draw_list, framebuffer, scene);
 		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx);
 		add_forward_transparency_pass(rg, framebuffer, draw_list, scene);
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview);
@@ -154,7 +154,7 @@ namespace z1 {
 	//   RT3: metallic-roughness (RG16F)
 	//   DS : depth
 
-	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer) {
+	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Scene> const& scene) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(5);
 		for (int i = 0; i < 5; i++) {
@@ -171,9 +171,9 @@ namespace z1 {
 			.add_output("gbuffer-normal", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-albedo", ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-metallic-roughness", ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
-			.add_output("gbuffer-emissive", ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-emissive", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-depth", ImageFormat::Depth)
-			.execute([this, &draw_list](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, &draw_list, scene](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 				per_frame.variant_key = ShaderVariant::GBuffer;
@@ -200,6 +200,34 @@ namespace z1 {
 						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
 					});
 				}
+
+				// Render skybox to emissive channel of G-buffer for now (could be optimized by skipping depth write and only rendering skybox in deferred lighting pass)
+				auto sky_view = scene->m_registry.view<SkyLightComponent const>();
+				for (auto [entity, sky] : sky_view.each()) {
+					if (sky.m_texture && sky.m_texture->m_image) {
+						m_pipeline_skybox->bind();
+
+						sky.m_texture->m_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
+
+						auto& s = m_pipeline_skybox->m_shader;
+						s->set_uniform("u_rotation", &sky.m_rotation);
+						s->set_uniform("u_intensity", &sky.m_intensity);
+						s->set_uniform("u_mip_level", &sky.m_mip_level);
+
+						auto& g = g_runtime_context.m_global;
+						glm::mat4 inv_projview = glm::inverse(g->projview);
+						s->set_uniform("u_inv_projview", &inv_projview);
+						s->set_uniform("u_cam_position", &g->cam_position);
+
+						m_shared.m_quad->bind();
+						m_shared.m_quad->draw(PrimitiveType::Triangles);
+						m_shared.m_quad->unbind();
+
+						sky.m_texture->m_image->unbind();
+						m_pipeline_skybox->unbind();
+					}
+					break;
+				}
 			});
 	}
 
@@ -215,7 +243,7 @@ namespace z1 {
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
 		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
-		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
 
 		rg.add_pass("deferred-lighting")
 			.set_resolution_as(framebuffer)
@@ -225,8 +253,14 @@ namespace z1 {
 			.add_input("gbuffer-albedo")
 			.add_input("gbuffer-metallic-roughness")
 			.add_input("gbuffer-emissive")
+			.add_input("gbuffer-depth")
 			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("scene-depth", ImageFormat::Depth)
+			.pre_pass([](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto src = node.get_input_framebuffer_name("gbuffer-depth");
+				auto dst = node.get_output();
+				ctx.blit_depth_stencil(src, dst);
+			})
 			.execute([this, history_uninitialized, read_idx, width, height](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_deferred_lighting->bind();
 				auto& s = m_pipeline_deferred_lighting->m_shader;
@@ -257,7 +291,7 @@ namespace z1 {
 				node.unbind_input_index(2);
 				node.unbind_input_index(3);
 				m_shared.m_shadow_image->unbind();
-
+				m_shared.m_lights_buffer->unbind();
 				m_pipeline_deferred_lighting->unbind();
 
 				if (history_uninitialized) {
@@ -293,6 +327,9 @@ namespace z1 {
 				m_shared.m_lights_buffer->bind();
 				per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
 
+				m_shared.m_shadow_image->bind();
+				per_frame.shadow_map_binding = m_shared.m_shadow_image->get_binding();
+
 				// Render blended geometry
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
@@ -313,33 +350,8 @@ namespace z1 {
 					});
 				}
 
-				// Skybox
-				auto sky_view = scene->m_registry.view<SkyLightComponent const>();
-				for (auto [entity, sky] : sky_view.each()) {
-					if (sky.m_texture && sky.m_texture->m_image) {
-						m_pipeline_skybox->bind();
-
-						sky.m_texture->m_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
-
-						auto& s = m_pipeline_skybox->m_shader;
-						s->set_uniform("u_rotation", &sky.m_rotation);
-						s->set_uniform("u_intensity", &sky.m_intensity);
-						s->set_uniform("u_mip_level", &sky.m_mip_level);
-
-						auto& g = g_runtime_context.m_global;
-						glm::mat4 inv_projview = glm::inverse(g->projview);
-						s->set_uniform("u_inv_projview", &inv_projview);
-						s->set_uniform("u_cam_position", &g->cam_position);
-
-						m_shared.m_quad->bind();
-						m_shared.m_quad->draw(PrimitiveType::Triangles);
-						m_shared.m_quad->unbind();
-
-						sky.m_texture->m_image->unbind();
-						m_pipeline_skybox->unbind();
-					}
-					break;
-				}
+				m_shared.m_lights_buffer->unbind();
+				m_shared.m_shadow_image->unbind();
 			});
 	}
 

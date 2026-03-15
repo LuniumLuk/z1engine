@@ -743,7 +743,7 @@ namespace z1 {
 			if (mat.alphaMode == "MASK") {
 				MaterialFlags::set_alpha_mode(mi->m_override_flags, AlphaMode::Mask);
 				mi->set_int("u_alpha_mode", 1);
-				mi->set_float("u_alpha_mode", (float)mat.alphaCutoff);
+				mi->set_float("u_alpha_cutoff", (float)mat.alphaCutoff);
 			}
 			else if (mat.alphaMode == "BLEND") {
 				MaterialFlags::set_alpha_mode(mi->m_override_flags, AlphaMode::Blend);

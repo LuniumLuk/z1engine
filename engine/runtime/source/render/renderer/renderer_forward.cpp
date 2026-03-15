@@ -159,6 +159,9 @@ namespace z1 {
 				m_shared.m_lights_buffer->bind();
 				per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
 
+				m_shared.m_shadow_image->bind();
+				per_frame.shadow_map_binding = m_shared.m_shadow_image->get_binding();
+
 				// Pass 1: Opaque and Mask
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
@@ -225,6 +228,9 @@ namespace z1 {
 					}
 					break;
 				}
+
+				m_shared.m_lights_buffer->unbind();
+				m_shared.m_shadow_image->unbind();
 
 				if (history_uninitialized) {
 					ctx.blit_attachment(

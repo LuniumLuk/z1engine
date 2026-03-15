@@ -6,6 +6,11 @@ struct GLFWwindow;
 
 namespace z1 {
 
+	void glCheckError_(const char *file, int line);
+
+	// Macro to make calling it easier
+	#define glCheckError() glCheckError_(__FILE__, __LINE__)
+
 	struct OpenGLContext : GraphicsContext {
 		OpenGLContext();
 

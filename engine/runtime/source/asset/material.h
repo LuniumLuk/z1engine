@@ -14,9 +14,9 @@ namespace z1 {
 
 	struct API PerFrameConst {
 		glm::mat4 model;
-		uint32_t global_binding;
-		uint32_t lights_binding;
-		uint32_t shadow_map_binding;
+		uint32_t global_binding = INVALID_BINDING;
+		uint32_t lights_binding = INVALID_BINDING;
+		uint32_t shadow_map_binding = INVALID_BINDING;
 		uint32_t variant_key = 0;
 	};
 

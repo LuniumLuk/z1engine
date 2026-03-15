@@ -253,16 +253,16 @@ void show_type_fields(void* instance, const std::string& name, bool group /*= fa
 
 template<typename T, typename... Args>
 void component_context_menu(const char* label, std::shared_ptr<Entity> const& entity, Args&&... args) {
-    if (entity->has_component<T>()) {
-        if (ImGui::MenuItem(std::string("remove ").append(label).c_str())) {
-            entity->remove_component<T>();
-        }
-    }
-    else {
-        if (ImGui::MenuItem(std::string("add ").append(label).c_str())) {
-            entity->add_component<T>(std::forward<Args>(args)...);
-        }
-    }
+	if (entity->has_component<T>()) {
+		if (ImGui::MenuItem(std::string("remove ").append(label).c_str())) {
+			entity->remove_component<T>();
+		}
+	}
+	else {
+		if (ImGui::MenuItem(std::string("add ").append(label).c_str())) {
+			entity->add_component<T>(std::forward<Args>(args)...);
+		}
+	}
 }
 
 void show_properties(std::shared_ptr<Entity> const& selected_entity) {
