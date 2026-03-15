@@ -28,6 +28,7 @@
 #include "scene/component/camera.h"
 #include "scene/component/mesh.h"
 #include "scene/component/sprite.h"
+#include "scene/component/light.h"
 #include "scene/component/animation.h"
 #include "scene/component/postprocess_volume.h"
 

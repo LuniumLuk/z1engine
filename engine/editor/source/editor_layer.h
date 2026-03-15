@@ -11,6 +11,7 @@
 #include "camera_ctrl.h"
 #include "picking_system.h"
 #include "browser.h"
+#include "type_field.h"
 #include "stb/stb_image_write.h"
 #include "scene/component/light.h"
 #include "scene/prefab.h"
@@ -72,27 +73,6 @@ private:
 	void use_editor_camera();
 	void show_scene_graph();
 
-	template<typename T, typename... Args>
-	void component_context_menu(const char* label, std::shared_ptr<Entity> const& entity, Args&&... args) {
-		if (entity->has_component<T>()) {
-			if (ImGui::MenuItem(std::string("remove ").append(label).c_str())) {
-				entity->remove_component<T>();
-			}
-		}
-		else {
-			if (ImGui::MenuItem(std::string("add ").append(label).c_str())) {
-				entity->add_component<T>(std::forward<Args>(args)...);
-			}
-		}
-	}
-
-	void accept_payload(std::string const& data_type, std::function<void(void*)> callback);
-
-	void show_value(void* ptr, std::type_info const& type, std::string const& name, FieldInfo const& field, const EnumInfo* enum_info = nullptr);
-	void show_type_field(void* instance, FieldInfo const& field);
-	void show_type_fields(void* instance, const std::string& name, bool group = false);
-
-	void show_properties();;
 	void show_asset_info();
 	void show_settings();
 
