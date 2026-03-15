@@ -31,7 +31,7 @@ namespace z1 {
 		for (auto const& e : entries) {
 			Pipeline::Description desc;
 			desc.blend = true;
-			desc.depth_test = false;
+			desc.depth_test = true;
 			desc.depth_write = false;
 			desc.cull_mode = CullMode::None;
 			desc.src_blend_factor = e.src;
