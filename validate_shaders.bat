@@ -1,4 +1,3 @@
 @echo off
-pushd %~dp0
-call "%~dp0\engine\bin\shader_validator.exe"
-popd
+python "%~dp0dev\z1.py" validate-shaders %*
+exit /b %ERRORLEVEL%

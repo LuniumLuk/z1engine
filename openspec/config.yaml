@@ -1,13 +1,20 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Knowledge base location
+kb_path: openspec/kb
+
+# Dev-scripts CLI entry point
+dev_scripts: dev/z1.py
+
+# Project context
+context: |
+  Tech stack: C++17, Premake5, Visual Studio 2026, OpenGL, ImGui, EnTT ECS, Python 3.14 (pybind11)
+  Platform: Windows x64 only
+  Build: premake5 generates VS2022 projects with --vs2026 flag
+  Dev CLI: python dev/z1.py <command> (generate, compile, format, validate-shaders, test, smoke, dcv, release)
+  Knowledge base: openspec/kb/ (read at session start, update at session end)
+  Coding style: hard tabs, K&R braces, east const, m_ prefix, PascalCase types, camelCase methods
+  Commit format: [AI] <type>: <description> with Generated-by trailer
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.

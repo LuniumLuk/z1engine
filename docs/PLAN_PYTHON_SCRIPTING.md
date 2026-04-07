@@ -1,3 +1,5 @@
+> **DEPRECATED** — This document has been migrated to `openspec/kb/python-scripting.md`. This file is kept for reference only.
+
 # Plan: Python Scripting for Gameplay
 
 This document outlines the implementation of Python scripting support for the z1engine, enabling gameplay logic to be written in Python 3.14.

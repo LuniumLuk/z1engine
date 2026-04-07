@@ -1,3 +1,5 @@
+> **DEPRECATED** — This document has been migrated to `openspec/kb/coding-style.md`. This file is kept for reference only.
+
 AI Agent Coding Style Guidelines for z1engine
 
 Purpose
