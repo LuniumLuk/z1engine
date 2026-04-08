@@ -17,6 +17,8 @@ def main(argv=None):
 						help="Number of frames to render (default: 1)")
 	parser.add_argument("--config", default="Debug",
 						help="Build config (default: Debug)")
+	parser.add_argument("--scene", default="",
+						help="Scene asset path to load (e.g. scene/ParticleDemo)")
 	args = parser.parse_args(argv)
 
 	config = normalize_config(args.config) or "Debug"
@@ -44,7 +46,7 @@ def main(argv=None):
 	print_info(f"Using: {exe}")
 
 	rc, stdout, stderr = run_subprocess(
-		[str(exe), f"--one-frame={args.frames}"],
+		[str(exe), f"--one-frame={args.frames}"] + ([f"--scene={args.scene}"] if args.scene else []),
 		cwd=str(root),
 		timeout=30,
 	)

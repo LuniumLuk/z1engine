@@ -116,9 +116,10 @@ namespace z1 {
 					if (!cam_entity) continue;
 					auto& camera_comp = cam_entity->get_component<CameraComponent>();
 
-					// Initialize per-component instance buffer if needed
-					if (!pc.m_runtime.m_vbo) {
-						pc.m_runtime.m_vbo = VertexBuffer::create(nullptr, pc.m_max_particles * sizeof(ParticleInstanceData),
+					// Initialize or resize per-component instance buffer if needed
+					size_t required_size = static_cast<size_t>(pc.m_max_particles) * sizeof(ParticleInstanceData);
+					if (!pc.m_runtime.m_vbo || pc.m_runtime.m_vbo->get_size() < required_size) {
+						pc.m_runtime.m_vbo = VertexBuffer::create(nullptr, required_size,
 							{
 								{DataType::Float3},  // position
 								{DataType::Float},   // size

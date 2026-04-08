@@ -25,6 +25,13 @@
 - Single-pass rendering for transparent/special objects
 - Uses `pbr.glsl`, `unlit.glsl`, `sprite_2d.glsl`
 
+### Particle Renderer (`renderer/particle_renderer.h/.cpp`)
+
+- Renders GPU particles as camera-facing billboards via instanced draw
+- `particle.glsl` -- vertex + fragment shader for particle quads
+- Instance data: position, color, size per alive particle
+- VBO dynamically resized to match `m_max_particles * sizeof(ParticleInstanceData)`
+
 ### Post-Processing
 
 | Pass | Shader |

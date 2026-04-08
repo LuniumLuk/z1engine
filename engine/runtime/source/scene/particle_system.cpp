@@ -15,8 +15,9 @@ namespace z1 {
 		// spread: 0 = focused beam, 1 = full hemisphere
 		// spread is a cone half-angle as fraction of pi/2 radians (90 degrees)
 
-		// Normalize base direction
-		glm::vec3 dir = glm::normalize(base_direction);
+		// Normalize base direction (fallback to up if zero-length)
+		float len = glm::length(base_direction);
+		glm::vec3 dir = len > 1e-6f ? base_direction / len : glm::vec3(0.0f, 1.0f, 0.0f);
 
 		// Generate random point on unit sphere
 		float theta = Random::rfloat(0.0f, glm::two_pi<float>());
@@ -34,7 +35,8 @@ namespace z1 {
 		up = glm::normalize(glm::cross(right, dir));
 
 		// Rotate random offset to align with base direction
-		return dir + random_offset.x * right + random_offset.y * up + (random_offset.z - 1.0f) * dir;
+		glm::vec3 result = random_offset.x * right + random_offset.y * up + random_offset.z * dir;
+		return glm::normalize(result);
 	}
 
 	// Helper: Sample emitter shape
@@ -128,6 +130,30 @@ namespace z1 {
 		p.alive = true;
 	}
 
+	// Helper: Spawn a burst of particles
+	static void emit_burst_internal(
+		ParticleComponent& pc,
+		uint32_t count,
+		glm::vec3 const& emitter_position,
+		glm::mat4 const& emitter_rotation
+	) {
+		for (uint32_t i = 0; i < count && !pc.m_runtime.m_free_list.empty(); ++i) {
+			uint32_t slot = pc.m_runtime.m_free_list.back();
+			pc.m_runtime.m_free_list.pop_back();
+			spawn_particle(pc, slot, emitter_position, emitter_rotation);
+			++pc.m_runtime.m_alive_count;
+			++pc.m_runtime.m_total_emitted;
+		}
+	}
+
+	void ParticleComponent::emit_burst(uint32_t count) {
+		// Public API: spawns at origin with identity rotation.
+		// When called from the update loop, emit_burst_internal is used instead
+		// with the proper emitter transform.
+		if (m_runtime.m_particles.empty()) return;
+		emit_burst_internal(*this, count, glm::vec3(0.0f), glm::mat4(1.0f));
+	}
+
 	void ParticleSystem::update(Scene* scene, float dt) {
 		PROFILE_FUNCTION();
 
@@ -139,6 +165,13 @@ namespace z1 {
 
 			if (!pc.m_playing) continue;
 
+			// Clamp dt to prevent emission spikes after stalls/breakpoints
+			float clamped_dt = glm::min(dt, 0.1f);
+
+			// Get emitter transform
+			glm::vec3 emitter_pos = tc.m_location;
+			glm::mat4 emitter_rot = tc.get_local_rotation();
+
 			// Initialize particle pool if needed
 			if (pc.m_runtime.m_particles.empty()) {
 				pc.m_runtime.m_particles.resize(pc.m_max_particles);
@@ -147,6 +180,11 @@ namespace z1 {
 				for (uint32_t i = pc.m_max_particles; i > 0; --i) {
 					pc.m_runtime.m_particles[i - 1].alive = false;
 					pc.m_runtime.m_free_list.push_back(i - 1);
+				}
+
+				// Initial burst on first pool creation
+				if (pc.m_burst_count > 0) {
+					emit_burst_internal(pc, pc.m_burst_count, emitter_pos, emitter_rot);
 				}
 			}
 
@@ -158,32 +196,35 @@ namespace z1 {
 				pc.m_runtime.m_alive_count = 0;
 				for (uint32_t i = pc.m_max_particles; i > 0; --i) {
 					auto& p = pc.m_runtime.m_particles[i - 1];
-					if (p.lifetime == 0.0f) {
-						p.alive = false;
-					}
 					if (!p.alive) {
 						pc.m_runtime.m_free_list.push_back(i - 1);
 					} else {
 						++pc.m_runtime.m_alive_count;
 					}
 				}
+				// Reset VBO so the renderer recreates it with correct capacity
+				pc.m_runtime.m_vbo.reset();
 			}
 
-			// Get emitter transform
-			glm::vec3 emitter_pos = tc.m_location;
-			glm::mat4 emitter_rot = tc.get_local_rotation();
-
 			// Spawn new particles (continuous emission)
-			if (pc.m_emission_rate > 0.0f && !pc.m_runtime.m_free_list.empty()) {
-				pc.m_runtime.m_emission_accumulator += pc.m_emission_rate * dt;
+			bool can_emit = pc.m_loop || pc.m_runtime.m_total_emitted < pc.m_max_particles;
+			if (pc.m_emission_rate > 0.0f && !pc.m_runtime.m_free_list.empty() && can_emit) {
+				pc.m_runtime.m_emission_accumulator += pc.m_emission_rate * clamped_dt;
 				uint32_t particles_to_spawn = static_cast<uint32_t>(pc.m_runtime.m_emission_accumulator);
 				pc.m_runtime.m_emission_accumulator -= particles_to_spawn;
+
+				// Clamp to remaining budget for non-looping emitters
+				if (!pc.m_loop) {
+					uint32_t remaining = pc.m_max_particles - pc.m_runtime.m_total_emitted;
+					particles_to_spawn = glm::min(particles_to_spawn, remaining);
+				}
 
 				for (uint32_t i = 0; i < particles_to_spawn && !pc.m_runtime.m_free_list.empty(); ++i) {
 					uint32_t slot = pc.m_runtime.m_free_list.back();
 					pc.m_runtime.m_free_list.pop_back();
 					spawn_particle(pc, slot, emitter_pos, emitter_rot);
 					++pc.m_runtime.m_alive_count;
+					++pc.m_runtime.m_total_emitted;
 				}
 			}
 
@@ -192,7 +233,7 @@ namespace z1 {
 				auto& p = pc.m_runtime.m_particles[pi];
 				if (!p.alive) continue;
 
-				p.age += dt;
+				p.age += clamped_dt;
 
 				// Check lifetime
 				if (p.age >= p.lifetime) {
@@ -203,15 +244,16 @@ namespace z1 {
 				}
 
 				// Apply gravity
-				p.velocity += pc.m_gravity * dt;
+				p.velocity += pc.m_gravity * clamped_dt;
 
-				// Apply damping
-				float damping_factor = 1.0f - (pc.m_damping * dt);
-				damping_factor = glm::max(damping_factor, 0.0f);
-				p.velocity *= damping_factor;
+				// Apply damping (frame-rate independent exponential decay)
+				if (pc.m_damping > 0.0f) {
+					float damping_factor = powf(1.0f - pc.m_damping, clamped_dt);
+					p.velocity *= damping_factor;
+				}
 
 				// Update position
-				p.position += p.velocity * dt;
+				p.position += p.velocity * clamped_dt;
 
 				// Interpolate color
 				float t = p.age / p.lifetime;
@@ -221,7 +263,12 @@ namespace z1 {
 				p.size = p.birth_size * glm::mix(pc.m_size_over_life.x, pc.m_size_over_life.y, t);
 
 				// Update rotation
-				p.rotation += p.rotation_speed * dt;
+				p.rotation += p.rotation_speed * clamped_dt;
+			}
+
+			// Auto-stop non-looping emitters when all particles are dead
+			if (!pc.m_loop && pc.m_runtime.m_total_emitted >= pc.m_max_particles && pc.m_runtime.m_alive_count == 0) {
+				pc.m_playing = false;
 			}
 
 			// Compact alive particles to front (optional, for depth sorting)
