@@ -54,6 +54,10 @@ def main(argv=None):
 	elapsed = timer.elapsed()
 
 	if rc == 0:
+		# Echo any diagnostic lines printed by the engine (e.g. CSM shadow stats)
+		diag_lines = [l for l in stdout.splitlines() if l.strip()]
+		for line in diag_lines:
+			print_info(f"  {line}")
 		print_ok(f"Editor started and rendered {args.frames} frame(s) ({elapsed})")
 		return make_result("ok", "smoke", frames=args.frames, elapsed=elapsed)
 	else:

@@ -34,6 +34,8 @@ namespace z1 {
 		LightData lights[MAX_LIGHTS];
 	};
 
+	struct MaterialInstance;
+
 	// Shared render resources and pass helpers
 
 	struct API RenderShared {
@@ -68,8 +70,8 @@ namespace z1 {
 
 		// Pass helpers (add to a RenderGraph)
 
-		void add_shadow_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene);
-		void add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview);
+		void add_shadow_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<MaterialInstance> const& default_material);
+		void add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview, std::shared_ptr<MaterialInstance> const& default_material);
 		void add_taa_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& history_write, std::shared_ptr<Framebuffer> const& history_read);
 		void add_bloom_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& source);
 		void add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target, std::shared_ptr<Framebuffer> const& source);

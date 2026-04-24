@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "asset/material.h"
 #include "render/renderer/render_shared.h"
 #include "render/global.h"
 #include "render/shader.h"
@@ -204,7 +205,7 @@ namespace z1 {
 		}
 	}
 
-	void RenderShared::add_shadow_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene) {
+	void RenderShared::add_shadow_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<MaterialInstance> const& default_material) {
 		auto& g = g_runtime_context.m_global;
 		RenderPass::Description desc;
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
@@ -217,107 +218,123 @@ namespace z1 {
 				.pre_pass([&, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
 					m_shadow_framebuffer->set_attachment_layer(0, cascade);
 				})
-				.execute([this, cascade, scene, &g](RenderGraphNode& node, GraphicsContext& ctx) {
+				.execute([this, cascade, scene, &g, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
+				int csm_candidates = 0;
+				int csm_drawn = 0;
 
-					// -- Static meshes --
-					auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
-					for (auto [entity, transform, mesh] : view.each()) {
-						if (!mesh.m_mesh) continue;
-						glm::mat4 model = transform.get_world_transform();
+				// -- Static meshes --
+				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
+				for (auto [entity, transform, mesh] : view.each()) {
+					if (!mesh.m_mesh) continue;
+					glm::mat4 model = transform.get_world_transform();
 
-						PerFrameConst per_frame{};
-						per_frame.model = model;
-						per_frame.global_binding = g->get_binding();
-						per_frame.variant_key = ShaderVariant::Shadow;
+					PerFrameConst per_frame{};
+					per_frame.model = model;
+					per_frame.global_binding = g->get_binding();
+					per_frame.variant_key = ShaderVariant::Shadow;
 
-						int has_skinning = 0;
+					int has_skinning = 0;
 
-						for (auto const& prim : mesh.m_mesh->m_primitives) {
-							std::shared_ptr<MaterialInstance> mi = nullptr;
-							if (prim.m_material.is_valid()) {
-								mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
-							}
-							if (!mi) continue;
+					for (auto const& prim : mesh.m_mesh->m_primitives) {
+						std::shared_ptr<MaterialInstance> mi = nullptr;
+						if (prim.m_material.is_valid()) {
+							mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
+						}
+						// Fall back to the default material so meshes without an explicit
+						// material assignment still cast shadows (mirrors GBuffer fallback).
+						if (!mi) mi = default_material;
 
-							AlphaMode alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
-							if (alpha_mode == AlphaMode::Blend)
-								continue;
+						csm_candidates++;
+						if (!mi) continue;
 
-							// Bind the material's shadow variant pipeline
-							// This compiles/caches the shadow variant of the material's shader
-							// and binds all material uniforms (including s_base_color for alpha mask)
-							mi->bind(per_frame);
-							auto const& s = mi->get_pipeline(ShaderVariant::Shadow)->m_shader;
+						AlphaMode alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
+						if (alpha_mode == AlphaMode::Blend)
+							continue;
 
-							// Set shadow-pass-specific uniforms
-							s->set_uniform("u_csm_index", &cascade);
-							s->set_uniform("u_has_skinning", &has_skinning);
+						mi->bind(per_frame);
+						auto const& s = mi->get_pipeline(ShaderVariant::Shadow)->m_shader;
 
-							prim.m_vertex_array->bind();
-							prim.m_vertex_array->draw(prim.m_primitive_type);
-							prim.m_vertex_array->unbind();
+						s->set_uniform("u_csm_index", &cascade);
+						s->set_uniform("u_has_skinning", &has_skinning);
 
-							mi->unbind();
+						prim.m_vertex_array->bind();
+						prim.m_vertex_array->draw(prim.m_primitive_type);
+						prim.m_vertex_array->unbind();
+
+						mi->unbind();
+						csm_drawn++;
+					}
+				}
+
+				// -- Skeletal meshes --
+				auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
+				for (auto [entity, transform, mesh] : view_skel.each()) {
+					if (!mesh.m_mesh) continue;
+					glm::mat4 model = transform.get_world_transform();
+
+					PerFrameConst per_frame{};
+					per_frame.model = model;
+					per_frame.global_binding = g->get_binding();
+					per_frame.variant_key = ShaderVariant::Shadow;
+
+					int has_skinning = 0;
+					if (scene->m_registry.all_of<AnimationComponent>(entity)) {
+						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+						if (anim.bone_ubo) {
+							has_skinning = 1;
+							anim.bone_ubo->bind();
 						}
 					}
 
-					// -- Skeletal meshes --
-					auto view_skel = scene->m_registry.view<TransformComponent const, SkeletalMeshComponent const>();
-					for (auto [entity, transform, mesh] : view_skel.each()) {
-						if (!mesh.m_mesh) continue;
-						glm::mat4 model = transform.get_world_transform();
-
-						PerFrameConst per_frame{};
-						per_frame.model = model;
-						per_frame.global_binding = g->get_binding();
-						per_frame.variant_key = ShaderVariant::Shadow;
-
-						int has_skinning = 0;
-						if (scene->m_registry.all_of<AnimationComponent>(entity)) {
-							auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-							if (anim.bone_ubo) {
-								has_skinning = 1;
-								anim.bone_ubo->bind();
-							}
+					for (auto const& prim : mesh.m_mesh->m_primitives) {
+						std::shared_ptr<MaterialInstance> mi = nullptr;
+						if (prim.m_material.is_valid()) {
+							mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 						}
+						if (!mi) mi = default_material;
 
-						for (auto const& prim : mesh.m_mesh->m_primitives) {
-							std::shared_ptr<MaterialInstance> mi = nullptr;
-							if (prim.m_material.is_valid()) {
-								mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
-							}
-							if (!mi) continue;
+						csm_candidates++;
+						if (!mi) continue;
 
-							AlphaMode alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
-							if (alpha_mode == AlphaMode::Blend)
-								continue;
+						AlphaMode alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
+						if (alpha_mode == AlphaMode::Blend)
+							continue;
 
-							mi->bind(per_frame);
-							auto const& s = mi->get_pipeline(ShaderVariant::Shadow)->m_shader;
+						mi->bind(per_frame);
+						auto const& s = mi->get_pipeline(ShaderVariant::Shadow)->m_shader;
 
-							s->set_uniform("u_csm_index", &cascade);
-							s->set_uniform("u_has_skinning", &has_skinning);
-							if (has_skinning) {
-								auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-								s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
-							}
-
-							prim.m_vertex_array->bind();
-							prim.m_vertex_array->draw(prim.m_primitive_type);
-							prim.m_vertex_array->unbind();
-
-							mi->unbind();
-						}
-
+						s->set_uniform("u_csm_index", &cascade);
+						s->set_uniform("u_has_skinning", &has_skinning);
 						if (has_skinning) {
-							scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
+							auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
+							s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
 						}
+
+						prim.m_vertex_array->bind();
+						prim.m_vertex_array->draw(prim.m_primitive_type);
+						prim.m_vertex_array->unbind();
+
+						mi->unbind();
+						csm_drawn++;
 					}
-				});
+
+					if (has_skinning) {
+						scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
+					}
+				}
+
+				// Diagnostic: print every 60 frames so frame 0 always shows in the smoke test
+				if (m_frame_index % 60 == 0) {
+					std::cout << "[render.shadow] shadow-CSM" << cascade
+					          << " frame=" << m_frame_index
+					          << " candidates=" << csm_candidates
+					          << " drawn=" << csm_drawn << "\n";
+				}
+			});
 		}
 	}
 
-	void RenderShared::add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview) {
+	void RenderShared::add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview, std::shared_ptr<MaterialInstance> const& default_material) {
 		auto& g = g_runtime_context.m_global;
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
@@ -331,7 +348,7 @@ namespace z1 {
 			.set_pass_desc(desc)
 			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
-			.execute([this, &draw_list, projview, &g](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, &draw_list, projview, &g, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
 
 				auto jittered_projview = g->projview;
 				g->projview = projview;
@@ -352,6 +369,7 @@ namespace z1 {
 						if (prim.m_material.is_valid()) {
 							mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 						}
+						if (!mi) mi = default_material;
 						if (!mi) continue;
 
 						mi->bind(per_frame);
@@ -390,6 +408,7 @@ namespace z1 {
 						if (prim.m_material.is_valid()) {
 							mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 						}
+						if (!mi) mi = default_material;
 						if (!mi) continue;
 
 						mi->bind(per_frame);
