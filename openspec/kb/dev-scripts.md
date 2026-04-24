@@ -17,6 +17,7 @@ python dev/z1.py <command> [options]
 | `format` | `commands/format_cmd.py` | Code formatting (tabs, whitespace, CRLF) |
 | `validate-shaders` | `commands/validate_shaders.py` | GLSL shader validation |
 | `test` | `commands/test.py` | Discover and run test executables |
+| `benchmark` | `commands/benchmark.py` | Run benchmark suites and baseline regression checks |
 | `smoke` | `commands/smoke.py` | Editor startup smoke test |
 | `dcv` | `commands/dcv.py` | Full develop-compile-verify loop |
 | `release` | `commands/release.py` | Package release folder |
@@ -49,6 +50,7 @@ python dev/z1.py <command> [options]
 python dev/z1.py dcv --auto        # auto-detect steps from git diff
 python dev/z1.py dcv --all         # run all steps
 python dev/z1.py dcv --test --smoke  # force specific steps
+python dev/z1.py benchmark --suite runtime-core --config Debug
 ```
 
 ### Step Order
@@ -58,7 +60,18 @@ python dev/z1.py dcv --test --smoke  # force specific steps
 3. `format` -- always
 4. `validate-shaders` -- if `.glsl` files changed
 5. `test` -- if engine code changed
-6. `smoke` -- if requested
+6. `benchmark` -- if mapped by changed paths or explicitly requested
+7. `smoke` -- if requested
+
+## Validation Report
+
+- `dcv` writes structured reports to:
+	- `dev/validation/reports/latest.json`
+	- `dev/validation/reports/dcv-<timestamp>.json`
+- Report includes:
+	- aggregate verdict (`status`, `correctness`, `performance`)
+	- selected test and benchmark suites
+	- per-step payloads and environment metadata
 
 ## Shared Utilities (`commands/_common.py`)
 

@@ -16,6 +16,7 @@
 - Create branch from `main`
 - Implement changes following coding style
 - Build and test via `python dev/z1.py dcv --auto`
+- For performance-sensitive changes, ensure mapped benchmark suites pass (`python dev/z1.py benchmark --suite <name>` or `dcv --auto`)
 - Commit with conventional format
 - Open Pull Request against `main`
 

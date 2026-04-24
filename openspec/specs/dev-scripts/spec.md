@@ -22,6 +22,7 @@ All development scripts MUST be implemented in Python and accessible through a s
     format            Format source code (tabs, trailing whitespace, CRLF)
     validate-shaders  Validate all GLSL shaders
     test              Discover and run test executables
+    benchmark         Run benchmark suites and compare baselines
     smoke             Run editor smoke test (--one-frame)
     dcv               Full develop-compile-verify loop
     release           Package release folder
@@ -166,7 +167,8 @@ All commands MUST accept input in any reasonable format without requiring shell-
   3. `format`
   4. `validate-shaders` (if `--shaders` flag or `.glsl` files exist in git diff)
   5. `test` (if `--test` flag or test-adjacent code changed)
-  6. `smoke` (if `--smoke` flag)
+  6. `benchmark` (if `--benchmark` flag or benchmark-adjacent/runtime code changed)
+  7. `smoke` (if `--smoke` flag)
 - **AND** stop on first failure with the failing command's exit code
 - **AND** report per-step status: `[OK] compile`, `[OK] format`, `[SKIP] shaders (no .glsl changes)`, etc.
 - **AND** the summary MUST include results from all steps
@@ -178,7 +180,22 @@ All commands MUST accept input in any reasonable format without requiring shell-
   - `.lua` files changed -> enable `generate`
   - `.glsl` files changed -> enable `validate-shaders`
   - `engine/runtime/`, `engine/bakery/` changed -> enable `test`
+  - `engine/runtime/`, `engine/editor/`, benchmark config paths changed -> enable `benchmark`
   - any code change -> always run `compile` + `format`
+
+### Requirement: `benchmark` command must run performance suites and compare baselines
+
+#### Scenario: Benchmark execution
+- **WHEN** `python dev/z1.py benchmark [--suite <name>] [--update-baseline]` is run
+- **THEN** it MUST discover and execute benchmark suites with warmup and repeat sampling
+- **AND** compare measured metrics against stored baselines unless `--update-baseline` is set
+- **AND** report each suite as `[OK]` or `[FAIL]` with delta percentages
+
+#### Scenario: Benchmark summary reporting
+- **WHEN** benchmark execution completes
+- **THEN** the final `RESULT:` summary MUST include `"command": "benchmark"`
+- **AND** it MUST include `"passed": N`, `"failed": N`, and per-suite regression counts
+- **AND** it MUST include baseline comparison metadata needed by gate orchestration
 
 ### Requirement: Old batch scripts must be thin wrappers
 

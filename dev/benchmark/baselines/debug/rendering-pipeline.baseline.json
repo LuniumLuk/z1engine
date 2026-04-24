@@ -1,0 +1,18 @@
+{
+  "suite": "rendering-pipeline",
+  "config": "Debug",
+  "generatedAt": "2026-04-25T00:00:00Z",
+  "notes": "Bootstrap baseline values; replace with measured values on first benchmark capture",
+  "cases": {
+    "render_courtyard": {
+      "render_frame_ms_p50": 17.20,
+      "render_frame_ms_p95": 21.10,
+      "shader_bind_us_p50": 115.0
+    },
+    "render_alpha_blend_stress": {
+      "render_frame_ms_p50": 18.60,
+      "render_frame_ms_p95": 23.50,
+      "shader_bind_us_p50": 132.0
+    }
+  }
+}

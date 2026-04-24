@@ -1,4 +1,5 @@
 #include "z1engine.h"
+#include <fstream>
 #include <vector>
 #include <string>
 #include "python/python_layer.h"
@@ -14,11 +15,48 @@ int main() {
 	OurApp app;
 	app.init();
 
+	Filepath scene_path = "sandbox-tests/scene_serialize_case";
+	Filepath scene_file = (FileSystem::s_content_root / scene_path).concat(".yaml");
+	Filepath sandbox_script_dir = FileSystem::s_content_root / "sandbox_tests";
+	Filepath sandbox_script_file = sandbox_script_dir / "test_mover.py";
+	Filepath sandbox_init_file = sandbox_script_dir / "__init__.py";
+	auto cleanup_scene = [&]() {
+		std::error_code ec;
+		std::filesystem::remove(scene_file, ec);
+		std::filesystem::remove(sandbox_script_file, ec);
+		std::filesystem::remove(sandbox_init_file, ec);
+		std::filesystem::remove_all(sandbox_script_dir, ec);
+		std::filesystem::remove_all(FileSystem::s_content_root / "sandbox-tests", ec);
+	};
+	cleanup_scene();
+	std::filesystem::create_directories(sandbox_script_dir);
+	{
+		std::ofstream init_file(sandbox_init_file.string(), std::ios::out | std::ios::trunc);
+		if (!init_file.is_open()) {
+			cleanup_scene();
+			return 1;
+		}
+	}
+	{
+		std::ofstream script_file(sandbox_script_file.string(), std::ios::out | std::ios::trunc);
+		if (!script_file.is_open()) {
+			cleanup_scene();
+			return 1;
+		}
+		script_file << "class TestMover:\n";
+		script_file << "\tdef on_update(self, delta_time):\n";
+		script_file << "\t\tt = self.entity.transform\n";
+		script_file << "\t\tif t is not None:\n";
+		script_file << "\t\t\tloc = t.location\n";
+		script_file << "\t\t\tloc.x = loc.x + delta_time\n";
+		script_file << "\t\t\tt.location = loc\n";
+	}
+
 	Filepath cwd = std::filesystem::current_path();
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
 	// generate and serialize sample scene
-	auto scene = Scene::create("scene/sample");
+	auto scene = Scene::create(scene_path);
 
 #if 0
 	auto persp_cam = scene->create_entity("Persp Camera");
@@ -52,7 +90,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_0");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("SM_bunny")
+			g_runtime_context.m_asset_manager->get<StaticMesh>("mesh/SM_Cube")
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(0.5f, 0.5f, -5.0f);
 	}
@@ -60,7 +98,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_1");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("SM_fireplace_room")
+			g_runtime_context.m_asset_manager->get<StaticMesh>("mesh/SM_Sphere")
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(1.0f, -2.0f, -4.0f);
 	}
@@ -68,7 +106,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_2");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("DamagedHelmet/mesh_helmet_LP_13930damagedHelmet")
+			g_runtime_context.m_asset_manager->get<StaticMesh>("mesh/SM_Cone")
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(-1.5f, 0.0f, -1.0f);
 		ent->get_component<TransformComponent>().m_rotation = glm::vec3(90.0f, 0.0f, 0.0f);
@@ -155,10 +193,11 @@ int main() {
 	// Python Script Test
 	if (g_runtime_context.m_python_layer) {
 		std::cout << "Starting Python Script Test..." << std::endl;
+		g_runtime_context.m_global->script_enabled = true;
 		g_runtime_context.m_python_layer->on_attach();
 
 		auto ent = scene->create_entity("PythonTestEntity");
-		ent->attach_script<PythonScript>("test_mover", "TestMover");
+		ent->attach_script<PythonScript>("sandbox_tests.test_mover", "TestMover");
 
 		// Run update loop (Attach and Update)
 		scene->on_update(0.1f);
@@ -171,12 +210,16 @@ int main() {
 		}
 		else {
 			std::cout << "[FAILURE] Python Script did not move entity." << std::endl;
+			g_runtime_context.m_python_layer->on_detach();
+			cleanup_scene();
+			return 1;
 		}
 
 		g_runtime_context.m_python_layer->on_detach();
 	}
 
 	scene->save();
+	cleanup_scene();
 
 	return 0;
 }

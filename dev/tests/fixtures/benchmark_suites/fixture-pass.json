@@ -1,0 +1,33 @@
+{
+  "suite": "fixture-pass",
+  "enabled": true,
+  "command": [
+    "C:/Users/luniu/AppData/Local/Python/pythoncore-3.14-64/python.exe"
+  ],
+  "workingDirectory": "dev/tests/fixtures/workdir-pass",
+  "warmupRuns": 0,
+  "measuredRuns": 1,
+  "metrics": [
+    {
+      "name": "fixture_ms_p50",
+      "source": "trace.json",
+      "aggregation": "p50",
+      "traceNameContains": "fixture-pass",
+      "lowerIsBetter": true,
+      "thresholdPercent": 5.0
+    }
+  ],
+  "cases": [
+    {
+      "id": "case-pass",
+      "args": [
+        "{repo_root}/dev/tests/fixtures/emit_trace.py",
+        "trace.json",
+        "fixture-pass",
+        "1000",
+        "1000",
+        "1000"
+      ]
+    }
+  ]
+}

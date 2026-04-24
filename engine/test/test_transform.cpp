@@ -62,9 +62,9 @@ int main() {
 		Random::rfloat() * 180.0f,
 	};
 	glm::vec3 random_S = {
-		Random::rfloat(),
-		Random::rfloat(),
-		Random::rfloat(),
+		0.1f + Random::rfloat() * 0.9f,
+		0.1f + Random::rfloat() * 0.9f,
+		0.1f + Random::rfloat() * 0.9f,
 		//1.0f, 1.0f, 1.0f,
 	};
 	std::cout << "--------random input--------\n";
@@ -120,5 +120,5 @@ int main() {
 		glm_utils::print(scale);
 	}
 
-
+	return 0;
 }

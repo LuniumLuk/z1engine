@@ -1,0 +1,18 @@
+{
+  "suite": "runtime-core",
+  "config": "Debug",
+  "generatedAt": "2026-04-25T00:00:00Z",
+  "notes": "Bootstrap baseline values; replace with measured values on first benchmark capture",
+  "cases": {
+    "runtime_forest_medium": {
+      "frame_time_ms_p50": 16.40,
+      "frame_time_ms_p95": 19.20,
+      "scene_update_us_p50": 820.0
+    },
+    "runtime_new_scene": {
+      "frame_time_ms_p50": 15.80,
+      "frame_time_ms_p95": 18.70,
+      "scene_update_us_p50": 760.0
+    }
+  }
+}

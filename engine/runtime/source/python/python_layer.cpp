@@ -18,6 +18,21 @@ extern void ForceLinkPythonEngine();
 
 namespace z1 {
 
+	static std::filesystem::path get_embedded_python_home() {
+		auto cwd = std::filesystem::current_path();
+		auto candidate = cwd / "engine" / "3rdparty" / "python314";
+		if (std::filesystem::exists(candidate / "python314.zip")) {
+			return std::filesystem::absolute(candidate);
+		}
+
+		candidate = cwd / "pyenv";
+		if (std::filesystem::exists(candidate / "python314.zip")) {
+			return std::filesystem::absolute(candidate);
+		}
+
+		return std::filesystem::absolute(cwd);
+	}
+
 	static std::multimap<EventType, py::object> s_python_event_listeners;
 
 	void register_python_event_listener(EventType type, py::object callback) {
@@ -34,11 +49,25 @@ namespace z1 {
 
 		// 2. Set the Python Home (the directory containing python314.zip or Lib/)
 		// This replaces Py_SetPythonHome
-		std::wstring home = std::filesystem::absolute("./pyenv").wstring();
+		auto python_home_path = get_embedded_python_home();
+		std::wstring home = python_home_path.wstring();
 		PyStatus status = PyConfig_SetString(&config, &config.home, home.c_str());
 		if (PyStatus_Exception(status)) {
 			PyConfig_Clear(&config);
 			CORE_ASSERT(false, "Failed to set Python Home");
+		}
+
+		config.module_search_paths_set = 1;
+		std::wstring python_zip = (python_home_path / "python314.zip").wstring();
+		status = PyWideStringList_Append(&config.module_search_paths, python_zip.c_str());
+		if (PyStatus_Exception(status)) {
+			PyConfig_Clear(&config);
+			CORE_ASSERT(false, "Failed to append python zip path");
+		}
+		status = PyWideStringList_Append(&config.module_search_paths, home.c_str());
+		if (PyStatus_Exception(status)) {
+			PyConfig_Clear(&config);
+			CORE_ASSERT(false, "Failed to append python home path");
 		}
 
 		// Configure pycache prefix to redirect .pyc files to a central location
