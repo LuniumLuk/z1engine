@@ -19,7 +19,7 @@
 | `deferred_skybox.glsl` | Skybox in deferred pipeline |
 | `pbr.glsl` | PBR material (metallic-roughness) |
 | `pbr_sg.glsl` | PBR specular-glossiness variant |
-| `phone.glsl` | Phong/Blinn lighting |
+| `phone.glsl` | Phong/Blinn lighting (forward default material — now uses PBR to match deferred) |
 | `unlit.glsl` | Unlit material |
 | `shadow.glsl` | Shadow map generation |
 | `bloom_downsample.glsl` | Bloom downsample pass |

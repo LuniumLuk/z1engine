@@ -24,6 +24,7 @@
 
 - Single-pass rendering for transparent/special objects
 - Uses `pbr.glsl`, `unlit.glsl`, `sprite_2d.glsl`
+- Default material (`MI_phone` / `phone.glsl`) uses Cook-Torrance PBR lighting (same as deferred) for brightness parity
 
 ### Particle Renderer (`renderer/particle_renderer.h/.cpp`)
 

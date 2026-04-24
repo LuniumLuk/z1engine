@@ -4,6 +4,9 @@ vec4 lambert_shading(vec3 normal, vec4 color) {
 	return vec4(color.rgb * NoL, color.a);
 }
 
+// Note: phone_shading is superseded by calculate_pbr_illumination for the default
+// material (MI_phone / phone.glsl forward path) to maintain lighting parity with
+// the deferred pipeline. Kept here for any other callers.
 vec4 phone_shading(vec3 normal, vec3 world_pos, vec4 color, float shadow) {
 	// Ambient lighting
 	vec3 ambient = color.rgb * u_sun_ambient.rgb;

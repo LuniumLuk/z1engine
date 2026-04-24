@@ -219,8 +219,6 @@ namespace z1 {
 					m_shadow_framebuffer->set_attachment_layer(0, cascade);
 				})
 				.execute([this, cascade, scene, &g, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
-				int csm_candidates = 0;
-				int csm_drawn = 0;
 
 				// -- Static meshes --
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
@@ -244,7 +242,6 @@ namespace z1 {
 						// material assignment still cast shadows (mirrors GBuffer fallback).
 						if (!mi) mi = default_material;
 
-						csm_candidates++;
 						if (!mi) continue;
 
 						AlphaMode alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
@@ -262,7 +259,6 @@ namespace z1 {
 						prim.m_vertex_array->unbind();
 
 						mi->unbind();
-						csm_drawn++;
 					}
 				}
 
@@ -293,7 +289,6 @@ namespace z1 {
 						}
 						if (!mi) mi = default_material;
 
-						csm_candidates++;
 						if (!mi) continue;
 
 						AlphaMode alpha_mode = MaterialFlags::get_alpha_mode(mi->get_flags());
@@ -315,20 +310,11 @@ namespace z1 {
 						prim.m_vertex_array->unbind();
 
 						mi->unbind();
-						csm_drawn++;
 					}
 
 					if (has_skinning) {
 						scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
 					}
-				}
-
-				// Diagnostic: print every 60 frames so frame 0 always shows in the smoke test
-				if (m_frame_index % 60 == 0) {
-					std::cout << "[render.shadow] shadow-CSM" << cascade
-					          << " frame=" << m_frame_index
-					          << " candidates=" << csm_candidates
-					          << " drawn=" << csm_drawn << "\n";
 				}
 			});
 		}
