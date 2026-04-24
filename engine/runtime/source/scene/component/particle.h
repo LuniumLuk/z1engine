@@ -78,6 +78,8 @@ namespace z1 {
 		bool m_loop = true;
 		bool m_playing = true;
 		bool m_sort_by_depth = false;
+		bool m_receive_shadows = true;
+		bool m_cast_shadows = true;
 		glm::vec2 m_initial_rotation = glm::vec2(0.0f, 360.0f);
 		glm::vec2 m_rotation_speed = glm::vec2(0.0f, 0.0f);
 
@@ -113,6 +115,8 @@ namespace z1 {
 	REFLECTED_FIELD(ParticleComponent, m_loop,               FF_Default)
 	REFLECTED_FIELD(ParticleComponent, m_playing,            FF_Default)
 	REFLECTED_FIELD(ParticleComponent, m_sort_by_depth,      FF_Default)
+	REFLECTED_FIELD(ParticleComponent, m_receive_shadows,    FF_Default)
+	REFLECTED_FIELD(ParticleComponent, m_cast_shadows,       FF_Default)
 	REFLECTED_FIELD(ParticleComponent, m_initial_rotation,   FF_Default, "[drag]")
 	REFLECTED_FIELD(ParticleComponent, m_rotation_speed,     FF_Default, "[drag]")
 

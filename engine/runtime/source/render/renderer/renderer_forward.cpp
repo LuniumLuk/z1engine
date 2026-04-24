@@ -126,8 +126,9 @@ namespace z1 {
 
 		RenderGraph rg;
 		m_shared.add_shadow_pass(rg, scene, m_default_material);
+		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, CSM_LAYERS);
 		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview);
-		m_particle_renderer.add_particle_pass(rg, scene.get(), "main");
+		m_particle_renderer.add_particle_pass(rg, scene.get(), "main", m_shared.m_shadow_image);
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview, m_default_material);
 		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
 		m_shared.add_bloom_pass(rg, m_shared.m_history_colors[write_idx]);

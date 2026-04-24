@@ -2,6 +2,8 @@
 
 #include "render/pipeline.h"
 #include "render/vertex_array.h"
+#include "render/image.h"
+#include "render/framebuffer.h"
 #include "scene/scene.h"
 #include "scene/component/particle.h"
 #include "render/render_graph.h"
@@ -27,6 +29,7 @@ namespace z1 {
 		std::shared_ptr<Pipeline> m_pipeline_alpha;
 		std::shared_ptr<Pipeline> m_pipeline_additive;
 		std::shared_ptr<Pipeline> m_pipeline_soft;
+		std::shared_ptr<Pipeline> m_pipeline_shadow;
 
 		// Shared unit quad geometry (created once)
 		std::shared_ptr<VertexBuffer> m_quad_vbo;
@@ -35,7 +38,8 @@ namespace z1 {
 
 		void init();
 		void shutdown();
-		void add_particle_pass(RenderGraph& rg, Scene* scene, std::string const& input_pass);
+		void add_particle_pass(RenderGraph& rg, Scene* scene, std::string const& input_pass, std::shared_ptr<Image> const& shadow_image = nullptr);
+		void add_particle_shadow_passes(RenderGraph& rg, Scene* scene, std::shared_ptr<Framebuffer> const& shadow_fb, int csm_layers);
 
 	private:
 		std::shared_ptr<Pipeline> select_pipeline(ParticleBlendMode mode);

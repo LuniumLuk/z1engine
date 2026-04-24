@@ -30,8 +30,14 @@
 
 - Renders GPU particles as camera-facing billboards via instanced draw
 - `particle.glsl` -- vertex + fragment shader for particle quads
-- Instance data: position, color, size per alive particle
+- `particle_shadow.glsl` -- depth-only shadow pass shader using `u_sun_projview[u_csm_index]`
+- Instance data: position, color, size, rotation per alive particle
 - VBO dynamically resized to match `m_max_particles * sizeof(ParticleInstanceData)`
+- `add_particle_pass(rg, scene, input_pass, shadow_image)` -- shadow_image enables CSM shadow reception per emitter
+- `add_particle_shadow_passes(rg, scene, shadow_fb, csm_layers)` -- appends 4 depth-only passes after mesh shadow passes using `LoadOp::Load`
+- Shadow receive: binds CSM shadow array, calls `set_uniform_block_binding("Global", ...)`, sets `u_receive_shadows` per emitter
+- Shadow cast: per-cascade billboard depth pass; skips emitters with `m_cast_shadows = false`
+- Both controlled by `ParticleComponent::m_receive_shadows` and `m_cast_shadows` (default `true`)
 
 ### Post-Processing
 

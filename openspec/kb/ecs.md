@@ -34,7 +34,7 @@
 | `SkyLightComponent` | `component/sky_light.h` | Environment lighting |
 | `PostprocessVolumeComponent` | `component/postprocess_volume.h` | Post-processing settings |
 | `AnimationComponent` | `component/animation.h` | Animation state |
-| `ParticleComponent` | `component/particle.h` | GPU particle emitter: rate, lifetime, cone angle, damping, burst, loop, gravity |
+| `ParticleComponent` | `component/particle.h` | GPU particle emitter: rate, lifetime, cone angle, damping, burst, loop, gravity, **receive_shadows**, **cast_shadows** |
 
 ## Systems
 

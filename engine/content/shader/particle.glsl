@@ -8,6 +8,7 @@
 	uniform int u_soft_blend;
 	uniform float u_near;
 	uniform float u_far;
+	uniform int u_receive_shadows;
 }
 
 @stage: vert {
@@ -23,6 +24,7 @@
 
 	layout(location = 0) out vec4 v_color;
 	layout(location = 1) out vec2 v_texcoord;
+	layout(location = 2) out vec3 v_world_pos;
 
 	void main() {
 		// Apply rotation (2D rotation in billboard plane)
@@ -45,18 +47,47 @@
 		// Pass data to fragment shader
 		v_color = a_color;
 		v_texcoord = a_texcoord;
+		v_world_pos = world_pos;
 	}
 }
 
 @stage: frag {
 	layout(location = 0) in vec4 v_color;
 	layout(location = 1) in vec2 v_texcoord;
+	layout(location = 2) in vec3 v_world_pos;
 
 	layout(location = 0) out vec4 o_color;
 
 	// Linearize a [0,1] depth buffer value to view-space distance
 	float linearize_depth(float d) {
 		return u_near * u_far / (u_far - d * (u_far - u_near));
+	}
+
+	// 3x3 PCF shadow factor for a billboard particle (no surface normal, fixed bias)
+	float get_particle_shadow(vec3 world_pos) {
+		float dist = distance(u_cam_position.xyz, world_pos);
+		int layer = 0;
+		if (dist >= u_csm_splits.x) layer = 1;
+		if (dist >= u_csm_splits.y) layer = 2;
+		if (dist >= u_csm_splits.z) layer = 3;
+
+		vec4 ls = u_sun_projview[layer] * vec4(world_pos, 1.0);
+		vec3 proj = ls.xyz / ls.w;
+		vec3 uv = vec3(proj.xy * 0.5 + 0.5, float(layer));
+		float current_depth = proj.z * 0.5 + 0.5;
+
+		float bias = 0.002;
+
+		vec2 texel_size = 1.0 / vec2(textureSize(u_shadow_map, 0).xy);
+		float shadow = 0.0;
+		for (int x = -1; x <= 1; ++x) {
+			for (int y = -1; y <= 1; ++y) {
+				vec2 offset = vec2(float(x), float(y)) * texel_size;
+				float sampled = texture(u_shadow_map, vec3(uv.xy + offset, uv.z)).r;
+				shadow += (current_depth - bias > sampled) ? 0.0 : 1.0;
+			}
+		}
+		return shadow / 9.0;
 	}
 
 	void main() {
@@ -83,6 +114,12 @@
 			float soft_range = max(frag_linear * 0.05, 0.5);
 			float fade = clamp((scene_linear - frag_linear) / soft_range, 0.0, 1.0);
 			final_color.a *= fade;
+		}
+
+		// Shadow reception
+		if (u_receive_shadows != 0) {
+			float shadow = get_particle_shadow(v_world_pos);
+			final_color.rgb *= shadow;
 		}
 
 		// Discard fully transparent pixels

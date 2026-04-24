@@ -431,6 +431,8 @@ namespace z1 {
 				if (p["loop"]) pc.m_loop = p["loop"].as<bool>();
 				if (p["playing"]) pc.m_playing = p["playing"].as<bool>();
 				if (p["sort_by_depth"]) pc.m_sort_by_depth = p["sort_by_depth"].as<bool>();
+				if (p["receive_shadows"]) pc.m_receive_shadows = p["receive_shadows"].as<bool>();
+				if (p["cast_shadows"]) pc.m_cast_shadows = p["cast_shadows"].as<bool>();
 				if (p["initial_rotation"]) pc.m_initial_rotation = p["initial_rotation"].as<glm::vec2>();
 				if (p["rotation_speed"]) pc.m_rotation_speed = p["rotation_speed"].as<glm::vec2>();
 			}
@@ -746,6 +748,8 @@ namespace z1 {
 				yaml << YAML::Key << "loop" << YAML::Value << particle.m_loop;
 				yaml << YAML::Key << "playing" << YAML::Value << particle.m_playing;
 				yaml << YAML::Key << "sort_by_depth" << YAML::Value << particle.m_sort_by_depth;
+				yaml << YAML::Key << "receive_shadows" << YAML::Value << particle.m_receive_shadows;
+				yaml << YAML::Key << "cast_shadows" << YAML::Value << particle.m_cast_shadows;
 				yaml << YAML::Key << "initial_rotation" << YAML::Value << particle.m_initial_rotation;
 				yaml << YAML::Key << "rotation_speed" << YAML::Value << particle.m_rotation_speed;
 
