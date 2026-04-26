@@ -1,0 +1,10 @@
+{
+  "suite": "fixture-fail",
+  "config": "Debug",
+  "generatedAt": "fixture",
+  "cases": {
+    "case-fail": {
+      "fixture_ms_p50": 1.0
+    }
+  }
+}

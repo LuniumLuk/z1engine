@@ -1,0 +1,51 @@
+{
+  "suite": "runtime-core",
+  "description": "Runtime hot-path metrics for scene update and core systems",
+  "enabled": true,
+  "binary": "engine/bin/Debug/game.exe",
+  "workingDirectory": ".",
+  "warmupRuns": 1,
+  "measuredRuns": 5,
+  "metrics": [
+    {
+      "name": "frame_time_ms_p50",
+      "source": "profile-run.json",
+      "aggregation": "p50",
+      "lowerIsBetter": true,
+      "thresholdPercent": 8.0
+    },
+    {
+      "name": "frame_time_ms_p95",
+      "source": "profile-run.json",
+      "aggregation": "p95",
+      "lowerIsBetter": true,
+      "thresholdPercent": 10.0
+    },
+    {
+      "name": "scene_update_us_p50",
+      "source": "profile-run.json",
+      "aggregation": "p50",
+      "traceNameContains": "scene::on_update",
+      "lowerIsBetter": true,
+      "thresholdPercent": 12.0
+    }
+  ],
+  "cases": [
+    {
+      "id": "runtime_forest_medium",
+      "args": [
+        "--one-frame=200",
+        "--scene=content/forest.yaml"
+      ],
+      "samples": 200
+    },
+    {
+      "id": "runtime_new_scene",
+      "args": [
+        "--one-frame=200",
+        "--scene=content/new_scene.yaml"
+      ],
+      "samples": 200
+    }
+  ]
+}

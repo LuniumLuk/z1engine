@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "workspaceHygiene": {
+    "enabled": true,
+    "mode": "sandbox",
+    "forbidPersistentWrites": [
+      "content/**"
+    ],
+    "allowPrefixesUnderContent": [
+      "content/sandbox-tests/**"
+    ],
+    "cleanupAfterRun": true,
+    "cleanupPaths": [
+      "content/sandbox-tests/**",
+      "profile-*.json",
+      "trace-*.json"
+    ]
+  },
+  "gates": {
+    "failOnTestFailure": true,
+    "failOnBenchmarkRegression": true,
+    "missingBaseline": "warn"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "default": {
+    "tests": [
+      "test_transform",
+      "test_binary_file"
+    ],
+    "benchmarks": [
+      "runtime-core"
+    ]
+  },
+  "pathRules": [
+    {
+      "matchAny": [
+        "engine/runtime/source/core/",
+        "engine/runtime/source/scene/",
+        "engine/runtime/source/asset/"
+      ],
+      "tests": [
+        "test_transform",
+        "test_scene_serialize",
+        "test_import"
+      ],
+      "benchmarks": [
+        "runtime-core"
+      ]
+    },
+    {
+      "matchAny": [
+        "engine/runtime/source/render/",
+        "engine/editor/source/",
+        "engine/tool/shader_validator/"
+      ],
+      "tests": [
+        "test_render_graph"
+      ],
+      "benchmarks": [
+        "rendering-pipeline"
+      ]
+    },
+    {
+      "matchAny": [
+        "engine/bakery/",
+        "asset/texture/",
+        "asset/mesh/"
+      ],
+      "tests": [
+        "test_bakery",
+        "test_import"
+      ],
+      "benchmarks": [
+        "runtime-core"
+      ]
+    },
+    {
+      "matchAny": [
+        "engine/runtime/source/python/",
+        "dev/commands/"
+      ],
+      "tests": [
+        "test_pybind11",
+        "test_scene_serialize"
+      ],
+      "benchmarks": [
+        "runtime-core"
+      ]
+    }
+  ],
+  "escalationRules": [
+    {
+      "matchAny": [
+        "engine/runtime/source/render/renderer/",
+        "engine/runtime/source/render/rhi/",
+        "engine/runtime/source/core/application.cpp"
+      ],
+      "mode": "full"
+    }
+  ],
+  "fullMode": {
+    "tests": [
+      "test_bakery",
+      "test_binary_file",
+      "test_import",
+      "test_pybind11",
+      "test_render_graph",
+      "test_scene_serialize",
+      "test_transform"
+    ],
+    "benchmarks": [
+      "runtime-core",
+      "rendering-pipeline"
+    ]
+  }
+}

@@ -9,7 +9,9 @@
 #include "scene/component/sky_light.h"
 #include "scene/component/postprocess_volume.h"
 #include "scene/component/animation.h"
+#include "scene/component/particle.h"
 #include "scene/animation_system.h"
+#include "scene/particle_system.h"
 #include "scene/postprocess_system.h"
 #include "scene/script_system.h"
 #include "python/python_script.h"
@@ -144,6 +146,7 @@ namespace z1 {
 		}
 
 		AnimationSystem::update(this, delta_time);
+		ParticleSystem::update(this, delta_time);
 		ScriptSystem::update(this, delta_time);
 		PostProcessSystem::update(this);
 	}
@@ -397,6 +400,41 @@ namespace z1 {
 				anim.speed = anim_yaml["speed"].as<float>();
 				anim.loop = anim_yaml["loop"].as<bool>();
 				anim.playing = anim_yaml["playing"].as<bool>();
+			}
+
+			// ParticleComponent
+			if (entity_yaml["particle"]) {
+				auto const& p = entity_yaml["particle"];
+				auto& pc = entity->add_component<ParticleComponent>();
+				if (p["max_particles"]) pc.m_max_particles = p["max_particles"].as<uint32_t>();
+				if (p["emission_rate"]) pc.m_emission_rate = p["emission_rate"].as<float>();
+				if (p["burst_count"]) pc.m_burst_count = p["burst_count"].as<uint32_t>();
+				if (p["lifetime"]) pc.m_lifetime = p["lifetime"].as<glm::vec2>();
+				if (p["initial_speed"]) pc.m_initial_speed = p["initial_speed"].as<glm::vec2>();
+				if (p["direction"]) pc.m_direction = p["direction"].as<glm::vec3>();
+				if (p["direction_spread"]) pc.m_direction_spread = p["direction_spread"].as<float>();
+				if (p["gravity"]) pc.m_gravity = p["gravity"].as<glm::vec3>();
+				if (p["damping"]) pc.m_damping = p["damping"].as<float>();
+				if (p["initial_size"]) pc.m_initial_size = p["initial_size"].as<glm::vec2>();
+				if (p["size_over_life"]) pc.m_size_over_life = p["size_over_life"].as<glm::vec2>();
+				if (p["initial_color"]) pc.m_initial_color = p["initial_color"].as<glm::vec4>();
+				if (p["end_color"]) pc.m_end_color = p["end_color"].as<glm::vec4>();
+				if (p["texture"] && !p["texture"].IsNull()) {
+					auto tex_guid = Guid::make(p["texture"].as<std::string>());
+					pc.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
+				}
+				if (p["blend_mode"]) pc.m_blend_mode = static_cast<ParticleBlendMode>(p["blend_mode"].as<uint8_t>());
+				if (p["emitter_shape"]) pc.m_emitter_shape = static_cast<EmitterShape>(p["emitter_shape"].as<uint8_t>());
+				if (p["shape_radius"]) pc.m_shape_radius = p["shape_radius"].as<float>();
+				if (p["shape_extents"]) pc.m_shape_extents = p["shape_extents"].as<glm::vec3>();
+				if (p["world_space"]) pc.m_world_space = p["world_space"].as<bool>();
+				if (p["loop"]) pc.m_loop = p["loop"].as<bool>();
+				if (p["playing"]) pc.m_playing = p["playing"].as<bool>();
+				if (p["sort_by_depth"]) pc.m_sort_by_depth = p["sort_by_depth"].as<bool>();
+				if (p["receive_shadows"]) pc.m_receive_shadows = p["receive_shadows"].as<bool>();
+				if (p["cast_shadows"]) pc.m_cast_shadows = p["cast_shadows"].as<bool>();
+				if (p["initial_rotation"]) pc.m_initial_rotation = p["initial_rotation"].as<glm::vec2>();
+				if (p["rotation_speed"]) pc.m_rotation_speed = p["rotation_speed"].as<glm::vec2>();
 			}
 
 			// ScriptComponent
@@ -673,6 +711,47 @@ namespace z1 {
 				yaml << YAML::Key << "speed" << YAML::Value << anim.speed;
 				yaml << YAML::Key << "loop" << YAML::Value << anim.loop;
 				yaml << YAML::Key << "playing" << YAML::Value << anim.playing;
+
+				yaml << YAML::EndMap;
+			}
+
+			// ParticleComponent
+			if (entity->has_component<ParticleComponent>()) {
+				auto const& particle = entity->get_component<ParticleComponent>();
+				yaml << YAML::Key << "particle" << YAML::Value;
+				yaml << YAML::BeginMap;
+
+				yaml << YAML::Key << "max_particles" << YAML::Value << particle.m_max_particles;
+				yaml << YAML::Key << "emission_rate" << YAML::Value << particle.m_emission_rate;
+				yaml << YAML::Key << "burst_count" << YAML::Value << particle.m_burst_count;
+				yaml << YAML::Key << "lifetime" << YAML::Value << particle.m_lifetime;
+				yaml << YAML::Key << "initial_speed" << YAML::Value << particle.m_initial_speed;
+				yaml << YAML::Key << "direction" << YAML::Value << particle.m_direction;
+				yaml << YAML::Key << "direction_spread" << YAML::Value << particle.m_direction_spread;
+				yaml << YAML::Key << "gravity" << YAML::Value << particle.m_gravity;
+				yaml << YAML::Key << "damping" << YAML::Value << particle.m_damping;
+				yaml << YAML::Key << "initial_size" << YAML::Value << particle.m_initial_size;
+				yaml << YAML::Key << "size_over_life" << YAML::Value << particle.m_size_over_life;
+				yaml << YAML::Key << "initial_color" << YAML::Value << particle.m_initial_color;
+				yaml << YAML::Key << "end_color" << YAML::Value << particle.m_end_color;
+				if (particle.m_texture) {
+					yaml << YAML::Key << "texture" << YAML::Value << particle.m_texture->m_meta.guid;
+				}
+				else {
+					yaml << YAML::Key << "texture" << YAML::Value << YAML::Null;
+				}
+				yaml << YAML::Key << "blend_mode" << YAML::Value << (int)particle.m_blend_mode;
+				yaml << YAML::Key << "emitter_shape" << YAML::Value << (int)particle.m_emitter_shape;
+				yaml << YAML::Key << "shape_radius" << YAML::Value << particle.m_shape_radius;
+				yaml << YAML::Key << "shape_extents" << YAML::Value << particle.m_shape_extents;
+				yaml << YAML::Key << "world_space" << YAML::Value << particle.m_world_space;
+				yaml << YAML::Key << "loop" << YAML::Value << particle.m_loop;
+				yaml << YAML::Key << "playing" << YAML::Value << particle.m_playing;
+				yaml << YAML::Key << "sort_by_depth" << YAML::Value << particle.m_sort_by_depth;
+				yaml << YAML::Key << "receive_shadows" << YAML::Value << particle.m_receive_shadows;
+				yaml << YAML::Key << "cast_shadows" << YAML::Value << particle.m_cast_shadows;
+				yaml << YAML::Key << "initial_rotation" << YAML::Value << particle.m_initial_rotation;
+				yaml << YAML::Key << "rotation_speed" << YAML::Value << particle.m_rotation_speed;
 
 				yaml << YAML::EndMap;
 			}

@@ -1,0 +1,37 @@
+entities:
+  - name: Basic Particles
+    id: 1
+    transform:
+      location: [0, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+    particle:
+      max_particles: 100
+      emission_rate: 30
+      burst_count: 0
+      lifetime: [1, 2]
+      initial_speed: [1, 2]
+      direction: [0, 1, 0]
+      direction_spread: 0.2
+      gravity: [0, -5, 0]
+      damping: 0
+      initial_size: [0.1, 0.1]
+      size_over_life: [1, 0.5]
+      initial_color: [1, 1, 1, 1]
+      end_color: [1, 1, 1, 0]
+      texture: ~
+      blend_mode: 0
+      emitter_shape: 0
+      shape_radius: 0
+      shape_extents: [0, 0, 0]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: true
+      initial_rotation: [0, 360]
+      rotation_speed: [0, 0]
+meta:
+  guid: 10000005-0000-0000-0000-000000000005
+  type: prefab
+  path: prefab/BasicParticles.prefab
+  extra: ~

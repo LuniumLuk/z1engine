@@ -1,0 +1,22 @@
+entities:
+  - name: Magenta Sprite
+    id: 1
+    transform:
+      location: [0, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1.5, 1.5, 1]
+    sprite:
+      color: [1, 0, 1, 1]
+      texture: texture/T_magenta
+      tiling_scale: [1, 1]
+      tiling_offset: [0, 0]
+      texcoords:
+        - [0, 0]
+        - [1, 0]
+        - [1, 1]
+        - [0, 1]
+meta:
+  guid: c3d4e5f6-a5b9-4c8d-7e6f-5a4b3c2d1e2f
+  type: prefab
+  path: prefab/MagentaSprite.prefab
+  extra: ~

@@ -15,6 +15,7 @@ COMMANDS = {
 	"format":           ("commands.format_cmd",       "Format source code (tabs, trailing whitespace, CRLF)"),
 	"validate-shaders": ("commands.validate_shaders", "Validate all GLSL shaders"),
 	"test":             ("commands.test",             "Discover and run test executables"),
+	"benchmark":        ("commands.benchmark",        "Run benchmark suites and compare baselines"),
 	"smoke":            ("commands.smoke",            "Run editor smoke test (--one-frame)"),
 	"dcv":              ("commands.dcv",              "Full develop-compile-verify loop"),
 	"release":          ("commands.release",          "Package release folder"),

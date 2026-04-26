@@ -1,0 +1,10 @@
+{
+  "suite": "fixture-pass",
+  "config": "Debug",
+  "generatedAt": "fixture",
+  "cases": {
+    "case-pass": {
+      "fixture_ms_p50": 1.0
+    }
+  }
+}

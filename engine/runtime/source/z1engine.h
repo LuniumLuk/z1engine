@@ -30,6 +30,7 @@
 #include "scene/component/sprite.h"
 #include "scene/component/light.h"
 #include "scene/component/animation.h"
+#include "scene/component/particle.h"
 #include "scene/component/postprocess_volume.h"
 
 #include "render/global.h"

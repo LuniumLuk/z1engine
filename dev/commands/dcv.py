@@ -2,12 +2,16 @@
 """dcv -- Full develop-compile-verify loop orchestrator."""
 
 import argparse
+import datetime
 import json
+import platform
+from pathlib import Path
 import sys
 from commands._common import (
-	EXIT_BUILD_ERROR, Timer, make_result, print_fail, print_info, print_ok,
+	Timer, make_result, print_fail, print_info, print_ok,
 	print_run, print_skip, repo_root, run_subprocess,
 )
+from commands.validation_map import load_suite_map, select_suites
 
 def _git_changed_files(root):
 	"""Return list of changed file paths relative to repo root using git diff."""
@@ -39,6 +43,7 @@ def _detect_steps(changed_files):
 		"format": True,    # always
 		"validate-shaders": False,
 		"test": False,
+		"benchmark": False,
 		"smoke": False,
 	}
 	for f in changed_files:
@@ -49,6 +54,13 @@ def _detect_steps(changed_files):
 			steps["validate-shaders"] = True
 		if "engine/runtime/" in fl or "engine/bakery/" in fl or "engine/test/" in fl:
 			steps["test"] = True
+		if (
+			"engine/runtime/" in fl
+			or "engine/editor/" in fl
+			or "dev/benchmark/" in fl
+			or "dev/validation/" in fl
+		):
+			steps["benchmark"] = True
 	return steps
 
 def _run_step(step_name, step_argv):
@@ -59,6 +71,7 @@ def _run_step(step_name, step_argv):
 		"format": "commands.format_cmd",
 		"validate-shaders": "commands.validate_shaders",
 		"test": "commands.test",
+		"benchmark": "commands.benchmark",
 		"smoke": "commands.smoke",
 	}
 	import importlib
@@ -88,6 +101,24 @@ def _run_step(step_name, step_argv):
 	status = result_data.get("status", "fail" if exit_code != 0 else "ok")
 	return status, result_data
 
+
+def _write_validation_report(root, report):
+	report_dir = Path(root) / "dev" / "validation" / "reports"
+	report_dir.mkdir(parents=True, exist_ok=True)
+
+	now = datetime.datetime.now(datetime.UTC)
+	ts = now.strftime("%Y%m%dT%H%M%SZ")
+	timestamped = report_dir / f"dcv-{ts}.json"
+	latest = report_dir / "latest.json"
+
+	with timestamped.open("w", encoding="utf-8") as f:
+		json.dump(report, f, indent=2)
+
+	with latest.open("w", encoding="utf-8") as f:
+		json.dump(report, f, indent=2)
+
+	return str(timestamped), str(latest)
+
 def main(argv=None):
 	parser = argparse.ArgumentParser(
 		prog="z1 dcv",
@@ -101,6 +132,8 @@ def main(argv=None):
 						help="Force run shader validation step")
 	parser.add_argument("--test", action="store_true",
 						help="Force run test step")
+	parser.add_argument("--benchmark", action="store_true",
+						help="Force run benchmark step")
 	parser.add_argument("--smoke", action="store_true",
 						help="Force run smoke test step")
 	parser.add_argument("--config", default="Debug",
@@ -114,12 +147,32 @@ def main(argv=None):
 	print_run("dcv")
 
 	# Determine which steps to run
+	selected_tests = []
+	selected_benchmarks = []
+	full_mode = False
+	changed = []
+
 	if args.all:
-		steps = {k: True for k in ["generate", "compile", "format", "validate-shaders", "test", "smoke"]}
+		steps = {k: True for k in ["generate", "compile", "format", "validate-shaders", "test", "benchmark", "smoke"]}
 	elif args.auto:
 		changed = _git_changed_files(root)
 		print_info(f"Auto-detected {len(changed)} changed file(s)")
 		steps = _detect_steps(changed)
+		suite_map = load_suite_map(root / "dev" / "validation" / "suite-map.json")
+		selection = select_suites(changed, suite_map)
+		selected_tests = selection["tests"]
+		selected_benchmarks = selection["benchmarks"]
+		full_mode = selection["full_mode"]
+
+		if selected_tests:
+			steps["test"] = True
+		if selected_benchmarks:
+			steps["benchmark"] = True
+
+		if full_mode:
+			print_info("Validation mode: full")
+		else:
+			print_info("Validation mode: scoped")
 	else:
 		steps = {
 			"generate": args.generate,
@@ -127,6 +180,7 @@ def main(argv=None):
 			"format": True,
 			"validate-shaders": args.shaders,
 			"test": args.test,
+			"benchmark": args.benchmark,
 			"smoke": args.smoke,
 		}
 
@@ -137,11 +191,14 @@ def main(argv=None):
 		steps["validate-shaders"] = True
 	if args.test:
 		steps["test"] = True
+	if args.benchmark:
+		steps["benchmark"] = True
 	if args.smoke:
 		steps["smoke"] = True
 
-	step_order = ["generate", "compile", "format", "validate-shaders", "test", "smoke"]
+	step_order = ["generate", "compile", "format", "validate-shaders", "test", "benchmark", "smoke"]
 	step_results = {}
+	step_payloads = {}
 	overall_status = "ok"
 
 	for step_name in step_order:
@@ -150,6 +207,7 @@ def main(argv=None):
 				"generate": "no .lua changes",
 				"validate-shaders": "no .glsl changes",
 				"test": "no engine code changes",
+				"benchmark": "no benchmark-mapped changes",
 				"smoke": "not requested",
 			}
 			reason = reason_map.get(step_name, "not enabled")
@@ -158,11 +216,18 @@ def main(argv=None):
 			continue
 
 		step_argv = []
-		if step_name in ("compile", "validate-shaders", "test", "smoke"):
+		if step_name in ("compile", "validate-shaders", "test", "benchmark", "smoke"):
 			step_argv = ["--config", args.config]
+		if step_name == "test" and selected_tests:
+			for name in selected_tests:
+				step_argv.extend(["--name", name])
+		if step_name == "benchmark" and selected_benchmarks:
+			for suite in selected_benchmarks:
+				step_argv.extend(["--suite", suite])
 
-		status, _ = _run_step(step_name, step_argv)
+		status, payload = _run_step(step_name, step_argv)
 		step_results[step_name] = status
+		step_payloads[step_name] = payload
 
 		if status == "fail":
 			overall_status = "fail"
@@ -176,4 +241,47 @@ def main(argv=None):
 	else:
 		print_fail(f"DCV failed ({elapsed})")
 
-	return make_result(overall_status, "dcv", steps=step_results, elapsed=elapsed)
+	correctness = step_results.get("test", "skip")
+	performance = step_results.get("benchmark", "skip")
+
+	report = {
+		"schemaVersion": 1,
+		"command": "dcv",
+		"status": overall_status,
+		"correctness": correctness,
+		"performance": performance,
+		"timestampUtc": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
+		"environment": {
+			"platform": platform.platform(),
+			"pythonVersion": platform.python_version(),
+			"config": args.config,
+			"repoRoot": str(root),
+		},
+		"selection": {
+			"mode": "auto" if args.auto else ("all" if args.all else "manual"),
+			"fullMode": full_mode,
+			"selectedTests": selected_tests,
+			"selectedBenchmarks": selected_benchmarks,
+			"changedFiles": changed,
+		},
+		"steps": step_results,
+		"stepPayloads": step_payloads,
+		"elapsed": elapsed,
+	}
+
+	report_file, report_latest = _write_validation_report(root, report)
+	print_info(f"Validation report: {report_latest}")
+
+	return make_result(
+		overall_status,
+		"dcv",
+		steps=step_results,
+		correctness=correctness,
+		performance=performance,
+		selected_tests=selected_tests,
+		selected_benchmarks=selected_benchmarks,
+		full_mode=full_mode,
+		report_file=report_file,
+		report_latest=report_latest,
+		elapsed=elapsed,
+	)

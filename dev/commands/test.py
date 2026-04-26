@@ -10,11 +10,23 @@ from commands._common import (
 	normalize_config,
 )
 
-def _discover_tests(test_dir, pattern=None):
+def _discover_tests(test_dir, pattern=None, names=None):
 	"""Find test_*.exe files in the given directory."""
 	if not test_dir.exists():
 		return []
 	tests = sorted(test_dir.glob("test_*.exe"))
+	if names:
+		norm = set()
+		for n in names:
+			ns = n.strip()
+			if not ns:
+				continue
+			norm.add(ns)
+			if ns.endswith(".exe"):
+				norm.add(ns[:-4])
+			else:
+				norm.add(ns + ".exe")
+		tests = [t for t in tests if t.name in norm or t.stem in norm]
 	if pattern:
 		tests = [t for t in tests if fnmatch.fnmatch(t.name, pattern)]
 	return tests
@@ -26,6 +38,8 @@ def main(argv=None):
 	)
 	parser.add_argument("--filter", default=None,
 						help="Glob pattern to filter test executables (e.g., 'test_render*')")
+	parser.add_argument("--name", action="append", default=[],
+						help="Exact test name (stem or filename), repeatable")
 	parser.add_argument("--config", default="Debug",
 						help="Build config (default: Debug)")
 	args = parser.parse_args(argv)
@@ -40,9 +54,11 @@ def main(argv=None):
 
 	timer = Timer()
 	filter_display = f" --filter {args.filter}" if args.filter else ""
+	if args.name:
+		filter_display += " --name " + ",".join(args.name)
 	print_run(f"test{filter_display}")
 
-	tests = _discover_tests(test_dir, args.filter)
+	tests = _discover_tests(test_dir, args.filter, args.name)
 
 	if not tests:
 		print_skip(f"No test executables found in {test_dir}")

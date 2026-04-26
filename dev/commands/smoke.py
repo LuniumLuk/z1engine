@@ -17,6 +17,8 @@ def main(argv=None):
 						help="Number of frames to render (default: 1)")
 	parser.add_argument("--config", default="Debug",
 						help="Build config (default: Debug)")
+	parser.add_argument("--scene", default="",
+						help="Scene asset path to load (e.g. scene/ParticleDemo)")
 	args = parser.parse_args(argv)
 
 	config = normalize_config(args.config) or "Debug"
@@ -44,7 +46,7 @@ def main(argv=None):
 	print_info(f"Using: {exe}")
 
 	rc, stdout, stderr = run_subprocess(
-		[str(exe), f"--one-frame={args.frames}"],
+		[str(exe), f"--one-frame={args.frames}"] + ([f"--scene={args.scene}"] if args.scene else []),
 		cwd=str(root),
 		timeout=30,
 	)
@@ -52,6 +54,10 @@ def main(argv=None):
 	elapsed = timer.elapsed()
 
 	if rc == 0:
+		# Echo any diagnostic lines printed by the engine (e.g. CSM shadow stats)
+		diag_lines = [l for l in stdout.splitlines() if l.strip()]
+		for line in diag_lines:
+			print_info(f"  {line}")
 		print_ok(f"Editor started and rendered {args.frames} frame(s) ({elapsed})")
 		return make_result("ok", "smoke", frames=args.frames, elapsed=elapsed)
 	else:

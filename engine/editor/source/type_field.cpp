@@ -285,6 +285,9 @@ void show_properties(std::shared_ptr<Entity> const& selected_entity) {
 			if (selected_entity->has_component<PostprocessVolumeComponent>()) {
 				SHOW_COMPONENT(PostprocessVolumeComponent)
 			}
+			if (selected_entity->has_component<ParticleComponent>()) {
+				SHOW_COMPONENT(ParticleComponent)
+			}
 
 			if (selected_entity->has_component<StaticMeshComponent>()) {
 				if (ImGui::CollapsingHeader("StaticMeshComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -464,6 +467,7 @@ void show_properties(std::shared_ptr<Entity> const& selected_entity) {
 				component_context_menu<SkyLightComponent>("skylight component", selected_entity);
 				component_context_menu<AnimationComponent>("animation component", selected_entity);
 				component_context_menu<PostprocessVolumeComponent>("postprocess volume component", selected_entity);
+				component_context_menu<ParticleComponent>("particle component", selected_entity);
 				ImGui::EndPopup();
 			}
 		}

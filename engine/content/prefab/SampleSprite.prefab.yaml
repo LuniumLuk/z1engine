@@ -1,0 +1,22 @@
+entities:
+  - name: Sample Sprite
+    id: 1
+    transform:
+      location: [0, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+    sprite:
+      color: [1, 1, 1, 1]
+      texture: texture/T_white
+      tiling_scale: [1, 1]
+      tiling_offset: [0, 0]
+      texcoords:
+        - [0, 0]
+        - [1, 0]
+        - [1, 1]
+        - [0, 1]
+meta:
+  guid: a1b2c3d4-e5f6-4a5b-9c8d-7e6f5a4b3c2d
+  type: prefab
+  path: prefab/SampleSprite.prefab
+  extra: ~

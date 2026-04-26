@@ -13,6 +13,7 @@
 #include "scene/component/light.h"
 #include "scene/component/animation.h"
 #include "render/renderer/renderer_deferred.h"
+#include "render/renderer/particle_renderer.h"
 #include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -35,6 +36,9 @@ namespace z1 {
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/deferred_skybox");
 			m_pipeline_skybox = Pipeline::build(desc);
 		}
+
+		// Initialize particle renderer
+		m_particle_renderer.init();
 	}
 
 	RendererDeferred::~RendererDeferred() {
@@ -129,11 +133,13 @@ namespace z1 {
 		}
 
 		RenderGraph rg;
-		m_shared.add_shadow_pass(rg, scene);
-		add_gbuffer_pass(rg, draw_list, framebuffer, scene);
+		m_shared.add_shadow_pass(rg, scene, m_default_material);
+		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, CSM_LAYERS);
+		add_gbuffer_pass(rg, draw_list, framebuffer, scene, projview);
 		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx);
 		add_forward_transparency_pass(rg, framebuffer, draw_list, scene);
-		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview);
+		m_particle_renderer.add_particle_pass(rg, scene.get(), "forward-transparency", m_shared.m_shadow_image);
+		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview, m_default_material);
 		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
 		m_shared.add_bloom_pass(rg, m_shared.m_history_colors[write_idx]);
 		m_shared.add_postprocess_pass(rg, framebuffer, m_shared.m_history_colors[write_idx]);
@@ -154,7 +160,7 @@ namespace z1 {
 	//   RT3: metallic-roughness (RG16F)
 	//   DS : depth
 
-	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Scene> const& scene) {
+	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Scene> const& scene, glm::mat4 const& unjittered_projview) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(5);
 		for (int i = 0; i < 5; i++) {
@@ -173,7 +179,7 @@ namespace z1 {
 			.add_output("gbuffer-metallic-roughness", ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-emissive", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-depth", ImageFormat::Depth)
-			.execute([this, &draw_list, scene](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, &draw_list, scene, unjittered_projview](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 				per_frame.variant_key = ShaderVariant::GBuffer;
@@ -215,7 +221,8 @@ namespace z1 {
 						s->set_uniform("u_mip_level", &sky.m_mip_level);
 
 						auto& g = g_runtime_context.m_global;
-						glm::mat4 inv_projview = glm::inverse(g->projview);
+						// Use unjittered projview so the skybox is stable across TAA frames
+						glm::mat4 inv_projview = glm::inverse(unjittered_projview);
 						s->set_uniform("u_inv_projview", &inv_projview);
 						s->set_uniform("u_cam_position", &g->cam_position);
 

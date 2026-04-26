@@ -10,50 +10,90 @@ int main() {
 	OurApp app;
 	app.init();
 
+	Filepath sandbox_root = FileSystem::s_content_root / "sandbox-tests" / "test_import";
+	std::filesystem::remove_all(sandbox_root);
+
+	auto import_texture = [](char const* file, char const* path, SamplerMode sampler = SamplerMode::Linear) {
+		TextureImporterSettings settings{};
+		settings.file = file;
+		settings.path = path;
+		settings.sampler_mode = sampler;
+		auto result = TextureImporter::import(settings);
+		return result.success;
+	};
+
+	auto import_obj = [](char const* file, char const* path) {
+		ObjImporterSettings settings{};
+		settings.file = file;
+		settings.path = path;
+		auto result = ObjImporter::import(settings);
+		return result.success;
+	};
+
+	auto import_gltf = [](char const* file, char const* path) {
+		GltfImporterSettings settings{};
+		settings.file = file;
+		settings.path = path;
+		auto result = GltfImporter::import(settings);
+		return result.success;
+	};
+
 	Filepath cwd = std::filesystem::current_path();
 	std::cout << "current working directory: " << cwd.generic_string() << std::endl;
 
 	{
-		TextureImporterSettings settings{};
-		settings.file = "../../asset/texture/sheet/roguelikeSheet_transparent.png";
-		settings.path = "texture/T_roguelikeSheet";
-		settings.sampler_mode = SamplerMode::Nearest;
-		TextureImporter().import(settings);
+		if (!import_texture(
+			"asset/texture/sheet/roguelikeSheet_transparent.png",
+			"sandbox-tests/test_import/texture/T_roguelikeSheet",
+			SamplerMode::Nearest)) {
+			std::filesystem::remove_all(sandbox_root);
+			return 1;
+		}
 	}
 
 	{
-		TextureImporterSettings settings{};
-		settings.file = "../../asset/texture/awesomeface.png";
-		settings.path = "texture/T_awesomeface";
-		TextureImporter().import(settings);
+		if (!import_texture(
+			"asset/texture/awesomeface.png",
+			"sandbox-tests/test_import/texture/T_awesomeface")) {
+			std::filesystem::remove_all(sandbox_root);
+			return 1;
+		}
 	}
 
 	{
-		TextureImporterSettings settings{};
-		settings.file = "../../asset/texture/tira-checker.jpg";
-		settings.path = "texture/T_tira-checker";
-		TextureImporter().import(settings);
+		if (!import_texture(
+			"asset/texture/tira-checker.jpg",
+			"sandbox-tests/test_import/texture/T_tira-checker")) {
+			std::filesystem::remove_all(sandbox_root);
+			return 1;
+		}
 	}
 
 	{
-		GltfImporterSettings settings{};
-		settings.file = "../../asset/mesh/DamagedHelmet.glb";
-		settings.path = "DamagedHelmet";
-		GltfImporter().import(settings);
+		if (!import_gltf(
+			"asset/gltf/DamagedHelmet.glb",
+			"sandbox-tests/test_import/DamagedHelmet")) {
+			std::filesystem::remove_all(sandbox_root);
+			return 1;
+		}
 	}
 
 	{
-		ObjImporterSettings settings{};
-		settings.file = "../../asset/mesh/bunny.obj";
-		settings.path = "SM_bunny";
-		ObjImporter().import(settings);
+		if (!import_obj(
+			"asset/mesh/bunny.obj",
+			"sandbox-tests/test_import/SM_bunny")) {
+			std::filesystem::remove_all(sandbox_root);
+			return 1;
+		}
 	}
 
 	{
-		ObjImporterSettings settings{};
-		settings.file = "../../asset/fireplace_room/fireplace_room.obj";
-		settings.path = "SM_fireplace_room";
-		ObjImporter().import(settings);
+		if (!import_obj(
+			"asset/mesh/Cube.obj",
+			"sandbox-tests/test_import/SM_cube")) {
+			std::filesystem::remove_all(sandbox_root);
+			return 1;
+		}
 	}
 
 	//std::vector<std::string> engine_meshes = {
@@ -71,5 +111,6 @@ int main() {
 	//	ObjImporter().import(settings);
 	//}
 
+	std::filesystem::remove_all(sandbox_root);
 	return 0;
 }

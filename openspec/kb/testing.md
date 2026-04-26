@@ -60,4 +60,22 @@ int main() {
 - Triggered when `engine/runtime/` or `engine/bakery/` code changes
 - `python dev/z1.py dcv --auto` auto-detects when tests are needed
 
+## Benchmark Gate
+
+- Benchmark step runs after tests in DCV
+- Mapped suites selected from `dev/validation/suite-map.json`
+- Suite definitions in `dev/benchmark/suites/*.json`
+- Baselines in `dev/benchmark/baselines/<config>/*.baseline.json`
+- Regressions over configured thresholds fail the validation gate
+
+## Workspace Hygiene + Waiver Policy
+
+- Validation runs must not persist artifacts into live `content/**`
+- Temporary artifacts must be confined to sandbox paths and cleaned after run
+- Policy file: `dev/validation/policy.json`
+- Temporary waiver handling:
+    - if benchmark instability is known, use a documented waiver with owner + expiry
+    - waivers are temporary and must be removed after baseline stabilization
+    - test failures are never waived silently
+
 -> see [build.md]

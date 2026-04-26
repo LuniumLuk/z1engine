@@ -1,0 +1,53 @@
+{
+  "suite": "rendering-pipeline",
+  "description": "Render-path metrics for forward/deferred passes and shader-heavy scenes",
+  "enabled": true,
+  "binary": "engine/bin/Debug/game.exe",
+  "workingDirectory": ".",
+  "warmupRuns": 2,
+  "measuredRuns": 6,
+  "metrics": [
+    {
+      "name": "render_frame_ms_p50",
+      "source": "profile-run.json",
+      "aggregation": "p50",
+      "traceNameContains": "renderer",
+      "lowerIsBetter": true,
+      "thresholdPercent": 6.0
+    },
+    {
+      "name": "render_frame_ms_p95",
+      "source": "profile-run.json",
+      "aggregation": "p95",
+      "traceNameContains": "renderer",
+      "lowerIsBetter": true,
+      "thresholdPercent": 8.0
+    },
+    {
+      "name": "shader_bind_us_p50",
+      "source": "profile-run.json",
+      "aggregation": "p50",
+      "traceNameContains": "opengl_shader",
+      "lowerIsBetter": true,
+      "thresholdPercent": 12.0
+    }
+  ],
+  "cases": [
+    {
+      "id": "render_courtyard",
+      "args": [
+        "--one-frame=220",
+        "--scene=content/new_scene_1.yaml"
+      ],
+      "samples": 220
+    },
+    {
+      "id": "render_alpha_blend_stress",
+      "args": [
+        "--one-frame=220",
+        "--scene=content/AlphaBlendModeTest/AlphaBlendModeTest.prefab.yaml"
+      ],
+      "samples": 220
+    }
+  ]
+}

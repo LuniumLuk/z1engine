@@ -34,6 +34,7 @@
 | `SkyLightComponent` | `component/sky_light.h` | Environment lighting |
 | `PostprocessVolumeComponent` | `component/postprocess_volume.h` | Post-processing settings |
 | `AnimationComponent` | `component/animation.h` | Animation state |
+| `ParticleComponent` | `component/particle.h` | GPU particle emitter: rate, lifetime, cone angle, damping, burst, loop, gravity, **receive_shadows**, **cast_shadows** |
 
 ## Systems
 
@@ -42,6 +43,7 @@
 | `AnimationSystem` | `scene/animation_system.h/.cpp` | Updates skeletal animations |
 | `PostprocessSystem` | `scene/postprocess_system.h/.cpp` | Manages post-process volumes |
 | `ScriptSystem` | `scene/script_system.h/.cpp` | Executes script `on_update` callbacks |
+| `ParticleSystem` | `scene/particle_system.h/.cpp` | Spawns, simulates, and kills GPU particles per entity |
 
 ## Light Types
 

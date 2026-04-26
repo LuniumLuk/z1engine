@@ -1,0 +1,276 @@
+meta:
+  guid: d3m0-0001-0000-0000-part1cl3d3m0
+  type: scene
+  path: scene/ParticleDemo
+  extra: ~
+
+global_settings:
+  sun_direction: [-0.5, -1, -0.3]
+  sun_color: [1, 0.95, 0.9, 1]
+  sun_intensity: 1.5
+  sun_ambient_color: [0.15, 0.18, 0.25, 1]
+  sun_ambient_intensity: 0.4
+  taa_enabled: false
+  taa_blend: 0.1
+  pp_exposure: 1
+  pp_gamma: 2.2
+  pp_tint: [1, 1, 1, 1]
+  sm_near: 0.1
+  sm_far: 100
+  sm_ortho_size: 20
+
+entities:
+  # ── Main Camera ──────────────────────────────────────────────
+  - name: Main Camera
+    id: 1
+    transform:
+      location: [0, 3, 12]
+      rotation: [-10, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    camera:
+      is_perspective: true
+      intrinsic: 60
+      near: 0.1
+      far: 500
+      aspect: 1.7777
+      use_fixed_aspect: false
+      is_primary: true
+
+  # ── 1. Fountain  (Point shape, Alpha blend, gravity + damping, sort_by_depth) ──
+  - name: Fountain
+    id: 10
+    transform:
+      location: [-6, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 500
+      emission_rate: 100
+      burst_count: 0
+      lifetime: [1.5, 2.5]
+      initial_speed: [4, 6]
+      direction: [0, 1, 0]
+      direction_spread: 0.35
+      gravity: [0, -9.81, 0]
+      damping: 0.05
+      initial_size: [0.06, 0.1]
+      size_over_life: [1, 0.4]
+      initial_color: [0.3, 0.6, 1, 1]
+      end_color: [0.1, 0.3, 1, 0]
+      texture: ~
+      blend_mode: 0
+      emitter_shape: 0
+      shape_radius: 0.1
+      shape_extents: [0.1, 0.1, 0.1]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: true
+      initial_rotation: [0, 360]
+      rotation_speed: [0, 90]
+
+  # ── 2. Fire  (Sphere shape, Additive blend, upward buoyancy, rotation) ──
+  - name: Fire
+    id: 20
+    transform:
+      location: [-3, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 250
+      emission_rate: 80
+      burst_count: 0
+      lifetime: [0.6, 1.2]
+      initial_speed: [1, 3]
+      direction: [0, 1, 0]
+      direction_spread: 0.55
+      gravity: [0, 2.5, 0]
+      damping: 0.25
+      initial_size: [0.15, 0.25]
+      size_over_life: [1, 0.1]
+      initial_color: [1, 0.7, 0.1, 1]
+      end_color: [1, 0.15, 0, 0]
+      texture: ~
+      blend_mode: 1
+      emitter_shape: 1
+      shape_radius: 0.2
+      shape_extents: [0.2, 0.2, 0.2]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: false
+      initial_rotation: [0, 360]
+      rotation_speed: [90, 270]
+
+  # ── 3. Smoke  (Sphere shape, Soft blend, size grows, slow rise) ──
+  - name: Smoke
+    id: 30
+    transform:
+      location: [0, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 200
+      emission_rate: 40
+      burst_count: 0
+      lifetime: [2.5, 4]
+      initial_speed: [0.3, 0.8]
+      direction: [0, 1, 0]
+      direction_spread: 0.7
+      gravity: [0, 0.4, 0]
+      damping: 0.03
+      initial_size: [0.1, 0.15]
+      size_over_life: [0.5, 2]
+      initial_color: [0.45, 0.45, 0.45, 0.5]
+      end_color: [0.6, 0.6, 0.6, 0]
+      texture: ~
+      blend_mode: 2
+      emitter_shape: 1
+      shape_radius: 0.15
+      shape_extents: [0.15, 0.15, 0.15]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: true
+      initial_rotation: [0, 360]
+      rotation_speed: [20, 60]
+
+  # ── 4. Sparkle Burst  (Point shape, Additive, non-looping one-shot burst) ──
+  - name: Sparkle Burst
+    id: 40
+    transform:
+      location: [3, 1.5, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 120
+      emission_rate: 0
+      burst_count: 120
+      lifetime: [0.8, 1.8]
+      initial_speed: [3, 7]
+      direction: [0, 1, 0]
+      direction_spread: 1
+      gravity: [0, -2, 0]
+      damping: 0.15
+      initial_size: [0.03, 0.06]
+      size_over_life: [1, 0.1]
+      initial_color: [1, 1, 0.5, 1]
+      end_color: [1, 0.5, 0, 0]
+      texture: ~
+      blend_mode: 1
+      emitter_shape: 0
+      shape_radius: 0.05
+      shape_extents: [0.05, 0.05, 0.05]
+      world_space: true
+      loop: false
+      playing: true
+      sort_by_depth: false
+      initial_rotation: [0, 360]
+      rotation_speed: [180, 540]
+
+  # ── 5. Box Rain  (Box shape, Alpha blend, downward direction, wide extents) ──
+  - name: Box Rain
+    id: 50
+    transform:
+      location: [6, 5, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 400
+      emission_rate: 120
+      burst_count: 0
+      lifetime: [1, 2]
+      initial_speed: [2, 4]
+      direction: [0, -1, 0]
+      direction_spread: 0.05
+      gravity: [0, -9.81, 0]
+      damping: 0
+      initial_size: [0.02, 0.04]
+      size_over_life: [1, 0.8]
+      initial_color: [0.5, 0.7, 1, 0.7]
+      end_color: [0.3, 0.5, 1, 0]
+      texture: ~
+      blend_mode: 0
+      emitter_shape: 2
+      shape_radius: 0.5
+      shape_extents: [3, 0.1, 1.5]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: true
+      initial_rotation: [0, 0]
+      rotation_speed: [0, 0]
+
+  # ── 6. Cone Jet  (Cone shape, Additive, high speed, narrow spread, heavy damping) ──
+  - name: Cone Jet
+    id: 60
+    transform:
+      location: [-6, 0, 4]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 300
+      emission_rate: 150
+      burst_count: 0
+      lifetime: [0.4, 0.9]
+      initial_speed: [8, 14]
+      direction: [0, 1, 0]
+      direction_spread: 0.15
+      gravity: [0, -3, 0]
+      damping: 0.6
+      initial_size: [0.04, 0.08]
+      size_over_life: [1, 0.3]
+      initial_color: [0.2, 1, 0.4, 1]
+      end_color: [0, 0.5, 0.2, 0]
+      texture: ~
+      blend_mode: 1
+      emitter_shape: 3
+      shape_radius: 0.3
+      shape_extents: [0.3, 0.3, 0.3]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: false
+      initial_rotation: [0, 360]
+      rotation_speed: [0, 120]
+
+  # ── 7. Local-Space Emitter  (world_space=false, demonstrates local-space particles) ──
+  - name: Local Space Emitter
+    id: 70
+    transform:
+      location: [0, 0, 4]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 150
+      emission_rate: 60
+      burst_count: 0
+      lifetime: [1, 2]
+      initial_speed: [1, 3]
+      direction: [0, 1, 0]
+      direction_spread: 0.5
+      gravity: [0, -4, 0]
+      damping: 0.1
+      initial_size: [0.08, 0.12]
+      size_over_life: [1, 0.5]
+      initial_color: [1, 0.4, 1, 0.9]
+      end_color: [0.5, 0, 1, 0]
+      texture: ~
+      blend_mode: 1
+      emitter_shape: 0
+      shape_radius: 0.1
+      shape_extents: [0.1, 0.1, 0.1]
+      world_space: false
+      loop: true
+      playing: true
+      sort_by_depth: false
+      initial_rotation: [0, 360]
+      rotation_speed: [60, 180]

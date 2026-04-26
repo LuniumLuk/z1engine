@@ -1,0 +1,53 @@
+change_id: "taa-shadow-fix"
+title: "Fix TAA jitter (skybox shaking) and shadow-pass empty commit"
+author: "Copilot"
+date: "2026-04-09T03:53:46Z"
+status: "proposed"
+summary: |
+  Two related rendering bugs were observed:
+  1) Temporal Anti-Aliasing (TAA) produces excessive jitter; the entire scene including the skybox visibly shakes between frames.
+  2) The shadow map pass reports committing 0 objects (no shadow draw calls), so shadows are missing.
+
+scope:
+  - Diagnose and fix TAA jitter and skybox instability.
+  - Investigate and fix shadow-pass drawlist commit logic (0 objects committed).
+  - Add diagnostics, tests, and a minimal repro scene for QA.
+
+impact: "High — affects rendering stability and correctness. Touches projection/jitter math, motion vectors, and culling paths."
+
+artifacts:
+  - path: openspec/taa-shadow-fix.md
+    type: proposal
+  - path: openspec/taa-shadow-tasks.md
+    type: tasks
+
+apply:
+  requires:
+    - proposal
+    - tasks
+
+acceptance_criteria:
+  taa:
+    - "Skybox shows no frame-to-frame translation when camera is stationary."
+    - "Measured per-frame jitter magnitude <= 0.5 pixels in the debug overlay."
+    - "TAA no longer produces visible instability at camera standstill."
+  shadow:
+    - "Shadow-pass commit_count > 0 for a minimal test scene (single shadow-casting object + light)."
+    - "Shadows visible in the scene."
+  build:
+    - "Running `python dev\\z1.py smoke` completes with exit code 0 on the fixed branch and performs a smoke run that loads the repro scene and asserts shadowpass commit_count > 0."
+candidate_files:
+  - engine/render/taa.cpp
+  - engine/render/taa.h
+  - engine/render/projection.cpp
+  - engine/render/motion_vectors.cpp
+  - engine/render/skybox.cpp
+  - engine/render/shadowpass.cpp
+  - engine/render/culling.cpp
+  - engine/render/culling.h
+
+decision_log: []
+
+notes: |
+  - Implementers should capture both jittered and unjittered projection matrices and keep previous-frame copies that match conventions used by motion-vector generation and TAA reprojection.
+  - Exclude skybox rendering and shadow culling from camera jitter. Shadow culling must use light-space matrices unaffected by TAA jitter.
