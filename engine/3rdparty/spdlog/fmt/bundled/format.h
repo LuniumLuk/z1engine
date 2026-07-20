@@ -485,7 +485,9 @@ inline auto get_data(Container& c) -> typename Container::value_type* {
   return c.data();
 }
 
-#if defined(_SECURE_SCL) && _SECURE_SCL
+// stdext::checked_array_iterator was removed in VS 2022 17.8+ / VS2026 (toolset v145).
+// Only use it for older MSVC versions that still define _SECURE_SCL.
+#if defined(_SECURE_SCL) && _SECURE_SCL && _MSC_VER < 1940
 // Make a checked iterator to avoid MSVC warnings.
 template <typename T> using checked_ptr = stdext::checked_array_iterator<T*>;
 template <typename T>
