@@ -91,26 +91,87 @@ def find_vs2026():
 # ---------------------------------------------------------------------------
 # Subprocess runner
 # ---------------------------------------------------------------------------
-def run_subprocess(cmd, cwd=None, timeout=None):
+def run_subprocess(cmd, cwd=None, timeout=None, stream=False, log_file=None):
 	"""Run a command and return (returncode, stdout, stderr).
 
 	cmd can be a list or a string. cwd defaults to repo_root().
+
+	When stream=True:
+	  - Prints each line to sys.stdout in real-time while also capturing it.
+	  - If log_file is provided, writes every line to that file as well.
+	  - stdout+stderr are merged into stdout (stderr is empty).
+	When stream=False (default):
+	  - Captures all output silently and returns it after the process ends
+	    (same as the original behaviour).
 	"""
 	if cwd is None:
 		cwd = str(repo_root())
+
+	if not stream:
+		try:
+			result = subprocess.run(
+				cmd,
+				cwd=cwd,
+				capture_output=True,
+				text=True,
+				timeout=timeout,
+			)
+			return result.returncode, result.stdout, result.stderr
+		except FileNotFoundError:
+			return -1, "", f"Command not found: {cmd[0] if isinstance(cmd, list) else cmd}"
+		except subprocess.TimeoutExpired:
+			return -2, "", f"Command timed out after {timeout}s"
+
+	# -- streaming mode --------------------------------------------------
+	# Write header to log file
+	log_fh = None
+	if log_file:
+		try:
+			log_file.parent.mkdir(parents=True, exist_ok=True)
+			log_fh = open(str(log_file), "w", encoding="utf-8", errors="replace")
+			log_fh.write(f"# Log: {' '.join(cmd) if isinstance(cmd, list) else cmd}\n")
+			log_fh.write(f"# CWD: {cwd}\n")
+			log_fh.write(f"# Time: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+			log_fh.write("-" * 60 + "\n")
+			log_fh.flush()
+		except OSError as e:
+			print_warn(f"Could not open log file {log_file}: {e}")
+			log_fh = None
+
+	lines = []
+	proc = None
 	try:
-		result = subprocess.run(
+		proc = subprocess.Popen(
 			cmd,
 			cwd=cwd,
-			capture_output=True,
+			stdout=subprocess.PIPE,
+			stderr=subprocess.STDOUT,
 			text=True,
-			timeout=timeout,
+			bufsize=1,  # line-buffered
 		)
-		return result.returncode, result.stdout, result.stderr
+
+		for line in proc.stdout:
+			sys.stdout.write(line)
+			sys.stdout.flush()
+			lines.append(line)
+			if log_fh:
+				log_fh.write(line)
+
+		proc.wait(timeout=timeout)
+		return proc.returncode, "".join(lines), ""
+
 	except FileNotFoundError:
 		return -1, "", f"Command not found: {cmd[0] if isinstance(cmd, list) else cmd}"
 	except subprocess.TimeoutExpired:
-		return -2, "", f"Command timed out after {timeout}s"
+		proc.kill()
+		proc.wait()
+		return -2, "".join(lines), f"Command timed out after {timeout}s"
+	finally:
+		if log_fh:
+			log_fh.write("\n" + "-" * 60 + "\n")
+			rc_msg = f"# Return code: {proc.returncode}" if proc else "# Return code: ?"
+			log_fh.write(rc_msg + "\n")
+			log_fh.close()
 
 # ---------------------------------------------------------------------------
 # Timer helper

@@ -3,6 +3,8 @@
 
 import argparse
 import re
+import time
+from pathlib import Path
 from commands._common import (
 	EXIT_BUILD_ERROR, EXIT_CONFIG_ERROR, Timer, find_vs2026, make_result,
 	normalize_config, print_fail, print_info, print_ok, print_run, print_warn,
@@ -44,12 +46,21 @@ def main(argv=None):
 
 	timer = Timer()
 	print_run(f"compile --config {config}")
+
+	# Log file: dev/logs/compile_<config>_<timestamp>.log
+	log_dir = root / "dev" / "logs"
+	timestamp = time.strftime("%Y%m%d_%H%M%S")
+	log_path = log_dir / f"compile_{config}_{timestamp}.log"
+
 	print_info(f"Invoking devenv.com z1engine.sln /Build \"{config}|x64\"")
+	print_info(f"Build log: {log_path}")
 
 	rc, stdout, stderr = run_subprocess(
 		[devenv, str(sln), "/Build", f"{config}|x64"],
 		cwd=str(root),
 		timeout=600,
+		stream=True,
+		log_file=log_path,
 	)
 
 	output = stdout + stderr
