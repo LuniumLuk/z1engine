@@ -169,4 +169,22 @@ namespace z1 {
 		glfwSetWindowTitle(m_window, title.c_str());
 	}
 
+	void Window::hide_cursor() {
+		glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		m_data.cursor_hidden = true;
+	}
+
+	void Window::show_cursor() {
+		glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		m_data.cursor_hidden = false;
+	}
+
+	void Window::center_cursor() {
+		glfwSetCursorPos(m_window, m_data.width / 2.0, m_data.height / 2.0);
+	}
+
+	bool Window::is_cursor_hidden() const {
+		return m_data.cursor_hidden;
+	}
+
 }

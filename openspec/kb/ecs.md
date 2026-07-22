@@ -64,8 +64,17 @@
 
 ## Reflection
 
-- Components use `REFLECTED_STRUCT` macro for serialization and editor inspection
+- Components use `REFLECTED_COMPONENT` macro (expands to `REFLECTED_STRUCT` + ECS hook registration)
+- `REFLECTED_FIELD` registers fields with flags, widget hints, and YAML key overrides
+- `TypeInfo` carries type-erased hooks: `add_to(Entity&)`, `remove_from(Entity&)`, `has_in(Entity const&)`
+- Component hooks are registered in `core/reflection_hooks.cpp` (deferred to after `Entity` is fully defined)
+- `TypeRegistry::get_all_components()` returns all types with `add_to` hooks — used by editor menus
 - `Requires<T>` template declares component dependencies
+- Serialization is now reflection-driven via `scene/serialization.h`: `serialize_type()` / `deserialize_type()`
+- Field-level flags control behavior: `FF_Default` (visible+editable+serializable), `FF_ReadOnly` (visible only)
+- Asset reference fields (`shared_ptr<AssetT>`) are auto-detected via `is_asset_type<T>` trait
+- `yaml_key` override on `FieldInfo` maps C++ member names to legacy YAML key names
+- Enum reflection via `REFLECT_ENUM` — values accessible in editor and serialization
 
 -> see [python-scripting.md]
 -> see [architecture.md]

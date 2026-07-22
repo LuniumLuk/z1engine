@@ -4,6 +4,8 @@
 #include "core/core.h"
 #include "core/window.h"
 #include "core/application.h"
+#include "render/global.h"
+#include "core/reflection_hooks.h"
 
 #include "event/key_event.h"
 #include "event/mouse_event.h"
@@ -40,8 +42,9 @@ namespace z1 {
 	}
 
 	PythonLayer::PythonLayer() : Layer("Python layer") {
-		// temporary test space for python script runner
+		// Force-link translation units whose static registrars might be stripped
 		ForceLinkPythonEngine();
+		ForceLinkReflectionHooks();
 
 		// 1. Initialize PyConfig
 		PyConfig config;
@@ -154,6 +157,10 @@ namespace z1 {
 	}
 
 	void PythonLayer::on_event(Event& event) {
+		// When script_enabled is false, no events reach Python scripts
+		if (!g_runtime_context.m_global->script_enabled)
+			return;
+
 		auto range = s_python_event_listeners.equal_range(event.get_event_type());
 		for (auto it = range.first; it != range.second; ++it) {
 			try {

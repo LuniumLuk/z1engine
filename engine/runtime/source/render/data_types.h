@@ -31,6 +31,23 @@ namespace z1 {
 #undef X
 	};
 
+	// Reflect DataType enum values
+	REFLECT_ENUM(DataType, None)
+	REFLECT_ENUM(DataType, Float)
+	REFLECT_ENUM(DataType, Float2)
+	REFLECT_ENUM(DataType, Float3)
+	REFLECT_ENUM(DataType, Float4)
+	REFLECT_ENUM(DataType, Int)
+	REFLECT_ENUM(DataType, Int2)
+	REFLECT_ENUM(DataType, Int3)
+	REFLECT_ENUM(DataType, Int4)
+	REFLECT_ENUM(DataType, Mat3)
+	REFLECT_ENUM(DataType, Mat4)
+	REFLECT_ENUM(DataType, Bool)
+	REFLECT_ENUM(DataType, Sampler2D)
+	REFLECT_ENUM(DataType, Sampler2DArray)
+	REFLECT_ENUM(DataType, SamplerCube)
+
 	inline std::string get_data_type_name(DataType type) {
 		switch (type) {
 #define X(name, size, count) case DataType::name: return #name;

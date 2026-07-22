@@ -7,7 +7,7 @@
 
 namespace z1 {
 
-	REFLECTED_STRUCT(StaticMeshComponent) {
+	REFLECTED_COMPONENT(StaticMeshComponent) {
 		std::shared_ptr<StaticMesh> m_mesh;
 
 		StaticMeshComponent(std::shared_ptr<StaticMesh> const& mesh) noexcept
@@ -17,7 +17,9 @@ namespace z1 {
 
 	};
 
-	REFLECTED_STRUCT(SkeletalMeshComponent) {
+	REFLECTED_FIELD(StaticMeshComponent, m_mesh, FF_Default, "[asset]type=static_mesh")
+
+	REFLECTED_COMPONENT(SkeletalMeshComponent) {
 		std::shared_ptr<SkeletalMesh> m_mesh;
 		std::shared_ptr<Skeleton> m_skeleton;
 
@@ -29,5 +31,8 @@ namespace z1 {
 		DISABLE_COPY(SkeletalMeshComponent)
 
 	};
+
+	REFLECTED_FIELD(SkeletalMeshComponent, m_mesh,     FF_Default, "[asset]type=skeletal_mesh")
+	REFLECTED_FIELD(SkeletalMeshComponent, m_skeleton, FF_Default, "[asset]type=skeleton")
 
 }

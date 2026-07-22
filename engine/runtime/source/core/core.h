@@ -174,6 +174,39 @@ namespace z1 {
 	static _REFLECT_REGISTER_##type _REFLECT_REGISTER_INSTANCE_##type; \
 	struct API type
 
+#define REFLECTED_COMPONENT(type)                                      \
+	struct _REFLECT_REGISTER_##type {                                  \
+		_REFLECT_REGISTER_##type() {                                   \
+			TypeRegistry::instance().register_type(#type);             \
+		}                                                              \
+	};                                                                 \
+	static _REFLECT_REGISTER_##type _REFLECT_REGISTER_INSTANCE_##type; \
+	struct API type
+
+// Call this AFTER the component struct is fully defined to register its hooks.
+// Must be used in a compilation unit where Entity is fully defined.
+#define REGISTER_COMPONENT_HOOKS(type)                                 \
+	struct _REFLECT_HOOK_REGISTER_##type {                             \
+		_REFLECT_HOOK_REGISTER_##type() {                              \
+			auto* info = const_cast<TypeInfo*>(TypeRegistry::instance().get(#type)); \
+			if (info) {                                                \
+				info->construct = [](void* buffer) {                   \
+					new (buffer) type();                               \
+				};                                                     \
+				info->add_to = [](Entity& entity) {                    \
+					entity.add_component<type>();                      \
+				};                                                     \
+				info->remove_from = [](Entity& entity) {               \
+					entity.remove_component<type>();                   \
+				};                                                     \
+				info->has_in = [](Entity const& entity) -> bool {      \
+					return entity.has_component<type>();               \
+				};                                                     \
+			}                                                          \
+		}                                                              \
+	};                                                                 \
+	static _REFLECT_HOOK_REGISTER_##type _REFLECT_HOOK_INSTANCE_##type;
+
 #define REFLECT_ENUM(type, value) \
 	struct _REFLECT_REGISTER_ENUM_##type##_##value { \
 		_REFLECT_REGISTER_ENUM_##type##_##value() { \
@@ -192,8 +225,7 @@ namespace z1 {
 				&typeid(((type*)0)->field),                            \
 				__VA_ARGS__                                            \
 			};                                                         \
-			field_info.container = z1::ContainerInfoResolver<std::remove_cv_t<std::remove_reference_t<decltype(((type*)0)->field)>>>::get(); \
-			field_info.enum_info = z1::EnumInfoResolver<std::remove_cv_t<std::remove_reference_t<decltype(((type*)0)->field)>>>::get(); \
+			z1::configure_field_meta<std::decay_t<decltype(((type*)0)->field)>>(field_info); \
 			TypeRegistry::instance().register_field(#type, field_info);\
 		}                                                              \
 	};                                                                 \

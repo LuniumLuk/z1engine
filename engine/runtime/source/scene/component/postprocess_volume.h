@@ -5,7 +5,7 @@
 
 namespace z1 {
 
-	REFLECTED_STRUCT(PostprocessVolumeComponent) {
+	REFLECTED_COMPONENT(PostprocessVolumeComponent) {
 		bool enabled = true;
 		bool is_global = false;
 		float priority = 0.0f;

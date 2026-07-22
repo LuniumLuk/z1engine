@@ -8,7 +8,7 @@
 
 namespace z1 {
 
-	REFLECTED_STRUCT(AnimationComponent) {
+	REFLECTED_COMPONENT(AnimationComponent) {
 		std::shared_ptr<Animation> animation_asset;
 		float current_time = 0.0f;
 		float speed = 1.0f;

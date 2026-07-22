@@ -7,8 +7,48 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <type_traits>
+#include <memory>
 
 namespace z1 {
+
+	// Forward declarations for asset-type trait
+	struct Texture2D;
+	struct StaticMesh;
+	struct SkeletalMesh;
+	struct Animation;
+	struct Material;
+	struct MaterialInstance;
+	struct Shader;
+	struct Skeleton;
+	struct Guid;
+
+	// Asset-type trait: marks types that are engine assets (stored as shared_ptr in components)
+	template<typename T>
+	struct is_asset_type : std::false_type {};
+
+	template<> struct is_asset_type<Texture2D> : std::true_type {};
+	template<> struct is_asset_type<StaticMesh> : std::true_type {};
+	template<> struct is_asset_type<SkeletalMesh> : std::true_type {};
+	template<> struct is_asset_type<Animation> : std::true_type {};
+	template<> struct is_asset_type<Material> : std::true_type {};
+	template<> struct is_asset_type<MaterialInstance> : std::true_type {};
+	template<> struct is_asset_type<Shader> : std::true_type {};
+	template<> struct is_asset_type<Skeleton> : std::true_type {};
+
+	template<typename T>
+	inline constexpr bool is_asset_type_v = is_asset_type<T>::value;
+
+	// Helper to detect asset-ref fields (shared_ptr<AssetType>)
+	template<typename T>
+	struct is_asset_ref_field : std::false_type {};
+
+	template<typename T>
+	struct is_asset_ref_field<std::shared_ptr<T>> : is_asset_type<T> {};
+
+	template<typename T>
+	inline constexpr bool is_asset_ref_field_v = is_asset_ref_field<T>::value;
+
+	struct Entity;
 
 	enum FieldFlags : uint32_t
 	{
@@ -22,6 +62,9 @@ namespace z1 {
 		FF_ReadOnly         = FF_Visible | FF_Copiable,
 		FF_Default          = FF_Visible | FF_Editable | FF_Serializable | FF_Copiable,
 	};
+
+	// YAML key override: when set, use this key instead of the auto-derived snake_case name
+	inline constexpr const char* YAML_KEY_OVERRIDE_NONE = nullptr;
 
 	struct EnumItem {
 		std::string name;
@@ -56,9 +99,42 @@ namespace z1 {
 		const ContainerInfo* container = nullptr;
 		const EnumInfo* enum_info = nullptr;
 
+		// Custom accessor callbacks for fields that cannot be modeled as offset+typeid
+		// (e.g., Material::Variable::Value tagged union, ScriptComponent script entries)
+		using GetterFn = std::function<void*(void* instance)>;
+		using SetterFn = std::function<void(void* instance, void const* value)>;
+		using ClearFn = std::function<void(void* instance)>;
+		GetterFn custom_getter = nullptr;
+		SetterFn custom_setter = nullptr;
+
+		// For asset-ref fields: properly resets the shared_ptr (calls .reset())
+		// Avoids directly zeroing shared_ptr internals which crashes
+		ClearFn clear_fn = nullptr;
+
+		// YAML key override: if non-null, use this string as the YAML map key
+		// instead of auto-deriving from field name (strip m_, snake_case)
+		const char* yaml_key = nullptr;
+
+		// Whether this field is an asset reference (shared_ptr<T> where is_asset_type_v<T>)
+		bool is_asset_ref = false;
+
+		// Whether this field is of type Guid (for read-only display in editor, string in YAML)
+		bool is_guid = false;
+
 		template<typename T, typename C>
 		T& get(C* instance) const {
+			if (custom_getter) {
+				return *reinterpret_cast<T*>(custom_getter(instance));
+			}
 			return *reinterpret_cast<T*>((uint8_t*)instance + offset);
+		}
+
+		template<typename T, typename C>
+		T const& get_const(C const* instance) const {
+			if (custom_getter) {
+				return *reinterpret_cast<T const*>(custom_getter(const_cast<void*>((void const*)instance)));
+			}
+			return *reinterpret_cast<T const*>((uint8_t const*)instance + offset);
 		}
 
 		bool is_widget_type(std::string const& type_name) const {
@@ -88,11 +164,35 @@ namespace z1 {
 		}
 	};
 
+	// Helper to configure field metadata at registration time
+	template<typename FieldType>
+	inline void configure_field_meta(FieldInfo& field_info) {
+		field_info.container = ContainerInfoResolver<FieldType>::get();
+		field_info.enum_info = EnumInfoResolver<FieldType>::get();
+		field_info.is_guid = std::is_same_v<FieldType, Guid>;
+		field_info.is_asset_ref = is_asset_ref_field_v<FieldType>;
+		// For asset-ref fields, register a clear callback that properly resets the shared_ptr
+		if constexpr (is_asset_ref_field_v<FieldType>) {
+			field_info.clear_fn = [](void* instance) {
+				auto* sp = reinterpret_cast<FieldType*>(instance);
+				sp->reset();
+			};
+		}
+	}
+
 	struct TypeInfo
 	{
 		std::string name;
 		std::unordered_set<std::string> field_names;
 		std::vector<FieldInfo> fields;
+
+		// Type-erased hooks
+		std::function<void(void* buffer)> construct = nullptr;
+		std::function<void(Entity& entity)> add_to = nullptr;
+		std::function<void(Entity& entity)> remove_from = nullptr;
+		std::function<bool(Entity const& entity)> has_in = nullptr;
+
+		bool is_component() const { return add_to != nullptr; }
 	};
 
 	struct TypeRegistry
@@ -108,6 +208,12 @@ namespace z1 {
 		void register_field(std::string const& name, FieldInfo const& field);
 
 		const TypeInfo* get(std::string const& name) const;
+
+		// Iterate all registered types (for editor menus, etc.)
+		std::vector<std::string> get_all_type_names() const;
+
+		// Get all component types (types with add_to hook)
+		std::vector<const TypeInfo*> get_all_components() const;
 
 	private:
 		std::unordered_map<std::string, TypeInfo> m_types;

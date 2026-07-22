@@ -48,3 +48,25 @@
 
 -> see [coding-style.md]
 -> see [build.md]
+
+## Reflecting a New Struct or Component
+
+1. **Mark the type**: Use `REFLECTED_STRUCT(MyType)` for plain structs or `REFLECTED_COMPONENT(MyComponent)` for ECS components (auto-registers add/remove/has hooks).
+
+2. **Register fields**: After the struct body, add `REFLECTED_FIELD(MyType, field_name, FF_Default)` for each field. Common flags:
+   - `FF_Default` — visible, editable, serializable, copiable
+   - `FF_ReadOnly` — visible only (e.g., GUIDs, computed fields)
+
+3. **Widget hints** (optional): Append a hint string to customize the editor widget:
+   - `REFLECTED_FIELD(Foo, m_bar, FF_Default, "[asset]type=static_mesh")` — asset picker
+   - `REFLECTED_FIELD(Foo, m_val, FF_Default, "[slider]min=0;max=1;step=0.01")` — slider
+
+4. **Enums**: Register via `REFLECT_ENUM(EnumType, Value1)` / `REFLECT_ENUM(EnumType, Value2)` after the enum definition.
+
+5. **YAML key overrides**: If the legacy YAML keys differ from auto-derived snake_case names, set `yaml_key` via a static registrar (see `Material` in `asset/material.h` for an example).
+
+6. **Regenerate bindings**: Run `python dev/z1.py gen-pybinds` to update `py_engine.gen.cpp` and `z1.pyi`.
+
+7. **Add hooks** (components only): If the component lacks a default constructor, add manual hook registration in `core/reflection_hooks.cpp` (see `StaticMeshComponent` for the pattern).
+
+8. **Verify**: `python dev/z1.py compile` then `python dev/z1.py test --filter test_reflection`.

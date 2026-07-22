@@ -18,6 +18,7 @@ COMMANDS = {
 	"benchmark":        ("commands.benchmark",        "Run benchmark suites and compare baselines"),
 	"smoke":            ("commands.smoke",            "Run editor smoke test (--one-frame)"),
 	"dcv":              ("commands.dcv",              "Full develop-compile-verify loop"),
+	"gen-pybinds":      ("commands.gen_pybinds",      "Regenerate Python bindings from reflected types"),
 	"release":          ("commands.release",          "Package release folder"),
 }
 

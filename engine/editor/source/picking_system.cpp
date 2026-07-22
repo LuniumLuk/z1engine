@@ -68,6 +68,9 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 
 		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const, TagComponent const>();
 		for (auto [entity, transform, mesh, tag] : view.each()) {
+			if (!mesh.m_mesh)
+				continue;
+
 			float object_id = static_cast<float>(tag.m_id) + 1.0f;
 
 			auto model = transform.get_world_transform();

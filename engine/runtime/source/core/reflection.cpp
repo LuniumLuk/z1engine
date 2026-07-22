@@ -38,4 +38,23 @@ namespace z1 {
 		return it != m_types.end() ? &it->second : nullptr;
 	}
 
+	std::vector<std::string> TypeRegistry::get_all_type_names() const {
+		std::vector<std::string> names;
+		names.reserve(m_types.size());
+		for (auto const& [name, info] : m_types) {
+			names.push_back(name);
+		}
+		return names;
+	}
+
+	std::vector<const TypeInfo*> TypeRegistry::get_all_components() const {
+		std::vector<const TypeInfo*> components;
+		for (auto const& [name, info] : m_types) {
+			if (info.is_component()) {
+				components.push_back(&info);
+			}
+		}
+		return components;
+	}
+
 }

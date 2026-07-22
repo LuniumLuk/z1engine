@@ -8,6 +8,11 @@ def log_warn(msg: str) -> None: ...
 def log_error(msg: str) -> None: ...
 def log_info(*args: Any, **kwargs: Any) -> Any: ...
 def log_warn(*args: Any, **kwargs: Any) -> Any: ...
+def log_error(*args: Any, **kwargs: Any) -> Any: ...
+def hide_cursor(*args: Any, **kwargs: Any) -> Any: ...
+def show_cursor(*args: Any, **kwargs: Any) -> Any: ...
+def center_cursor(*args: Any, **kwargs: Any) -> Any: ...
+def is_cursor_hidden(*args: Any, **kwargs: Any) -> Any: ...
 def register_event_listener(type: EventType, callback: Any) -> None: ...
 
 class Event:
@@ -94,7 +99,11 @@ class Entity:
 	@property
 	def light(self) -> Optional[Light]: ...
 	@property
+	def particle(self) -> Optional[Particle]: ...
+	@property
 	def postprocess_volume(self) -> Optional[PostprocessVolume]: ...
+	@property
+	def script(self) -> Optional[Script]: ...
 	@property
 	def skeletal_mesh(self) -> Optional[SkeletalMesh]: ...
 	@property
@@ -140,10 +149,42 @@ class EventType(Enum):
 	MouseMoved = 10
 	MouseScrolled = 11
 
+class DataType(Enum):
+	None = 0
+	Float = 1
+	Float2 = 2
+	Float3 = 3
+	Float4 = 4
+	Int = 5
+	Int2 = 6
+	Int3 = 7
+	Int4 = 8
+	Mat3 = 9
+	Mat4 = 10
+	Bool = 11
+	Sampler2D = 12
+	Sampler2DArray = 13
+	SamplerCube = 14
+
+class EmitterShape(Enum):
+	Point = 0
+	Sphere = 1
+	Box = 2
+	Cone = 3
+
 class LightType(Enum):
 	Directional = 0
 	Point = 1
 	Spot = 2
+
+class ParticleBlendMode(Enum):
+	Alpha = 0
+	Additive = 1
+	Soft = 2
+
+class RenderMode(Enum):
+	Forward = 0
+	Deferred = 1
 
 class Animation:
 	animation_asset: Optional[Any]
@@ -182,6 +223,7 @@ class GlobalSettings:
 	sm_ortho_size: float
 	anim_enabled: bool
 	script_enabled: bool
+	render_mode: RenderMode
 	def __init__(self) -> None: ...
 
 class Light:
@@ -192,6 +234,46 @@ class Light:
 	inner_cone: float
 	outer_cone: float
 	cast_shadow: bool
+	def __init__(self) -> None: ...
+
+class Material:
+	flags: int
+	shader_guid: Any
+	variables: Any
+
+class MaterialInstance:
+	material: Optional[Any]
+	override_variables: Any
+	override_flags: int
+	override_mask: int
+
+class Particle:
+	max_particles: int
+	emission_rate: float
+	burst_count: int
+	lifetime: Vec2
+	initial_speed: Vec2
+	direction: Vec3
+	direction_spread: float
+	gravity: Vec3
+	damping: float
+	initial_size: Vec2
+	size_over_life: Vec2
+	initial_color: Vec4
+	end_color: Vec4
+	texture: Optional[Any]
+	blend_mode: ParticleBlendMode
+	emitter_shape: EmitterShape
+	shape_radius: float
+	shape_extents: Vec3
+	world_space: bool
+	loop: bool
+	playing: bool
+	sort_by_depth: bool
+	receive_shadows: bool
+	cast_shadows: bool
+	initial_rotation: Vec2
+	rotation_speed: Vec2
 	def __init__(self) -> None: ...
 
 class PostprocessVolume:
@@ -214,8 +296,12 @@ class PostprocessVolume:
 	override_bloom_knee: bool
 	bloom_knee: float
 
+class Script:
+	def __init__(self) -> None: ...
+
 class SkeletalMesh:
-	pass
+	mesh: Optional[Any]
+	skeleton: Optional[Any]
 
 class SkyLight:
 	texture: Optional[Any]
@@ -234,10 +320,11 @@ class Sprite:
 	def __init__(self) -> None: ...
 
 class StaticMesh:
-	pass
+	mesh: Optional[Any]
 
 class Tag:
 	tag: str
+	id: int
 	def __init__(self) -> None: ...
 
 class Transform:

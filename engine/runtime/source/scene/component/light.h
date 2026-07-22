@@ -15,7 +15,7 @@ namespace z1 {
 	REFLECT_ENUM(LightType, Point)
 	REFLECT_ENUM(LightType, Spot)
 
-	REFLECTED_STRUCT(LightComponent) {
+	REFLECTED_COMPONENT(LightComponent) {
 		LightType m_type = LightType::Directional; // 0: Directional, 1: Point, 2: Spot
 		glm::vec3 m_color = { 1.0f, 1.0f, 1.0f };
 		float m_intensity = 1.0f;

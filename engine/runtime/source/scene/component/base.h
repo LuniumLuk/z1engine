@@ -26,7 +26,7 @@ namespace z1 {
 		}
 	};
 
-	REFLECTED_STRUCT(TagComponent) {
+	REFLECTED_COMPONENT(TagComponent) {
 		std::string m_tag;
 		uint32_t m_id = 0;
 		TagComponent() = default;
@@ -36,8 +36,9 @@ namespace z1 {
 	};
 
 	REFLECTED_FIELD(TagComponent, m_tag, FF_Default)
+	REFLECTED_FIELD(TagComponent, m_id,  FF_ReadOnly)
 
-	REFLECTED_STRUCT(TransformComponent) {
+	REFLECTED_COMPONENT(TransformComponent) {
 		glm::vec3 m_location{ 0.0f, 0.0f, 0.0f };
 		glm::vec3 m_rotation{ 0.0f, 0.0f, 0.0f }; // in degrees (pitch, yaw, roll)
 		glm::vec3 m_scale{ 1.0f, 1.0f, 1.0f };
@@ -194,7 +195,7 @@ namespace z1 {
 
 	};
 
-	struct API ScriptComponent {
+	REFLECTED_STRUCT(ScriptComponent) {
 
 		struct ScriptData {
 			ScriptData() = default;
@@ -208,6 +209,9 @@ namespace z1 {
 			std::function<void(ScriptData&)> attach_func = nullptr;
 			std::function<void(ScriptData&)> detach_func = nullptr;
 		};
+
+		// Custom accessor for script entries (module.class string pairs)
+		// Registered via a static helper below
 
 		std::weak_ptr<Entity> m_entity;
 		std::vector<ScriptData> m_scripts;
@@ -290,5 +294,42 @@ namespace z1 {
 			m_scripts.erase(m_scripts.begin() + index);
 		}
 	};
+
+	// Custom accessor field for ScriptComponent script entries
+	// Exposes script names as a vector<string> of "module.Class" entries
+	struct _REFLECT_REGISTER_ScriptComponent_script_entries {
+		_REFLECT_REGISTER_ScriptComponent_script_entries() {
+			FieldInfo field_info = {};
+			field_info.name = "script_entries";
+			field_info.type = &typeid(std::vector<std::string>);
+			field_info.flag = FF_Default;
+			field_info.offset = 0;
+			field_info.size = sizeof(std::vector<std::string>);
+
+			// Custom getter: collect script names from m_scripts
+			field_info.custom_getter = [](void* instance) -> void* {
+				auto* comp = static_cast<ScriptComponent*>(instance);
+				static thread_local std::vector<std::string> entries;
+				entries.clear();
+				for (auto& script : comp->m_scripts) {
+					if (script.instance) {
+						std::string name = script.instance->get_script_name();
+						if (name != "unregistered") {
+							entries.push_back(name);
+						}
+					}
+				}
+				return &entries;
+			};
+
+			// Custom setter: accepts new entries but attachment requires Entity access
+			// Serialization uses this getter; deserialization handles ScriptComponent
+			// specially because script instantiation requires the Entity
+			field_info.yaml_key = "script_component";
+
+			TypeRegistry::instance().register_field("ScriptComponent", field_info);
+		}
+	};
+	static _REFLECT_REGISTER_ScriptComponent_script_entries _REFLECT_REGISTER_INSTANCE_ScriptComponent_script_entries;
 
 }

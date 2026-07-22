@@ -101,6 +101,12 @@ namespace z1 {
 			return !m_is_destroyed && !m_scene.expired() && m_scene.lock()->m_registry.valid(m_handle);
 		}
 
+		// Get a weak_ptr to this Entity (from the EntityPtr component)
+		std::weak_ptr<Entity> get_weak_ptr() const {
+			CORE_ASSERT(is_valid(), "Entity is invalid!");
+			return get_component<Scene::EntityPtr>().m_ptr;
+		}
+
 		template<typename T, typename... Args>
 		void attach_script(Args&&... args) {
 			CORE_ASSERT(is_valid(), "Entity is invalid!");

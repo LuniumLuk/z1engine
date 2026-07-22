@@ -6,7 +6,7 @@
 
 namespace z1 {
 
-	REFLECTED_STRUCT(SpriteComponent) {
+	REFLECTED_COMPONENT(SpriteComponent) {
 		glm::vec4 m_color{ 1.0f, 1.0f, 1.0f, 1.0f };
 		std::shared_ptr<Texture2D> m_texture = nullptr;
 		glm::vec2 m_tiling_scale = glm::vec2(1.0f);

@@ -6,7 +6,7 @@
 
 namespace z1 {
 
-	REFLECTED_STRUCT(SkyLightComponent) {
+	REFLECTED_COMPONENT(SkyLightComponent) {
 		std::shared_ptr<Texture2D> m_texture;
 		float m_rotation = 0.0f; // degrees around Y
 		float m_intensity = 1.0f;

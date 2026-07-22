@@ -21,8 +21,42 @@
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
 #include "asset/asset_manager.h"
+#include "scene/serialization.h"
 
 namespace z1 {
+
+	// Reflection registration for EditorCameraData (manual, nested struct in Scene)
+	// Placed in .cpp to avoid duplicate registrations from multiple TUs including scene.h
+	struct _REFLECT_REGISTER_EditorCameraData {
+		_REFLECT_REGISTER_EditorCameraData() {
+			TypeRegistry::instance().register_type("EditorCameraData");
+
+			FieldInfo transform_field = {};
+			transform_field.name = "transform";
+			transform_field.offset = offsetof(Scene::EditorCameraData, transform);
+			transform_field.size = sizeof(TransformComponent);
+			transform_field.type = &typeid(TransformComponent);
+			transform_field.flag = FF_Default;
+			TypeRegistry::instance().register_field("EditorCameraData", transform_field);
+
+			FieldInfo camera_field = {};
+			camera_field.name = "camera";
+			camera_field.offset = offsetof(Scene::EditorCameraData, camera);
+			camera_field.size = sizeof(CameraComponent);
+			camera_field.type = &typeid(CameraComponent);
+			camera_field.flag = FF_Default;
+			TypeRegistry::instance().register_field("EditorCameraData", camera_field);
+
+			FieldInfo valid_field = {};
+			valid_field.name = "is_valid";
+			valid_field.offset = offsetof(Scene::EditorCameraData, is_valid);
+			valid_field.size = sizeof(bool);
+			valid_field.type = &typeid(bool);
+			valid_field.flag = FF_ReadOnly;
+			TypeRegistry::instance().register_field("EditorCameraData", valid_field);
+		}
+	};
+	static _REFLECT_REGISTER_EditorCameraData _REFLECT_REGISTER_INSTANCE_EditorCameraData;
 
 	Scene::Scene() {}
 
@@ -193,23 +227,11 @@ namespace z1 {
 			return scene;
 		}
 
-		// Global Settings
+		// Global Settings (reflection-driven)
 		auto global_settings = yaml["global_settings"];
 		if (global_settings) {
 			auto& global = *g_runtime_context.m_global;
-			if (global_settings["sun_direction"]) global.sun_direction = global_settings["sun_direction"].as<glm::vec3>();
-			if (global_settings["sun_color"]) global.sun_color = global_settings["sun_color"].as<glm::vec4>();
-			if (global_settings["sun_intensity"]) global.sun_intensity = global_settings["sun_intensity"].as<float>();
-			if (global_settings["sun_ambient_color"]) global.sun_ambient_color = global_settings["sun_ambient_color"].as<glm::vec4>();
-			if (global_settings["sun_ambient_intensity"]) global.sun_ambient_intensity = global_settings["sun_ambient_intensity"].as<float>();
-			if (global_settings["taa_enabled"]) global.taa_enabled = global_settings["taa_enabled"].as<bool>();
-			if (global_settings["taa_blend"]) global.taa_blend = global_settings["taa_blend"].as<float>();
-			if (global_settings["pp_exposure"]) global.pp_exposure = global_settings["pp_exposure"].as<float>();
-			if (global_settings["pp_gamma"]) global.pp_gamma = global_settings["pp_gamma"].as<float>();
-			if (global_settings["pp_tint"]) global.pp_tint = global_settings["pp_tint"].as<glm::vec4>();
-			if (global_settings["sm_near"]) global.sm_near = global_settings["sm_near"].as<float>();
-			if (global_settings["sm_far"]) global.sm_far = global_settings["sm_far"].as<float>();
-			if (global_settings["sm_ortho_size"]) global.sm_ortho_size = global_settings["sm_ortho_size"].as<float>();
+			deserialize_type(global_settings, &global, "GlobalSettings");
 		}
 
 		// Editor Camera
@@ -487,24 +509,10 @@ namespace z1 {
 
 		yaml << YAML::Key << "meta" << YAML::Value << m_meta;
 
-		// Global Settings
+		// Global Settings (reflection-driven)
 		auto& global = *g_runtime_context.m_global;
 		yaml << YAML::Key << "global_settings" << YAML::Value;
-		yaml << YAML::BeginMap;
-		yaml << YAML::Key << "sun_direction" << YAML::Value << global.sun_direction;
-		yaml << YAML::Key << "sun_color" << YAML::Value << global.sun_color;
-		yaml << YAML::Key << "sun_intensity" << YAML::Value << global.sun_intensity;
-		yaml << YAML::Key << "sun_ambient_color" << YAML::Value << global.sun_ambient_color;
-		yaml << YAML::Key << "sun_ambient_intensity" << YAML::Value << global.sun_ambient_intensity;
-		yaml << YAML::Key << "taa_enabled" << YAML::Value << global.taa_enabled;
-		yaml << YAML::Key << "taa_blend" << YAML::Value << global.taa_blend;
-		yaml << YAML::Key << "pp_exposure" << YAML::Value << global.pp_exposure;
-		yaml << YAML::Key << "pp_gamma" << YAML::Value << global.pp_gamma;
-		yaml << YAML::Key << "pp_tint" << YAML::Value << global.pp_tint;
-		yaml << YAML::Key << "sm_near" << YAML::Value << global.sm_near;
-		yaml << YAML::Key << "sm_far" << YAML::Value << global.sm_far;
-		yaml << YAML::Key << "sm_ortho_size" << YAML::Value << global.sm_ortho_size;
-		yaml << YAML::EndMap;
+		serialize_type(yaml, &global, "GlobalSettings");
 
 		// Editor Camera
 		for (auto const& entity : m_transient_entities) {

@@ -3,12 +3,15 @@
 
 #include "pch.h"
 #include "z1engine.h"
+#include "asset/material.h"
+#include "render/data_types.h"
 #include "render/global.h"
 #include "scene/component/animation.h"
 #include "scene/component/base.h"
 #include "scene/component/camera.h"
 #include "scene/component/light.h"
 #include "scene/component/mesh.h"
+#include "scene/component/particle.h"
 #include "scene/component/postprocess_volume.h"
 #include "scene/component/sky_light.h"
 #include "scene/component/sprite.h"
@@ -20,10 +23,46 @@ using namespace z1;
 
 void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& entity_cls) {
 	// Bind Enums
+	py::enum_<DataType>(m, "DataType")
+		.value("None", DataType::None)
+		.value("Float", DataType::Float)
+		.value("Float2", DataType::Float2)
+		.value("Float3", DataType::Float3)
+		.value("Float4", DataType::Float4)
+		.value("Int", DataType::Int)
+		.value("Int2", DataType::Int2)
+		.value("Int3", DataType::Int3)
+		.value("Int4", DataType::Int4)
+		.value("Mat3", DataType::Mat3)
+		.value("Mat4", DataType::Mat4)
+		.value("Bool", DataType::Bool)
+		.value("Sampler2D", DataType::Sampler2D)
+		.value("Sampler2DArray", DataType::Sampler2DArray)
+		.value("SamplerCube", DataType::SamplerCube)
+		.export_values();
+
+	py::enum_<EmitterShape>(m, "EmitterShape")
+		.value("Point", EmitterShape::Point)
+		.value("Sphere", EmitterShape::Sphere)
+		.value("Box", EmitterShape::Box)
+		.value("Cone", EmitterShape::Cone)
+		.export_values();
+
 	py::enum_<LightType>(m, "LightType")
 		.value("Directional", LightType::Directional)
 		.value("Point", LightType::Point)
 		.value("Spot", LightType::Spot)
+		.export_values();
+
+	py::enum_<ParticleBlendMode>(m, "ParticleBlendMode")
+		.value("Alpha", ParticleBlendMode::Alpha)
+		.value("Additive", ParticleBlendMode::Additive)
+		.value("Soft", ParticleBlendMode::Soft)
+		.export_values();
+
+	py::enum_<RenderMode>(m, "RenderMode")
+		.value("Forward", RenderMode::Forward)
+		.value("Deferred", RenderMode::Deferred)
 		.export_values();
 
 	// Generated Bindings
@@ -64,7 +103,8 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("sm_far", &GlobalSettings::sm_far)
 		.def_readwrite("sm_ortho_size", &GlobalSettings::sm_ortho_size)
 		.def_readwrite("anim_enabled", &GlobalSettings::anim_enabled)
-		.def_readwrite("script_enabled", &GlobalSettings::script_enabled);
+		.def_readwrite("script_enabled", &GlobalSettings::script_enabled)
+		.def_readwrite("render_mode", &GlobalSettings::render_mode);
 
 	py::class_<LightComponent>(m, "Light")
 		.def(py::init<>())
@@ -75,6 +115,46 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("inner_cone", &LightComponent::m_inner_cone)
 		.def_readwrite("outer_cone", &LightComponent::m_outer_cone)
 		.def_readwrite("cast_shadow", &LightComponent::m_cast_shadow);
+
+	py::class_<Material>(m, "Material")
+		.def_readwrite("flags", &Material::m_flags)
+		.def_readwrite("shader_guid", &Material::m_shader_guid)
+		.def_readwrite("variables", &Material::m_variables);
+
+	py::class_<MaterialInstance>(m, "MaterialInstance")
+		.def_readwrite("material", &MaterialInstance::m_material)
+		.def_readwrite("override_variables", &MaterialInstance::m_override_variables)
+		.def_readwrite("override_flags", &MaterialInstance::m_override_flags)
+		.def_readwrite("override_mask", &MaterialInstance::m_override_mask);
+
+	py::class_<ParticleComponent>(m, "Particle")
+		.def(py::init<>())
+		.def_readwrite("max_particles", &ParticleComponent::m_max_particles)
+		.def_readwrite("emission_rate", &ParticleComponent::m_emission_rate)
+		.def_readwrite("burst_count", &ParticleComponent::m_burst_count)
+		.def_readwrite("lifetime", &ParticleComponent::m_lifetime)
+		.def_readwrite("initial_speed", &ParticleComponent::m_initial_speed)
+		.def_readwrite("direction", &ParticleComponent::m_direction)
+		.def_readwrite("direction_spread", &ParticleComponent::m_direction_spread)
+		.def_readwrite("gravity", &ParticleComponent::m_gravity)
+		.def_readwrite("damping", &ParticleComponent::m_damping)
+		.def_readwrite("initial_size", &ParticleComponent::m_initial_size)
+		.def_readwrite("size_over_life", &ParticleComponent::m_size_over_life)
+		.def_readwrite("initial_color", &ParticleComponent::m_initial_color)
+		.def_readwrite("end_color", &ParticleComponent::m_end_color)
+		.def_readwrite("texture", &ParticleComponent::m_texture)
+		.def_readwrite("blend_mode", &ParticleComponent::m_blend_mode)
+		.def_readwrite("emitter_shape", &ParticleComponent::m_emitter_shape)
+		.def_readwrite("shape_radius", &ParticleComponent::m_shape_radius)
+		.def_readwrite("shape_extents", &ParticleComponent::m_shape_extents)
+		.def_readwrite("world_space", &ParticleComponent::m_world_space)
+		.def_readwrite("loop", &ParticleComponent::m_loop)
+		.def_readwrite("playing", &ParticleComponent::m_playing)
+		.def_readwrite("sort_by_depth", &ParticleComponent::m_sort_by_depth)
+		.def_readwrite("receive_shadows", &ParticleComponent::m_receive_shadows)
+		.def_readwrite("cast_shadows", &ParticleComponent::m_cast_shadows)
+		.def_readwrite("initial_rotation", &ParticleComponent::m_initial_rotation)
+		.def_readwrite("rotation_speed", &ParticleComponent::m_rotation_speed);
 
 	py::class_<PostprocessVolumeComponent>(m, "PostprocessVolume")
 		.def_readwrite("enabled", &PostprocessVolumeComponent::enabled)
@@ -96,7 +176,9 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("override_bloom_knee", &PostprocessVolumeComponent::override_bloom_knee)
 		.def_readwrite("bloom_knee", &PostprocessVolumeComponent::bloom_knee);
 
-	py::class_<SkeletalMeshComponent>(m, "SkeletalMesh");
+	py::class_<SkeletalMeshComponent>(m, "SkeletalMesh")
+		.def_readwrite("mesh", &SkeletalMeshComponent::m_mesh)
+		.def_readwrite("skeleton", &SkeletalMeshComponent::m_skeleton);
 
 	py::class_<SkyLightComponent>(m, "SkyLight")
 		.def(py::init<>())
@@ -114,11 +196,13 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("texcoords", &SpriteComponent::m_texcoords)
 		.def_readwrite("extras", &SpriteComponent::m_extras);
 
-	py::class_<StaticMeshComponent>(m, "StaticMesh");
+	py::class_<StaticMeshComponent>(m, "StaticMesh")
+		.def_readwrite("mesh", &StaticMeshComponent::m_mesh);
 
 	py::class_<TagComponent>(m, "Tag")
 		.def(py::init<>())
-		.def_readwrite("tag", &TagComponent::m_tag);
+		.def_readwrite("tag", &TagComponent::m_tag)
+		.def_readwrite("id", &TagComponent::m_id);
 
 	py::class_<TransformComponent>(m, "Transform")
 		.def(py::init<>())
@@ -142,6 +226,12 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 	entity_cls.def_property_readonly("light", [](Entity& e) -> LightComponent* {
 		if (e.has_component<LightComponent>()) {
 			return &e.get_component<LightComponent>();
+		}
+		return nullptr;
+	}, py::return_value_policy::reference);
+	entity_cls.def_property_readonly("particle", [](Entity& e) -> ParticleComponent* {
+		if (e.has_component<ParticleComponent>()) {
+			return &e.get_component<ParticleComponent>();
 		}
 		return nullptr;
 	}, py::return_value_policy::reference);

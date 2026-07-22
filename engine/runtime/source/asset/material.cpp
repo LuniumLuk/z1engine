@@ -2,6 +2,7 @@
 #include "asset/material.h"
 #include "asset/asset_manager.h"
 #include "util/string_utils.h"
+#include "scene/serialization.h"
 
 namespace z1 {
 
@@ -442,8 +443,10 @@ namespace z1 {
 		YAML::Emitter out;
 		out << YAML::BeginMap;
 		out << YAML::Key << "meta" << YAML::Value << m_meta;
-		out << YAML::Key << "flags" << YAML::Value << m_flags;
-		out << YAML::Key << "shader" << YAML::Value << m_shader_guid;
+
+		// Reflection-driven serialization of basic fields (flags, shader_guid, variables)
+		serialize_type(out, const_cast<Material*>(this), "Material");
+
 		out << YAML::EndMap;
 
 		save_yaml(file, out);

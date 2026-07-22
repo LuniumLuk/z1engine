@@ -99,4 +99,4 @@ namespace z1 {
 		std::shared_ptr<Entity> m_main_camera = nullptr;
 	};
 
-}
+} // namespace z1

@@ -86,7 +86,7 @@ namespace z1 {
 		}
 	}
 
-	struct API Material : Asset<Material> {
+	REFLECTED_STRUCT(Material) : Asset<Material> {
 		struct Variable {
 			std::string name;
 			DataType type = DataType::None;
@@ -159,7 +159,25 @@ namespace z1 {
 
 	};
 
-	struct API MaterialInstance : Asset<MaterialInstance> {
+	REFLECTED_FIELD(Material, m_flags,       FF_Default)
+	REFLECTED_FIELD(Material, m_shader_guid, FF_ReadOnly)
+	REFLECTED_FIELD(Material, m_variables,   FF_Default)
+
+	// Set yaml_key overrides for Material fields to match legacy format
+	struct _REFLECT_YAMLKEY_Material {
+		_REFLECT_YAMLKEY_Material() {
+			auto* info = const_cast<TypeInfo*>(TypeRegistry::instance().get("Material"));
+			if (info) {
+				for (auto& f : info->fields) {
+					if (f.name == "m_shader_guid") f.yaml_key = "shader";
+					if (f.name == "m_flags") f.yaml_key = "flags";
+				}
+			}
+		}
+	};
+	static _REFLECT_YAMLKEY_Material _REFLECT_YAMLKEY_INST_Material;
+
+	REFLECTED_STRUCT(MaterialInstance) : Asset<MaterialInstance> {
 
 		MaterialInstance(std::shared_ptr<Material> const& material);
 
@@ -201,5 +219,10 @@ namespace z1 {
 		void set_texture2d(std::string const& name, std::shared_ptr<Texture2D> const& tex);
 
 	};
+
+	REFLECTED_FIELD(MaterialInstance, m_material,           FF_Default)
+	REFLECTED_FIELD(MaterialInstance, m_override_variables, FF_Default)
+	REFLECTED_FIELD(MaterialInstance, m_override_flags,     FF_Default)
+	REFLECTED_FIELD(MaterialInstance, m_override_mask,      FF_Default)
 
 }

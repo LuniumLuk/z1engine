@@ -24,6 +24,7 @@ namespace z1 {
 			uint32_t width = 0;
 			uint32_t height = 0;
 			bool v_sync = true;
+			bool cursor_hidden = false;
 			std::vector<EventCallbackFn> event_callbacks;
 		};
 
@@ -44,6 +45,12 @@ namespace z1 {
 		void set_window_title(std::string const& title);
 
 		void* get_native_window() const { return m_window; }
+
+		// Cursor control
+		void hide_cursor();    // GLFW_CURSOR_DISABLED: hide + lock to window
+		void show_cursor();    // GLFW_CURSOR_NORMAL: visible
+		void center_cursor();  // move cursor to window center
+		bool is_cursor_hidden() const;
 
 	private:
 		void shutdown();

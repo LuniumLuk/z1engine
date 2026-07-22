@@ -29,14 +29,42 @@ class MyScript(z1.Script):
         z1.log_info("attached")
 
     def on_update(self, dt):
-        t = self.entity.transform
-        loc = t.location
-        loc.y += 1.0 * dt
-        t.location = loc
+        # Input polling
+        if z1.input.is_key_pressed(z1.input.KEY_W):
+            t = self.entity.transform
+            loc = t.location
+            loc.y += 1.0 * dt
+            t.location = loc
 
     def on_detach(self):
         z1.log_info("detached")
 ```
+
+## Input API
+
+- `z1.input.is_key_pressed(keycode)` — poll keyboard state (GLFW key codes)
+- `z1.input.is_mouse_button_pressed(button)` — poll mouse button state
+- `z1.input.get_mouse_pos()` — returns `(x, y)` tuple of cursor position
+- Key constants on `z1.input`: `KEY_W`, `KEY_A`, `KEY_SPACE`, `KEY_ESCAPE`, `KEY_LEFT_SHIFT`, `KEY_LEFT_CONTROL`, etc.
+- Mouse constants: `MOUSE_BUTTON_LEFT`, `MOUSE_BUTTON_RIGHT`, `MOUSE_BUTTON_MIDDLE`
+- Cursor control: `z1.hide_cursor()`, `z1.show_cursor()`, `z1.center_cursor()`, `z1.is_cursor_hidden()`
+
+## Code Generation
+
+- `python dev/z1.py gen-pybinds` — regenerates `py_engine.gen.cpp` and `z1.pyi` from reflected C++ types
+- `python dev/z1.py gen-pybinds --check` — dry-run check for stale bindings (exit 2 if drift)
+- Run after adding/removing `REFLECTED_FIELD`, `REFLECTED_COMPONENT`, or `REFLECT_ENUM`
+- Generated bindings include per-type entity properties (e.g., `entity.light`, `entity.camera`)
+- `ScriptComponent` is bound manually as `z1.Script` (excluded from auto-generation)
+
+## Entity Component API
+
+- `entity.light` — access `LightComponent` (read-only, returns None if absent)
+- `entity.camera`, `entity.transform`, `entity.tag`, `entity.skeletal_mesh`, `entity.static_mesh`
+- `entity.sky_light`, `entity.sprite`, `entity.animation`, `entity.particle`, `entity.postprocess_volume`
+- `entity.add_static_mesh(path)`, `entity.add_skeletal_mesh(path)`, `entity.add_camera()`
+- `entity.add_script(module, class_name)` — attach a Python script
+- `entity.is_valid()` — check if entity is still alive
 
 ## Attaching Scripts (C++)
 

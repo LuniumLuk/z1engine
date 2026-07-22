@@ -54,7 +54,7 @@ namespace z1 {
 		std::shared_ptr<VertexBuffer> m_vbo;	// per-particle instance data
 	};
 
-	REFLECTED_STRUCT(ParticleComponent) : Requires<TransformComponent> {
+	REFLECTED_COMPONENT(ParticleComponent) : Requires<TransformComponent> {
 		// Emitter configuration (reflected, serialized)
 		uint32_t m_max_particles = 1000;
 		float m_emission_rate = 50.0f;

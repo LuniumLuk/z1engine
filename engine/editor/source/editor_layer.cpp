@@ -1,5 +1,7 @@
 #include "editor_layer.h"
 
+#include "core/reflection_hooks.h"
+
 void EditorSettings::save() {
 	YAML::Emitter yaml;
 	yaml << YAML::BeginMap;
@@ -39,6 +41,10 @@ void EditorSettings::load() {
 }
 
 EditorLayer::EditorLayer() {
+	// Force-link reflection hooks so component add/remove menus work
+	// even when the Python layer is not active
+	ForceLinkReflectionHooks();
+
 	m_one_frame = g_args.get<int>("one-frame", -1);
 	m_settings.load();
 	m_gui = std::make_shared<EditorGUI>(m_settings.curr_resolution);
@@ -734,6 +740,12 @@ void EditorLayer::show_asset_info() {
 			auto mat = g_runtime_context.m_asset_manager->get<Material>(m_selected_asset->guid);
 			ImGui::Text("shader name: %s", mat->get_shader()->get_name().c_str());
 
+			// Show reflected Material fields (flags, shader_guid)
+			if (ImGui::CollapsingHeader("Material Properties", ImGuiTreeNodeFlags_DefaultOpen)) {
+				show_type_fields(mat.get(), "Material");
+			}
+
+			ImGui::Separator();
 			ImGui::Text("variables");
 			for (auto& [name, var] : mat->m_variables) {
 				if (!var.visible) continue;
@@ -772,6 +784,12 @@ void EditorLayer::show_asset_info() {
 			ImGui::Text("parent material: %s", mi->m_material->m_meta.path.generic_string().c_str());
 			ImGui::Text("shader name: %s", mi->m_material->get_shader()->get_name().c_str());
 
+			// Show reflected MaterialInstance fields (override_flags, override_mask, material ref)
+			if (ImGui::CollapsingHeader("Instance Properties", ImGuiTreeNodeFlags_DefaultOpen)) {
+				show_type_fields(mi.get(), "MaterialInstance");
+			}
+
+			ImGui::Separator();
 			ImGui::Text("override variables");
 			for (auto& [name, var] : mi->m_override_variables) {
 				if (!var.visible) continue;

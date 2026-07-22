@@ -5,6 +5,7 @@
 #include "event/key_event.h"
 #include "event/mouse_event.h"
 #include "event/application_event.h"
+#include "core/input.h"
 
 #include "pybind11/embed.h"
 namespace py = pybind11;
@@ -33,6 +34,14 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 	m.doc() = "z1 Engine API";
 	m.def("log_info", &log_info_py);
 	m.def("log_warn", &log_warn_py);
+	m.def("log_error", &log_error_py);
+
+	// Cursor control
+	m.def("hide_cursor", []() { g_runtime_context.m_window->hide_cursor(); });
+	m.def("show_cursor", []() { g_runtime_context.m_window->show_cursor(); });
+	m.def("center_cursor", []() { g_runtime_context.m_window->center_cursor(); });
+	m.def("is_cursor_hidden", []() -> bool { return g_runtime_context.m_window->is_cursor_hidden(); });
+
 	// Bind Event System
 	py::enum_<EventType>(m, "EventType")
 		.value("WindowClose", EventType::WindowClose)
@@ -180,6 +189,144 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 		.def(py::init<>())
 		.def("create_entity", &Scene::create_entity)
 		.def("destroy_entity", &Scene::destroy_entity);
+
+	// Input polling submodule
+	auto input_module = m.def_submodule("input", "Input polling API");
+	input_module.def("is_key_pressed", [](int keycode) -> bool {
+		if (!g_runtime_context.m_input_system) return false;
+		return g_runtime_context.m_input_system->is_key_pressed(keycode);
+	});
+	input_module.def("is_mouse_button_pressed", [](int button) -> bool {
+		if (!g_runtime_context.m_input_system) return false;
+		return g_runtime_context.m_input_system->is_mouse_button_pressed(button);
+	});
+	input_module.def("get_mouse_pos", []() -> std::pair<float, float> {
+		if (!g_runtime_context.m_input_system) return {0.0f, 0.0f};
+		return g_runtime_context.m_input_system->get_mouse_pos();
+	});
+
+	// GLFW key code constants (exposed on z1.input)
+	#define ADD_KEY_CONST(name, code) input_module.attr(#name) = code
+	ADD_KEY_CONST(KEY_SPACE,        32);
+	ADD_KEY_CONST(KEY_APOSTROPHE,   39);
+	ADD_KEY_CONST(KEY_COMMA,        44);
+	ADD_KEY_CONST(KEY_MINUS,        45);
+	ADD_KEY_CONST(KEY_PERIOD,       46);
+	ADD_KEY_CONST(KEY_SLASH,        47);
+	ADD_KEY_CONST(KEY_0,            48);
+	ADD_KEY_CONST(KEY_1,            49);
+	ADD_KEY_CONST(KEY_2,            50);
+	ADD_KEY_CONST(KEY_3,            51);
+	ADD_KEY_CONST(KEY_4,            52);
+	ADD_KEY_CONST(KEY_5,            53);
+	ADD_KEY_CONST(KEY_6,            54);
+	ADD_KEY_CONST(KEY_7,            55);
+	ADD_KEY_CONST(KEY_8,            56);
+	ADD_KEY_CONST(KEY_9,            57);
+	ADD_KEY_CONST(KEY_SEMICOLON,    59);
+	ADD_KEY_CONST(KEY_EQUAL,        61);
+	ADD_KEY_CONST(KEY_A,            65);
+	ADD_KEY_CONST(KEY_B,            66);
+	ADD_KEY_CONST(KEY_C,            67);
+	ADD_KEY_CONST(KEY_D,            68);
+	ADD_KEY_CONST(KEY_E,            69);
+	ADD_KEY_CONST(KEY_F,            70);
+	ADD_KEY_CONST(KEY_G,            71);
+	ADD_KEY_CONST(KEY_H,            72);
+	ADD_KEY_CONST(KEY_I,            73);
+	ADD_KEY_CONST(KEY_J,            74);
+	ADD_KEY_CONST(KEY_K,            75);
+	ADD_KEY_CONST(KEY_L,            76);
+	ADD_KEY_CONST(KEY_M,            77);
+	ADD_KEY_CONST(KEY_N,            78);
+	ADD_KEY_CONST(KEY_O,            79);
+	ADD_KEY_CONST(KEY_P,            80);
+	ADD_KEY_CONST(KEY_Q,            81);
+	ADD_KEY_CONST(KEY_R,            82);
+	ADD_KEY_CONST(KEY_S,            83);
+	ADD_KEY_CONST(KEY_T,            84);
+	ADD_KEY_CONST(KEY_U,            85);
+	ADD_KEY_CONST(KEY_V,            86);
+	ADD_KEY_CONST(KEY_W,            87);
+	ADD_KEY_CONST(KEY_X,            88);
+	ADD_KEY_CONST(KEY_Y,            89);
+	ADD_KEY_CONST(KEY_Z,            90);
+	ADD_KEY_CONST(KEY_LEFT_BRACKET, 91);
+	ADD_KEY_CONST(KEY_BACKSLASH,    92);
+	ADD_KEY_CONST(KEY_RIGHT_BRACKET,93);
+	ADD_KEY_CONST(KEY_GRAVE_ACCENT, 96);
+	ADD_KEY_CONST(KEY_ESCAPE,       256);
+	ADD_KEY_CONST(KEY_ENTER,        257);
+	ADD_KEY_CONST(KEY_TAB,          258);
+	ADD_KEY_CONST(KEY_BACKSPACE,    259);
+	ADD_KEY_CONST(KEY_INSERT,       260);
+	ADD_KEY_CONST(KEY_DELETE,       261);
+	ADD_KEY_CONST(KEY_RIGHT,        262);
+	ADD_KEY_CONST(KEY_LEFT,         263);
+	ADD_KEY_CONST(KEY_DOWN,         264);
+	ADD_KEY_CONST(KEY_UP,           265);
+	ADD_KEY_CONST(KEY_PAGE_UP,      266);
+	ADD_KEY_CONST(KEY_PAGE_DOWN,    267);
+	ADD_KEY_CONST(KEY_HOME,         268);
+	ADD_KEY_CONST(KEY_END,          269);
+	ADD_KEY_CONST(KEY_CAPS_LOCK,    280);
+	ADD_KEY_CONST(KEY_SCROLL_LOCK,  281);
+	ADD_KEY_CONST(KEY_NUM_LOCK,     282);
+	ADD_KEY_CONST(KEY_PRINT_SCREEN, 283);
+	ADD_KEY_CONST(KEY_PAUSE,        284);
+	ADD_KEY_CONST(KEY_F1,           290);
+	ADD_KEY_CONST(KEY_F2,           291);
+	ADD_KEY_CONST(KEY_F3,           292);
+	ADD_KEY_CONST(KEY_F4,           293);
+	ADD_KEY_CONST(KEY_F5,           294);
+	ADD_KEY_CONST(KEY_F6,           295);
+	ADD_KEY_CONST(KEY_F7,           296);
+	ADD_KEY_CONST(KEY_F8,           297);
+	ADD_KEY_CONST(KEY_F9,           298);
+	ADD_KEY_CONST(KEY_F10,          299);
+	ADD_KEY_CONST(KEY_F11,          300);
+	ADD_KEY_CONST(KEY_F12,          301);
+	ADD_KEY_CONST(KEY_KP_0,         320);
+	ADD_KEY_CONST(KEY_KP_1,         321);
+	ADD_KEY_CONST(KEY_KP_2,         322);
+	ADD_KEY_CONST(KEY_KP_3,         323);
+	ADD_KEY_CONST(KEY_KP_4,         324);
+	ADD_KEY_CONST(KEY_KP_5,         325);
+	ADD_KEY_CONST(KEY_KP_6,         326);
+	ADD_KEY_CONST(KEY_KP_7,         327);
+	ADD_KEY_CONST(KEY_KP_8,         328);
+	ADD_KEY_CONST(KEY_KP_9,         329);
+	ADD_KEY_CONST(KEY_KP_DECIMAL,   330);
+	ADD_KEY_CONST(KEY_KP_DIVIDE,    331);
+	ADD_KEY_CONST(KEY_KP_MULTIPLY,  332);
+	ADD_KEY_CONST(KEY_KP_SUBTRACT,  333);
+	ADD_KEY_CONST(KEY_KP_ADD,       334);
+	ADD_KEY_CONST(KEY_KP_ENTER,     335);
+	ADD_KEY_CONST(KEY_KP_EQUAL,     336);
+	ADD_KEY_CONST(KEY_LEFT_SHIFT,   340);
+	ADD_KEY_CONST(KEY_LEFT_CONTROL, 341);
+	ADD_KEY_CONST(KEY_LEFT_ALT,     342);
+	ADD_KEY_CONST(KEY_LEFT_SUPER,   343);
+	ADD_KEY_CONST(KEY_RIGHT_SHIFT,  344);
+	ADD_KEY_CONST(KEY_RIGHT_CONTROL,345);
+	ADD_KEY_CONST(KEY_RIGHT_ALT,    346);
+	ADD_KEY_CONST(KEY_RIGHT_SUPER,  347);
+	#undef ADD_KEY_CONST
+
+	// Mouse button constants
+	#define ADD_MOUSE_CONST(name, code) input_module.attr(#name) = code
+	ADD_MOUSE_CONST(MOUSE_BUTTON_1,      0);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_2,      1);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_3,      2);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_4,      3);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_5,      4);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_6,      5);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_7,      6);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_8,      7);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_LEFT,   0);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_RIGHT,  1);
+	ADD_MOUSE_CONST(MOUSE_BUTTON_MIDDLE, 2);
+	#undef ADD_MOUSE_CONST
 
 	// Generated Bindings
 	bind_generated(m, entity_cls);

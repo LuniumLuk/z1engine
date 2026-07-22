@@ -12,3 +12,5 @@ void show_type_field(void* instance, FieldInfo const& field);
 void show_type_fields(void* instance, const std::string& name, bool group = false);
 
 void show_properties(std::shared_ptr<Entity> const& selected_entity);
+
+void show_properties_context_menu(std::shared_ptr<Entity> const& selected_entity);

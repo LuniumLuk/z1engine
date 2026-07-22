@@ -20,6 +20,7 @@ python dev/z1.py <command> [options]
 | `benchmark` | `commands/benchmark.py` | Run benchmark suites and baseline regression checks |
 | `smoke` | `commands/smoke.py` | Editor startup smoke test |
 | `dcv` | `commands/dcv.py` | Full develop-compile-verify loop |
+| `gen-pybinds` | `commands/gen_pybinds.py` | Regenerate Python bindings from reflected C++ types |
 | `release` | `commands/release.py` | Package release folder |
 
 ## Output Format

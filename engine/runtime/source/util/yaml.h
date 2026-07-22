@@ -3,6 +3,7 @@
 #include <filesystem>
 #include "core/core.h"
 #include "core/guid.h"
+#include "core/io.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "yaml-cpp/yaml.h"

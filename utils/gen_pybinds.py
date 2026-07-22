@@ -10,7 +10,7 @@ STUB_FILE = os.path.join(STUBS_DIR, "z1.pyi")
 MANUAL_BINDINGS_FILE = os.path.join(ENGINE_ROOT, "python", "py_engine.cpp")
 
 # Regex patterns
-REFLECTED_STRUCT_RE = re.compile(r'REFLECTED_STRUCT\s*\(\s*(\w+)\s*\)')
+REFLECTED_STRUCT_RE = re.compile(r'REFLECTED_(?:STRUCT|COMPONENT)\s*\(\s*(\w+)\s*\)')
 REFLECTED_FIELD_RE = re.compile(r'REFLECTED_FIELD\s*\(\s*(\w+)\s*,\s*(\w+)\s*,')
 REFLECT_ENUM_RE = re.compile(r'REFLECT_ENUM\s*\(\s*(\w+)\s*,')
 
@@ -24,8 +24,8 @@ PY_ENUM_VAL_RE = re.compile(r'\.value\s*\(\s*"(?P<name>\w+)"')
 
 
 def extract_struct_body(content, struct_name):
-	# Find start of struct
-	match = re.search(r'REFLECTED_STRUCT\s*\(\s*' + struct_name + r'\s*\)', content)
+	# Find start of struct (handles both REFLECTED_STRUCT and REFLECTED_COMPONENT)
+	match = re.search(r'REFLECTED_(?:STRUCT|COMPONENT)\s*\(\s*' + struct_name + r'\s*\)', content)
 	if not match:
 		return ""
 
@@ -114,6 +114,19 @@ def strip_field_name(name):
 	if name.startswith("m_"):
 		return name[2:]
 	return name
+
+# Types that don't have public default constructors and should not get py::init<>()
+NO_DEFAULT_CTOR_TYPES = {
+	"ScriptComponent",   # requires weak_ptr<Entity>
+	"Material",          # requires flags + shader_guid
+	"MaterialInstance",  # requires shared_ptr<Material>
+}
+
+# Types that should be excluded from auto-generated bindings entirely
+# (because they're bound manually in py_engine.cpp)
+MANUALLY_BOUND_TYPES = {
+	"ScriptComponent",   # Bound as "Script" (PyScript) in py_engine.cpp
+}
 
 def generate_bindings(structs, enums, fields, struct_headers, enum_headers):
 	# Sort for deterministic output
@@ -208,10 +221,12 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	# Generated Bindings
 	code.append("\t// Generated Bindings")
 	for s in sorted_structs:
+		if s in MANUALLY_BOUND_TYPES:
+			continue
 		py_name = strip_struct_name(s)
 		code.append(f'\tpy::class_<{s}>(m, "{py_name}")')
 
-		if has_default_ctor.get(s, False):
+		if has_default_ctor.get(s, False) and s not in NO_DEFAULT_CTOR_TYPES:
 			code.append('\t\t.def(py::init<>())')
 
 		if s in fields:
@@ -225,6 +240,8 @@ def generate_cpp_bindings(sorted_structs, sorted_enums, fields, struct_headers, 
 	# Auto-generate properties for Entity
 	code.append("\t// Entity component properties")
 	for s in sorted_structs:
+		if s in MANUALLY_BOUND_TYPES:
+			continue
 		if s.endswith("Component"):
 			py_name = strip_struct_name(s)
 			prop_name = re.sub(r'(?<!^)(?=[A-Z])', '_', py_name).lower()

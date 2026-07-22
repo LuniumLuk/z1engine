@@ -63,6 +63,43 @@ void accept_payload(std::string const& data_type, std::function<void(void*)> cal
 		}                                                                  \
 	});
 
+// Helper: assign an asset (loaded by guid) to a reflected shared_ptr field.
+// shared_ptr_addr points to the raw memory of the std::shared_ptr<T>.
+// Dispatches on AssetMeta::type to call the correct AssetType::load().
+static void assign_asset_to_field(void* shared_ptr_addr, AssetMeta const& meta) {
+	// We write into the shared_ptr memory directly.
+	// std::shared_ptr layout: { T* ptr, control_block* ctrl }
+	void** dst = static_cast<void**>(shared_ptr_addr);
+	if (!dst) return;
+
+	std::shared_ptr<void> loaded;
+
+	if (meta.type == "static mesh") {
+		auto asset = StaticMesh::load(meta.guid);
+		dst[0] = asset.get();
+		// Create a new shared_ptr in-place via placement new
+		new (dst) std::shared_ptr<StaticMesh>(std::move(asset));
+	} else if (meta.type == "skeletal mesh") {
+		auto asset = SkeletalMesh::load(meta.guid);
+		new (dst) std::shared_ptr<SkeletalMesh>(std::move(asset));
+	} else if (meta.type == "texture2d") {
+		auto asset = Texture2D::load(meta.guid);
+		new (dst) std::shared_ptr<Texture2D>(std::move(asset));
+	} else if (meta.type == "animation") {
+		auto asset = Animation::load(meta.guid);
+		new (dst) std::shared_ptr<Animation>(std::move(asset));
+	} else if (meta.type == "skeleton") {
+		auto asset = Skeleton::load(meta.guid);
+		new (dst) std::shared_ptr<Skeleton>(std::move(asset));
+	} else if (meta.type == "material") {
+		auto asset = Material::load(meta.guid);
+		new (dst) std::shared_ptr<Material>(std::move(asset));
+	} else if (meta.type == "material instance") {
+		auto asset = MaterialInstance::load(meta.guid);
+		new (dst) std::shared_ptr<MaterialInstance>(std::move(asset));
+	}
+}
+
 void show_value(void* ptr, std::type_info const& type, std::string const& name, FieldInfo const& field, const EnumInfo* enum_info /*= nullptr*/) {
 	std::string widget_name = "##" + name;
 	ImGui::SetNextItemWidth(-1.0f);
@@ -89,6 +126,79 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 			}
 			ImGui::EndCombo();
 		}
+		return;
+	}
+
+	if (field.is_guid) {
+		Guid* value_ptr = reinterpret_cast<Guid*>(ptr);
+		ImGui::Text("%s", value_ptr->is_valid() ? value_ptr->value.c_str() : "(empty)");
+		return;
+	}
+
+	if (field.is_asset_ref) {
+		// Generalized asset reference widget: display current asset, drag-drop, browse
+		ImGui::Indent();
+
+		std::string asset_type_hint = field.get_widget_value<std::string>("type", "");
+		// Convert widget hint (e.g. "static_mesh") to asset meta type (e.g. "static mesh")
+		std::string meta_type;
+		for (char c : asset_type_hint) {
+			if (c == '_') meta_type += ' ';
+			else meta_type += c;
+		}
+
+		// Read current asset GUID via the shared_ptr's raw object pointer
+		// AssetBase has virtual dtor → vtable ptr at offset 0; m_meta at sizeof(void*)
+		void* shared_ptr_addr = ptr;
+		void* const* raw_ptrs = static_cast<void* const*>(shared_ptr_addr);
+		void* object_ptr = raw_ptrs ? raw_ptrs[0] : nullptr;
+
+		if (object_ptr) {
+			// Skip vtable pointer to reach AssetBase::m_meta
+			uint8_t* meta_addr = static_cast<uint8_t*>(object_ptr) + sizeof(void*);
+			auto* meta = reinterpret_cast<AssetMeta*>(meta_addr);
+			ImGui::Text("%s", meta->guid.value.c_str());
+			ImGui::SameLine();
+			if (ImGui::Button("X")) {
+				// Properly clear the shared_ptr using the registered clear callback
+				if (field.clear_fn) {
+					field.clear_fn(ptr);
+				}
+			}
+		} else {
+			ImGui::Text("(none)");
+		}
+
+		// "Select..." button to browse assets
+		std::string popup_name = "Select Asset##" + name;
+		if (ImGui::Button("Select...")) {
+			ImGui::OpenPopup(popup_name.c_str());
+		}
+
+		// Browse popup: list all assets of matching type
+		if (ImGui::BeginPopup(popup_name.c_str())) {
+			auto const& metas = g_runtime_context.m_asset_manager->get_all_metas();
+			for (auto const& meta : metas) {
+				if (meta.type != meta_type) continue;
+
+				std::string label = meta.path.generic_string() + " (" + meta.guid.value + ")";
+				if (ImGui::Selectable(label.c_str())) {
+					// Load the asset by type and assign to the shared_ptr
+					assign_asset_to_field(shared_ptr_addr, meta);
+				}
+			}
+			ImGui::EndPopup();
+		}
+
+		// Drag-drop target
+		accept_payload("ASSET_ITEM", [&](void* data) {
+			AssetMeta* meta = *(AssetMeta**)data;
+			if (meta->type == meta_type) {
+				assign_asset_to_field(shared_ptr_addr, *meta);
+			}
+		});
+
+		ImGui::Unindent();
 		return;
 	}
 
@@ -265,114 +375,70 @@ void component_context_menu(const char* label, std::shared_ptr<Entity> const& en
 	}
 }
 
+// Forward declaration
+static void show_type_fields_for_entity(std::shared_ptr<Entity> const& entity, std::string const& type_name);
+
 void show_properties(std::shared_ptr<Entity> const& selected_entity) {
 	if (ImGui::Begin("properties")) {
 		if (selected_entity) {
-			SHOW_COMPONENT(TagComponent)
-			SHOW_COMPONENT(TransformComponent)
-			if (selected_entity->has_component<SkyLightComponent>()) {
-				SHOW_COMPONENT(SkyLightComponent)
+			// Always show TagComponent and TransformComponent first
+			if (ImGui::CollapsingHeader("TagComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
+				auto& comp = selected_entity->get_component<TagComponent>();
+				show_type_fields(&comp, "TagComponent");
 			}
-			if (selected_entity->has_component<AnimationComponent>()) {
-				SHOW_COMPONENT(AnimationComponent)
-			}
-			if (selected_entity->has_component<LightComponent>()) {
-				SHOW_COMPONENT(LightComponent)
-			}
-			if (selected_entity->has_component<SpriteComponent>()) {
-				SHOW_COMPONENT(SpriteComponent)
-			}
-			if (selected_entity->has_component<PostprocessVolumeComponent>()) {
-				SHOW_COMPONENT(PostprocessVolumeComponent)
-			}
-			if (selected_entity->has_component<ParticleComponent>()) {
-				SHOW_COMPONENT(ParticleComponent)
+			if (ImGui::CollapsingHeader("TransformComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
+				auto& comp = selected_entity->get_component<TransformComponent>();
+				show_type_fields(&comp, "TransformComponent");
 			}
 
-			if (selected_entity->has_component<StaticMeshComponent>()) {
-				if (ImGui::CollapsingHeader("StaticMeshComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
-					auto& mesh = selected_entity->get_component<StaticMeshComponent>();
-					ImGui::Text("guid: %s", mesh.m_mesh->m_meta.guid.value.c_str());
-					ImGui::Text("primitives");
-					ImGui::Indent();
-					for (int i = 0; i < mesh.m_mesh->m_primitives.size(); ++i) {
-						auto const& prim = mesh.m_mesh->m_primitives[i];
-						if (ImGui::CollapsingHeader(("primitive " + std::to_string(i)).c_str())) {
-							ImGui::Text("triangle count: %d", prim.get_triangle_count());
-							ImGui::Text("material");
-							ImGui::Indent();
-							if (prim.m_material.is_valid()) {
-								auto mat_meta = g_runtime_context.m_asset_manager->get_meta(prim.m_material);
-								ImGui::Text("guid: %s", mat_meta.guid.value.c_str());
-								ImGui::Text("path: %s", mat_meta.path.generic_string().c_str());
-							}
-							else {
-								ImGui::Text("no material attached");
-							}
-							accept_payload("ASSET_ITEM",
-								[&](void* data) {
-									AssetMeta* meta = *(AssetMeta**)data;
-									if (meta->type == "material" || meta->type == "material instance") {
-										mesh.m_mesh->m_primitives[i].m_material = meta->guid;
+			// Show all other components via reflection
+			auto components = TypeRegistry::instance().get_all_components();
+			for (auto* info : components) {
+				if (info->name == "TagComponent" || info->name == "TransformComponent")
+					continue;
+
+				// Check if entity has this component using the has_in hook
+				if (info->has_in && info->has_in(*selected_entity)) {
+					if (ImGui::CollapsingHeader(info->name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+						// For ScriptComponent, show script entries widget
+						if (info->name == "ScriptComponent") {
+							auto& script = selected_entity->get_component<ScriptComponent>();
+							if (ImGui::CollapsingHeader("script_entries", ImGuiTreeNodeFlags_DefaultOpen)) {
+								ImGui::Indent();
+								for (size_t i = 0; i < script.m_scripts.size(); ++i) {
+									auto& sd = script.m_scripts[i];
+									if (sd.instance) {
+										ImGui::Text("%s", sd.instance->get_script_name().c_str());
 									}
 								}
-							);
-							ImGui::Unindent();
+								ImGui::Unindent();
+							}
+							// Add script button
+							if (ImGui::BeginCombo("add script", "select script...")) {
+								auto const& metas = g_runtime_context.m_asset_manager->get_all_metas();
+								for (auto const& meta : metas) {
+									if (meta.type == "script") {
+										std::string name = meta.path.stem().string();
+										if (ImGui::Selectable(name.c_str())) {
+											selected_entity->attach_script<PythonScript>(name, "Script");
+										}
+									}
+								}
+								ImGui::EndCombo();
+							}
+						} else {
+							// Generic: get component and show fields
+							// Use the construct hook to get a typed pointer
+							// Since we can't easily get a void* from an entity component generically,
+							// we need to special-case each component or add a get_component_void API
+							// For now, fall back to per-type handling for those we know
+							show_type_fields_for_entity(selected_entity, info->name);
 						}
 					}
-					ImGui::Unindent();
 				}
 			}
 
-			if (selected_entity->has_component<SkeletalMeshComponent>()) {
-				if (ImGui::CollapsingHeader("SkeletalMeshComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
-					auto& mesh = selected_entity->get_component<SkeletalMeshComponent>();
-					ImGui::Text("guid: %s", mesh.m_mesh->m_meta.guid.value.c_str());
-					ImGui::Text("primitives");
-					ImGui::Indent();
-					for (int i = 0; i < mesh.m_mesh->m_primitives.size(); ++i) {
-						auto const& prim = mesh.m_mesh->m_primitives[i];
-						if (ImGui::CollapsingHeader(("primitive " + std::to_string(i)).c_str())) {
-							ImGui::Text("triangle count: %d", prim.get_triangle_count());
-							ImGui::Text("material");
-							ImGui::Indent();
-							if (prim.m_material.is_valid()) {
-								auto mat_meta = g_runtime_context.m_asset_manager->get_meta(prim.m_material);
-								ImGui::Text("guid: %s", mat_meta.guid.value.c_str());
-								ImGui::Text("path: %s", mat_meta.path.generic_string().c_str());
-							} else {
-								ImGui::Text("no material attached");
-							}
-							accept_payload("ASSET_ITEM",
-								[&](void* data) {
-									AssetMeta* meta = *(AssetMeta**)data;
-									if (meta->type == "material" || meta->type == "material instance") {
-										mesh.m_mesh->m_primitives[i].m_material = meta->guid;
-									}
-								}
-							);
-							ImGui::Unindent();
-						}
-					}
-					ImGui::Unindent();
-
-					if (mesh.m_skeleton) {
-						ImGui::Text("skeleton guid: %s", mesh.m_skeleton->m_meta.guid.value.c_str());
-						ImGui::Text("joint count: %d", mesh.m_skeleton->bones.size());
-					}
-					else {
-						ImGui::Text("no skeleton attached");
-					}
-
-					accept_payload("ASSET_ITEM", [&](void* data) {
-						AssetMeta* meta = *(AssetMeta**)data;
-						if (meta->type == "skeleton") {
-							mesh.m_skeleton = Skeleton::load(meta->guid);
-						}
-					});
-				}
-			}
-
+			// CameraComponent needs special handling for the m_intrinsic union (fov/size)
 			if (selected_entity->has_component<CameraComponent>()) {
 				if (ImGui::CollapsingHeader("CameraComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
 					auto& camera = selected_entity->get_component<CameraComponent>();
@@ -380,8 +446,7 @@ void show_properties(std::shared_ptr<Entity> const& selected_entity) {
 
 					if (camera.m_is_perspective) {
 						ImGui::InputFloat("field of view", &camera.m_intrinsic.fov, 0.01f);
-					}
-					else {
+					} else {
 						ImGui::InputFloat("frustum size", &camera.m_intrinsic.size, 0.01f);
 					}
 					if (ImGui::RadioButton("is primary", camera.m_is_primary)) {
@@ -391,86 +456,50 @@ void show_properties(std::shared_ptr<Entity> const& selected_entity) {
 					}
 				}
 			}
-
-			if (selected_entity->has_component<ScriptComponent>()) {
-				if (ImGui::CollapsingHeader("ScriptComponent", ImGuiTreeNodeFlags_DefaultOpen)) {
-					auto& script = selected_entity->get_component<ScriptComponent>();
-					bool new_script_added = false;
-					if (ImGui::BeginCombo("add", "select script...")) {
-						auto const& metas = g_runtime_context.m_asset_manager->get_all_metas();
-						for (auto const& meta : metas) {
-							if (meta.type == "script") {
-								if (ImGui::Selectable(meta.name().c_str())) {
-									// Convert path to module name
-									// e.g. scripts/test_mover.py -> scripts.test_mover
-									std::string module_path = meta.path.generic_string();
-
-									// remove extension
-									size_t lastindex = module_path.find_last_of(".");
-									if (lastindex != std::string::npos) {
-										module_path = module_path.substr(0, lastindex);
-									}
-
-									// replace / with .
-									std::replace(module_path.begin(), module_path.end(), '/', '.');
-									// replace \ with .
-									std::replace(module_path.begin(), module_path.end(), '\\', '.');
-
-									// Assume class name is PascalCase(filename)
-									// e.g. test_mover -> TestMover
-									std::string stem = meta.path.stem().string();
-									std::string class_name;
-									bool next_upper = true;
-									for (char c : stem) {
-										if (c == '_') {
-											next_upper = true;
-										} else {
-											if (next_upper) {
-												class_name += toupper(c);
-												next_upper = false;
-											} else {
-												class_name += c;
-											}
-										}
-									}
-									selected_entity->attach_script<PythonScript>(module_path, class_name);
-									new_script_added = true;
-								}
-							}
-						}
-						ImGui::EndCombo();
-					}
-					if (!new_script_added) {
-						ImGui::Text("attached:");
-						ImGui::Separator();
-						size_t to_remove = INVALID_INDEX;
-						for (size_t i = 0; i < script.m_scripts.size(); ++i) {
-							auto const& sd = script.m_scripts[i];
-							ImGui::Text(sd.instance->get_script_name().c_str());
-							ImGui::SameLine();
-							if (ImGui::Button("remove")) {
-								to_remove = i;
-							}
-						}
-						if (to_remove != INVALID_INDEX) {
-							script.unbind_at(to_remove);
-						}
-					}
-				}
-			}
-
-			if (ImGui::BeginPopupContextWindow()) {
-				component_context_menu<CameraComponent>("camera component", selected_entity);
-				component_context_menu<LightComponent>("light component", selected_entity);
-				component_context_menu<SpriteComponent>("sprite component", selected_entity);
-				component_context_menu<ScriptComponent>("script component", selected_entity, selected_entity);
-				component_context_menu<SkyLightComponent>("skylight component", selected_entity);
-				component_context_menu<AnimationComponent>("animation component", selected_entity);
-				component_context_menu<PostprocessVolumeComponent>("postprocess volume component", selected_entity);
-				component_context_menu<ParticleComponent>("particle component", selected_entity);
-				ImGui::EndPopup();
-			}
 		}
+		show_properties_context_menu(selected_entity);
 	}
 	ImGui::End();
+}
+
+// Helper: display type fields for an entity's component by name
+static void show_type_fields_for_entity(std::shared_ptr<Entity> const& entity, std::string const& type_name) {
+#define SHOW_IF_COMPONENT(T) if (type_name == #T) { auto& comp = entity->get_component<T>(); show_type_fields(&comp, #T); return; }
+	SHOW_IF_COMPONENT(LightComponent)
+	SHOW_IF_COMPONENT(SpriteComponent)
+	SHOW_IF_COMPONENT(SkyLightComponent)
+	SHOW_IF_COMPONENT(AnimationComponent)
+	SHOW_IF_COMPONENT(ParticleComponent)
+	SHOW_IF_COMPONENT(PostprocessVolumeComponent)
+	SHOW_IF_COMPONENT(StaticMeshComponent)
+	SHOW_IF_COMPONENT(SkeletalMeshComponent)
+#undef SHOW_IF_COMPONENT
+}
+
+void show_properties_context_menu(std::shared_ptr<Entity> const& selected_entity) {
+	if (!selected_entity) return;
+
+	if (ImGui::BeginPopupContextWindow()) {
+		// Generate add/remove component menu from TypeRegistry
+		auto components = TypeRegistry::instance().get_all_components();
+		for (auto* info : components) {
+			if (info->name == "TagComponent" || info->name == "TransformComponent")
+				continue;
+
+			if (info->has_in && info->has_in(*selected_entity)) {
+				std::string label = "remove " + info->name;
+				if (ImGui::MenuItem(label.c_str())) {
+					if (info->remove_from)
+						info->remove_from(*selected_entity);
+				}
+			} else {
+				std::string label = "add " + info->name;
+				if (ImGui::MenuItem(label.c_str())) {
+					if (info->add_to)
+						info->add_to(*selected_entity);
+				}
+			}
+		}
+		ImGui::EndPopup();
+	}
 }

@@ -48,6 +48,9 @@ project "runtime"
 
 	linkoptions { "/IGNORE:4006" }
 
+	-- Support large generated files (py_engine.gen.cpp has many pybind11 templates)
+	buildoptions { "/bigobj" }
+
 	filter "system:windows"
 		systemversion "latest"
 
