@@ -241,7 +241,7 @@ namespace z1 {
 #define DEBUG_CHECK(expr, ...)                                         \
 	{                                                                  \
 		if (!(expr)) {                                                 \
-			CORE_ERROR("debug check failed: {0}", __VA_ARGS__);        \
+			CORE_ERROR("debug check failed: " __VA_ARGS__);            \
 			__debugbreak();                                            \
 		}                                                              \
 	}

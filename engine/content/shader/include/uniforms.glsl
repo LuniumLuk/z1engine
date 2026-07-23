@@ -27,6 +27,13 @@ layout (std140) uniform Global {
 	float u_pp_bloom_threshold;
 	float u_pp_bloom_intensity;
 	float u_pp_bloom_knee;
+	// TAA upgrade
+	float u_taa_variance_scale;
+	float u_taa_clip_gamma;
+	float u_taa_jitter_u;
+	float u_taa_jitter_v;
+	float u_taa_sharpen_enabled;
+	float u_taa_sharpen_strength;
 };
 
 uniform sampler2DArray u_shadow_map;

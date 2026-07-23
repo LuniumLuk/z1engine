@@ -46,6 +46,7 @@
 | Bloom downsample | `bloom_downsample.glsl` |
 | Bloom upsample | `bloom_upsample.glsl` |
 | TAA | `taa.glsl` |
+| TAA Sharpen | `taa_sharpen.glsl` |
 | Velocity | `velocity.glsl` |
 | Tone mapping | `postprocessing.glsl` |
 
@@ -54,6 +55,22 @@
 - Common render state and utilities shared between deferred and forward
 - `Renderer` -- high-level interface: `Renderer::submit()`
 - `Renderer2D` -- 2D sprite batching (`renderer/renderer_2d.h`)
+
+### TAA Pipeline (2026-07-23 upgrade)
+
+TAA now uses a modern algorithm with: jitter compensation (UV offset passed to
+resolve shader), per-pixel adaptive blend from 5x5 neighborhood YCoCg variance,
+UE4-style variance-guided AABB clip, and a separate luma-guided unsharp mask
+sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
+
+- Jitter: Halton(2,3) sequence applied to projection matrix; offset stored in
+  `GlobalSettings::taa_jitter_uv` and passed to `taa.glsl` as
+  `u_taa_jitter_u`/`u_taa_jitter_v`
+- New tunables in global UBO: `taa_variance_scale`, `taa_clip_gamma`,
+  `taa_sharpen_enabled`, `taa_sharpen_strength`
+- `taa_blend` semantics changed from 0.9 (history weight) to 0.1 (new-frame weight)
+- Sharpen pass reuses `history_colors[read_idx]` as output target (overwritten
+  after serving as TAA history input)
 
 ## RHI (Render Hardware Interface)
 

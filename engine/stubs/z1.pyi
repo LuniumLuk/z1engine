@@ -210,6 +210,10 @@ class GlobalSettings:
 	sun_ambient_intensity: float
 	taa_enabled: bool
 	taa_blend: float
+	taa_variance_scale: float
+	taa_clip_gamma: float
+	taa_sharpen_enabled: bool
+	taa_sharpen_strength: float
 	taa_animated: bool
 	pp_exposure: float
 	pp_gamma: float

@@ -78,6 +78,12 @@ namespace z1 {
 
 			proj_jittered[2][0] += ndc_x;
 			proj_jittered[2][1] += ndc_y;
+
+			// Pass jitter offset to TAA shader (in UV space: jx/width, jy/height)
+			g->taa_jitter_uv = { jx / width, jy / height };
+		}
+		else {
+			g->taa_jitter_uv = { 0.0f, 0.0f };
 		}
 
 		auto projview_jittered = proj_jittered * camera_comp.get_view();
@@ -141,8 +147,9 @@ namespace z1 {
 		m_particle_renderer.add_particle_pass(rg, scene.get(), "forward-transparency", m_shared.m_shadow_image);
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview, m_default_material);
 		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
-		m_shared.add_bloom_pass(rg, m_shared.m_history_colors[write_idx]);
-		m_shared.add_postprocess_pass(rg, framebuffer, m_shared.m_history_colors[write_idx]);
+		m_shared.add_taa_sharpen_pass(rg, m_shared.m_history_colors[write_idx]);
+		m_shared.add_bloom_pass(rg);
+		m_shared.add_postprocess_pass(rg, framebuffer);
 
 		rg.compile();
 		rg.execute();

@@ -52,6 +52,14 @@ namespace z1 {
 			m_pipeline_taa = Pipeline::build(desc);
 		}
 
+		// TAA sharpen pipeline
+		{
+			Pipeline::Description desc{};
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/taa_sharpen");
+			m_pipeline_taa_sharpen = Pipeline::build(desc);
+		}
+
 		// Bloom downsample pipeline
 		{
 			Pipeline::Description desc{};
@@ -476,7 +484,41 @@ namespace z1 {
 				});
 	}
 
-	void RenderShared::add_bloom_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& source) {
+	void RenderShared::add_taa_sharpen_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& source) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::DontCare;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
+
+		rg.add_pass("taa-sharpen")
+			.set_resolution_as(source)
+			.depends_on("taa")
+			.add_output("taa-sharpen", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
+			.set_pass_desc(desc)
+			.execute([this, source](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto& src_img = source->get_attachment_image(0);
+				src_img->bind();
+
+				m_pipeline_taa_sharpen->bind();
+				auto& s = m_pipeline_taa_sharpen->m_shader;
+				s->set_uniform_block_binding(
+					"Global",
+					g_runtime_context.m_global->get_binding());
+				s->set_uniform_binding(
+					"u_src_texture",
+					src_img->get_binding());
+
+				m_quad->bind();
+				m_quad->draw(PrimitiveType::Triangles);
+				m_quad->unbind();
+
+				src_img->unbind();
+
+				m_pipeline_taa_sharpen->unbind();
+				});
+	}
+
+	void RenderShared::add_bloom_pass(RenderGraph& rg) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::DontCare;
@@ -495,20 +537,20 @@ namespace z1 {
 				.set_pass_desc(desc);
 
 			if (i == 0) {
-				pass.depends_on("taa");
+				pass.add_input("taa-sharpen");
 			}
 			else {
 				pass.depends_on("bloom-down-" + std::to_string(i - 1));
 			}
 
-			pass.execute([this, i, source](RenderGraphNode& node, GraphicsContext& ctx) {
+			pass.execute([this, i](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_bloom_downsample->bind();
 				auto& s = m_pipeline_bloom_downsample->m_shader;
 				s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
 
 				std::shared_ptr<Image> src_img = nullptr;
 				if (i == 0) {
-					src_img = source->get_attachment_image(0);
+					src_img = node.get_input_image_index(0); // "taa-sharpen"
 				}
 				else {
 					src_img = m_bloom_textures[i - 1]->get_attachment_image(0);
@@ -559,7 +601,7 @@ namespace z1 {
 		}
 	}
 
-	void RenderShared::add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target, std::shared_ptr<Framebuffer> const& source) {
+	void RenderShared::add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::DontCare;
@@ -568,16 +610,16 @@ namespace z1 {
 		rg.add_pass("postprocessing")
 			.set_output(target)
 			.set_pass_desc(desc)
-			.depends_on("taa")
+			.add_input("taa-sharpen")
 			.depends_on("bloom-up-1")
-			.execute([this, source](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_postprocess->bind();
 				auto& s = m_pipeline_postprocess->m_shader;
 				s->set_uniform_block_binding(
 					"Global",
 					g_runtime_context.m_global->get_binding());
 
-				auto& scene = source->get_attachment_image(0);
+				auto& scene = node.get_input_image_index(0); // "taa-sharpen"
 				scene->bind();
 				s->set_uniform_binding(
 					"u_scene",

@@ -32,7 +32,12 @@ namespace z1 {
 		glm::vec3 cam_position          = {};
 		// TAA
 		bool      taa_enabled           = true;
-		float     taa_blend             = 0.9f;
+		float     taa_blend             = 0.1f;  // New-frame weight (inverted from old 0.9 history weight)
+		float     taa_variance_scale    = 1.0f;  // Higher = more aggressive history rejection in high-variance areas
+		float     taa_clip_gamma        = 1.0f;  // Variance expansion for AABB clip (UE4-style)
+		glm::vec2 taa_jitter_uv         = {};     // Per-frame jitter offset in UV space (non-serialized)
+		bool      taa_sharpen_enabled   = true;
+		float     taa_sharpen_strength  = 0.3f;
 		bool      taa_animated          = true; // Calculate velocity of animated object for better TAA effect
 		// Post-processing
 		float     pp_exposure           = 1.0f;
@@ -106,6 +111,13 @@ namespace z1 {
 			float     pp_bloom_threshold;
 			float     pp_bloom_intensity;
 			float     pp_bloom_knee;
+			// TAA upgrade (appended at end to preserve existing layout alignment)
+			float     taa_variance_scale;
+			float     taa_clip_gamma;
+			float     taa_jitter_u;
+			float     taa_jitter_v;
+			float     taa_sharpen_enabled;
+			float     taa_sharpen_strength;
 		} m_data = {};
 
 	};
@@ -117,6 +129,10 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, sun_ambient_intensity, FF_Default, "[drag]min=0.0,group=sun")
 	REFLECTED_FIELD(GlobalSettings, taa_enabled,           FF_Default, "group=taa")
 	REFLECTED_FIELD(GlobalSettings, taa_blend,             FF_Default, "[slider]min=0.0,max=1.0,group=taa")
+	REFLECTED_FIELD(GlobalSettings, taa_variance_scale,    FF_Default, "[drag]min=0.0,group=taa")
+	REFLECTED_FIELD(GlobalSettings, taa_clip_gamma,        FF_Default, "[drag]min=0.0,group=taa")
+	REFLECTED_FIELD(GlobalSettings, taa_sharpen_enabled,   FF_Default, "group=taa")
+	REFLECTED_FIELD(GlobalSettings, taa_sharpen_strength,  FF_Default, "[slider]min=0.0,max=2.0,group=taa")
 	REFLECTED_FIELD(GlobalSettings, taa_animated,          FF_Default, "group=taa")
 	REFLECTED_FIELD(GlobalSettings, pp_exposure,           FF_Default, "[drag]min=0.0,group=postprocess")
 	REFLECTED_FIELD(GlobalSettings, pp_gamma,              FF_Default, "[drag]min=0.0,group=postprocess")

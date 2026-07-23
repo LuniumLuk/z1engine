@@ -60,6 +60,14 @@ namespace z1 {
 			m_data.pp_bloom_knee = pp_bloom_knee;
 		}
 
+		// TAA upgrade fields
+		m_data.taa_variance_scale = taa_variance_scale;
+		m_data.taa_clip_gamma = taa_clip_gamma;
+		m_data.taa_jitter_u = taa_jitter_uv.x;
+		m_data.taa_jitter_v = taa_jitter_uv.y;
+		m_data.taa_sharpen_enabled = (float)taa_sharpen_enabled;
+		m_data.taa_sharpen_strength = taa_sharpen_strength;
+
 		m_data.sun_ambient = sun_ambient_color * sun_ambient_intensity;
 
 		m_global_buffer->write(&m_data);
