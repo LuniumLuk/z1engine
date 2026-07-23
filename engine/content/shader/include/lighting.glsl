@@ -206,18 +206,18 @@ float sample_shadow(vec3 uv, float depth, float bias) {
 float sample_shadow_pcf(vec3 uv, float depth, float bias) {
 	ivec3 tex_size = textureSize(u_shadow_map, 0);
 
-	int u0 = int(floor(uv.x * tex_size.x));
-	int v0 = int(floor(uv.y * tex_size.y));
-	int u1 = u0 + 1;
-	int v1 = v0 + 1;
-	// vec2 uv00 = (vec2(u0, v0) + 0.5) / vec2(tex_size.xy);
+	vec2 texel_pos = uv.xy * vec2(tex_size.xy) - 0.5;
+	vec2 frac_pos = fract(texel_pos);
+	ivec2 base = ivec2(floor(texel_pos));
+	ivec2 next = base + ivec2(1, 1);
+	int z = int(uv.z);
 
-	float sum = 0.0;
-	sum += texelFetch(u_shadow_map, ivec3(u0, v0, uv.z), 0).r < depth - bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec3(u1, v0, uv.z), 0).r < depth - bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec3(u0, v1, uv.z), 0).r < depth - bias ? 0.0 : 1.0;
-	sum += texelFetch(u_shadow_map, ivec3(u1, v1, uv.z), 0).r < depth - bias ? 0.0 : 1.0;
-	return sum * 0.25;
+	float s00 = texelFetch(u_shadow_map, ivec3(base.x, base.y, z), 0).r < depth - bias ? 0.0 : 1.0;
+	float s10 = texelFetch(u_shadow_map, ivec3(next.x, base.y, z), 0).r < depth - bias ? 0.0 : 1.0;
+	float s01 = texelFetch(u_shadow_map, ivec3(base.x, next.y, z), 0).r < depth - bias ? 0.0 : 1.0;
+	float s11 = texelFetch(u_shadow_map, ivec3(next.x, next.y, z), 0).r < depth - bias ? 0.0 : 1.0;
+
+	return mix(mix(s00, s10, frac_pos.x), mix(s01, s11, frac_pos.x), frac_pos.y);
 }
 
 float pcf_filter(vec3 uv, float depth, vec2 texel_size, float radius, float bias) {
@@ -227,7 +227,7 @@ float pcf_filter(vec3 uv, float depth, vec2 texel_size, float radius, float bias
 	for (int x = -1; x <= 1; ++x) {
 		for (int y = -1; y <= 1; ++y) {
 			vec2 offset = vec2(float(x), float(y)) * scaled;
-			shadow += sample_shadow(vec3(uv.xy + offset, uv.z), depth, bias);
+			shadow += sample_shadow_pcf(vec3(uv.xy + offset, uv.z), depth, bias);
 			samples += 1.0;
 		}
 	}

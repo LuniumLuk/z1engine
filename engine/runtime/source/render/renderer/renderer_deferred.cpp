@@ -180,7 +180,7 @@ namespace z1 {
 		rg.add_pass("gbuffer")
 			.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.add_output("gbuffer-position", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-position", ImageFormat::RGBA32F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-normal", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-albedo", ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-metallic-roughness", ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge)

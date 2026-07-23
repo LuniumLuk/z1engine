@@ -189,11 +189,10 @@ namespace z1 {
 		glm::vec3 cam_forward = -glm::vec3(inv_view[2]);
 
 		for (int i = 0; i < CSM_LAYERS; ++i) {
-			float cascade_near = splits[i];
 			float cascade_far = splits[i + 1];
-			float mid_dist = (cascade_near + cascade_far) * 0.5f;
 
-			glm::vec3 center = cam_pos_world + cam_forward * mid_dist;
+			// Rotation-stable center + texel-snapped light-view translation
+			glm::vec3 center = cam_pos_world;
 
 			float fov = camera.m_intrinsic.fov;
 			float aspect = camera.m_aspect;
@@ -201,13 +200,16 @@ namespace z1 {
 			float far_height = 2.0f * cascade_far * tan_half_fov;
 			float far_width = far_height * aspect;
 			float diag = std::sqrt(far_height * far_height + far_width * far_width);
-
-			float size = diag * 0.5f;
+			float size = diag * 0.5f + cascade_far;
 
 			glm::vec3 light_pos = center + glm::normalize(sun_dir) * size;
 
 			glm::mat4 light_view = glm::lookAt(light_pos, center, glm::vec3(0.0f, 1.0f, 0.0f));
 			glm::mat4 light_proj = glm::ortho(-size, size, -size, size, -size * 6.0f, size * 6.0f);
+
+			float world_units_per_texel = (size * 2.0f) / m_shadow_framebuffer->get_width();
+			light_view[0][3] = std::floor(light_view[0][3] / world_units_per_texel) * world_units_per_texel;
+			light_view[1][3] = std::floor(light_view[1][3] / world_units_per_texel) * world_units_per_texel;
 
 			g->sun_projview[i] = light_proj * light_view;
 		}

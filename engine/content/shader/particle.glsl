@@ -63,7 +63,7 @@
 		return u_near * u_far / (u_far - d * (u_far - u_near));
 	}
 
-	// 3x3 PCF shadow factor for a billboard particle (no surface normal, fixed bias)
+	// 3x3 PCF with 4-tap bilinear per sample
 	float get_particle_shadow(vec3 world_pos) {
 		float dist = distance(u_cam_position.xyz, world_pos);
 		int layer = 0;
@@ -78,13 +78,27 @@
 
 		float bias = 0.002;
 
-		vec2 texel_size = 1.0 / vec2(textureSize(u_shadow_map, 0).xy);
+		ivec3 tex_size = textureSize(u_shadow_map, 0);
+		vec2 texel_size = 1.0 / vec2(tex_size.xy);
+		int z = int(uv.z);
+
 		float shadow = 0.0;
 		for (int x = -1; x <= 1; ++x) {
 			for (int y = -1; y <= 1; ++y) {
-				vec2 offset = vec2(float(x), float(y)) * texel_size;
-				float sampled = texture(u_shadow_map, vec3(uv.xy + offset, uv.z)).r;
-				shadow += (current_depth - bias > sampled) ? 0.0 : 1.0;
+				vec2 sample_uv = uv.xy + vec2(float(x), float(y)) * texel_size;
+
+				// 4-tap bilinear PCF at this grid position
+				vec2 texel_pos = sample_uv * vec2(tex_size.xy) - 0.5;
+				vec2 frac_pos = fract(texel_pos);
+				ivec2 base = ivec2(floor(texel_pos));
+				ivec2 next = base + ivec2(1, 1);
+
+				float s00 = texelFetch(u_shadow_map, ivec3(base.x, base.y, z), 0).r < current_depth - bias ? 0.0 : 1.0;
+				float s10 = texelFetch(u_shadow_map, ivec3(next.x, base.y, z), 0).r < current_depth - bias ? 0.0 : 1.0;
+				float s01 = texelFetch(u_shadow_map, ivec3(base.x, next.y, z), 0).r < current_depth - bias ? 0.0 : 1.0;
+				float s11 = texelFetch(u_shadow_map, ivec3(next.x, next.y, z), 0).r < current_depth - bias ? 0.0 : 1.0;
+
+				shadow += mix(mix(s00, s10, frac_pos.x), mix(s01, s11, frac_pos.x), frac_pos.y);
 			}
 		}
 		return shadow / 9.0;
