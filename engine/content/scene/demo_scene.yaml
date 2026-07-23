@@ -11,6 +11,10 @@ global_settings:
   sun_ambient_intensity: 0.5
   taa_enabled: true
   taa_blend: 0.899999976
+  taa_variance_scale: 1
+  taa_clip_gamma: 1
+  taa_sharpen_enabled: true
+  taa_sharpen_strength: 0.300000012
   taa_animated: true
   pp_exposure: 1
   pp_gamma: 2.20000005
@@ -25,6 +29,18 @@ global_settings:
   anim_enabled: true
   script_enabled: false
   render_mode: Deferred
+editor_camera:
+  transform:
+    location: [9.29183769, 5.98521471, 10.5064249]
+    rotation: [-18.5, 21, 0]
+    scale: [1, 1, 1]
+  camera:
+    is_perspective: true
+    intrinsic: 45
+    near: 0.00999999978
+    far: 1000
+    aspect: 1.77777779
+    use_fixed_aspect: false
 entities:
   - name: Main Camera
     id: 0

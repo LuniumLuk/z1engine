@@ -327,6 +327,8 @@ void EditorLayer::on_event(Event& event) {
 }
 
 bool EditorLayer::on_key_pressed(KeyPressedEvent& event) {
+	if (!m_gui->is_viewport_focused()) return false;
+
 	switch (event.get_keycode()) {
 	case KEY_W:
 		m_current_gizmo_operation = ImGuizmo::OPERATION::TRANSLATE; break;
@@ -389,6 +391,13 @@ void EditorLayer::load_scene(std::shared_ptr<Scene> const& scene /*= nullptr*/) 
 	}
 
 	m_selected_entity = nullptr;
+
+	// Remember which entity was the original main camera before editor takes over
+	if (auto main_cam = g_runtime_context.m_scene->get_main_camera()) {
+		// Only track non-transient cameras as the origin main camera
+		auto& tag = main_cam->get_component<TagComponent>();
+		g_runtime_context.m_scene->m_editor_camera_data.origin_main_camera_id = tag.m_id;
+	}
 
 	// setup editor viewport camera
 	auto camera = g_runtime_context.m_scene->create_transient_entity("[Editor] Viewport Camera");

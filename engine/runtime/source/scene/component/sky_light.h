@@ -17,7 +17,7 @@ namespace z1 {
 		DISABLE_COPY(SkyLightComponent)
 	};
 
-	REFLECTED_FIELD(SkyLightComponent, m_texture,   FF_Default)
+	REFLECTED_FIELD(SkyLightComponent, m_texture,   FF_Default, "[asset]type=texture2d")
 	REFLECTED_FIELD(SkyLightComponent, m_rotation,  FF_Default, "[slider]min=0.0,max=360.0")
 	REFLECTED_FIELD(SkyLightComponent, m_intensity, FF_Default, "[input]min=0.0")
 	REFLECTED_FIELD(SkyLightComponent, m_mip_level, FF_Default, "[slider]min=0.0,max=10.0")

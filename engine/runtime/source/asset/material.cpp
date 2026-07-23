@@ -405,9 +405,13 @@ namespace z1 {
 		auto mat = std::make_shared<Material>(flags, shader_guid);
 		mat->m_meta.guid = Guid::generate();
 		mat->m_meta.type = "material";
-		mat->m_meta.path = path;
-		auto root = FileSystem::get_root_path("");
+
+		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
+
+		mat->m_meta.root = root_name;
+		mat->m_meta.path = sub_path;
 		mat->m_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(mat->m_meta.path);
+		auto root = FileSystem::get_root_path(root_name);
 		if (!g_runtime_context.m_asset_manager->register_asset(mat->m_meta, root)) {
 			return nullptr;
 		}
@@ -438,7 +442,7 @@ namespace z1 {
 	}
 
 	void Material::save() const {
-		auto root = FileSystem::get_root_path("");
+		auto root = FileSystem::get_root_path(m_meta.root);
 		Filepath file = root / m_meta.path;
 		file += ".yaml";
 
@@ -458,9 +462,13 @@ namespace z1 {
 		auto mi = std::make_shared<MaterialInstance>(material);
 		mi->m_meta.guid = Guid::generate();
 		mi->m_meta.type = "material instance";
-		mi->m_meta.path = path;
-		auto root = FileSystem::get_root_path("");
+
+		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
+
+		mi->m_meta.root = root_name;
+		mi->m_meta.path = sub_path;
 		mi->m_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(mi->m_meta.path);
+		auto root = FileSystem::get_root_path(root_name);
 		if (!g_runtime_context.m_asset_manager->register_asset(mi->m_meta, root)) {
 			return nullptr;
 		}
@@ -555,7 +563,7 @@ namespace z1 {
 	}
 
 	void MaterialInstance::save() const {
-		auto root = FileSystem::get_root_path("");
+		auto root = FileSystem::get_root_path(m_meta.root);
 		Filepath file = root / m_meta.path;
 		file += ".yaml";
 

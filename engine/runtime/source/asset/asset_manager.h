@@ -34,6 +34,11 @@ namespace z1 {
 		}
 	};
 
+	enum class PathResolveMode {
+		Query,   // search through all roots to find an existing asset
+		Create,  // use the default root (for creating new assets)
+	};
+
 	struct API AssetManager {
 		AssetManager();
 		~AssetManager();
@@ -53,6 +58,13 @@ namespace z1 {
 
 		Guid get_guid_from_path(Filepath const& path) const;
 		Guid resolve_guid(std::string const& str) const;
+
+		// Resolves a path to (root_name, sub_path).
+		// "$engine/scene/demo" → ("engine", "scene/demo")   — explicit root
+		// "my_asset" + Query  → searches all roots for existing asset
+		// "my_asset" + Create → ("", "my_asset")            — default root
+		std::pair<std::string, Filepath> resolve_asset_path(
+			Filepath const& path, PathResolveMode mode = PathResolveMode::Create) const;
 
 		template <typename T>
 		std::shared_ptr<T> get(Filepath const& path) {

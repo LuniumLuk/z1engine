@@ -33,7 +33,7 @@ namespace z1 {
 
 	};
 
-	REFLECTED_FIELD(AnimationComponent, animation_asset, FF_Default)
+	REFLECTED_FIELD(AnimationComponent, animation_asset, FF_Default, "[asset]type=animation")
 	REFLECTED_FIELD(AnimationComponent, current_time,    FF_Default, "[input]min=0")
 	REFLECTED_FIELD(AnimationComponent, speed,           FF_Default, "[input]min=0")
 	REFLECTED_FIELD(AnimationComponent, loop,            FF_Default)

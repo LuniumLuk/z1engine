@@ -227,13 +227,16 @@ namespace z1 {
 		AssetMeta meta{};
 		meta.guid = Guid::generate();
 		meta.type = "static mesh";
-		meta.path = path;
+
+		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
+		meta.root = root_name;
+		meta.path = sub_path;
 		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
 
 		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;
 
-		auto root = FileSystem::get_root_path("");
+		auto root = FileSystem::get_root_path(meta.root);
 		Filepath file = root / meta.path;
 
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
@@ -461,13 +464,16 @@ namespace z1 {
 		AssetMeta meta{};
 		meta.guid = Guid::generate();
 		meta.type = "skeletal mesh";
-		meta.path = path;
+
+		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
+		meta.root = root_name;
+		meta.path = sub_path;
 		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
 
 		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;
 
-		auto root = FileSystem::get_root_path("");
+		auto root = FileSystem::get_root_path(meta.root);
 		Filepath file = root / meta.path;
 
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {

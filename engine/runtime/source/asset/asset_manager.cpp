@@ -352,46 +352,59 @@ namespace z1 {
 	}
 
 	Guid AssetManager::get_guid_from_path(Filepath const& path) const {
+		// Resolve the path using Query mode (searches all roots for existing assets)
+		auto [root_name, sub_path] = resolve_asset_path(path, PathResolveMode::Query);
+
+		std::string internal_key = root_name.empty()
+			? sub_path.string()
+			: ("$" + root_name + "/" + sub_path.string());
+
+		auto it = m_path_to_guid_mapping.find(internal_key);
+		if (it != m_path_to_guid_mapping.end()) {
+			return it->second;
+		}
+
+		return {};
+	}
+
+	std::pair<std::string, Filepath> AssetManager::resolve_asset_path(
+		Filepath const& path, PathResolveMode mode) const {
+
 		std::string path_str = path.generic_string();
 
-		// Check for $rootname/ prefix — use the full string as internal key directly
+		// $rootname/ prefix explicitly targets a named root
 		if (!path_str.empty() && path_str[0] == '$') {
 			auto slash_pos = path_str.find('/');
 			if (slash_pos != std::string::npos) {
 				std::string root_name = path_str.substr(1, slash_pos - 1);
-
-				// Verify root exists
 				auto root_path = FileSystem::get_root_path(root_name);
-				if (root_path.empty()) {
-					CORE_WARN("unknown root in asset path: {0}", path_str);
-					return {};
+				if (!root_path.empty()) {
+					return { root_name, Filepath(path_str.substr(slash_pos + 1)) };
 				}
-
-				// Direct lookup: key = "$engine/shader/pbr"
-				auto it = m_path_to_guid_mapping.find(path_str);
-				if (it != m_path_to_guid_mapping.end()) {
-					return it->second;
-				}
-				return {};
+				CORE_WARN("unknown root in asset path: {0}", path_str);
+				return { "", path };
 			}
 		}
 
-		// No $ prefix: search roots in priority order
-		auto ordered_roots = FileSystem::get_roots_ordered();
-		for (auto* root_config : ordered_roots) {
-			std::string internal_key;
-			if (root_config->name.empty()) {
-				internal_key = path_str;
-			} else {
-				internal_key = "$" + root_config->name + "/" + path_str;
-			}
-			auto it = m_path_to_guid_mapping.find(internal_key);
-			if (it != m_path_to_guid_mapping.end()) {
-				return it->second;
+		// No $ prefix: behavior depends on mode
+		if (mode == PathResolveMode::Query) {
+			// Search through all roots by priority to find an existing asset
+			auto ordered_roots = FileSystem::get_roots_ordered();
+			for (auto* root_config : ordered_roots) {
+				std::string internal_key;
+				if (root_config->name.empty()) {
+					internal_key = path_str;
+				} else {
+					internal_key = "$" + root_config->name + "/" + path_str;
+				}
+				if (m_path_to_guid_mapping.find(internal_key) != m_path_to_guid_mapping.end()) {
+					return { root_config->name, path };
+				}
 			}
 		}
 
-		return {};
+		// Create mode, or Query mode with no match found → default root
+		return { "", path };
 	}
 
 	Guid AssetManager::resolve_guid(std::string const& str) const {
@@ -406,8 +419,8 @@ namespace z1 {
 		Filepath file = root / meta.path;
 
 		if (!register_guid(meta.guid)) {
-			DEBUG_CHECK(false);
 			CORE_ERROR("duplicate guid found: {0}, file: {1}", meta.guid, file.generic_string());
+			DEBUG_CHECK(false);
 			return false;
 		}
 

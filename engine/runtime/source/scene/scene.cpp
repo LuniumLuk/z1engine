@@ -190,11 +190,15 @@ namespace z1 {
 
 		scene->m_meta.guid = Guid::generate();
 		scene->m_meta.type = "scene";
-		scene->m_meta.path = path;
+
+		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
+
+		scene->m_meta.root = root_name;
+		scene->m_meta.path = sub_path;
 		scene->m_is_dirty = true;
 		scene->m_is_saved = false;
 
-		auto root = FileSystem::get_root_path("");
+		auto root = FileSystem::get_root_path(root_name);
 		if (g_runtime_context.m_asset_manager->register_asset(scene->m_meta, root)) {
 			CORE_DEBUG("created new scene: {}", path.generic_string());
 		}
@@ -251,7 +255,6 @@ namespace z1 {
 			scene->m_editor_camera_data.camera.m_far = camera_yaml["far"].as<float>();
 			scene->m_editor_camera_data.camera.m_aspect = camera_yaml["aspect"].as<float>();
 			scene->m_editor_camera_data.camera.m_use_fixed_aspect = camera_yaml["use_fixed_aspect"].as<bool>();
-			scene->m_editor_camera_data.camera.m_is_primary = camera_yaml["is_primary"].as<bool>();
 		}
 
 		auto entities = yaml["entities"];
@@ -540,7 +543,6 @@ namespace z1 {
 				yaml << YAML::Key << "far" << YAML::Value << camera.m_far;
 				yaml << YAML::Key << "aspect" << YAML::Value << camera.m_aspect;
 				yaml << YAML::Key << "use_fixed_aspect" << YAML::Value << camera.m_use_fixed_aspect;
-				yaml << YAML::Key << "is_primary" << YAML::Value << camera.m_is_primary;
 				yaml << YAML::EndMap;
 
 				yaml << YAML::EndMap;
@@ -586,7 +588,9 @@ namespace z1 {
 				yaml << YAML::Key << "far" << YAML::Value << camera.m_far;
 				yaml << YAML::Key << "aspect" << YAML::Value << camera.m_aspect;
 				yaml << YAML::Key << "use_fixed_aspect" << YAML::Value << camera.m_use_fixed_aspect;
-				yaml << YAML::Key << "is_primary" << YAML::Value << camera.m_is_primary;
+				// Restore is_primary for the origin main camera (editor camera took over at runtime)
+				bool is_primary = (tag.m_id == m_editor_camera_data.origin_main_camera_id);
+				yaml << YAML::Key << "is_primary" << YAML::Value << is_primary;
 				yaml << YAML::EndMap;
 			}
 
@@ -784,7 +788,7 @@ namespace z1 {
 		yaml << YAML::EndSeq;
 		yaml << YAML::EndMap;
 
-		auto root = FileSystem::get_root_path("");
+		auto root = FileSystem::get_root_path(m_meta.root);
 		save_yaml((root / m_meta.path).concat(".yaml"), yaml);
 
 		m_is_dirty = false;

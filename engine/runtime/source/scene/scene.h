@@ -62,6 +62,7 @@ namespace z1 {
 		struct EditorCameraData {
 			TransformComponent transform;
 			CameraComponent camera;
+			uint32_t origin_main_camera_id = INVALID_INDEX;
 			bool is_valid = false;
 		};
 		mutable EditorCameraData m_editor_camera_data;
