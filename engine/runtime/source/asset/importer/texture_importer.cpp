@@ -30,7 +30,7 @@ namespace z1 {
 			return ret;
 		}
 
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 
 		Filepath import_file = root / settings.path;
 		import_file += ".bin";

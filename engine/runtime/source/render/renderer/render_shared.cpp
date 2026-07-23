@@ -38,7 +38,7 @@ namespace z1 {
 		{
 			Pipeline::Description desc{};
 			desc.cull_mode = CullMode::None;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/postprocessing");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/postprocessing");
 			m_pipeline_postprocess = Pipeline::build(desc);
 		}
 
@@ -48,7 +48,7 @@ namespace z1 {
 		{
 			Pipeline::Description desc{};
 			desc.cull_mode = CullMode::None;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/taa");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/taa");
 			m_pipeline_taa = Pipeline::build(desc);
 		}
 
@@ -56,7 +56,7 @@ namespace z1 {
 		{
 			Pipeline::Description desc{};
 			desc.cull_mode = CullMode::None;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/bloom_downsample");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/bloom_downsample");
 			m_pipeline_bloom_downsample = Pipeline::build(desc);
 		}
 
@@ -67,7 +67,7 @@ namespace z1 {
 			desc.blend = true;
 			desc.src_blend_factor = BlendFactor::One;
 			desc.dst_blend_factor = BlendFactor::One;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/bloom_upsample");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/bloom_upsample");
 			m_pipeline_bloom_upsample = Pipeline::build(desc);
 		}
 

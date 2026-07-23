@@ -229,7 +229,8 @@ namespace z1 {
 			var.visible = false;
 			break;
 		case DataType::Sampler2D:
-			var.default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(Guid::make(params[0]));
+			var.default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(
+				g_runtime_context.m_asset_manager->resolve_guid(params[0]));
 			break;
 		case DataType::SamplerCube:
 			break;
@@ -405,7 +406,7 @@ namespace z1 {
 		mat->m_meta.guid = Guid::generate();
 		mat->m_meta.type = "material";
 		mat->m_meta.path = path;
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		mat->m_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(mat->m_meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(mat->m_meta, root)) {
 			return nullptr;
@@ -424,7 +425,8 @@ namespace z1 {
 		YAML::Node node = YAML::LoadFile((file.concat(".yaml")).string());
 
 		auto flags = node["flags"].as<uint32_t>();
-		auto shader_guid = Guid::make(node["shader"].as<std::string>());
+		auto shader_path = node["shader"].as<std::string>();
+		auto shader_guid = g_runtime_context.m_asset_manager->resolve_guid(shader_path);
 		if (!shader_guid.is_valid() && g_runtime_context.m_asset_manager->has_asset(shader_guid)) {
 			CORE_ERROR("failed to load material: {0}, shader not found!", guid);
 			return nullptr;
@@ -436,7 +438,7 @@ namespace z1 {
 	}
 
 	void Material::save() const {
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		Filepath file = root / m_meta.path;
 		file += ".yaml";
 
@@ -457,7 +459,7 @@ namespace z1 {
 		mi->m_meta.guid = Guid::generate();
 		mi->m_meta.type = "material instance";
 		mi->m_meta.path = path;
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		mi->m_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(mi->m_meta.path);
 		if (!g_runtime_context.m_asset_manager->register_asset(mi->m_meta, root)) {
 			return nullptr;
@@ -474,7 +476,8 @@ namespace z1 {
 		}
 
 		YAML::Node node = YAML::LoadFile((file.concat(".yaml")).string());
-		auto material_guid = Guid::make(node["material"].as<std::string>());
+		auto material_path = node["material"].as<std::string>();
+		auto material_guid = g_runtime_context.m_asset_manager->resolve_guid(material_path);
 		auto material = g_runtime_context.m_asset_manager->get<Material>(material_guid);
 		if (!material) {
 			CORE_ERROR("failed to load material instance: {0}, material not found!", guid);
@@ -529,7 +532,8 @@ namespace z1 {
 				break;
 			case DataType::Sampler2D:
 				if (var_node["value"] && !var_node["value"].IsNull()) {
-					auto tex_guid = Guid::make(var_node["value"].as<std::string>());
+					auto tex_path = var_node["value"].as<std::string>();
+					auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(tex_path);
 					var.default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
 					if (!var.default_value.tex2D) {
 						CORE_WARN("material instance: {0} failed to load texture2D: {1} for variable: {2}", guid, tex_guid.value, name);
@@ -551,7 +555,7 @@ namespace z1 {
 	}
 
 	void MaterialInstance::save() const {
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		Filepath file = root / m_meta.path;
 		file += ".yaml";
 

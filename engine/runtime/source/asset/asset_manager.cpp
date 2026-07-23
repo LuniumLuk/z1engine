@@ -12,14 +12,24 @@ namespace z1 {
 		Filepath cwd = fs::current_path();
 		CORE_INFO("current working directory: {0}", cwd.generic_string());
 
-		CORE_INFO("content root: {0}", FileSystem::s_content_root.generic_string());
-		CORE_INFO("engine root: {0}", FileSystem::s_engine_root.generic_string());
+		for (auto const& root : FileSystem::s_roots) {
+			CORE_INFO("asset root [{0}]: {1} (priority: {2})",
+				root.name.empty() ? "(default)" : root.name,
+				root.path.generic_string(), root.priority);
+		}
 
 		scan_content();
 	}
 
 	AssetManager::~AssetManager() {
 		CORE_DEBUG("shutting down AssetManager ...");
+	}
+
+	std::string AssetManager::build_internal_path(AssetMeta const& meta) const {
+		if (meta.root.empty()) {
+			return meta.path.string();
+		}
+		return "$" + meta.root + "/" + meta.path.string();
 	}
 
 	void AssetManager::scan_content() {
@@ -30,38 +40,48 @@ namespace z1 {
 		m_loaded_assets.clear();
 		m_asset_tree_root = std::make_unique<AssetNode>();
 
-		{
-			auto const& root = FileSystem::s_content_root;
+		for (auto const& root_config : FileSystem::s_roots) {
+			auto const& root = root_config.path;
 
 			if (!fs::exists(root)) {
-				fs::create_directories(root);
+				if (root_config.name.empty()) {
+					fs::create_directories(root);
+				} else {
+					CORE_WARN("missing asset root [{0}]: {1}",
+						root_config.name, root.generic_string());
+				}
+				if (!fs::exists(root)) {
+					continue;
+				}
 			}
 
+			// Scan YAML meta files
 			for (auto& entry : fs::recursive_directory_iterator(root)) {
 				if (!entry.is_regular_file())
 					continue;
 
 				auto const& file = entry.path();
 				if (file.extension() != ".yaml")
-					continue; // skip non-meta files
+					continue;
 
 				AssetMeta meta;
 				try {
 					YAML::Node node = YAML::LoadFile(file.string());
 					meta = node["meta"].as<AssetMeta>();
-					meta.root = "content";
+					meta.root = root_config.name;
 				}
 				catch (std::exception const& e) {
 					CORE_ERROR("failed to load meta file: {0}, {1}", file.generic_string(), e.what());
 					continue;
 				}
 
+
 				if (!register_asset(meta, root)) {
 					continue;
 				}
 			}
 
-			// scan for python scripts
+			// Scan Python scripts (only in default root and engine root)
 			for (auto& entry : fs::recursive_directory_iterator(root)) {
 				if (!entry.is_regular_file())
 					continue;
@@ -73,62 +93,45 @@ namespace z1 {
 				Filepath path = fs::relative(file, root);
 				std::string path_str = path.generic_string();
 
-				// Ensure we don't duplicate existing assets (like yaml)
-				// m_path_to_guid_mapping contains full paths? No, let's check.
-				// m_path_to_guid_mapping stores relative path as key.
-				if (m_path_to_guid_mapping.find(path) != m_path_to_guid_mapping.end())
-					continue;
-
 				AssetMeta meta;
-				meta.guid = Guid::make(path_str);
 				meta.type = "script";
 				meta.path = path_str;
-				meta.root = "content";
+				meta.root = root_config.name;
+
+				meta.guid = Guid::make(path_str);
+
+				// Check for duplicates
+				std::string internal_path = build_internal_path(meta);
+				if (m_path_to_guid_mapping.find(internal_path) != m_path_to_guid_mapping.end())
+					continue;
 
 				register_asset(meta, root);
 			}
-		}
 
-		{
-			auto const& root = FileSystem::s_engine_root;
-
-			if (!fs::exists(root)) {
-				CORE_WARN("missing engine root: {0}", root.generic_string());
-			}
-
+			// Scan GLSL shader files (engine root and any root with shaders)
 			for (auto& entry : fs::recursive_directory_iterator(root)) {
 				if (!entry.is_regular_file())
 					continue;
 
 				auto const& file = entry.path();
+				if (file.extension() != ".glsl")
+					continue;
 
 				Filepath path = fs::relative(file.parent_path() / file.stem(), root);
 
 				AssetMeta meta;
-				if (file.extension() == ".glsl") {
-					meta.guid = Guid::make(path.generic_string());
-					meta.type = "shader";
-					meta.path = path.generic_string();
-					meta.root = "engine";
-				}
-				else if (file.extension() == ".yaml") {
-					try {
-						YAML::Node node = YAML::LoadFile(file.string());
-						meta = node["meta"].as<AssetMeta>();
-						meta.root = "engine";
-					}
-					catch (std::exception const& e) {
-						CORE_ERROR("failed to load meta file: {0}, {1}", file.generic_string(), e.what());
-						continue;
-					}
-				}
-				else {
-					continue;
-				}
+				meta.type = "shader";
+				meta.path = path.generic_string();
+				meta.root = root_config.name;
 
-				if (!register_asset(meta, root)) {
+				meta.guid = Guid::make(path.generic_string());
+
+				// Check for duplicates (YAML might already define this shader)
+				std::string internal_path = build_internal_path(meta);
+				if (m_path_to_guid_mapping.find(internal_path) != m_path_to_guid_mapping.end())
 					continue;
-				}
+
+				register_asset(meta, root);
 			}
 		}
 	}
@@ -171,7 +174,7 @@ namespace z1 {
 		m_guid_registry.erase(guid);
 		m_asset_metas.erase(it);
 		m_guid_to_file_mapping.erase(guid);
-		m_path_to_guid_mapping.erase(meta.path);
+		m_path_to_guid_mapping.erase(build_internal_path(meta));
 		m_loaded_assets.erase(guid);
 
 		return true;
@@ -201,9 +204,14 @@ namespace z1 {
 			return true;
 		}
 
-		if (m_path_to_guid_mapping.find(normalized) != m_path_to_guid_mapping.end()) {
-			CORE_WARN("asset already exists at path: {0}", normalized.generic_string());
-			return false;
+		{
+			AssetMeta check_meta = meta;
+			check_meta.path = normalized;
+			std::string new_internal = build_internal_path(check_meta);
+			if (m_path_to_guid_mapping.find(new_internal) != m_path_to_guid_mapping.end()) {
+				CORE_WARN("asset already exists at path: {0}", normalized.generic_string());
+				return false;
+			}
 		}
 
 		auto root = get_root_for_meta(meta);
@@ -285,8 +293,12 @@ namespace z1 {
 
 		remove_asset_node(old_meta);
 
-		m_path_to_guid_mapping.erase(old_meta.path);
-		m_path_to_guid_mapping[normalized] = guid;
+		m_path_to_guid_mapping.erase(build_internal_path(old_meta));
+		{
+			AssetMeta new_meta = meta;
+			new_meta.path = normalized;
+			m_path_to_guid_mapping[build_internal_path(new_meta)] = guid;
+		}
 		m_guid_to_file_mapping[guid] = new_base;
 
 		insert_asset_node(meta);
@@ -305,7 +317,7 @@ namespace z1 {
 	}
 
 	bool AssetManager::has_path(Filepath const& path) const {
-		return m_path_to_guid_mapping.find(path) != m_path_to_guid_mapping.end();
+		return get_guid_from_path(path).is_valid();
 	}
 
 	Filepath AssetManager::legalize_import_path(Filepath const& path) const {
@@ -339,6 +351,57 @@ namespace z1 {
 		return it->second;
 	}
 
+	Guid AssetManager::get_guid_from_path(Filepath const& path) const {
+		std::string path_str = path.generic_string();
+
+		// Check for $rootname/ prefix — use the full string as internal key directly
+		if (!path_str.empty() && path_str[0] == '$') {
+			auto slash_pos = path_str.find('/');
+			if (slash_pos != std::string::npos) {
+				std::string root_name = path_str.substr(1, slash_pos - 1);
+
+				// Verify root exists
+				auto root_path = FileSystem::get_root_path(root_name);
+				if (root_path.empty()) {
+					CORE_WARN("unknown root in asset path: {0}", path_str);
+					return {};
+				}
+
+				// Direct lookup: key = "$engine/shader/pbr"
+				auto it = m_path_to_guid_mapping.find(path_str);
+				if (it != m_path_to_guid_mapping.end()) {
+					return it->second;
+				}
+				return {};
+			}
+		}
+
+		// No $ prefix: search roots in priority order
+		auto ordered_roots = FileSystem::get_roots_ordered();
+		for (auto* root_config : ordered_roots) {
+			std::string internal_key;
+			if (root_config->name.empty()) {
+				internal_key = path_str;
+			} else {
+				internal_key = "$" + root_config->name + "/" + path_str;
+			}
+			auto it = m_path_to_guid_mapping.find(internal_key);
+			if (it != m_path_to_guid_mapping.end()) {
+				return it->second;
+			}
+		}
+
+		return {};
+	}
+
+	Guid AssetManager::resolve_guid(std::string const& str) const {
+		auto guid = get_guid_from_path(str);
+		if (!guid.is_valid()) {
+			guid = Guid::make(str);
+		}
+		return guid;
+	}
+
 	bool AssetManager::register_asset(AssetMeta const& meta, Filepath const& root) {
 		Filepath file = root / meta.path;
 
@@ -350,7 +413,7 @@ namespace z1 {
 
 		m_asset_metas[meta.guid] = meta;
 		m_guid_to_file_mapping[meta.guid] = file;
-		m_path_to_guid_mapping[meta.path] = meta.guid;
+		m_path_to_guid_mapping[build_internal_path(meta)] = meta.guid;
 
 		insert_asset_node(meta);
 		return true;
@@ -449,10 +512,7 @@ namespace z1 {
 	}
 
 	Filepath AssetManager::get_root_for_meta(AssetMeta const& meta) const {
-		if (meta.root == "engine") {
-			return FileSystem::s_engine_root;
-		}
-		return FileSystem::s_content_root;
+		return FileSystem::get_root_path(meta.root);
 	}
 
 }

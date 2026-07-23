@@ -233,7 +233,7 @@ namespace z1 {
 		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;
 
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		Filepath file = root / meta.path;
 
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
@@ -467,7 +467,7 @@ namespace z1 {
 		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;
 
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		Filepath file = root / meta.path;
 
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {

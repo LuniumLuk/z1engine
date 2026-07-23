@@ -7,10 +7,18 @@
 #include <iostream>
 #include <unordered_map>
 #include <sstream>
+#include <vector>
+#include <algorithm>
 
 namespace z1 {
 
 	using Filepath = std::filesystem::path;
+
+	struct RootConfig {
+		std::string name;     // empty string = default root
+		Filepath path;        // filesystem path (e.g., "content", "engine/content")
+		int priority = 0;     // lower = searched first for unprefixed lookups
+	};
 
 	struct API FileSystem {
 		std::string read_file(Filepath const& path) noexcept;
@@ -23,9 +31,11 @@ namespace z1 {
 		Filepath m_engine_dir = "../runtime";
 #endif
 
-		static Filepath s_content_root;
+		static std::vector<RootConfig> s_roots;
 		static Filepath s_cache_root;
-		static Filepath s_engine_root;
+
+		static Filepath get_root_path(std::string const& name);
+		static std::vector<RootConfig const*> get_roots_ordered();
 
 	};
 

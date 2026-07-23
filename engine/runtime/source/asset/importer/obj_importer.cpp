@@ -130,7 +130,7 @@ namespace z1 {
 			return ret;
 		}
 
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		auto mesh_storage = import_obj_as_mesh_storage(settings.file);
 		auto meta = mesh_storage->import(settings.path);
 		if (meta.guid.is_valid()) {

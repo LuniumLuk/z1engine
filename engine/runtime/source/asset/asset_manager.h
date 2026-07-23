@@ -51,13 +51,8 @@ namespace z1 {
 		AssetMeta get_meta(Guid const& guid) const;
 		bool move_asset(Guid const& guid, Filepath const& new_path);
 
-		Guid get_guid_from_path(Filepath const& path) const {
-			auto it = m_path_to_guid_mapping.find(path);
-			if (it != m_path_to_guid_mapping.end()) {
-				return it->second;
-			}
-			return {};
-		}
+		Guid get_guid_from_path(Filepath const& path) const;
+		Guid resolve_guid(std::string const& str) const;
 
 		template <typename T>
 		std::shared_ptr<T> get(Filepath const& path) {
@@ -192,8 +187,6 @@ namespace z1 {
 			return *std::any_cast<std::unordered_map<Guid, std::shared_ptr<T>>>(&it->second);
 		}
 
-		static Filepath s_content_root;
-		static std::vector<Filepath> s_shader_roots;
 		std::unordered_map<size_t, std::any> m_storages;
 		std::unordered_map<Guid, AssetBase*> m_loaded_assets;
 		std::unordered_map<Guid, AssetMeta> m_asset_metas;
@@ -207,6 +200,7 @@ namespace z1 {
 		void insert_asset_node(AssetMeta const& meta);
 		void remove_asset_node(AssetMeta const& meta);
 		Filepath get_root_for_meta(AssetMeta const& meta) const;
+		std::string build_internal_path(AssetMeta const& meta) const;
 	};
 
 	template<>

@@ -15,7 +15,7 @@ namespace z1 {
 
 	void ParticleRenderer::init() {
 		// Load particle shader
-		auto particle_shader = g_runtime_context.m_asset_manager->get<Shader>("shader/particle");
+		auto particle_shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/particle");
 
 		// Data-driven pipeline construction table
 		struct PipelineEntry {
@@ -68,7 +68,7 @@ namespace z1 {
 			desc.depth_test = true;
 			desc.depth_write = true;
 			desc.cull_mode = CullMode::None;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/particle_shadow");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/particle_shadow");
 			m_pipeline_shadow = Pipeline::build(desc);
 		}
 	}

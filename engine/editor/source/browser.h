@@ -448,7 +448,7 @@ struct ContentBrowser {
 			dest_path = folder / file.stem();
 		}
 
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		if (dest_path.is_absolute()) {
 			// Try to make it relative to content root
 			dest_path = std::filesystem::relative(dest_path, root);

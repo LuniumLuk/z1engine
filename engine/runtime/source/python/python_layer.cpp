@@ -98,6 +98,7 @@ namespace z1 {
 				import os
 				# print(f"Python Home: {sys.prefix}")
 				sys.path.append(os.path.abspath("./content"))
+				sys.path.append(os.path.abspath("./engine/content"))
 				# print(f"Searching in: {sys.path}")
 
 				import z1

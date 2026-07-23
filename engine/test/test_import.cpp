@@ -10,7 +10,7 @@ int main() {
 	OurApp app;
 	app.init();
 
-	Filepath sandbox_root = FileSystem::s_content_root / "sandbox-tests" / "test_import";
+	Filepath sandbox_root = FileSystem::get_root_path("") / "sandbox-tests" / "test_import";
 	std::filesystem::remove_all(sandbox_root);
 
 	auto import_texture = [](char const* file, char const* path, SamplerMode sampler = SamplerMode::Linear) {

@@ -16,8 +16,8 @@ int main() {
 	app.init();
 
 	Filepath scene_path = "sandbox-tests/scene_serialize_case";
-	Filepath scene_file = (FileSystem::s_content_root / scene_path).concat(".yaml");
-	Filepath sandbox_script_dir = FileSystem::s_content_root / "sandbox_tests";
+	Filepath scene_file = (FileSystem::get_root_path("") / scene_path).concat(".yaml");
+	Filepath sandbox_script_dir = FileSystem::get_root_path("") / "sandbox_tests";
 	Filepath sandbox_script_file = sandbox_script_dir / "test_mover.py";
 	Filepath sandbox_init_file = sandbox_script_dir / "__init__.py";
 	auto cleanup_scene = [&]() {
@@ -26,7 +26,7 @@ int main() {
 		std::filesystem::remove(sandbox_script_file, ec);
 		std::filesystem::remove(sandbox_init_file, ec);
 		std::filesystem::remove_all(sandbox_script_dir, ec);
-		std::filesystem::remove_all(FileSystem::s_content_root / "sandbox-tests", ec);
+		std::filesystem::remove_all(FileSystem::get_root_path("") / "sandbox-tests", ec);
 	};
 	cleanup_scene();
 	std::filesystem::create_directories(sandbox_script_dir);
@@ -90,7 +90,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_0");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("mesh/SM_Cube")
+			g_runtime_context.m_asset_manager->get<StaticMesh>("$engine/mesh/SM_Cube")
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(0.5f, 0.5f, -5.0f);
 	}
@@ -98,7 +98,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_1");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("mesh/SM_Sphere")
+			g_runtime_context.m_asset_manager->get<StaticMesh>("$engine/mesh/SM_Sphere")
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(1.0f, -2.0f, -4.0f);
 	}
@@ -106,7 +106,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_2");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("mesh/SM_Cone")
+			g_runtime_context.m_asset_manager->get<StaticMesh>("$engine/mesh/SM_Cone")
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(-1.5f, 0.0f, -1.0f);
 		ent->get_component<TransformComponent>().m_rotation = glm::vec3(90.0f, 0.0f, 0.0f);
@@ -118,7 +118,7 @@ int main() {
 		{
 			auto ground = scene->create_entity("Ground");
 			ground->add_component<StaticMeshComponent>(
-				g_runtime_context.m_asset_manager->get<StaticMesh>(std::string("mesh/SM_Cube"))
+				g_runtime_context.m_asset_manager->get<StaticMesh>(std::string("$engine/mesh/SM_Cube"))
 			);
 			auto& gtc = ground->get_component<TransformComponent>();
 			gtc.m_location = glm::vec3(0.0f, -3.4f, -4.5f);
@@ -140,7 +140,7 @@ int main() {
 				std::string ename = std::string("EngineMesh_") + mname + "_" + std::to_string(d);
 				auto ent = scene->create_entity(ename);
 				ent->add_component<StaticMeshComponent>(
-					g_runtime_context.m_asset_manager->get<StaticMesh>(std::string("mesh/") + mname)
+					g_runtime_context.m_asset_manager->get<StaticMesh>(std::string("$engine/mesh/") + mname)
 				);
 
 				auto& tc = ent->get_component<TransformComponent>();

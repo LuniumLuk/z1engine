@@ -1,0 +1,216 @@
+meta:
+  guid: demo-scene-0001
+  type: scene
+  path: scene/demo_scene
+  extra: ~
+global_settings:
+  sun_direction: [-0.5, 1, -0.300000012]
+  sun_color: [1, 0.949999988, 0.899999976, 1]
+  sun_intensity: 2.5
+  sun_ambient_color: [0.200000003, 0.219999999, 0.300000012, 1]
+  sun_ambient_intensity: 0.5
+  taa_enabled: true
+  taa_blend: 0.899999976
+  taa_animated: true
+  pp_exposure: 1
+  pp_gamma: 2.20000005
+  pp_tint: [1, 1, 1, 1]
+  pp_bloom_enabled: true
+  pp_bloom_threshold: 1
+  pp_bloom_intensity: 0.5
+  pp_bloom_knee: 0.100000001
+  sm_near: 0.5
+  sm_far: 80
+  sm_ortho_size: 30
+  anim_enabled: true
+  script_enabled: false
+  render_mode: Deferred
+entities:
+  - name: Main Camera
+    id: 0
+    transform:
+      location: [0, 4, 15]
+      rotation: [-10, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    camera:
+      is_perspective: true
+      intrinsic: 60
+      near: 0.100000001
+      far: 500
+      aspect: 1.77769995
+      use_fixed_aspect: false
+      is_primary: true
+    script_component:
+      - scripts.player_controller.PlayerController
+  - name: Ground
+    id: 1
+    transform:
+      location: [0, -2, 0]
+      rotation: [0, -0, 0]
+      scale: [20, 0.200000003, 20]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+  - name: WorldManager
+    id: 2
+    transform:
+      location: [0, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    script_component:
+      - scripts.demo_world.DemoWorld
+  - name: Suzanne
+    id: 3
+    transform:
+      location: [0, 1.5, -6]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Suzanne
+  - name: TrafficCone
+    id: 4
+    transform:
+      location: [-7, 0, -3]
+      rotation: [0, 0, 0]
+      scale: [0.800000012, 1.5, 0.800000012]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cone
+  - name: DecoSphere
+    id: 5
+    transform:
+      location: [7, 1, -3]
+      rotation: [0, 0, 0]
+      scale: [1.5, 1.5, 1.5]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Sphere
+  - name: DecoPillar
+    id: 6
+    transform:
+      location: [0, 0.5, -8]
+      rotation: [0, -0, 0]
+      scale: [0.600000024, 2.5, 0.600000024]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cylinder
+  - name: Sparkle Particles
+    id: 7
+    transform:
+      location: [-4.57821846, -0.801264048, 0]
+      rotation: [0, -0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 150
+      emission_rate: 120
+      burst_count: 0
+      lifetime: [0.5, 1.20000005]
+      initial_speed: [2, 6]
+      direction: [0, 1, 0]
+      direction_spread: 0.899999976
+      gravity: [0, -3, 0]
+      damping: 0.200000003
+      initial_size: [0.0299999993, 0.0599999987]
+      size_over_life: [1, 0.200000003]
+      initial_color: [0, 1, 1, 0.800000012]
+      end_color: [0.5, 1, 1, 0]
+      texture: ~
+      blend_mode: 1
+      emitter_shape: 0
+      shape_radius: 0.0500000007
+      shape_extents: [0.0500000007, 0.0500000007, 0.0500000007]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: false
+      receive_shadows: true
+      cast_shadows: true
+      initial_rotation: [0, 360]
+      rotation_speed: [180, 360]
+  - name: Fountain Particles
+    id: 8
+    transform:
+      location: [0, 2.9603405, -7.9155097]
+      rotation: [0, -0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 500
+      emission_rate: 100
+      burst_count: 0
+      lifetime: [1.5, 2.5]
+      initial_speed: [3, 5]
+      direction: [0, 1, 0]
+      direction_spread: 0.400000006
+      gravity: [0, -9.81000042, 0]
+      damping: 0.100000001
+      initial_size: [0.0500000007, 0.100000001]
+      size_over_life: [1, 0.5]
+      initial_color: [0.200000003, 0.5, 1, 1]
+      end_color: [0.200000003, 0.5, 1, 0]
+      texture: ~
+      blend_mode: 0
+      emitter_shape: 0
+      shape_radius: 0.100000001
+      shape_extents: [0.100000001, 0.100000001, 0.100000001]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: true
+      receive_shadows: true
+      cast_shadows: true
+      initial_rotation: [0, 360]
+      rotation_speed: [0, 180]
+  - name: Fire Particles
+    id: 9
+    transform:
+      location: [6.99413157, 2.50915146, -3.05566645]
+      rotation: [0, -0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    particle:
+      max_particles: 200
+      emission_rate: 80
+      burst_count: 0
+      lifetime: [0.800000012, 1.5]
+      initial_speed: [1, 3]
+      direction: [0, 1, 0]
+      direction_spread: 0.600000024
+      gravity: [0, 2, 0]
+      damping: 0.300000012
+      initial_size: [0.150000006, 0.25]
+      size_over_life: [1, 0.100000001]
+      initial_color: [1, 0.699999988, 0, 1]
+      end_color: [1, 0.200000003, 0, 0]
+      texture: ~
+      blend_mode: 1
+      emitter_shape: 1
+      shape_radius: 0.200000003
+      shape_extents: [0.200000003, 0.200000003, 0.200000003]
+      world_space: true
+      loop: true
+      playing: true
+      sort_by_depth: false
+      receive_shadows: true
+      cast_shadows: true
+      initial_rotation: [0, 360]
+      rotation_speed: [90, 180]
+  - name: Spot
+    id: 10
+    transform:
+      location: [0, 0.48783052, 0]
+      rotation: [0, -0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    light:
+      type: 2
+      color: [1, 0, 0]
+      intensity: 20
+      range: 10
+      inner_cone: 20
+      outer_cone: 30
+      cast_shadow: false

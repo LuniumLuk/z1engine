@@ -5,9 +5,31 @@ namespace z1 {
 
 	Args g_args;
 
-	Filepath FileSystem::s_content_root = "content";
+	std::vector<RootConfig> FileSystem::s_roots = {
+		{"",       "content",        0},
+		{"engine", "engine/content", 10},
+	};
 	Filepath FileSystem::s_cache_root = "cache";
-	Filepath FileSystem::s_engine_root = "engine/content";
+
+	Filepath FileSystem::get_root_path(std::string const& name) {
+		for (auto& root : s_roots) {
+			if (root.name == name) {
+				return root.path;
+			}
+		}
+		return {};
+	}
+
+	std::vector<RootConfig const*> FileSystem::get_roots_ordered() {
+		std::vector<RootConfig const*> result;
+		for (auto& root : s_roots) {
+			result.push_back(&root);
+		}
+		std::sort(result.begin(), result.end(), [](RootConfig const* a, RootConfig const* b) {
+			return a->priority < b->priority;
+		});
+		return result;
+	}
 
 	std::string FileSystem::read_file(Filepath const& path) noexcept {
 		PROFILE_FUNCTION();

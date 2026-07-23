@@ -19,13 +19,13 @@
 namespace z1 {
 
 	RendererForward::RendererForward() {
-		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(Guid::make("material/MI_phone"));
+		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>("$engine/material/MI_phone");
 
 		{
 			Pipeline::Description desc{};
 			desc.depth_test = true;
 			desc.cull_mode = CullMode::None;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("shader/skybox");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/skybox");
 			m_pipeline_skybox = Pipeline::build(desc);
 		}
 

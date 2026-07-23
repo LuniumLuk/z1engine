@@ -194,7 +194,7 @@ namespace z1 {
 		scene->m_is_dirty = true;
 		scene->m_is_saved = false;
 
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		if (g_runtime_context.m_asset_manager->register_asset(scene->m_meta, root)) {
 			CORE_DEBUG("created new scene: {}", path.generic_string());
 		}
@@ -316,7 +316,7 @@ namespace z1 {
 			if (entity_yaml["static_mesh"]) {
 				auto const& mesh_yaml = entity_yaml["static_mesh"];
 				if (mesh_yaml["guid"] && !mesh_yaml["guid"].IsNull()) {
-					auto sm = g_runtime_context.m_asset_manager->get<StaticMesh>(Guid::make(mesh_yaml["guid"].as<std::string>()));
+					auto sm = g_runtime_context.m_asset_manager->get<StaticMesh>(g_runtime_context.m_asset_manager->resolve_guid(mesh_yaml["guid"].as<std::string>()));
 					auto& mesh = entity->add_component<StaticMeshComponent>(sm);
 				}
 			}
@@ -326,11 +326,11 @@ namespace z1 {
 				auto const& mesh_yaml = entity_yaml["skeletal_mesh"];
 				if (mesh_yaml["mesh"] && !mesh_yaml["mesh"].IsNull()) {
 					auto sk = g_runtime_context.m_asset_manager->get<SkeletalMesh>(
-						Guid::make(mesh_yaml["mesh"].as<std::string>()));
+						g_runtime_context.m_asset_manager->resolve_guid(mesh_yaml["mesh"].as<std::string>()));
 					std::shared_ptr<Skeleton> skel = nullptr;
 					if (mesh_yaml["skeleton"] && !mesh_yaml["skeleton"].IsNull()) {
 						skel = g_runtime_context.m_asset_manager->get<Skeleton>(
-							Guid::make(mesh_yaml["skeleton"].as<std::string>()));
+							g_runtime_context.m_asset_manager->resolve_guid(mesh_yaml["skeleton"].as<std::string>()));
 					}
 					auto& mesh = entity->add_component<SkeletalMeshComponent>(sk, skel);
 				}
@@ -342,7 +342,7 @@ namespace z1 {
 				auto& sprite = entity->add_component<SpriteComponent>();
 				sprite.m_color = sprite_yaml["color"].as<glm::vec4>();
 				if (sprite_yaml["texture"] && !sprite_yaml["texture"].IsNull()) {
-					auto tex_guid = Guid::make(sprite_yaml["texture"].as<std::string>());
+					auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(sprite_yaml["texture"].as<std::string>());
 					sprite.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
 				}
 				sprite.m_tiling_scale = sprite_yaml["tiling_scale"].as<glm::vec2>();
@@ -371,7 +371,7 @@ namespace z1 {
 				auto const& skylight_yaml = entity_yaml["sky_light"];
 				auto& skylight = entity->add_component<SkyLightComponent>();
 				if (skylight_yaml["texture"] && !skylight_yaml["texture"].IsNull()) {
-					auto tex_guid = Guid::make(skylight_yaml["texture"].as<std::string>());
+					auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(skylight_yaml["texture"].as<std::string>());
 					skylight.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
 				}
 				skylight.m_intensity = skylight_yaml["intensity"].as<float>();
@@ -416,7 +416,7 @@ namespace z1 {
 				auto const& anim_yaml = entity_yaml["animation"];
 				auto& anim = entity->add_component<AnimationComponent>();
 				if (anim_yaml["animation"] && !anim_yaml["animation"].IsNull()) {
-					auto anim_guid = Guid::make(anim_yaml["animation"].as<std::string>());
+					auto anim_guid = g_runtime_context.m_asset_manager->resolve_guid(anim_yaml["animation"].as<std::string>());
 					anim.animation_asset = g_runtime_context.m_asset_manager->get<Animation>(anim_guid);
 				}
 				anim.speed = anim_yaml["speed"].as<float>();
@@ -442,7 +442,7 @@ namespace z1 {
 				if (p["initial_color"]) pc.m_initial_color = p["initial_color"].as<glm::vec4>();
 				if (p["end_color"]) pc.m_end_color = p["end_color"].as<glm::vec4>();
 				if (p["texture"] && !p["texture"].IsNull()) {
-					auto tex_guid = Guid::make(p["texture"].as<std::string>());
+					auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(p["texture"].as<std::string>());
 					pc.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
 				}
 				if (p["blend_mode"]) pc.m_blend_mode = static_cast<ParticleBlendMode>(p["blend_mode"].as<uint8_t>());
@@ -784,7 +784,7 @@ namespace z1 {
 		yaml << YAML::EndSeq;
 		yaml << YAML::EndMap;
 
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		save_yaml((root / m_meta.path).concat(".yaml"), yaml);
 
 		m_is_dirty = false;

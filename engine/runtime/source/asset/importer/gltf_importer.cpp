@@ -302,7 +302,7 @@ namespace z1 {
 						mesh_storage->primitives.push_back(prim_storage);
 					}
 
-					auto const& root = FileSystem::s_content_root;
+					auto root = FileSystem::get_root_path("");
 
 					std::string name = mesh.name.empty() ? ("SKM_" + std::to_string(node.mesh)) : mesh.name;
 					auto meta = mesh_storage->import(settings.path / name);
@@ -413,7 +413,7 @@ namespace z1 {
 						mesh_storage->primitives.push_back(prim_storage);
 					}
 
-					auto const& root = FileSystem::s_content_root;
+					auto root = FileSystem::get_root_path("");
 
 					std::string name = mesh.name.empty() ? ("SM_" + std::to_string(node.mesh)) : mesh.name;
 					auto meta = mesh_storage->import(settings.path / name);
@@ -539,7 +539,7 @@ namespace z1 {
 				continue;
 			}
 
-			auto const& root = FileSystem::s_content_root;
+			auto root = FileSystem::get_root_path("");
 
 			std::string name = image.name.empty() ? ("T_" + std::to_string(tex.source)) : image.name;
 			Filepath import_file = root / settings.path / (name + ".bin");
@@ -669,16 +669,14 @@ namespace z1 {
 			// mat.doubleSided;
 
 			// base material for material instance
-			auto base_material_guid = Guid::make("material/M_pbr");
+			auto base = g_runtime_context.m_asset_manager->get<Material>("$engine/material/M_pbr");
 
 			// Check for KHR_materials_pbrSpecularGlossiness
 			bool has_specular_glossiness = false;
 			if (mat.extensions.find("KHR_materials_pbrSpecularGlossiness") != mat.extensions.end()) {
 				has_specular_glossiness = true;
-				base_material_guid = Guid::make("material/M_pbr_sg");
+				base = g_runtime_context.m_asset_manager->get<Material>("$engine/material/M_pbr_sg");
 			}
-
-			auto base = g_runtime_context.m_asset_manager->get<Material>(base_material_guid);
 			auto mi = MaterialInstance::create(settings.path / name, base);
 
 			if (has_specular_glossiness) {
@@ -849,7 +847,7 @@ namespace z1 {
 		}
 
 		// Save skeleton
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		std::string name = skin.name.empty() ? ("SK_" + std::to_string(ret.assets.size())) : skin.name;
 		// Ensure unique name if multiple skins
 
@@ -994,7 +992,7 @@ namespace z1 {
 		}
 
 		// Save animation
-		auto const& root = FileSystem::s_content_root;
+		auto root = FileSystem::get_root_path("");
 		std::string name = anim.name.empty() ? ("AN_" + std::to_string(ret.assets.size())) : anim.name;
 
 		AssetMeta meta{};
@@ -1156,7 +1154,7 @@ namespace z1 {
 		yaml << YAML::EndMap;
 
 		{
-			auto physical_path = FileSystem::s_content_root / prefab_path;
+			auto physical_path = FileSystem::get_root_path("") / prefab_path;
 			physical_path += ".yaml";
 
 			std::ofstream fout(physical_path);
@@ -1164,7 +1162,7 @@ namespace z1 {
 			fout.close();
 
 			prefab_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(prefab_meta.path);
-			if (g_runtime_context.m_asset_manager->register_asset(prefab_meta, FileSystem::s_content_root)) {
+			if (g_runtime_context.m_asset_manager->register_asset(prefab_meta, FileSystem::get_root_path(""))) {
 				ret.assets.push_back(prefab_meta);
 				ret.files.push_back(physical_path);
 			}
