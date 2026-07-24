@@ -10,7 +10,7 @@ project "runtime"
 	pchheader "pch.h"
 	pchsource "source/pch.cpp"
 
-	defines { "YAML_CPP_STATIC_DEFINE" }
+	defines { "YAML_CPP_STATIC_DEFINE", "PX_PHYSX_STATIC_LIB" }
 
 	files
 	{
@@ -31,9 +31,20 @@ project "runtime"
 		"%{wks.location}/engine/3rdparty/entt",
 		"%{wks.location}/engine/3rdparty/yaml-cpp/include",
 		"%{wks.location}/engine/3rdparty/python314/include",
+		"%{wks.location}/engine/3rdparty/physx/include",
 	}
 
-	libdirs { "%{wks.location}/engine/3rdparty/python314/lib" }
+	libdirs
+	{
+		"%{wks.location}/engine/3rdparty/python314/lib",
+	}
+
+	filter "configurations:Debug"
+		libdirs { "%{wks.location}/engine/3rdparty/physx/lib/Debug" }
+	filter "configurations:Release"
+		libdirs { "%{wks.location}/engine/3rdparty/physx/lib/Release" }
+	filter {}
+
 	links
 	{
 		"glfw",
@@ -44,6 +55,12 @@ project "runtime"
 		"yaml-cpp",
 		"opengl32.lib",
 		"python314",
+		"PhysX_static_64",
+		"PhysXCommon_static_64",
+		"PhysXCooking_static_64",
+		"PhysXExtensions_static_64",
+		"PhysXFoundation_static_64",
+		"PhysXPvdSDK_static_64",
 	}
 
 	linkoptions { "/IGNORE:4006" }
