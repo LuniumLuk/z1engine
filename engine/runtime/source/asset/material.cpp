@@ -493,7 +493,7 @@ namespace z1 {
 		}
 
 		auto mi = std::make_shared<MaterialInstance>(material);
-
+		mi->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
 		mi->m_override_flags = node["override_flags"].as<uint32_t>();
 		mi->m_override_mask = node["override_mask"].as<uint32_t>();
 

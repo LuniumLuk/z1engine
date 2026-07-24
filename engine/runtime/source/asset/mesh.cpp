@@ -141,18 +141,47 @@ namespace z1 {
 		}
 	}
 
+	void StaticMesh::draw(
+		PerFrameConst const& per_frame,
+		std::shared_ptr<MaterialInstance> const& default_material,
+		std::unordered_map<std::string, std::shared_ptr<MaterialInstance>> const* override_materials,
+		MaterialFlagsFilter filter) const {
+		for (size_t i = 0; i < m_primitives.size(); ++i) {
+			draw_primitive(i, per_frame, default_material, override_materials, filter);
+		}
+	}
+
 	void StaticMesh::draw_primitive(
 		size_t index,
 		PerFrameConst const& per_frame,
 		std::shared_ptr<MaterialInstance> const& default_material,
 		MaterialFlagsFilter filter) const {
+		draw_primitive(index, per_frame, default_material, nullptr, filter);
+	}
+
+	void StaticMesh::draw_primitive(
+		size_t index,
+		PerFrameConst const& per_frame,
+		std::shared_ptr<MaterialInstance> const& default_material,
+		std::unordered_map<std::string, std::shared_ptr<MaterialInstance>> const* override_materials,
+		MaterialFlagsFilter filter) const {
 		if (index >= m_primitives.size()) return;
 		auto const& prim = m_primitives[index];
 		std::shared_ptr<MaterialInstance> mi = nullptr;
-		if (prim.m_material.is_valid()) {
+
+		// Check override materials by slot name — highest priority
+		// Backward-compatible: primitives without a slot default to "slot0"
+		if (override_materials) {
+			std::string slot = prim.m_material_slot.empty() ? "slot0" : prim.m_material_slot;
+			auto it = override_materials->find(slot);
+			if (it != override_materials->end() && it->second) {
+				mi = it->second;
+			}
+		}
+		if (!mi && prim.m_material.is_valid()) {
 			mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 		}
-		else if (default_material) {
+		if (!mi && default_material) {
 			mi = default_material;
 		}
 
@@ -200,6 +229,19 @@ namespace z1 {
 		bf.set_data(vertices.data(), vdata_size, 0);
 		bf.set_data(indices.data(), idata_size, vdata_size);
 
+		// Auto-assign material slots: primitives sharing the same material guid
+		// get the same slot name ("slot0", "slot1", ...)
+		std::unordered_map<Guid, std::string> guid_to_slot;
+		int next_slot = 0;
+		auto assign_slot = [&](Guid const& mat) -> std::string {
+			if (!mat.is_valid()) return {};
+			auto it = guid_to_slot.find(mat);
+			if (it != guid_to_slot.end()) return it->second;
+			std::string slot = "slot" + std::to_string(next_slot++);
+			guid_to_slot[mat] = slot;
+			return slot;
+		};
+
 		YAML::Emitter yaml;
 		yaml << YAML::BeginMap;
 		yaml << YAML::Key << "bound_min" << YAML::Value << bound_min;
@@ -216,6 +258,7 @@ namespace z1 {
 			yaml << YAML::Key << "bound_min" << YAML::Value << prim.bound_min;
 			yaml << YAML::Key << "bound_max" << YAML::Value << prim.bound_max;
 			yaml << YAML::Key << "material" << YAML::Value << prim.material;
+			yaml << YAML::Key << "material_slot" << YAML::Value << assign_slot(prim.material);
 			yaml << YAML::Key << "has_indices" << YAML::Value << prim.has_indices;
 			yaml << YAML::Key << "has_normal" << YAML::Value << prim.has_normal;
 			yaml << YAML::Key << "has_tangent" << YAML::Value << prim.has_tangent;
@@ -281,6 +324,9 @@ namespace z1 {
 			prim_storage.bound_min = prim_node["bound_min"].as<glm::vec3>();
 			prim_storage.bound_max = prim_node["bound_max"].as<glm::vec3>();
 			prim_storage.material = prim_node["material"].as<Guid>();
+			if (prim_node["material_slot"]) {
+				prim_storage.material_slot = prim_node["material_slot"].as<std::string>();
+			}
 			prim_storage.has_indices = prim_node["has_indices"].as<bool>();
 			prim_storage.has_normal = prim_node["has_normal"].as<bool>();
 			prim_storage.has_tangent = prim_node["has_tangent"].as<bool>();
@@ -353,6 +399,7 @@ namespace z1 {
 				prim_storage.bound_min,
 				prim_storage.bound_max,
 				prim_storage.material,
+				prim_storage.material_slot,
 			};
 			m_primitives.push_back(prim);
 		}
@@ -378,19 +425,50 @@ namespace z1 {
 		}
 	}
 
+	void SkeletalMesh::draw(
+		PerFrameConst const& per_frame,
+		std::shared_ptr<MaterialInstance> const& default_material,
+		std::shared_ptr<UniformBuffer> const& bones,
+		std::unordered_map<std::string, std::shared_ptr<MaterialInstance>> const* override_materials,
+		MaterialFlagsFilter filter) const {
+		for (size_t i = 0; i < m_primitives.size(); ++i) {
+			draw_primitive(i, per_frame, default_material, bones, override_materials, filter);
+		}
+	}
+
 	void SkeletalMesh::draw_primitive(
 		size_t index,
 		PerFrameConst const& per_frame,
 		std::shared_ptr<MaterialInstance> const& default_material,
 		std::shared_ptr<UniformBuffer> const& bones,
 		MaterialFlagsFilter filter) const {
+		draw_primitive(index, per_frame, default_material, bones, nullptr, filter);
+	}
+
+	void SkeletalMesh::draw_primitive(
+		size_t index,
+		PerFrameConst const& per_frame,
+		std::shared_ptr<MaterialInstance> const& default_material,
+		std::shared_ptr<UniformBuffer> const& bones,
+		std::unordered_map<std::string, std::shared_ptr<MaterialInstance>> const* override_materials,
+		MaterialFlagsFilter filter) const {
 		if (index >= m_primitives.size()) return;
 		auto const& prim = m_primitives[index];
 		std::shared_ptr<MaterialInstance> mi = nullptr;
-		if (prim.m_material.is_valid()) {
+
+		// Check override materials by slot name — highest priority
+		// Backward-compatible: primitives without a slot default to "slot0"
+		if (override_materials) {
+			std::string slot = prim.m_material_slot.empty() ? "slot0" : prim.m_material_slot;
+			auto it = override_materials->find(slot);
+			if (it != override_materials->end() && it->second) {
+				mi = it->second;
+			}
+		}
+		if (!mi && prim.m_material.is_valid()) {
 			mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(prim.m_material);
 		}
-		else if (default_material) {
+		if (!mi && default_material) {
 			mi = default_material;
 		}
 
@@ -437,6 +515,19 @@ namespace z1 {
 		bf.set_data(vertices.data(), vdata_size, 0);
 		bf.set_data(indices.data(), idata_size, vdata_size);
 
+		// Auto-assign material slots: primitives sharing the same material guid
+		// get the same slot name ("slot0", "slot1", ...)
+		std::unordered_map<Guid, std::string> guid_to_slot;
+		int next_slot = 0;
+		auto assign_slot = [&](Guid const& mat) -> std::string {
+			if (!mat.is_valid()) return {};
+			auto it = guid_to_slot.find(mat);
+			if (it != guid_to_slot.end()) return it->second;
+			std::string slot = "slot" + std::to_string(next_slot++);
+			guid_to_slot[mat] = slot;
+			return slot;
+		};
+
 		YAML::Emitter yaml;
 		yaml << YAML::BeginMap;
 		yaml << YAML::Key << "bound_min" << YAML::Value << bound_min;
@@ -453,6 +544,7 @@ namespace z1 {
 			yaml << YAML::Key << "bound_min" << YAML::Value << prim.bound_min;
 			yaml << YAML::Key << "bound_max" << YAML::Value << prim.bound_max;
 			yaml << YAML::Key << "material" << YAML::Value << prim.material;
+			yaml << YAML::Key << "material_slot" << YAML::Value << assign_slot(prim.material);
 			yaml << YAML::Key << "has_indices" << YAML::Value << prim.has_indices;
 			yaml << YAML::Key << "has_normal" << YAML::Value << prim.has_normal;
 			yaml << YAML::Key << "has_tangent" << YAML::Value << prim.has_tangent;
@@ -518,6 +610,9 @@ namespace z1 {
 			prim_storage.bound_min = prim_node["bound_min"].as<glm::vec3>();
 			prim_storage.bound_max = prim_node["bound_max"].as<glm::vec3>();
 			prim_storage.material = prim_node["material"].as<Guid>();
+			if (prim_node["material_slot"]) {
+				prim_storage.material_slot = prim_node["material_slot"].as<std::string>();
+			}
 			prim_storage.has_indices = prim_node["has_indices"].as<bool>();
 			prim_storage.has_normal = prim_node["has_normal"].as<bool>();
 			prim_storage.has_tangent = prim_node["has_tangent"].as<bool>();

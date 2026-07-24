@@ -197,7 +197,8 @@ namespace z1 {
 				// Render opaque and masked geometry only
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material, [](uint32_t flags) {
+					auto* overrides = item.mesh->override_materials_or_null();
+					item.mesh->m_mesh->draw(per_frame, m_default_material, overrides, [](uint32_t flags) {
 						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
 					});
 				}
@@ -209,7 +210,8 @@ namespace z1 {
 					}
 
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, [](uint32_t flags) {
+					auto* overrides = item.mesh->override_materials_or_null();
+					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, overrides, [](uint32_t flags) {
 						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
 					});
 				}
@@ -347,7 +349,8 @@ namespace z1 {
 				// Render blended geometry
 				for (auto const& item : draw_list.static_meshes) {
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material, [](uint32_t flags) {
+					auto* overrides = item.mesh->override_materials_or_null();
+					item.mesh->m_mesh->draw(per_frame, m_default_material, overrides, [](uint32_t flags) {
 						return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
 					});
 				}
@@ -359,7 +362,8 @@ namespace z1 {
 					}
 
 					per_frame.model = item.transform;
-					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, [](uint32_t flags) {
+					auto* overrides = item.mesh->override_materials_or_null();
+					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, overrides, [](uint32_t flags) {
 						return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
 					});
 				}

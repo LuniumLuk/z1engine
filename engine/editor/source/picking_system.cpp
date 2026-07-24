@@ -65,6 +65,8 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 		m_pipeline->bind();
 		g_runtime_context.m_global->bind();
 		m_pipeline->m_shader->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+		int has_skinning = 0;
+		m_pipeline->m_shader->set_uniform("u_has_skinning", &has_skinning);
 
 		auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const, TagComponent const>();
 		for (auto [entity, transform, mesh, tag] : view.each()) {
@@ -96,7 +98,7 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 				auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
 				bones = anim.bone_ubo;
 			}
-			int has_skinning = 0;
+			has_skinning = 0;
 			if (bones) {
 				has_skinning = 1;
 				bones->bind();
@@ -129,8 +131,11 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 		m_sprite_pipeline->unbind();
 		};
 
-	g_runtime_context.m_graphics_context->bind_framebuffer(m_framebuffer);
-	g_runtime_context.m_graphics_context->exec_render_pass(render_pass);
+	auto& ctx = g_runtime_context.m_graphics_context;
+	ctx->push_debug_group("picking-render");
+	ctx->bind_framebuffer(m_framebuffer);
+	ctx->exec_render_pass(render_pass);
+	ctx->pop_debug_group();
 }
 
 uint32_t PickingSystem::unpack_rgba8_to_uint32(glm::u8vec4 const& rgba) const {

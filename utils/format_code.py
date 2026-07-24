@@ -1,6 +1,10 @@
 import os
 import argparse
 import sys
+import re
+
+# Pattern: line like "} else {" or "} else if (...) {" — split to put else on its own line
+_else_pattern = re.compile(r'^(\s*)\}\s+(else\b.*)$')
 
 def is_ascii(s):
 	return all(ord(c) < 128 for c in s)
@@ -68,6 +72,16 @@ def process_file(filepath, tasks, dry_run):
 			if 'tabs' in tasks:
 				current_line = convert_to_tabs(current_line)
 
+			# Task 4: Put else on its own line (split "} else" patterns)
+			if 'else-nl' in tasks:
+				m = _else_pattern.match(current_line)
+				if m:
+					indent = m.group(1)
+					rest = m.group(2)  # "else ..."
+					new_lines.append(indent + '}')
+					new_lines.append(indent + rest)
+					continue
+
 			new_lines.append(current_line)
 
 		# Task 5: CRLF check - We always apply CRLF if 'crlf' is in tasks or if we modified content
@@ -112,7 +126,7 @@ def process_file(filepath, tasks, dry_run):
 def main():
 	parser = argparse.ArgumentParser(description="Code formatter utility.")
 	parser.add_argument('--extensions', type=str, default=".h,.cpp,.glsl,.py", help="Comma-separated list of extensions (default: .h,.cpp)")
-	parser.add_argument('--tasks', type=str, default="all", help="Comma-separated list of tasks: trailing, tabs, ascii, crlf (or all)")
+	parser.add_argument('--tasks', type=str, default="all", help="Comma-separated list of tasks: trailing, tabs, ascii, crlf, else-nl (or all)")
 	parser.add_argument('--dry-run', action='store_true', help="Run without modifying files")
 
 	args = parser.parse_args()
@@ -128,7 +142,7 @@ def main():
 	]
 	extensions = [e.strip() for e in args.extensions.split(',')]
 
-	available_tasks = {'trailing', 'tabs', 'ascii', 'crlf'}
+	available_tasks = {'trailing', 'tabs', 'ascii', 'crlf', 'else-nl'}
 	if args.tasks == 'all':
 		tasks = available_tasks
 	else:

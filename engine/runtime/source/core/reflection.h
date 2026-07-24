@@ -57,6 +57,7 @@ namespace z1 {
 		FF_Editable         = 1 << 1,
 		FF_Serializable     = 1 << 2,
 		FF_Copiable         = 1 << 3,
+		FF_ContainerResizable = 1 << 4,  // container can be resized from editor (e.g., add/remove elements)
 		// combinations
 		FF_Hidden           = FF_None,
 		FF_ReadOnly         = FF_Visible | FF_Copiable,
@@ -79,11 +80,29 @@ namespace z1 {
 	struct ContainerInfo
 	{
 		bool is_array;
+		bool is_map = false;               // true for unordered_map
+		bool is_element_asset_ref = false; // true if element type is shared_ptr<AssetType>
 		size_t (*size)(const void* instance);
 		void* (*get)(void* instance, size_t index);
 		void (*resize)(void* instance, size_t new_size);
 		const std::type_info* element_type;
+		const std::type_info* key_type = nullptr;  // for maps: typeid of key
 		const EnumInfo* element_enum_info;
+
+		// Map-specific: get key string at iteration index
+		void (*get_key)(const void* instance, size_t index, std::string& out_key) = nullptr;
+		// Map-specific: get value by key (returns nullptr if not found)
+		void* (*get_by_key)(void* instance, const std::string& key) = nullptr;
+		// Map-specific: insert or assign key with default-constructed value
+		void (*insert_or_assign)(void* instance, const std::string& key) = nullptr;
+		// Map-specific: erase entry by key
+		void (*erase_key)(void* instance, const std::string& key) = nullptr;
+
+		// Load asset by guid string and assign to element via typed operator=.
+		// Set by ContainerInfoResolver when is_element_asset_ref is true.
+		// Uses the concrete shared_ptr<T> type to call T::load(guid) and properly
+		// assign, destroying any previous value.
+		bool (*load_asset_by_guid)(void* elem_ptr, std::string const& guid_str) = nullptr;
 	};
 
 	struct FieldInfo
@@ -229,14 +248,34 @@ namespace z1 {
 	template<typename T, typename Alloc>
 	struct ContainerInfoResolver<std::vector<T, Alloc>> {
 		static const ContainerInfo* get() {
-			static ContainerInfo info{
-				false,
-				[](const void* instance) { return reinterpret_cast<const std::vector<T, Alloc>*>(instance)->size(); },
-				[](void* instance, size_t index) { return reinterpret_cast<void*>(&(*reinterpret_cast<std::vector<T, Alloc>*>(instance))[index]); },
-				[](void* instance, size_t new_size) { reinterpret_cast<std::vector<T, Alloc>*>(instance)->resize(new_size); },
-				&typeid(T),
-				EnumInfoResolver<T>::get()
-			};
+			static const ContainerInfo info = []() {
+				ContainerInfo info{
+					false,  // is_array
+					false,  // is_map
+					is_asset_ref_field_v<T>,  // is_element_asset_ref
+					[](const void* instance) { return reinterpret_cast<const std::vector<T, Alloc>*>(instance)->size(); },
+					[](void* instance, size_t index) { return reinterpret_cast<void*>(&(*reinterpret_cast<std::vector<T, Alloc>*>(instance))[index]); },
+					[](void* instance, size_t new_size) { reinterpret_cast<std::vector<T, Alloc>*>(instance)->resize(new_size); },
+					&typeid(T),
+					nullptr, // key_type
+					EnumInfoResolver<T>::get()
+				};
+				if constexpr (is_asset_ref_field_v<T>) {
+					info.load_asset_by_guid = [](void* elem_ptr, std::string const& guid_str) -> bool {
+						using AssetType = typename T::element_type;
+						if (guid_str.empty()) return false;
+						Guid guid = Guid::make(guid_str);
+						if (!guid.is_valid()) return false;
+						auto asset = AssetType::load(guid);
+						if (asset) {
+							*static_cast<T*>(elem_ptr) = std::move(asset);
+							return true;
+						}
+						return false;
+					};
+				}
+				return info;
+			}();
 			return &info;
 		}
 	};
@@ -244,14 +283,121 @@ namespace z1 {
 	template<typename T, size_t N>
 	struct ContainerInfoResolver<std::array<T, N>> {
 		static const ContainerInfo* get() {
-			static ContainerInfo info{
-				true,
-				[](const void* instance) { return N; },
-				[](void* instance, size_t index) { return reinterpret_cast<void*>(&(*reinterpret_cast<std::array<T, N>*>(instance))[index]); },
-				nullptr,
-				&typeid(T),
-				EnumInfoResolver<T>::get()
-			};
+			static const ContainerInfo info = []() {
+				ContainerInfo info{
+					true,   // is_array
+					false,  // is_map
+					is_asset_ref_field_v<T>,  // is_element_asset_ref
+					[](const void* instance) { return N; },
+					[](void* instance, size_t index) { return reinterpret_cast<void*>(&(*reinterpret_cast<std::array<T, N>*>(instance))[index]); },
+					nullptr, // resize
+					&typeid(T),
+					nullptr, // key_type
+					EnumInfoResolver<T>::get()
+				};
+				if constexpr (is_asset_ref_field_v<T>) {
+					info.load_asset_by_guid = [](void* elem_ptr, std::string const& guid_str) -> bool {
+						using AssetType = typename T::element_type;
+						if (guid_str.empty()) return false;
+						Guid guid = Guid::make(guid_str);
+						if (!guid.is_valid()) return false;
+						auto asset = AssetType::load(guid);
+						if (asset) {
+							*static_cast<T*>(elem_ptr) = std::move(asset);
+							return true;
+						}
+						return false;
+					};
+				}
+				return info;
+			}();
+			return &info;
+		}
+	};
+
+	template<typename K, typename V, typename Hash, typename KeyEqual, typename Alloc>
+	struct ContainerInfoResolver<std::unordered_map<K, V, Hash, KeyEqual, Alloc>> {
+		static const ContainerInfo* get() {
+			static const ContainerInfo info = []() {
+				ContainerInfo info{
+					false,  // is_array
+					true,   // is_map
+					is_asset_ref_field_v<V>,  // is_element_asset_ref
+					// size
+					[](const void* instance) {
+						return reinterpret_cast<const std::unordered_map<K, V, Hash, KeyEqual, Alloc>*>(instance)->size();
+					},
+					// get by index (iterate to index)
+					[](void* instance, size_t index) -> void* {
+						auto* map = reinterpret_cast<std::unordered_map<K, V, Hash, KeyEqual, Alloc>*>(instance);
+						size_t i = 0;
+						for (auto& pair : *map) {
+							if (i == index) return &pair.second;
+							++i;
+						}
+						return nullptr;
+					},
+					nullptr, // resize (not supported for maps)
+					&typeid(V),
+					&typeid(K), // key_type
+					EnumInfoResolver<V>::get(),
+					// get_key
+					[](const void* instance, size_t index, std::string& out_key) {
+						auto* map = reinterpret_cast<const std::unordered_map<K, V, Hash, KeyEqual, Alloc>*>(instance);
+						size_t i = 0;
+						for (auto const& pair : *map) {
+							if (i == index) {
+								if constexpr (std::is_same_v<K, std::string>) {
+									out_key = pair.first;
+								}
+								else {
+									out_key = std::to_string(pair.first);
+								}
+								return;
+							}
+							++i;
+						}
+					},
+					// get_by_key
+					[](void* instance, const std::string& key) -> void* {
+						auto* map = reinterpret_cast<std::unordered_map<K, V, Hash, KeyEqual, Alloc>*>(instance);
+						if constexpr (std::is_same_v<K, std::string>) {
+							auto it = map->find(key);
+							if (it != map->end()) return &it->second;
+						}
+						return nullptr;
+					},
+					// insert_or_assign
+					[](void* instance, const std::string& key) {
+						auto* map = reinterpret_cast<std::unordered_map<K, V, Hash, KeyEqual, Alloc>*>(instance);
+						if constexpr (std::is_same_v<K, std::string>) {
+							(*map)[key] = V{};
+						}
+					},
+					// erase_key
+					[](void* instance, const std::string& key) {
+						auto* map = reinterpret_cast<std::unordered_map<K, V, Hash, KeyEqual, Alloc>*>(instance);
+						if constexpr (std::is_same_v<K, std::string>) {
+							map->erase(key);
+						}
+					}
+				};
+				if constexpr (is_asset_ref_field_v<V>) {
+					info.load_asset_by_guid = [](void* elem_ptr, std::string const& guid_str) -> bool {
+						using AssetType = typename V::element_type;
+						if (guid_str.empty()) return false;
+						Guid guid = Guid::make(guid_str);
+						if (!guid.is_valid()) return false;
+						auto asset = AssetType::load(guid);
+						if (asset) {
+							*static_cast<V*>(elem_ptr) = std::move(asset);
+							return true;
+						}
+						return false;
+					};
+				}
+				return info;
+			}();
 			return &info;
 		}
 	};

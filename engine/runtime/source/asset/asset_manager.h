@@ -87,8 +87,8 @@ namespace z1 {
 			}
 
 			if (m_guid_to_file_mapping.find(guid) == m_guid_to_file_mapping.end()) {
-				DEBUG_CHECK(false);
 				CORE_ERROR("failed to find asset with guid: {0}", guid);
+				DEBUG_CHECK(false);
 				return nullptr;
 			}
 

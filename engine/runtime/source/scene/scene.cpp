@@ -321,6 +321,16 @@ namespace z1 {
 				if (mesh_yaml["guid"] && !mesh_yaml["guid"].IsNull()) {
 					auto sm = g_runtime_context.m_asset_manager->get<StaticMesh>(g_runtime_context.m_asset_manager->resolve_guid(mesh_yaml["guid"].as<std::string>()));
 					auto& mesh = entity->add_component<StaticMeshComponent>(sm);
+					// Deserialize override materials
+					if (mesh_yaml["override_materials"] && mesh_yaml["override_materials"].IsMap()) {
+						for (auto it = mesh_yaml["override_materials"].begin(); it != mesh_yaml["override_materials"].end(); ++it) {
+							std::string slot = it->first.as<std::string>();
+							if (!it->second.IsNull()) {
+								auto mat_guid = g_runtime_context.m_asset_manager->resolve_guid(it->second.as<std::string>());
+								mesh.m_override_materials[slot] = g_runtime_context.m_asset_manager->get<MaterialInstance>(mat_guid);
+							}
+						}
+					}
 				}
 			}
 
@@ -336,6 +346,16 @@ namespace z1 {
 							g_runtime_context.m_asset_manager->resolve_guid(mesh_yaml["skeleton"].as<std::string>()));
 					}
 					auto& mesh = entity->add_component<SkeletalMeshComponent>(sk, skel);
+					// Deserialize override materials
+					if (mesh_yaml["override_materials"] && mesh_yaml["override_materials"].IsMap()) {
+						for (auto it = mesh_yaml["override_materials"].begin(); it != mesh_yaml["override_materials"].end(); ++it) {
+							std::string slot = it->first.as<std::string>();
+							if (!it->second.IsNull()) {
+								auto mat_guid = g_runtime_context.m_asset_manager->resolve_guid(it->second.as<std::string>());
+								mesh.m_override_materials[slot] = g_runtime_context.m_asset_manager->get<MaterialInstance>(mat_guid);
+							}
+						}
+					}
 				}
 			}
 
@@ -600,6 +620,21 @@ namespace z1 {
 				yaml << YAML::Key << "static_mesh" << YAML::Value;
 				yaml << YAML::BeginMap;
 				yaml << YAML::Key << "guid" << YAML::Value << mesh.m_mesh->m_meta.guid;
+				// Serialize override materials
+				if (!mesh.m_override_materials.empty()) {
+					yaml << YAML::Key << "override_materials" << YAML::Value;
+					yaml << YAML::BeginMap;
+					for (auto const& [slot, mat] : mesh.m_override_materials) {
+						yaml << YAML::Key << slot << YAML::Value;
+						if (mat) {
+							yaml << mat->m_meta.guid.value;
+						}
+						else {
+							yaml << YAML::Null;
+						}
+					}
+					yaml << YAML::EndMap;
+				}
 				yaml << YAML::EndMap;
 			}
 
@@ -614,6 +649,21 @@ namespace z1 {
 				}
 				else {
 					yaml << YAML::Key << "skeleton" << YAML::Value << YAML::Null;
+				}
+				// Serialize override materials
+				if (!mesh.m_override_materials.empty()) {
+					yaml << YAML::Key << "override_materials" << YAML::Value;
+					yaml << YAML::BeginMap;
+					for (auto const& [slot, mat] : mesh.m_override_materials) {
+						yaml << YAML::Key << slot << YAML::Value;
+						if (mat) {
+							yaml << mat->m_meta.guid.value;
+						}
+						else {
+							yaml << YAML::Null;
+						}
+					}
+					yaml << YAML::EndMap;
 				}
 				yaml << YAML::EndMap;
 			}

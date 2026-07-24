@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "scene/serialization.h"
 #include "asset/asset_manager.h"
+#include "asset/mesh.h"
+#include "asset/texture.h"
+#include "animation/animation.h"
+#include "animation/skeleton.h"
 #include "core/guid.h"
 #include "core/core.h"
 #include <glm/glm.hpp>
@@ -175,18 +179,53 @@ namespace z1 {
 
 		if (field.container) {
 			yaml << YAML::Key << yaml_key << YAML::Value;
-			size_t size = field.container->size(ptr);
-			if (field.container->is_array) {
-				yaml << YAML::Flow;
+			if (field.container->is_map) {
+				// Map container: emit YAML map
+				yaml << YAML::BeginMap;
+				size_t size = field.container->size(ptr);
+				for (size_t i = 0; i < size; ++i) {
+					std::string key;
+					if (field.container->get_key) {
+						field.container->get_key(ptr, i, key);
+					}
+					void* elem_ptr = field.container->get(ptr, i);
+					yaml << YAML::Key << key << YAML::Value;
+					if (field.container->is_element_asset_ref) {
+						std::string guid = asset_ref_to_guid_string(elem_ptr);
+						if (!guid.empty()) {
+							yaml << guid;
+						} else {
+							yaml << YAML::Null;
+						}
+					} else {
+						serialize_value(yaml, elem_ptr, *field.container->element_type, field,
+							field.container->element_enum_info);
+					}
+				}
+				yaml << YAML::EndMap;
 			}
-			yaml << YAML::BeginSeq;
-			for (size_t i = 0; i < size; ++i) {
-				void* elem_ptr = field.container->get(ptr, i);
-				// Simplified: emit element; for complex types this needs more work
-				serialize_value(yaml, elem_ptr, *field.container->element_type, field,
-					field.container->element_enum_info);
+			else {
+				size_t size = field.container->size(ptr);
+				if (field.container->is_array) {
+					yaml << YAML::Flow;
+				}
+				yaml << YAML::BeginSeq;
+				for (size_t i = 0; i < size; ++i) {
+					void* elem_ptr = field.container->get(ptr, i);
+					if (field.container->is_element_asset_ref) {
+						std::string guid = asset_ref_to_guid_string(elem_ptr);
+						if (!guid.empty()) {
+							yaml << guid;
+						} else {
+							yaml << YAML::Null;
+						}
+					} else {
+						serialize_value(yaml, elem_ptr, *field.container->element_type, field,
+							field.container->element_enum_info);
+					}
+				}
+				yaml << YAML::EndSeq;
 			}
-			yaml << YAML::EndSeq;
 		} else if (field.custom_getter) {
 			yaml << YAML::Key << yaml_key << YAML::Value;
 			void* custom_ptr = field.custom_getter(instance);
@@ -227,6 +266,36 @@ namespace z1 {
 		void* ptr = (uint8_t*)instance + field.offset;
 
 		if (field.container) {
+
+			if (field.container->is_map) {
+				// Map container: deserialize from YAML map
+				if (value_node.IsMap()) {
+					for (auto it = value_node.begin(); it != value_node.end(); ++it) {
+						std::string key = it->first.as<std::string>();
+						if (field.container->insert_or_assign) {
+							field.container->insert_or_assign(ptr, key);
+						}
+						void* elem_ptr = nullptr;
+						if (field.container->get_by_key) {
+							elem_ptr = field.container->get_by_key(ptr, key);
+						}
+						if (elem_ptr) {
+							if (field.container->is_element_asset_ref && field.container->load_asset_by_guid) {
+								std::string guid_str = it->second.IsNull() ? "" : it->second.as<std::string>();
+								field.container->load_asset_by_guid(elem_ptr, guid_str);
+							} else if (field.container->is_element_asset_ref) {
+								std::string guid_str = it->second.IsNull() ? "" : it->second.as<std::string>();
+								asset_ref_from_guid_string(elem_ptr, guid_str, field.get_widget_value<std::string>("type", ""));
+							} else {
+								deserialize_value(it->second, elem_ptr, *field.container->element_type, field,
+									field.container->element_enum_info);
+							}
+						}
+					}
+				}
+				return true;
+			}
+
 			size_t expected_size = 0;
 			if (value_node.IsSequence()) {
 				expected_size = value_node.size();
@@ -237,8 +306,16 @@ namespace z1 {
 			size_t actual_size = field.container->size(ptr);
 			for (size_t i = 0; i < actual_size && i < expected_size; ++i) {
 				void* elem_ptr = field.container->get(ptr, i);
-				deserialize_value(value_node[i], elem_ptr, *field.container->element_type, field,
-					field.container->element_enum_info);
+				if (field.container->is_element_asset_ref && field.container->load_asset_by_guid) {
+					std::string guid_str = value_node[i].IsNull() ? "" : value_node[i].as<std::string>();
+					field.container->load_asset_by_guid(elem_ptr, guid_str);
+				} else if (field.container->is_element_asset_ref) {
+					std::string guid_str = value_node[i].IsNull() ? "" : value_node[i].as<std::string>();
+					asset_ref_from_guid_string(elem_ptr, guid_str, field.get_widget_value<std::string>("type", ""));
+				} else {
+					deserialize_value(value_node[i], elem_ptr, *field.container->element_type, field,
+						field.container->element_enum_info);
+				}
 			}
 			return true;
 		}
@@ -304,13 +381,44 @@ namespace z1 {
 	}
 
 	bool asset_ref_from_guid_string(void* shared_ptr_to_asset, std::string const& guid_str, std::string const& asset_meta_type) {
-		// Asset ref deserialization needs type-specific logic (lookup by guid + load).
-		// The shared_ptr cannot be generically reset here without knowing the concrete type.
-		// Callers should use AssetManager + type-specific load functions instead.
-		// Returns false to signal the caller should handle deserialization.
-		(void)shared_ptr_to_asset;
-		(void)guid_str;
-		(void)asset_meta_type;
+		if (guid_str.empty()) return false;
+
+		Guid guid = Guid::make(guid_str);
+		if (!guid.is_valid()) return false;
+
+		// shared_ptr layout: { T* ptr, control_block* ctrl }
+		void** dst = static_cast<void**>(shared_ptr_to_asset);
+		if (!dst) return false;
+
+		if (asset_meta_type == "static mesh") {
+			auto asset = StaticMesh::load(guid);
+			if (asset) new (dst) std::shared_ptr<StaticMesh>(std::move(asset));
+			return asset != nullptr;
+		} else if (asset_meta_type == "skeletal mesh") {
+			auto asset = SkeletalMesh::load(guid);
+			if (asset) new (dst) std::shared_ptr<SkeletalMesh>(std::move(asset));
+			return asset != nullptr;
+		} else if (asset_meta_type == "texture2d") {
+			auto asset = Texture2D::load(guid);
+			if (asset) new (dst) std::shared_ptr<Texture2D>(std::move(asset));
+			return asset != nullptr;
+		} else if (asset_meta_type == "animation") {
+			auto asset = Animation::load(guid);
+			if (asset) new (dst) std::shared_ptr<Animation>(std::move(asset));
+			return asset != nullptr;
+		} else if (asset_meta_type == "skeleton") {
+			auto asset = Skeleton::load(guid);
+			if (asset) new (dst) std::shared_ptr<Skeleton>(std::move(asset));
+			return asset != nullptr;
+		} else if (asset_meta_type == "material") {
+			auto asset = Material::load(guid);
+			if (asset) new (dst) std::shared_ptr<Material>(std::move(asset));
+			return asset != nullptr;
+		} else if (asset_meta_type == "material instance") {
+			auto asset = MaterialInstance::load(guid);
+			if (asset) new (dst) std::shared_ptr<MaterialInstance>(std::move(asset));
+			return asset != nullptr;
+		}
 		return false;
 	}
 

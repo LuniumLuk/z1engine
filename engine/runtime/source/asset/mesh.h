@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "asset/asset.h"
 #include "asset/material.h"
 #include "render/vertex_array.h"
@@ -47,6 +49,7 @@ namespace z1 {
 				glm::vec3 bound_min;
 				glm::vec3 bound_max;
 				Guid material;
+				std::string material_slot;
 				bool has_indices;
 				bool has_normal;
 				bool has_tangent;
@@ -57,9 +60,10 @@ namespace z1 {
 			glm::vec3 m_bound_min;
 			glm::vec3 m_bound_max;
 			Guid m_material;
+			std::string m_material_slot;
 
-			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array, glm::vec3 const& bound_min, glm::vec3 const& bound_max, Guid material)
-				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(bound_min), m_bound_max(bound_max), m_material(material) {}
+			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array, glm::vec3 const& bound_min, glm::vec3 const& bound_max, Guid material, std::string const& material_slot = {})
+				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(bound_min), m_bound_max(bound_max), m_material(material), m_material_slot(material_slot) {}
 
 			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array)
 				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(0.0f), m_bound_max(0.0f), m_material() {}
@@ -103,10 +107,24 @@ namespace z1 {
 			std::shared_ptr<MaterialInstance> const& default_material,
 			MaterialFlagsFilter filter = nullptr) const;
 
+		// Material overrides keyed by slot name; takes priority over primitive and default material.
+		void draw(
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material,
+			std::unordered_map<std::string, std::shared_ptr<MaterialInstance>> const* override_materials,
+			MaterialFlagsFilter filter = nullptr) const;
+
 		void draw_primitive(
 			size_t index,
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
+			MaterialFlagsFilter filter = nullptr) const;
+
+		void draw_primitive(
+			size_t index,
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material,
+			std::unordered_map<std::string, std::shared_ptr<MaterialInstance>> const* override_materials,
 			MaterialFlagsFilter filter = nullptr) const;
 
 		std::vector<Primitive> m_primitives;
@@ -157,6 +175,7 @@ namespace z1 {
 				glm::vec3 bound_min;
 				glm::vec3 bound_max;
 				Guid material;
+				std::string material_slot;
 				bool has_indices;
 				bool has_normal;
 				bool has_tangent;
@@ -166,9 +185,10 @@ namespace z1 {
 			glm::vec3 m_bound_min;
 			glm::vec3 m_bound_max;
 			Guid m_material;
+			std::string m_material_slot;
 
-			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array, glm::vec3 const& bound_min, glm::vec3 const& bound_max, Guid material)
-				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(bound_min), m_bound_max(bound_max), m_material(material) {}
+			Primitive(PrimitiveType type, std::shared_ptr<VertexArray> const& vertex_array, glm::vec3 const& bound_min, glm::vec3 const& bound_max, Guid material, std::string const& material_slot = {})
+				: m_primitive_type(type), m_vertex_array(vertex_array), m_bound_min(bound_min), m_bound_max(bound_max), m_material(material), m_material_slot(material_slot) {}
 
 			size_t get_triangle_count() const;
 			bool is_bounding_box_valid() const { return m_bound_min != m_bound_max; }
@@ -199,11 +219,27 @@ namespace z1 {
 			std::shared_ptr<UniformBuffer> const& bones,
 			MaterialFlagsFilter filter = nullptr) const;
 
+		// Material overrides keyed by slot name; takes priority over primitive and default material.
+		void draw(
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material,
+			std::shared_ptr<UniformBuffer> const& bones,
+			std::unordered_map<std::string, std::shared_ptr<MaterialInstance>> const* override_materials,
+			MaterialFlagsFilter filter = nullptr) const;
+
 		void draw_primitive(
 			size_t index,
 			PerFrameConst const& per_frame,
 			std::shared_ptr<MaterialInstance> const& default_material = nullptr,
 			std::shared_ptr<UniformBuffer> const& bones = nullptr,
+			MaterialFlagsFilter filter = nullptr) const;
+
+		void draw_primitive(
+			size_t index,
+			PerFrameConst const& per_frame,
+			std::shared_ptr<MaterialInstance> const& default_material,
+			std::shared_ptr<UniformBuffer> const& bones,
+			std::unordered_map<std::string, std::shared_ptr<MaterialInstance>> const* override_materials,
 			MaterialFlagsFilter filter = nullptr) const;
 
 		void draw() const;

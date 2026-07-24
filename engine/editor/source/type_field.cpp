@@ -281,6 +281,25 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 		ACCEPT_PAYLOAD(Animation, "animation")
 		ImGui::Unindent();
 	}
+	else if (type == typeid(std::shared_ptr<MaterialInstance>)) {
+		std::shared_ptr<MaterialInstance>& value = *reinterpret_cast<std::shared_ptr<MaterialInstance>*>(ptr);
+		ImGui::Indent();
+		if (value) {
+			ImGui::Text("guid: %s", value->m_meta.guid.value.c_str());
+		}
+		else {
+			ImGui::Text("(none)");
+		}
+		// Allow clearing via X button
+		if (value) {
+			ImGui::SameLine();
+			if (ImGui::Button("X")) {
+				value.reset();
+			}
+		}
+		ACCEPT_PAYLOAD(MaterialInstance, "material instance")
+		ImGui::Unindent();
+	}
 }
 
 void show_type_field(void* instance, FieldInfo const& field) {
@@ -299,22 +318,65 @@ void show_type_field(void* instance, FieldInfo const& field) {
 			ImGui::Indent();
 			size_t size = field.container->size(ptr);
 
-			if (!field.container->is_array && editable) {
-				int new_size = (int)size;
-				if (ImGui::InputInt("size", &new_size)) {
-					if (new_size >= 0) {
-						field.container->resize(ptr, new_size);
+			if (field.container->is_map) {
+				// Map container: display key-value pairs with add/remove
+				for (size_t i = 0; i < size; ++i) {
+					std::string key;
+					if (field.container->get_key) {
+						field.container->get_key(ptr, i, key);
+					}
+					void* elem_ptr = field.container->get(ptr, i);
+
+					ImGui::PushID((int)i);
+					ImGui::Text("%s", key.c_str());
+					ImGui::SameLine();
+
+					if (editable) {
+						ImGui::SameLine();
+						if (ImGui::Button("X")) {
+							if (field.container->erase_key) {
+								field.container->erase_key(ptr, key);
+								ImGui::PopID();
+								break; // size changed, restart loop
+							}
+						}
+					}
+
+					show_value(elem_ptr, *field.container->element_type, field.name + "[" + key + "]", field, field.container->element_enum_info);
+					ImGui::PopID();
+				}
+
+				// Add new entry button
+				if (editable && field.container->insert_or_assign) {
+					static char new_key_buf[64] = {};
+					ImGui::InputText("##new_key", new_key_buf, sizeof(new_key_buf));
+					ImGui::SameLine();
+					if (ImGui::Button("Add") && new_key_buf[0] != '\0') {
+						field.container->insert_or_assign(ptr, new_key_buf);
+						new_key_buf[0] = '\0';
 					}
 				}
-				size = field.container->size(ptr); // update size after resize
-			}
+			} else {
+				// Sequence container (vector/array)
+				// Only allow resizing if the FF_ContainerResizable flag is set
+				bool const container_resizable = (field.flag & FF_ContainerResizable) != 0;
+				if (!field.container->is_array && editable && container_resizable) {
+					int new_size = (int)size;
+					if (ImGui::InputInt("size", &new_size)) {
+						if (new_size >= 0) {
+							field.container->resize(ptr, new_size);
+						}
+					}
+					size = field.container->size(ptr); // update size after resize
+				}
 
-			for (size_t i = 0; i < size; ++i) {
-				void* elem_ptr = field.container->get(ptr, i);
-				std::string elem_name = field.name + "[" + std::to_string(i) + "]";
-				ImGui::Text(std::to_string(i).c_str());
-				ImGui::SameLine();
-				show_value(elem_ptr, *field.container->element_type, elem_name, field, field.container->element_enum_info);
+				for (size_t i = 0; i < size; ++i) {
+					void* elem_ptr = field.container->get(ptr, i);
+					std::string elem_name = field.name + "[" + std::to_string(i) + "]";
+					ImGui::Text(std::to_string(i).c_str());
+					ImGui::SameLine();
+					show_value(elem_ptr, *field.container->element_type, elem_name, field, field.container->element_enum_info);
+				}
 			}
 			ImGui::Unindent();
 		}
