@@ -1,6 +1,7 @@
 #include "editor_layer.h"
 
 #include "core/reflection_hooks.h"
+#include "scene/script_system.h"
 
 void EditorSettings::save() {
 	YAML::Emitter yaml;
@@ -290,7 +291,15 @@ void EditorLayer::on_attach() {
 
 }
 
+void EditorLayer::on_fixed_update() {
+	if (g_runtime_context.m_scene) {
+		g_runtime_context.m_scene->on_fixed_update();
+	}
+}
+
 void EditorLayer::on_update(float delta_time) {
+	ScriptSystem::set_blocked(!m_gui->is_viewport_focused());
+
 	m_fps_timer += delta_time;
 	m_fps_counter += 1;
 	if (m_fps_timer >= 1.0) {

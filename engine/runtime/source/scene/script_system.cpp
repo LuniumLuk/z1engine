@@ -6,7 +6,11 @@
 
 namespace z1 {
 
+	bool ScriptSystem::s_blocked = false;
+
 	void ScriptSystem::update(Scene* scene, float dt) {
+		if (s_blocked) return;
+
 		PROFILE_FUNCTION();
 
 		// Collect entities first to avoid iterator invalidation if scripts modify the registry

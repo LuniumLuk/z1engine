@@ -91,15 +91,21 @@ class Entity:
 	def add_static_mesh(self, path: str) -> None: ...
 	def add_skeletal_mesh(self, path: str) -> None: ...
 	def add_camera(self) -> None: ...
+	def add_collider(self, *args: Any, **kwargs: Any) -> Any: ...
+	def add_physics(self, *args: Any, **kwargs: Any) -> Any: ...
 	def add_script(self, module: str, cls: str) -> None: ...
 	@property
 	def animation(self) -> Optional[Animation]: ...
 	@property
 	def camera(self) -> Optional[Camera]: ...
 	@property
+	def collider(self) -> Optional[Collider]: ...
+	@property
 	def light(self) -> Optional[Light]: ...
 	@property
 	def particle(self) -> Optional[Particle]: ...
+	@property
+	def physics(self) -> Optional[Physics]: ...
 	@property
 	def postprocess_volume(self) -> Optional[PostprocessVolume]: ...
 	@property
@@ -149,6 +155,11 @@ class EventType(Enum):
 	MouseMoved = 10
 	MouseScrolled = 11
 
+class ColliderShape(Enum):
+	Sphere = 0
+	Box = 1
+	Capsule = 2
+
 class DataType(Enum):
 	None = 0
 	Float = 1
@@ -182,6 +193,11 @@ class ParticleBlendMode(Enum):
 	Additive = 1
 	Soft = 2
 
+class PhysicsMode(Enum):
+	Static = 0
+	Kinematic = 1
+	Dynamic = 2
+
 class RenderMode(Enum):
 	Forward = 0
 	Deferred = 1
@@ -200,6 +216,11 @@ class Camera:
 	aspect: Any
 	use_fixed_aspect: bool
 	is_primary: bool
+	def __init__(self) -> None: ...
+
+class Collider:
+	shape: ColliderShape
+	half_extents: Vec3
 	def __init__(self) -> None: ...
 
 class GlobalSettings:
@@ -280,6 +301,13 @@ class Particle:
 	rotation_speed: Vec2
 	def __init__(self) -> None: ...
 
+class Physics:
+	mode: PhysicsMode
+	mass: float
+	use_gravity: bool
+	linear_damping: float
+	def __init__(self) -> None: ...
+
 class PostprocessVolume:
 	enabled: bool
 	is_global: bool
@@ -306,6 +334,7 @@ class Script:
 class SkeletalMesh:
 	mesh: Optional[Any]
 	skeleton: Optional[Any]
+	override_materials: Optional[Any]
 
 class SkyLight:
 	texture: Optional[Any]
@@ -325,6 +354,7 @@ class Sprite:
 
 class StaticMesh:
 	mesh: Optional[Any]
+	override_materials: Optional[Any]
 
 class Tag:
 	tag: str

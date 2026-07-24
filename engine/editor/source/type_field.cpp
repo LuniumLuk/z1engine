@@ -545,6 +545,8 @@ static void show_type_fields_for_entity(std::shared_ptr<Entity> const& entity, s
 	SHOW_IF_COMPONENT(PostprocessVolumeComponent)
 	SHOW_IF_COMPONENT(StaticMeshComponent)
 	SHOW_IF_COMPONENT(SkeletalMeshComponent)
+	SHOW_IF_COMPONENT(ColliderComponent)
+	SHOW_IF_COMPONENT(PhysicsComponent)
 #undef SHOW_IF_COMPONENT
 }
 

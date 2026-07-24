@@ -20,6 +20,7 @@ namespace z1 {
 		~Scene();
 
 		void on_update(float delta_time);
+		void on_fixed_update();
 
 		// creates a normal entity that belongs to the scene.
 		// - persistent: will be serialized when saving the scene and restored on load.

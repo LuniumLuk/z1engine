@@ -1,0 +1,412 @@
+meta:
+  guid: demo-phys-0001
+  type: scene
+  path: scene/demo_phys
+  extra: ~
+global_settings:
+  sun_direction: [-0.5, 1, -0.300000012]
+  sun_color: [1, 0.949999988, 0.899999976, 1]
+  sun_intensity: 2.5
+  sun_ambient_color: [0.200000003, 0.219999999, 0.300000012, 1]
+  sun_ambient_intensity: 0.00999999978
+  taa_enabled: true
+  taa_blend: 0.899999976
+  taa_variance_scale: 1
+  taa_clip_gamma: 1
+  taa_sharpen_enabled: true
+  taa_sharpen_strength: 0.300000012
+  taa_animated: true
+  pp_exposure: 1
+  pp_gamma: 2.20000005
+  pp_tint: [1, 1, 1, 1]
+  pp_bloom_enabled: true
+  pp_bloom_threshold: 1
+  pp_bloom_intensity: 0.5
+  pp_bloom_knee: 0.100000001
+  sm_near: 0.5
+  sm_far: 80
+  sm_ortho_size: 30
+  anim_enabled: false
+  script_enabled: false
+  render_mode: Deferred
+editor_camera:
+  transform:
+    location: [7.81498051, 12.2134447, 15.6198063]
+    rotation: [-31.5, 25.5, 0]
+    scale: [1, 1, 1]
+  camera:
+    is_perspective: true
+    intrinsic: 45
+    near: 0.00999999978
+    far: 1000
+    aspect: 1.25
+    use_fixed_aspect: false
+entities:
+  - name: Main Camera
+    id: 0
+    transform:
+      location: [4, 8, 8]
+      rotation: [-45, 25, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    camera:
+      is_perspective: true
+      intrinsic: 60
+      near: 0.100000001
+      far: 500
+      aspect: 1.25
+      use_fixed_aspect: false
+      is_primary: true
+    script_component:
+      - scripts.player_controller.PlayerController
+  - name: Ground
+    id: 1
+    transform:
+      location: [0, -2, 0]
+      rotation: [0, 0, 0]
+      scale: [20, 1, 20]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: f2142c5c-3ec1-480a-b9e6-3856e983d39b
+    collider:
+      shape: 1
+      half_extents: [10, 0.5, 10]
+    physics:
+      mode: 0
+      mass: 1
+      use_gravity: false
+      linear_damping: 0
+  - name: WorldManager
+    id: 2
+    transform:
+      location: [0, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+      parent: ~
+    script_component:
+      - scripts.phys_demo.PhysDemo
+  - name: Ramp
+    id: 3
+    transform:
+      location: [5.5, 0.200000003, -2]
+      rotation: [0, 0, 30]
+      scale: [3, 0.200000003, 1]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: f2142c5c-3ec1-480a-b9e6-3856e983d39b
+    collider:
+      shape: 1
+      half_extents: [1.5, 0.100000001, 0.5]
+    physics:
+      mode: 0
+      mass: 1
+      use_gravity: false
+      linear_damping: 0
+  - name: Spot
+    id: 4
+    transform:
+      location: [0, 8, 0]
+      rotation: [-90, 0, 0]
+      scale: [0.999991417, 1, 1]
+      parent: ~
+    light:
+      type: 2
+      color: [1, 0.671280265, 0.0686274767]
+      intensity: 10
+      range: 20
+      inner_cone: 26.7059994
+      outer_cone: 42.6870003
+      cast_shadow: false
+  - name: Wall Back
+    id: 5
+    transform:
+      location: [0, 0, -8]
+      rotation: [0, 0, 0]
+      scale: [16, 2, 0.5]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [8, 2, 0.25]
+    physics:
+      mode: 0
+      mass: 1
+      use_gravity: false
+      linear_damping: 0
+  - name: Wall Left
+    id: 6
+    transform:
+      location: [-8, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [0.5, 2, 16]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [0.25, 2, 8]
+    physics:
+      mode: 0
+      mass: 1
+      use_gravity: false
+      linear_damping: 0
+  - name: Wall Right
+    id: 7
+    transform:
+      location: [8, 0, 0]
+      rotation: [0, 0, 0]
+      scale: [0.5, 2, 16]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [0.25, 2, 8]
+    physics:
+      mode: 0
+      mass: 1
+      use_gravity: false
+      linear_damping: 0
+  - name: Wall Front
+    id: 8
+    transform:
+      location: [0, 0, 8]
+      rotation: [0, 0, 0]
+      scale: [16, 2, 0.5]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [8, 2, 0.25]
+    physics:
+      mode: 0
+      mass: 1
+      use_gravity: false
+      linear_damping: 0
+  - name: Rotating Platform
+    id: 9
+    transform:
+      location: [3, 0.5, -3]
+      rotation: [0, 0, 0]
+      scale: [3, 0.300000012, 3]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    script_component:
+      []
+    collider:
+      shape: 1
+      half_extents: [1.5, 0.150000006, 1.5]
+    physics:
+      mode: 1
+      mass: 1
+      use_gravity: false
+      linear_damping: 0
+  - name: Sliding Platform
+    id: 10
+    transform:
+      location: [-3, 1.20000005, -3]
+      rotation: [0, 0, 0]
+      scale: [1.5, 0.300000012, 3]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    script_component:
+      []
+    collider:
+      shape: 1
+      half_extents: [0.75, 0.150000006, 1.5]
+    physics:
+      mode: 1
+      mass: 1
+      use_gravity: false
+      linear_damping: 0
+  - name: Box A1
+    id: 11
+    transform:
+      location: [-3.9997232, -1.14989483, 3.99897552]
+      rotation: [0.00792463031, 15.1227121, 0.0134044047]
+      scale: [0.699999988, 0.699999988, 0.699999988]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [0.349999994, 0.349999994, 0.349999994]
+    physics:
+      mode: 2
+      mass: 0.5
+      use_gravity: true
+      linear_damping: 0.0500000007
+  - name: Box A2
+    id: 12
+    transform:
+      location: [-2.50428057, -1.19989073, 3.50095105]
+      rotation: [-0.00674856082, -20.3145752, 0.0214924384]
+      scale: [0.600000024, 0.600000024, 0.600000024]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [0.300000012, 0.300000012, 0.300000012]
+    physics:
+      mode: 2
+      mass: 0.400000006
+      use_gravity: true
+      linear_damping: 0.0500000007
+  - name: Box A3
+    id: 13
+    transform:
+      location: [-1.40146005, -1.2498796, 4.84838915]
+      rotation: [34.0297089, 0.0161192473, 89.9803772]
+      scale: [0.5, 0.5, 0.5]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [0.25, 0.25, 0.25]
+    physics:
+      mode: 2
+      mass: 0.300000012
+      use_gravity: true
+      linear_damping: 0.0500000007
+  - name: Box A4
+    id: 14
+    transform:
+      location: [-3.00250101, -1.29983175, 4.00826168]
+      rotation: [0.00314140785, -19.3551998, 0.0353588276]
+      scale: [0.400000006, 0.400000006, 0.400000006]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [0.200000003, 0.200000003, 0.200000003]
+    physics:
+      mode: 2
+      mass: 0.200000003
+      use_gravity: true
+      linear_damping: 0.0500000007
+  - name: Sphere A
+    id: 15
+    transform:
+      location: [5, -1, 2]
+      rotation: [0, -0, 0]
+      scale: [0.5, 0.5, 0.5]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Sphere
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 0
+      half_extents: [0.5, 0, 0]
+    physics:
+      mode: 2
+      mass: 0.5
+      use_gravity: true
+      linear_damping: 0.0500000007
+  - name: Sphere B
+    id: 16
+    transform:
+      location: [6, -1.10000002, -1]
+      rotation: [0, -0, 0]
+      scale: [0.400000006, 0.400000006, 0.400000006]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Sphere
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 0
+      half_extents: [0.400000006, 0, 0]
+    physics:
+      mode: 2
+      mass: 0.300000012
+      use_gravity: true
+      linear_damping: 0.0500000007
+  - name: Sphere C
+    id: 17
+    transform:
+      location: [4, 1, -3]
+      rotation: [0, -0, 0]
+      scale: [0.349999994, 0.349999994, 0.349999994]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Sphere
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 0
+      half_extents: [0.349999994, 0, 0]
+    physics:
+      mode: 2
+      mass: 0.25
+      use_gravity: true
+      linear_damping: 0.0500000007
+  - name: Rolling Log
+    id: 18
+    transform:
+      location: [-5, -0.399999768, -2]
+      rotation: [0, -0, 90]
+      scale: [0.5, 1.5, 0.5]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cylinder
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 2
+      half_extents: [0.349999994, 0.75, 0]
+    physics:
+      mode: 2
+      mass: 0.800000012
+      use_gravity: true
+      linear_damping: 0.0500000007
+  - name: Ramp
+    id: 19
+    transform:
+      location: [5.5, 0.200000003, -2]
+      rotation: [0, 0, 30]
+      scale: [3, 0.200000003, 1]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: ~
+    collider:
+      shape: 1
+      half_extents: [1.5, 0.100000001, 0.5]
+    physics:
+      mode: 0
+      mass: 1
+      use_gravity: false
+      linear_damping: 0

@@ -10,6 +10,7 @@ struct GameLayer : Layer {
 
 	void on_attach() override;
 	void on_update(float delta_time) override;
+	void on_fixed_update() override;
 	void on_event(Event& event) override;
 	void on_imgui_render() override;
 };

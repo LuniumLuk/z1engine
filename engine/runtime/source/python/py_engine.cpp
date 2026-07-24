@@ -160,6 +160,22 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 				CLIENT_WARN("Entity already has a CameraComponent, skipping add_camera");
 			}
 		})
+		.def("add_collider", [](Entity& self, int shape, float x, float y, float z) {
+			if (!self.has_component<ColliderComponent>()) {
+				auto& c = self.add_component<ColliderComponent>();
+				c.m_shape = static_cast<ColliderShape>(shape);
+				c.m_half_extents = glm::vec3(x, y, z);
+			}
+		})
+		.def("add_physics", [](Entity& self, int mode, float mass, bool use_gravity, float damping) {
+			if (!self.has_component<PhysicsComponent>()) {
+				auto& p = self.add_component<PhysicsComponent>();
+				p.m_mode = static_cast<PhysicsMode>(mode);
+				p.m_mass = mass;
+				p.m_use_gravity = use_gravity;
+				p.m_linear_damping = damping;
+			}
+		})
 		.def("add_script", [](Entity& self, std::string const& module, std::string const& cls) {
 			if (!self.has_component<ScriptComponent>()) {
 				self.attach_script<PythonScript>(module, cls);

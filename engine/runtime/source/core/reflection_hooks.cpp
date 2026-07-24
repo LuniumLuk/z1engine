@@ -12,6 +12,8 @@
 #include "scene/component/animation.h"
 #include "scene/component/particle.h"
 #include "scene/component/postprocess_volume.h"
+#include "scene/component/collider.h"
+#include "scene/component/physics.h"
 
 namespace z1 {
 
@@ -31,6 +33,8 @@ namespace z1 {
 	REGISTER_COMPONENT_HOOKS(AnimationComponent)
 	REGISTER_COMPONENT_HOOKS(ParticleComponent)
 	REGISTER_COMPONENT_HOOKS(PostprocessVolumeComponent)
+	REGISTER_COMPONENT_HOOKS(ColliderComponent)
+	REGISTER_COMPONENT_HOOKS(PhysicsComponent)
 
 	// StaticMeshComponent: no default ctor (requires shared_ptr<StaticMesh>)
 	struct _REFLECT_HOOK_REGISTER_StaticMeshComponent {

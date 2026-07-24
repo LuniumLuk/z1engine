@@ -45,6 +45,12 @@ void GameLayer::on_update(float delta_time) {
 	}
 }
 
+void GameLayer::on_fixed_update() {
+	if (g_runtime_context.m_scene) {
+		g_runtime_context.m_scene->on_fixed_update();
+	}
+}
+
 void GameLayer::on_event(Event& event) {
 
 }

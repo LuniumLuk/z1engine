@@ -9,9 +9,11 @@
 #include "scene/component/animation.h"
 #include "scene/component/base.h"
 #include "scene/component/camera.h"
+#include "scene/component/collider.h"
 #include "scene/component/light.h"
 #include "scene/component/mesh.h"
 #include "scene/component/particle.h"
+#include "scene/component/physics.h"
 #include "scene/component/postprocess_volume.h"
 #include "scene/component/sky_light.h"
 #include "scene/component/sprite.h"
@@ -23,6 +25,12 @@ using namespace z1;
 
 void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& entity_cls) {
 	// Bind Enums
+	py::enum_<ColliderShape>(m, "ColliderShape")
+		.value("Sphere", ColliderShape::Sphere)
+		.value("Box", ColliderShape::Box)
+		.value("Capsule", ColliderShape::Capsule)
+		.export_values();
+
 	py::enum_<DataType>(m, "DataType")
 		.value("None", DataType::None)
 		.value("Float", DataType::Float)
@@ -60,6 +68,12 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.value("Soft", ParticleBlendMode::Soft)
 		.export_values();
 
+	py::enum_<PhysicsMode>(m, "PhysicsMode")
+		.value("Static", PhysicsMode::Static)
+		.value("Kinematic", PhysicsMode::Kinematic)
+		.value("Dynamic", PhysicsMode::Dynamic)
+		.export_values();
+
 	py::enum_<RenderMode>(m, "RenderMode")
 		.value("Forward", RenderMode::Forward)
 		.value("Deferred", RenderMode::Deferred)
@@ -81,6 +95,11 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("aspect", &CameraComponent::m_aspect)
 		.def_readwrite("use_fixed_aspect", &CameraComponent::m_use_fixed_aspect)
 		.def_readwrite("is_primary", &CameraComponent::m_is_primary);
+
+	py::class_<ColliderComponent>(m, "Collider")
+		.def(py::init<>())
+		.def_readwrite("shape", &ColliderComponent::m_shape)
+		.def_readwrite("half_extents", &ColliderComponent::m_half_extents);
 
 	py::class_<GlobalSettings>(m, "GlobalSettings")
 		.def(py::init<>())
@@ -160,6 +179,13 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("initial_rotation", &ParticleComponent::m_initial_rotation)
 		.def_readwrite("rotation_speed", &ParticleComponent::m_rotation_speed);
 
+	py::class_<PhysicsComponent>(m, "Physics")
+		.def(py::init<>())
+		.def_readwrite("mode", &PhysicsComponent::m_mode)
+		.def_readwrite("mass", &PhysicsComponent::m_mass)
+		.def_readwrite("use_gravity", &PhysicsComponent::m_use_gravity)
+		.def_readwrite("linear_damping", &PhysicsComponent::m_linear_damping);
+
 	py::class_<PostprocessVolumeComponent>(m, "PostprocessVolume")
 		.def_readwrite("enabled", &PostprocessVolumeComponent::enabled)
 		.def_readwrite("is_global", &PostprocessVolumeComponent::is_global)
@@ -182,7 +208,8 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 
 	py::class_<SkeletalMeshComponent>(m, "SkeletalMesh")
 		.def_readwrite("mesh", &SkeletalMeshComponent::m_mesh)
-		.def_readwrite("skeleton", &SkeletalMeshComponent::m_skeleton);
+		.def_readwrite("skeleton", &SkeletalMeshComponent::m_skeleton)
+		.def_readwrite("override_materials", &SkeletalMeshComponent::m_override_materials);
 
 	py::class_<SkyLightComponent>(m, "SkyLight")
 		.def(py::init<>())
@@ -201,7 +228,8 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("extras", &SpriteComponent::m_extras);
 
 	py::class_<StaticMeshComponent>(m, "StaticMesh")
-		.def_readwrite("mesh", &StaticMeshComponent::m_mesh);
+		.def_readwrite("mesh", &StaticMeshComponent::m_mesh)
+		.def_readwrite("override_materials", &StaticMeshComponent::m_override_materials);
 
 	py::class_<TagComponent>(m, "Tag")
 		.def(py::init<>())
@@ -227,6 +255,12 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		}
 		return nullptr;
 	}, py::return_value_policy::reference);
+	entity_cls.def_property_readonly("collider", [](Entity& e) -> ColliderComponent* {
+		if (e.has_component<ColliderComponent>()) {
+			return &e.get_component<ColliderComponent>();
+		}
+		return nullptr;
+	}, py::return_value_policy::reference);
 	entity_cls.def_property_readonly("light", [](Entity& e) -> LightComponent* {
 		if (e.has_component<LightComponent>()) {
 			return &e.get_component<LightComponent>();
@@ -236,6 +270,12 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 	entity_cls.def_property_readonly("particle", [](Entity& e) -> ParticleComponent* {
 		if (e.has_component<ParticleComponent>()) {
 			return &e.get_component<ParticleComponent>();
+		}
+		return nullptr;
+	}, py::return_value_policy::reference);
+	entity_cls.def_property_readonly("physics", [](Entity& e) -> PhysicsComponent* {
+		if (e.has_component<PhysicsComponent>()) {
+			return &e.get_component<PhysicsComponent>();
 		}
 		return nullptr;
 	}, py::return_value_policy::reference);

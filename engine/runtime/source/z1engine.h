@@ -32,6 +32,8 @@
 #include "scene/component/animation.h"
 #include "scene/component/particle.h"
 #include "scene/component/postprocess_volume.h"
+#include "scene/component/collider.h"
+#include "scene/component/physics.h"
 
 #include "render/global.h"
 #include "render/graphics_context.h"

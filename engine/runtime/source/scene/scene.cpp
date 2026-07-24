@@ -10,12 +10,16 @@
 #include "scene/component/postprocess_volume.h"
 #include "scene/component/animation.h"
 #include "scene/component/particle.h"
+#include "scene/component/collider.h"
+#include "scene/component/physics.h"
 #include "scene/animation_system.h"
 #include "scene/particle_system.h"
 #include "scene/postprocess_system.h"
 #include "scene/script_system.h"
+#include "scene/physics_system.h"
 #include "python/python_script.h"
 #include "core/core.h"
+#include "core/timer.h"
 #include "render/global.h"
 #include "render/shader.h"
 #include "render/renderer/renderer_2d.h"
@@ -179,10 +183,14 @@ namespace z1 {
 			tc.m_prev_world_transform = tc.get_world_transform();
 		}
 
-		AnimationSystem::update(this, delta_time);
-		ParticleSystem::update(this, delta_time);
-		ScriptSystem::update(this, delta_time);
 		PostProcessSystem::update(this);
+	}
+
+	void Scene::on_fixed_update() {
+		AnimationSystem::update(this, Timer::fixed_update_delta);
+		ParticleSystem::update(this, Timer::fixed_update_delta);
+		ScriptSystem::update(this, Timer::fixed_update_delta);
+		PhysicsSystem::update(this, Timer::fixed_update_delta);
 	}
 
 	std::shared_ptr<Scene> Scene::create(Filepath const& path) {
@@ -498,20 +506,30 @@ namespace z1 {
 					}
 				}
 			}
+
+		// ColliderComponent
+		if (entity_yaml["collider"]) {
+			auto const& c = entity_yaml["collider"];
+			auto& collider = entity->add_component<ColliderComponent>();
+			if (c["shape"]) collider.m_shape = (ColliderShape)c["shape"].as<int>();
+			if (c["half_extents"]) collider.m_half_extents = c["half_extents"].as<glm::vec3>();
+		}
+
+		// PhysicsComponent
+		if (entity_yaml["physics"]) {
+			auto const& p = entity_yaml["physics"];
+			auto& physics = entity->add_component<PhysicsComponent>();
+			if (p["mode"]) physics.m_mode = (PhysicsMode)p["mode"].as<int>();
+			if (p["mass"]) physics.m_mass = p["mass"].as<float>();
+			if (p["use_gravity"]) physics.m_use_gravity = p["use_gravity"].as<bool>();
+			if (p["linear_damping"]) physics.m_linear_damping = p["linear_damping"].as<float>();
+		}
 		}
 
 		// resolve parent references
 		for (auto const& [transform, parent_id] : transform_parent_pairs) {
 			if (id_to_transform.find(parent_id) != id_to_transform.end()) {
 				transform->m_parent = id_to_transform[parent_id];
-			}
-			else {
-				// Warn only if parent ID was present in this batch
-				// For prefabs, if parent ID refers to something outside the prefab, it won't be found here.
-				// But standard prefabs should be self-contained or root-level.
-				// If a root in prefab has a parent in original scene, that parent won't be in prefab.
-				// So we just ignore it (it becomes a root in the new scene).
-				// CORE_WARN("failed to find parent with id {}", parent_id);
 			}
 		}
 
@@ -831,6 +849,28 @@ namespace z1 {
 					}
 				}
 				yaml << YAML::EndSeq;
+			}
+
+			// ColliderComponent
+			if (entity->has_component<ColliderComponent>()) {
+				auto const& collider = entity->get_component<ColliderComponent>();
+				yaml << YAML::Key << "collider" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "shape" << YAML::Value << (int)collider.m_shape;
+				yaml << YAML::Key << "half_extents" << YAML::Value << collider.m_half_extents;
+				yaml << YAML::EndMap;
+			}
+
+			// PhysicsComponent
+			if (entity->has_component<PhysicsComponent>()) {
+				auto const& physics = entity->get_component<PhysicsComponent>();
+				yaml << YAML::Key << "physics" << YAML::Value;
+				yaml << YAML::BeginMap;
+				yaml << YAML::Key << "mode" << YAML::Value << (int)physics.m_mode;
+				yaml << YAML::Key << "mass" << YAML::Value << physics.m_mass;
+				yaml << YAML::Key << "use_gravity" << YAML::Value << physics.m_use_gravity;
+				yaml << YAML::Key << "linear_damping" << YAML::Value << physics.m_linear_damping;
+				yaml << YAML::EndMap;
 			}
 
 			yaml << YAML::EndMap;

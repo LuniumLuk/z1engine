@@ -14,6 +14,7 @@
 				"${workspaceFolder}/engine/3rdparty/glm",
 				"${workspaceFolder}/engine/3rdparty/entt",
 				"${workspaceFolder}/engine/3rdparty/yaml-cpp/include",
+				"${workspaceFolder}/engine/3rdparty/physx/include",
 				"${workspaceFolder}/engine/3rdparty/python314/include"
 			],
 			"defines": [
