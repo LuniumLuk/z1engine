@@ -141,7 +141,8 @@ namespace z1 {
 						line += c;
 						std::cout << c << std::flush; // Echo the character
 					}
-				} else {
+				}
+				else {
 					// 2. No key pressed, sleep briefly to save CPU, then check m_running
 					std::this_thread::sleep_for(std::chrono::milliseconds(10));
 				}

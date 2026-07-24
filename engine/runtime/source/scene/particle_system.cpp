@@ -198,7 +198,8 @@ namespace z1 {
 					auto& p = pc.m_runtime.m_particles[i - 1];
 					if (!p.alive) {
 						pc.m_runtime.m_free_list.push_back(i - 1);
-					} else {
+					}
+					else {
 						++pc.m_runtime.m_alive_count;
 					}
 				}

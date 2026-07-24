@@ -305,7 +305,8 @@ void EditorLayer::on_update(float delta_time) {
 	g_runtime_context.m_scene->on_update(delta_time);
 	if (g_runtime_context.m_global->render_mode == RenderMode::Deferred) {
 		g_runtime_context.m_renderer_deferred->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
-	} else {
+	}
+	else {
 		g_runtime_context.m_renderer_forward->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
 	}
 	//g_runtime_context.m_renderer_2d->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
@@ -444,7 +445,8 @@ void EditorLayer::save_screenshot() {
 	// Save using stb_image_write (PNG)
 	if (!stbi_write_png(filename.c_str(), width, height, 4, flipped.data(), width * 4)) {
 		std::cerr << "Failed to write image!" << std::endl;
-	} else {
+	}
+	else {
 		std::cout << "Saved: " << filename << std::endl;
 	}
 }

@@ -36,11 +36,13 @@ int main(int argc, char** argv) {
 		std::string arg = argv[i];
 		if (arg == "--type" && i + 1 < argc) {
 			type = argv[++i];
-		} else if (arg == "--sampler" && i + 1 < argc) {
+		}
+		else if (arg == "--sampler" && i + 1 < argc) {
 			std::string s = argv[++i];
 			if (s == "nearest") sampler = SamplerMode::Nearest;
 			else if (s == "linear") sampler = SamplerMode::Linear;
-		} else if (arg == "--wrap" && i + 1 < argc) {
+		}
+		else if (arg == "--wrap" && i + 1 < argc) {
 			 std::string s = argv[++i];
 			 if (s == "repeat") wrap = WrapMode::Repeat;
 			 else if (s == "mirror") wrap = WrapMode::MirroredRepeat;
@@ -67,13 +69,15 @@ int main(int argc, char** argv) {
 		settings.sampler_mode = sampler;
 		settings.wrap_mode = wrap;
 		result = TextureImporter::import(settings);
-	} else if (type == "gltf") {
+	}
+	else if (type == "gltf") {
 		known_type = true;
 		GltfImporterSettings settings;
 		settings.file = input_file;
 		settings.path = output_path;
 		result = GltfImporter::import(settings);
-	} else if (type == "obj") {
+	}
+	else if (type == "obj") {
 		known_type = true;
 		ObjImporterSettings settings;
 		settings.file = input_file;
@@ -92,7 +96,8 @@ int main(int argc, char** argv) {
 			std::cout << "Generated: " << file.string() << std::endl;
 		}
 		return 0;
-	} else {
+	}
+	else {
 		std::cerr << "Import failed!" << std::endl;
 		return 1;
 	}

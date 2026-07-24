@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "render/renderer/particle_renderer.h"
 #include "render/shader.h"
 #include "render/buffer.h"
@@ -151,7 +151,8 @@ namespace z1 {
 						ParticleInstanceData inst;
 						if (pc.m_world_space) {
 							inst.position = particle.position;
-						} else {
+						}
+						else {
 							inst.position = glm::vec3(transform.get_world_transform() * glm::vec4(particle.position, 1.0f));
 						}
 						inst.size = particle.size;
@@ -290,7 +291,8 @@ if (!particle.alive) continue;
 ParticleInstanceData inst;
 if (pc.m_world_space) {
 inst.position = particle.position;
-} else {
+}
+else {
 inst.position = glm::vec3(transform.get_world_transform() * glm::vec4(particle.position, 1.0f));
 }
 inst.size = particle.size;

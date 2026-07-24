@@ -24,7 +24,8 @@ namespace z1 {
 					result += '_';
 				}
 				result += (char)(c + ('a' - 'A'));
-			} else {
+			}
+			else {
 				result += c;
 			}
 		}
@@ -42,7 +43,8 @@ namespace z1 {
 			auto* guid = static_cast<Guid*>(ptr);
 			if (guid->is_valid()) {
 				yaml << guid->value;
-			} else {
+			}
+			else {
 				yaml << YAML::Null;
 			}
 			return;
@@ -54,7 +56,8 @@ namespace z1 {
 			std::string guid = asset_ref_to_guid_string(ptr);
 			if (!guid.empty()) {
 				yaml << guid;
-			} else {
+			}
+			else {
 				yaml << YAML::Null;
 			}
 			return;
@@ -75,36 +78,50 @@ namespace z1 {
 
 		if (type == typeid(bool)) {
 			yaml << *static_cast<bool*>(ptr);
-		} else if (type == typeid(int)) {
+		}
+		else if (type == typeid(int)) {
 			yaml << *static_cast<int*>(ptr);
-		} else if (type == typeid(uint32_t)) {
+		}
+		else if (type == typeid(uint32_t)) {
 			yaml << *static_cast<uint32_t*>(ptr);
-		} else if (type == typeid(uint8_t)) {
+		}
+		else if (type == typeid(uint8_t)) {
 			yaml << (int)*static_cast<uint8_t*>(ptr);
-		} else if (type == typeid(int8_t)) {
+		}
+		else if (type == typeid(int8_t)) {
 			yaml << (int)*static_cast<int8_t*>(ptr);
-		} else if (type == typeid(float)) {
+		}
+		else if (type == typeid(float)) {
 			yaml << *static_cast<float*>(ptr);
-		} else if (type == typeid(double)) {
+		}
+		else if (type == typeid(double)) {
 			yaml << *static_cast<double*>(ptr);
-		} else if (type == typeid(std::string)) {
+		}
+		else if (type == typeid(std::string)) {
 			yaml << *static_cast<std::string*>(ptr);
-		} else if (type == typeid(glm::vec2)) {
+		}
+		else if (type == typeid(glm::vec2)) {
 			yaml << *static_cast<glm::vec2*>(ptr);
-		} else if (type == typeid(glm::vec3)) {
+		}
+		else if (type == typeid(glm::vec3)) {
 			yaml << *static_cast<glm::vec3*>(ptr);
-		} else if (type == typeid(glm::vec4)) {
+		}
+		else if (type == typeid(glm::vec4)) {
 			yaml << *static_cast<glm::vec4*>(ptr);
-		} else if (type == typeid(glm::mat4)) {
+		}
+		else if (type == typeid(glm::mat4)) {
 			yaml << *static_cast<glm::mat4*>(ptr);
-		} else if (type == typeid(Guid)) {
+		}
+		else if (type == typeid(Guid)) {
 			auto* guid = static_cast<Guid*>(ptr);
 			if (guid->is_valid()) {
 				yaml << guid->value;
-			} else {
+			}
+			else {
 				yaml << YAML::Null;
 			}
-		} else {
+		}
+		else {
 			// Unknown type - skip
 			yaml << YAML::Null;
 		}
@@ -117,7 +134,8 @@ namespace z1 {
 			auto* guid = static_cast<Guid*>(ptr);
 			if (node.IsNull()) {
 				guid->value = "";
-			} else {
+			}
+			else {
 				guid->value = node.as<std::string>();
 			}
 			return true;
@@ -144,29 +162,41 @@ namespace z1 {
 
 		if (type == typeid(bool)) {
 			*static_cast<bool*>(ptr) = node.as<bool>();
-		} else if (type == typeid(int)) {
+		}
+		else if (type == typeid(int)) {
 			*static_cast<int*>(ptr) = node.as<int>();
-		} else if (type == typeid(uint32_t)) {
+		}
+		else if (type == typeid(uint32_t)) {
 			*static_cast<uint32_t*>(ptr) = node.as<uint32_t>();
-		} else if (type == typeid(uint8_t)) {
+		}
+		else if (type == typeid(uint8_t)) {
 			*static_cast<uint8_t*>(ptr) = (uint8_t)node.as<int>();
-		} else if (type == typeid(int8_t)) {
+		}
+		else if (type == typeid(int8_t)) {
 			*static_cast<int8_t*>(ptr) = (int8_t)node.as<int>();
-		} else if (type == typeid(float)) {
+		}
+		else if (type == typeid(float)) {
 			*static_cast<float*>(ptr) = node.as<float>();
-		} else if (type == typeid(double)) {
+		}
+		else if (type == typeid(double)) {
 			*static_cast<double*>(ptr) = node.as<double>();
-		} else if (type == typeid(std::string)) {
+		}
+		else if (type == typeid(std::string)) {
 			*static_cast<std::string*>(ptr) = node.as<std::string>();
-		} else if (type == typeid(glm::vec2)) {
+		}
+		else if (type == typeid(glm::vec2)) {
 			*static_cast<glm::vec2*>(ptr) = node.as<glm::vec2>();
-		} else if (type == typeid(glm::vec3)) {
+		}
+		else if (type == typeid(glm::vec3)) {
 			*static_cast<glm::vec3*>(ptr) = node.as<glm::vec3>();
-		} else if (type == typeid(glm::vec4)) {
+		}
+		else if (type == typeid(glm::vec4)) {
 			*static_cast<glm::vec4*>(ptr) = node.as<glm::vec4>();
-		} else if (type == typeid(Guid)) {
+		}
+		else if (type == typeid(Guid)) {
 			*static_cast<Guid*>(ptr) = node.as<Guid>();
-		} else {
+		}
+		else {
 			return false;
 		}
 		return true;
@@ -194,10 +224,12 @@ namespace z1 {
 						std::string guid = asset_ref_to_guid_string(elem_ptr);
 						if (!guid.empty()) {
 							yaml << guid;
-						} else {
+						}
+						else {
 							yaml << YAML::Null;
 						}
-					} else {
+					}
+					else {
 						serialize_value(yaml, elem_ptr, *field.container->element_type, field,
 							field.container->element_enum_info);
 					}
@@ -216,17 +248,20 @@ namespace z1 {
 						std::string guid = asset_ref_to_guid_string(elem_ptr);
 						if (!guid.empty()) {
 							yaml << guid;
-						} else {
+						}
+						else {
 							yaml << YAML::Null;
 						}
-					} else {
+					}
+					else {
 						serialize_value(yaml, elem_ptr, *field.container->element_type, field,
 							field.container->element_enum_info);
 					}
 				}
 				yaml << YAML::EndSeq;
 			}
-		} else if (field.custom_getter) {
+		}
+		else if (field.custom_getter) {
 			yaml << YAML::Key << yaml_key << YAML::Value;
 			void* custom_ptr = field.custom_getter(instance);
 			if (*field.type == typeid(std::vector<std::string>)) {
@@ -236,19 +271,23 @@ namespace z1 {
 					yaml << s;
 				}
 				yaml << YAML::EndSeq;
-			} else {
+			}
+			else {
 				serialize_value(yaml, custom_ptr, *field.type, field, field.enum_info);
 			}
-		} else {
+		}
+		else {
 			if (field.is_asset_ref) {
 				yaml << YAML::Key << yaml_key << YAML::Value;
 				std::string guid = asset_ref_to_guid_string(ptr);
 				if (!guid.empty()) {
 					yaml << guid;
-				} else {
+				}
+				else {
 					yaml << YAML::Null;
 				}
-			} else {
+			}
+			else {
 				yaml << YAML::Key << yaml_key << YAML::Value;
 				serialize_value(yaml, ptr, *field.type, field, field.enum_info);
 			}
@@ -283,10 +322,12 @@ namespace z1 {
 							if (field.container->is_element_asset_ref && field.container->load_asset_by_guid) {
 								std::string guid_str = it->second.IsNull() ? "" : it->second.as<std::string>();
 								field.container->load_asset_by_guid(elem_ptr, guid_str);
-							} else if (field.container->is_element_asset_ref) {
+							}
+							else if (field.container->is_element_asset_ref) {
 								std::string guid_str = it->second.IsNull() ? "" : it->second.as<std::string>();
 								asset_ref_from_guid_string(elem_ptr, guid_str, field.get_widget_value<std::string>("type", ""));
-							} else {
+							}
+							else {
 								deserialize_value(it->second, elem_ptr, *field.container->element_type, field,
 									field.container->element_enum_info);
 							}
@@ -309,10 +350,12 @@ namespace z1 {
 				if (field.container->is_element_asset_ref && field.container->load_asset_by_guid) {
 					std::string guid_str = value_node[i].IsNull() ? "" : value_node[i].as<std::string>();
 					field.container->load_asset_by_guid(elem_ptr, guid_str);
-				} else if (field.container->is_element_asset_ref) {
+				}
+				else if (field.container->is_element_asset_ref) {
 					std::string guid_str = value_node[i].IsNull() ? "" : value_node[i].as<std::string>();
 					asset_ref_from_guid_string(elem_ptr, guid_str, field.get_widget_value<std::string>("type", ""));
-				} else {
+				}
+				else {
 					deserialize_value(value_node[i], elem_ptr, *field.container->element_type, field,
 						field.container->element_enum_info);
 				}
@@ -394,27 +437,33 @@ namespace z1 {
 			auto asset = StaticMesh::load(guid);
 			if (asset) new (dst) std::shared_ptr<StaticMesh>(std::move(asset));
 			return asset != nullptr;
-		} else if (asset_meta_type == "skeletal mesh") {
+		}
+		else if (asset_meta_type == "skeletal mesh") {
 			auto asset = SkeletalMesh::load(guid);
 			if (asset) new (dst) std::shared_ptr<SkeletalMesh>(std::move(asset));
 			return asset != nullptr;
-		} else if (asset_meta_type == "texture2d") {
+		}
+		else if (asset_meta_type == "texture2d") {
 			auto asset = Texture2D::load(guid);
 			if (asset) new (dst) std::shared_ptr<Texture2D>(std::move(asset));
 			return asset != nullptr;
-		} else if (asset_meta_type == "animation") {
+		}
+		else if (asset_meta_type == "animation") {
 			auto asset = Animation::load(guid);
 			if (asset) new (dst) std::shared_ptr<Animation>(std::move(asset));
 			return asset != nullptr;
-		} else if (asset_meta_type == "skeleton") {
+		}
+		else if (asset_meta_type == "skeleton") {
 			auto asset = Skeleton::load(guid);
 			if (asset) new (dst) std::shared_ptr<Skeleton>(std::move(asset));
 			return asset != nullptr;
-		} else if (asset_meta_type == "material") {
+		}
+		else if (asset_meta_type == "material") {
 			auto asset = Material::load(guid);
 			if (asset) new (dst) std::shared_ptr<Material>(std::move(asset));
 			return asset != nullptr;
-		} else if (asset_meta_type == "material instance") {
+		}
+		else if (asset_meta_type == "material instance") {
 			auto asset = MaterialInstance::load(guid);
 			if (asset) new (dst) std::shared_ptr<MaterialInstance>(std::move(asset));
 			return asset != nullptr;

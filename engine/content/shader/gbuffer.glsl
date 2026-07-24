@@ -60,14 +60,16 @@
 			vec3 B = normalize(cross(N_raw, T_vec) * v_tangent.w);
 			mat3 TBN = mat3(T_vec, B, N_raw);
 			N = normalize(TBN * normal_map);
-		} else {
+		}
+		else {
 			vec3 dp1 = dFdx(v_world_position);
 			vec3 dp2 = dFdy(v_world_position);
 			vec2 duv1 = dFdx(v_texcoord0);
 			vec2 duv2 = dFdy(v_texcoord0);
 			if (dot(duv1, duv1) + dot(duv2, duv2) < 1e-6) {
 				N = N_raw;
-			} else {
+			}
+			else {
 				vec3 T_fb = normalize(dp1 * duv2.y - dp2 * duv1.y);
 				vec3 B_fb = normalize(cross(N_raw, T_fb));
 				mat3 TBN = mat3(T_fb, B_fb, N_raw);

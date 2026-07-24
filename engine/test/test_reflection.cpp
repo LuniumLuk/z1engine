@@ -56,7 +56,8 @@ int main() {
 	if (!gs_info) {
 		std::cerr << "FAIL: GlobalSettings not found in TypeRegistry" << std::endl;
 		++failures;
-	} else {
+	}
+	else {
 		// Verify key fields exist
 		std::vector<std::string> expected_fields = {
 			"sun_direction", "sun_color", "sun_intensity",
@@ -88,7 +89,8 @@ int main() {
 				std::cerr << "FAIL: ScriptComponent missing hooks" << std::endl;
 				++failures;
 			}
-		} else if (info->name == "TagComponent" || info->name == "TransformComponent") {
+		}
+		else if (info->name == "TagComponent" || info->name == "TransformComponent") {
 			// These always exist, verify hooks
 			if (!info->add_to || !info->remove_from || !info->has_in) {
 				std::cerr << "FAIL: " << info->name << " missing hooks" << std::endl;
@@ -102,7 +104,8 @@ int main() {
 	if (!mat_info) {
 		std::cerr << "FAIL: Material not found in TypeRegistry" << std::endl;
 		++failures;
-	} else {
+	}
+	else {
 		bool has_flags = false, has_shader = false;
 		for (auto const& f : mat_info->fields) {
 			if (f.name == "m_flags") has_flags = true;

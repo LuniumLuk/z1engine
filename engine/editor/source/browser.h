@@ -347,7 +347,8 @@ struct ContentBrowser {
 							if (mi) {
 								m_action_status = "Created Material Instance";
 								m_action_success = true;
-							} else {
+							}
+							else {
 								m_action_status = "Failed to create Material Instance";
 								m_action_success = false;
 							}
@@ -374,7 +375,8 @@ struct ContentBrowser {
 					if (import_asset(Filepath(m_import_source_path), Filepath(m_import_dest_buffer))) {
 						m_import_status = "Import Successful";
 						m_import_success = true;
-					} else {
+					}
+					else {
 						// Error message is set in import_asset
 						m_import_success = false;
 					}

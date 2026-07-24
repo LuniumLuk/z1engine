@@ -38,7 +38,8 @@ void GameLayer::on_update(float delta_time) {
 	if (g_runtime_context.m_global->render_mode == RenderMode::Deferred) {
 		g_runtime_context.m_renderer_deferred->draw(
 			g_runtime_context.m_scene, g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
-	} else {
+	}
+	else {
 		g_runtime_context.m_renderer_forward->draw(
 			g_runtime_context.m_scene, g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 	}

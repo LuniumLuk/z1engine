@@ -169,7 +169,7 @@ namespace z1 {
 		auto const& prim = m_primitives[index];
 		std::shared_ptr<MaterialInstance> mi = nullptr;
 
-		// Check override materials by slot name — highest priority
+		// Check override materials by slot name -- highest priority
 		// Backward-compatible: primitives without a slot default to "slot0"
 		if (override_materials) {
 			std::string slot = prim.m_material_slot.empty() ? "slot0" : prim.m_material_slot;
@@ -456,7 +456,7 @@ namespace z1 {
 		auto const& prim = m_primitives[index];
 		std::shared_ptr<MaterialInstance> mi = nullptr;
 
-		// Check override materials by slot name — highest priority
+		// Check override materials by slot name -- highest priority
 		// Backward-compatible: primitives without a slot default to "slot0"
 		if (override_materials) {
 			std::string slot = prim.m_material_slot.empty() ? "slot0" : prim.m_material_slot;

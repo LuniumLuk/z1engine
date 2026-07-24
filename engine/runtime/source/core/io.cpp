@@ -142,7 +142,8 @@ namespace z1 {
 				std::string key = arg.substr(0, equal_pos);
 				std::string value = arg.substr(equal_pos + 1);
 				m_args[key] = value;
-			} else {
+			}
+			else {
 				m_args[arg] = "";
 			}
 		}

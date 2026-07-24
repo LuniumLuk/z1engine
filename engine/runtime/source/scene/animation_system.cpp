@@ -162,7 +162,8 @@ namespace z1 {
 				int parent_idx = skeleton.bones[bone_idx].parent_id;
 				if (parent_idx != -1) {
 					global_transforms[bone_idx] = get_global_transform(parent_idx) * local_transforms[bone_idx];
-				} else {
+				}
+				else {
 					global_transforms[bone_idx] = local_transforms[bone_idx];
 				}
 

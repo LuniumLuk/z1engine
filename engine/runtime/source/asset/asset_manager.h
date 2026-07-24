@@ -60,9 +60,9 @@ namespace z1 {
 		Guid resolve_guid(std::string const& str) const;
 
 		// Resolves a path to (root_name, sub_path).
-		// "$engine/scene/demo" → ("engine", "scene/demo")   — explicit root
-		// "my_asset" + Query  → searches all roots for existing asset
-		// "my_asset" + Create → ("", "my_asset")            — default root
+		// "$engine/scene/demo" -> ("engine", "scene/demo")   -- explicit root
+		// "my_asset" + Query  -> searches all roots for existing asset
+		// "my_asset" + Create -> ("", "my_asset")            -- default root
 		std::pair<std::string, Filepath> resolve_asset_path(
 			Filepath const& path, PathResolveMode mode = PathResolveMode::Create) const;
 

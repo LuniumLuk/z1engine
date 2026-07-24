@@ -345,12 +345,14 @@ bool validate_shader_file(fs::path const& path) {
 			if (stage == Stage::None) {
 				CORE_ERROR("Unknown stage type: %s", type.c_str());
 				combo_success = false;
-			} else {
+			}
+			else {
 				GLuint handle = 0;
 				if (compile_shader_module(stage, src, handle, path.filename().string(), combo_label, type)) {
 					printf("      [OK] %s shader compiled successfully\n", type.c_str());
 					shader_handles.push_back(handle);
-				} else {
+				}
+				else {
 					CORE_ERROR("  Failed to compile %s stage for variant: %s", type.c_str(), combo_label.c_str());
 					combo_success = false;
 				}
@@ -369,7 +371,8 @@ bool validate_shader_file(fs::path const& path) {
 		if (combo_success) {
 			if (link_program(shader_handles, program, path.filename().string(), combo_label)) {
 				printf("      [OK] Program linked successfully\n");
-			} else {
+			}
+			else {
 				CORE_ERROR("  Failed to link variant: %s", combo_label.c_str());
 				combo_success = false;
 			}
@@ -387,7 +390,8 @@ bool validate_shader_file(fs::path const& path) {
 	if (all_success) {
 		if (num_variants > 0) {
 			CORE_SUCCESS("All %zu variant combinations validated successfully!", num_combos);
-		} else {
+		}
+		else {
 			CORE_SUCCESS("Shader validated successfully!");
 		}
 	}
@@ -453,7 +457,8 @@ int main(int argc, char** argv) {
 		printf("Passed files:  %d\n", total_files - failed_files);
 		if (success) {
 			CORE_SUCCESS("All shader files validated successfully!");
-		} else {
+		}
+		else {
 			CORE_ERROR("Some shader files failed validation");
 		}
 		printf("\n");

@@ -47,7 +47,8 @@
 
 		if (ma_unit > 1.0) {
 			return p_clip + v_clip / ma_unit;
-		} else {
+		}
+		else {
 			return prevSample;
 		}
 	}
@@ -99,8 +100,8 @@
 		variance = max(vec3(0.0), variance);
 
 		// --- Adaptive blend factor ---
-		// blend = new_frame_weight. High variance → more new frame (less ghosting).
-		// Low variance → less new frame (better accumulation on flat surfaces).
+		// blend = new_frame_weight. High variance -> more new frame (less ghosting).
+		// Low variance -> less new frame (better accumulation on flat surfaces).
 		float lumVariance = dot(variance, vec3(1.0, 0.25, 0.25)); // Y dominates
 		float blend = u_taa_blend * (1.0 + u_taa_variance_scale * lumVariance * 100.0);
 

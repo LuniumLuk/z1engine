@@ -79,22 +79,28 @@ static void assign_asset_to_field(void* shared_ptr_addr, AssetMeta const& meta) 
 		dst[0] = asset.get();
 		// Create a new shared_ptr in-place via placement new
 		new (dst) std::shared_ptr<StaticMesh>(std::move(asset));
-	} else if (meta.type == "skeletal mesh") {
+	}
+	else if (meta.type == "skeletal mesh") {
 		auto asset = SkeletalMesh::load(meta.guid);
 		new (dst) std::shared_ptr<SkeletalMesh>(std::move(asset));
-	} else if (meta.type == "texture2d") {
+	}
+	else if (meta.type == "texture2d") {
 		auto asset = Texture2D::load(meta.guid);
 		new (dst) std::shared_ptr<Texture2D>(std::move(asset));
-	} else if (meta.type == "animation") {
+	}
+	else if (meta.type == "animation") {
 		auto asset = Animation::load(meta.guid);
 		new (dst) std::shared_ptr<Animation>(std::move(asset));
-	} else if (meta.type == "skeleton") {
+	}
+	else if (meta.type == "skeleton") {
 		auto asset = Skeleton::load(meta.guid);
 		new (dst) std::shared_ptr<Skeleton>(std::move(asset));
-	} else if (meta.type == "material") {
+	}
+	else if (meta.type == "material") {
 		auto asset = Material::load(meta.guid);
 		new (dst) std::shared_ptr<Material>(std::move(asset));
-	} else if (meta.type == "material instance") {
+	}
+	else if (meta.type == "material instance") {
 		auto asset = MaterialInstance::load(meta.guid);
 		new (dst) std::shared_ptr<MaterialInstance>(std::move(asset));
 	}
@@ -148,7 +154,7 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 		}
 
 		// Read current asset GUID via the shared_ptr's raw object pointer
-		// AssetBase has virtual dtor → vtable ptr at offset 0; m_meta at sizeof(void*)
+		// AssetBase has virtual dtor -> vtable ptr at offset 0; m_meta at sizeof(void*)
 		void* shared_ptr_addr = ptr;
 		void* const* raw_ptrs = static_cast<void* const*>(shared_ptr_addr);
 		void* object_ptr = raw_ptrs ? raw_ptrs[0] : nullptr;
@@ -165,7 +171,8 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 					field.clear_fn(ptr);
 				}
 			}
-		} else {
+		}
+		else {
 			ImGui::Text("(none)");
 		}
 
@@ -356,7 +363,8 @@ void show_type_field(void* instance, FieldInfo const& field) {
 						new_key_buf[0] = '\0';
 					}
 				}
-			} else {
+			}
+			else {
 				// Sequence container (vector/array)
 				// Only allow resizing if the FF_ContainerResizable flag is set
 				bool const container_resizable = (field.flag & FF_ContainerResizable) != 0;
@@ -488,7 +496,8 @@ void show_properties(std::shared_ptr<Entity> const& selected_entity) {
 								}
 								ImGui::EndCombo();
 							}
-						} else {
+						}
+						else {
 							// Generic: get component and show fields
 							// Use the construct hook to get a typed pointer
 							// Since we can't easily get a void* from an entity component generically,
@@ -508,7 +517,8 @@ void show_properties(std::shared_ptr<Entity> const& selected_entity) {
 
 					if (camera.m_is_perspective) {
 						ImGui::InputFloat("field of view", &camera.m_intrinsic.fov, 0.01f);
-					} else {
+					}
+					else {
 						ImGui::InputFloat("frustum size", &camera.m_intrinsic.size, 0.01f);
 					}
 					if (ImGui::RadioButton("is primary", camera.m_is_primary)) {
@@ -554,7 +564,8 @@ void show_properties_context_menu(std::shared_ptr<Entity> const& selected_entity
 					if (info->remove_from)
 						info->remove_from(*selected_entity);
 				}
-			} else {
+			}
+			else {
 				std::string label = "add " + info->name;
 				if (ImGui::MenuItem(label.c_str())) {
 					if (info->add_to)

@@ -46,7 +46,8 @@ namespace z1 {
 			if (!fs::exists(root)) {
 				if (root_config.name.empty()) {
 					fs::create_directories(root);
-				} else {
+				}
+				else {
 					CORE_WARN("missing asset root [{0}]: {1}",
 						root_config.name, root.generic_string());
 				}
@@ -394,7 +395,8 @@ namespace z1 {
 				std::string internal_key;
 				if (root_config->name.empty()) {
 					internal_key = path_str;
-				} else {
+				}
+				else {
 					internal_key = "$" + root_config->name + "/" + path_str;
 				}
 				if (m_path_to_guid_mapping.find(internal_key) != m_path_to_guid_mapping.end()) {
@@ -403,7 +405,7 @@ namespace z1 {
 			}
 		}
 
-		// Create mode, or Query mode with no match found → default root
+		// Create mode, or Query mode with no match found -> default root
 		return { "", path };
 	}
 

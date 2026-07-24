@@ -86,7 +86,8 @@ namespace z1 {
 		auto it = m_variant_shaders.find(variant_key);
 		if (it != m_variant_shaders.end()) {
 			shader = it->second;
-		} else {
+		}
+		else {
 			Filepath path = g_runtime_context.m_asset_manager->get_file_from_guid(m_shader_guid);
 			shader = Shader::create(path.concat(".glsl"), variant_key);
 			m_variant_shaders[variant_key] = shader;

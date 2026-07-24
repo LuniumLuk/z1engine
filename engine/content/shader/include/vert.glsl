@@ -93,7 +93,8 @@ void main() {
 			prev_local_position = prev_skin_matrix * prev_local_position;
 			prev_world_position = (u_prev_model * prev_local_position).xyz;
 		}
-	} else {
+	}
+	else {
 		prev_world_position = (u_prev_model * vec4(a_position, 1.0)).xyz;
 	}
 
