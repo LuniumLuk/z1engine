@@ -115,6 +115,87 @@ def find_make():
 	return shutil.which("make")
 
 # ---------------------------------------------------------------------------
+# Python environment check
+# ---------------------------------------------------------------------------
+def check_python():
+	"""
+	Verify the Python environment is correctly set up for building z1engine.
+
+	Returns (ok: bool, message: str).
+	On macOS: requires Python 3.14 via pyenv.
+	On Windows: requires bundled Python in engine/3rdparty/python314/.
+	"""
+	import shutil
+
+	if is_macos():
+		# 1. Check python3 is available
+		python3 = shutil.which("python3")
+		if not python3:
+			return (False,
+				"python3 not found on PATH.\n"
+				"  Install pyenv:   brew install pyenv\n"
+				"  Add to shell:     echo 'eval \"$(pyenv init -)\"' >> ~/.zshrc && source ~/.zshrc\n"
+				"  Install Python:   pyenv install 3.14.3\n"
+				"  Activate:         cd $(z1 root) && pyenv local 3.14.3")
+
+		# 2. Check version is 3.14.x
+		try:
+			result = subprocess.run(
+				[python3, "--version"], capture_output=True, text=True, timeout=5)
+			version_str = result.stdout.strip() + result.stderr.strip()
+		except Exception:
+			return (False, f"Failed to run '{python3} --version'.")
+
+		if "3.14" not in version_str:
+			return (False,
+				f"Python 3.14 required, found: {version_str}\n"
+				"  Install:  pyenv install 3.14.3\n"
+				"  Activate: cd $(z1 root) && pyenv local 3.14.3")
+
+		# 3. Check it's a pyenv-managed Python
+		if ".pyenv" not in python3:
+			return (False,
+				f"Python must be managed by pyenv, found: {python3}\n"
+				"  Install pyenv:  brew install pyenv\n"
+				"  Then:           pyenv install 3.14.3 && pyenv local 3.14.3")
+
+		# 4. Check .python-version file exists
+		version_file = repo_root() / ".python-version"
+		if not version_file.exists():
+			return (False,
+				"Missing .python-version file in project root.\n"
+				"  Run: cd $(z1 root) && pyenv local 3.14.3")
+
+		# 5. Check libpython3.14.dylib exists
+		try:
+			result = subprocess.run(
+				[python3, "-c",
+				 "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))"],
+				capture_output=True, text=True, timeout=5)
+			libdir = Path(result.stdout.strip())
+			dylib = libdir / "libpython3.14.dylib"
+			if not dylib.exists():
+				return (False,
+					f"Python shared library not found at: {dylib}\n"
+					"  Reinstall: pyenv uninstall 3.14.3 && pyenv install 3.14.3 --enable-framework")
+		except Exception:
+			return (False, "Failed to locate Python library. Is pyenv Python 3.14 installed correctly?")
+
+		return (True, f"Python {version_str.strip()} (pyenv)")
+
+	elif is_windows():
+		python_dir = repo_root() / "engine" / "3rdparty" / "python314"
+		dll = python_dir / "python314.dll"
+		if not dll.exists():
+			return (False,
+				f"Bundled Python not found at: {dll}\n"
+				"  Download Python 3.14 embeddable package and extract to engine/3rdparty/python314/")
+		return (True, f"Python 3.14 (bundled) at {python_dir}")
+
+	else:
+		return (False, f"Unsupported platform: {sys.platform}")
+
+# ---------------------------------------------------------------------------
 # Visual Studio detection
 # ---------------------------------------------------------------------------
 _VS_EDITIONS = ["Community", "Professional", "Enterprise"]

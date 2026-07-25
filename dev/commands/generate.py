@@ -4,7 +4,7 @@
 import argparse
 from commands._common import (
 	EXIT_CONFIG_ERROR, Timer, make_result, print_fail, print_ok, print_run,
-	repo_root, run_subprocess, get_premake5_path, is_macos,
+	repo_root, run_subprocess, get_premake5_path, is_macos, check_python,
 )
 
 def main(argv=None):
@@ -13,6 +13,13 @@ def main(argv=None):
 		description="Regenerate Visual Studio project files using premake5.",
 	)
 	parser.parse_args(argv)
+
+	# Precheck: verify Python environment before generating
+	py_ok, py_msg = check_python()
+	if not py_ok:
+		print_fail(py_msg)
+		return make_result("fail", "generate", exit_code=EXIT_CONFIG_ERROR,
+						   detail="python environment not ready")
 
 	root = repo_root()
 	premake = get_premake5_path()
