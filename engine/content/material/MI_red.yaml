@@ -1,0 +1,18 @@
+meta:
+  guid: material/MI_red
+  type: material instance
+  path: material/MI_red
+  extra: ~
+material: material/M_pbr
+override_flags: 0
+override_mask: 0
+overrides:
+  - name: u_base_color_factor
+    type: 4
+    value: [1.0, 0.15, 0.15, 1.0]
+  - name: u_metallic_factor
+    type: 1
+    value: [0.0]
+  - name: u_roughness_factor
+    type: 1
+    value: [0.6]

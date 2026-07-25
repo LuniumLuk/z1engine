@@ -4,25 +4,25 @@ meta:
   path: scene/demo_scene
   extra: ~
 global_settings:
-  sun_direction: [-0.5, 1, -0.300000012]
-  sun_color: [1, 0.949999988, 0.899999976, 1]
+  sun_direction: [-0.5, 1, -0.3]
+  sun_color: [1, 0.95, 0.9, 1]
   sun_intensity: 2.5
-  sun_ambient_color: [0.200000003, 0.219999999, 0.300000012, 1]
-  sun_ambient_intensity: 0.100000001
+  sun_ambient_color: [0.2, 0.22, 0.3, 1]
+  sun_ambient_intensity: 0.1
   taa_enabled: true
-  taa_blend: 0.899999976
+  taa_blend: 0.9
   taa_variance_scale: 1
   taa_clip_gamma: 1
   taa_sharpen_enabled: true
-  taa_sharpen_strength: 0.300000012
+  taa_sharpen_strength: 0.3
   taa_animated: true
   pp_exposure: 1
-  pp_gamma: 2.20000005
+  pp_gamma: 2.2
   pp_tint: [1, 1, 1, 1]
   pp_bloom_enabled: true
   pp_bloom_threshold: 1
   pp_bloom_intensity: 0.5
-  pp_bloom_knee: 0.100000001
+  pp_bloom_knee: 0.1
   sm_near: 0.5
   sm_far: 80
   sm_ortho_size: 30
@@ -31,13 +31,13 @@ global_settings:
   render_mode: Deferred
 editor_camera:
   transform:
-    location: [1.99880517, 2.61936617, -1.24343836]
+    location: [2, 2.6, -1.2]
     rotation: [-11.5, -339, 0]
     scale: [1, 1, 1]
   camera:
     is_perspective: true
     intrinsic: 45
-    near: 0.00999999978
+    near: 0.01
     far: 1000
     aspect: 1.25
     use_fixed_aspect: false
@@ -52,33 +52,22 @@ entities:
     camera:
       is_perspective: true
       intrinsic: 60
-      near: 0.100000001
+      near: 0.1
       far: 500
-      aspect: 1.77769995
+      aspect: 1.7777
       use_fixed_aspect: false
       is_primary: true
-    script_component:
-      - scripts.player_controller.PlayerController
   - name: Ground
     id: 1
     transform:
       location: [0, -2, 0]
-      rotation: [0, -0, 0]
-      scale: [20, 0.200000003, 20]
+      rotation: [0, 0, 0]
+      scale: [20, 0.2, 20]
       parent: ~
     static_mesh:
       guid: mesh/SM_Cube
       override_materials:
-        slot0: f2142c5c-3ec1-480a-b9e6-3856e983d39b
-  - name: WorldManager
-    id: 2
-    transform:
-      location: [0, 0, 0]
-      rotation: [0, 0, 0]
-      scale: [1, 1, 1]
-      parent: ~
-    script_component:
-      - scripts.demo_world.DemoWorld
+        slot0: material/MI_earth
   - name: Suzanne
     id: 3
     transform:
@@ -89,66 +78,99 @@ entities:
     static_mesh:
       guid: mesh/SM_Suzanne
       override_materials:
-        slot0: f2142c5c-3ec1-480a-b9e6-3856e983d39b
+        slot0: material/MI_gold
   - name: TrafficCone
     id: 4
     transform:
       location: [-7, 0, -3]
       rotation: [0, 0, 0]
-      scale: [0.800000012, 1.5, 0.800000012]
+      scale: [0.8, 1.5, 0.8]
       parent: ~
     static_mesh:
       guid: mesh/SM_Cone
       override_materials:
-        slot0: ~
+        slot0: material/MI_orange
   - name: DecoSphere
     id: 5
     transform:
       location: [7, 1, -3]
-      rotation: [0, -0, 0]
+      rotation: [0, 0, 0]
       scale: [1.5, 1.5, 1.5]
       parent: ~
     static_mesh:
       guid: mesh/SM_Sphere
       override_materials:
-        slot0: ~
+        slot0: material/MI_blue
   - name: DecoPillar
     id: 6
     transform:
       location: [0, 0.5, -8]
-      rotation: [0, -0, 0]
-      scale: [0.600000024, 2.5, 0.600000024]
+      rotation: [0, 0, 0]
+      scale: [0.6, 2.5, 0.6]
       parent: ~
     static_mesh:
       guid: mesh/SM_Cylinder
       override_materials:
-        slot0: ~
+        slot0: material/MI_purple
+  - name: RedCube
+    id: 20
+    transform:
+      location: [-4, 0, -5]
+      rotation: [15, 25, 0]
+      scale: [0.7, 0.7, 0.7]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: material/MI_red
+  - name: GreenCube
+    id: 21
+    transform:
+      location: [4, 0, -5]
+      rotation: [-10, -30, 5]
+      scale: [0.7, 0.7, 0.7]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: material/MI_green
+  - name: CyanCube
+    id: 22
+    transform:
+      location: [0, 2.5, -7]
+      rotation: [0, 45, 0]
+      scale: [0.5, 0.5, 0.5]
+      parent: ~
+    static_mesh:
+      guid: mesh/SM_Cube
+      override_materials:
+        slot0: material/MI_cyan
   - name: Sparkle Particles
     id: 7
     transform:
-      location: [-4.57821846, -0.801264048, 0]
-      rotation: [0, -0, 0]
+      location: [-4.58, -0.8, 0]
+      rotation: [0, 0, 0]
       scale: [1, 1, 1]
       parent: ~
     particle:
       max_particles: 150
       emission_rate: 120
       burst_count: 0
-      lifetime: [0.5, 1.20000005]
+      lifetime: [0.5, 1.2]
       initial_speed: [2, 6]
       direction: [0, 1, 0]
-      direction_spread: 0.899999976
+      direction_spread: 0.9
       gravity: [0, -3, 0]
-      damping: 0.200000003
-      initial_size: [0.0299999993, 0.0599999987]
-      size_over_life: [1, 0.200000003]
-      initial_color: [0, 1, 1, 0.800000012]
+      damping: 0.2
+      initial_size: [0.03, 0.06]
+      size_over_life: [1, 0.2]
+      initial_color: [0, 1, 1, 0.8]
       end_color: [0.5, 1, 1, 0]
       texture: ~
       blend_mode: 1
       emitter_shape: 0
-      shape_radius: 0.0500000007
-      shape_extents: [0.0500000007, 0.0500000007, 0.0500000007]
+      shape_radius: 0.05
+      shape_extents: [0.05, 0.05, 0.05]
       world_space: true
       loop: true
       playing: true
@@ -160,8 +182,8 @@ entities:
   - name: Fountain Particles
     id: 8
     transform:
-      location: [0, 2.9603405, -7.9155097]
-      rotation: [0, -0, 0]
+      location: [0, 2.96, -7.92]
+      rotation: [0, 0, 0]
       scale: [1, 1, 1]
       parent: ~
     particle:
@@ -171,18 +193,18 @@ entities:
       lifetime: [1.5, 2.5]
       initial_speed: [3, 5]
       direction: [0, 1, 0]
-      direction_spread: 0.400000006
-      gravity: [0, -9.81000042, 0]
-      damping: 0.100000001
-      initial_size: [0.0500000007, 0.100000001]
+      direction_spread: 0.4
+      gravity: [0, -9.81, 0]
+      damping: 0.1
+      initial_size: [0.05, 0.1]
       size_over_life: [1, 0.5]
-      initial_color: [0.200000003, 0.5, 1, 1]
-      end_color: [0.200000003, 0.5, 1, 0]
+      initial_color: [0.2, 0.5, 1, 1]
+      end_color: [0.2, 0.5, 1, 0]
       texture: ~
       blend_mode: 0
       emitter_shape: 0
-      shape_radius: 0.100000001
-      shape_extents: [0.100000001, 0.100000001, 0.100000001]
+      shape_radius: 0.1
+      shape_extents: [0.1, 0.1, 0.1]
       world_space: true
       loop: true
       playing: true
@@ -194,29 +216,29 @@ entities:
   - name: Fire Particles
     id: 9
     transform:
-      location: [6.99413157, 2.50915146, -3.05566645]
-      rotation: [0, -0, 0]
+      location: [6.99, 2.51, -3.06]
+      rotation: [0, 0, 0]
       scale: [1, 1, 1]
       parent: ~
     particle:
       max_particles: 200
       emission_rate: 80
       burst_count: 0
-      lifetime: [0.800000012, 1.5]
+      lifetime: [0.8, 1.5]
       initial_speed: [1, 3]
       direction: [0, 1, 0]
-      direction_spread: 0.600000024
+      direction_spread: 0.6
       gravity: [0, 2, 0]
-      damping: 0.300000012
-      initial_size: [0.150000006, 0.25]
-      size_over_life: [1, 0.100000001]
-      initial_color: [1, 0.699999988, 0, 1]
-      end_color: [1, 0.200000003, 0, 0]
+      damping: 0.3
+      initial_size: [0.15, 0.25]
+      size_over_life: [1, 0.1]
+      initial_color: [1, 0.7, 0, 1]
+      end_color: [1, 0.2, 0, 0]
       texture: ~
       blend_mode: 1
       emitter_shape: 1
-      shape_radius: 0.200000003
-      shape_extents: [0.200000003, 0.200000003, 0.200000003]
+      shape_radius: 0.2
+      shape_extents: [0.2, 0.2, 0.2]
       world_space: true
       loop: true
       playing: true
@@ -225,193 +247,33 @@ entities:
       cast_shadows: true
       initial_rotation: [0, 360]
       rotation_speed: [90, 180]
-  - name: Spot
+  - name: RedSpot
     id: 10
     transform:
-      location: [0, 0.48783052, 0]
-      rotation: [0, -0, 0]
+      location: [0, 0.5, 0]
+      rotation: [0, 0, 0]
       scale: [1, 1, 1]
       parent: ~
     light:
       type: 2
-      color: [1, 0, 0]
-      intensity: 20
+      color: [1, 0.15, 0.15]
+      intensity: 15
       range: 10
       inner_cone: 20
       outer_cone: 30
       cast_shadow: false
-  - name: mesh_helmet_LP_13930damagedHelmet
+  - name: BluePointTop
     id: 11
     transform:
-      location: [3.55424452, -0.374611616, -1.42873418]
-      rotation: [90, -0, 0]
-      scale: [0.999981344, 1, 1]
+      location: [0, 6, 0]
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
       parent: ~
-    static_mesh:
-      guid: 60a67b95-dc90-424a-81d5-0cbe44990db2
-      override_materials:
-        slot0: ~
-  - name: Z_UP
-    id: 12
-    transform:
-      location: [-2.42044616, -1.74563837, -6.10351562e-05]
-      rotation: [-90, 0, 0]
-      scale: [0.999983907, 1, 1]
-      parent: ~
-  - name: Armature
-    id: 13
-    transform:
-      location: [0, 0, 0]
-      rotation: [0, 0, -90]
-      scale: [1, 1, 1]
-      parent: 12
-  - name: Skeleton_torso_joint_1
-    id: 14
-    transform:
-      location: [1.57554005e-08, 0.00499983691, 0.678999901]
-      rotation: [-0, 4.33299875, -0]
-      scale: [1, 1, 1]
-      parent: 13
-  - name: Skeleton_torso_joint_2
-    id: 15
-    transform:
-      location: [1.33617004e-05, -1.33738004e-05, 0.145416901]
-      rotation: [-0, 82.2032166, -0]
-      scale: [1, 1, 1]
-      parent: 14
-  - name: torso_joint_3
-    id: 16
-    transform:
-      location: [-0.250516891, 6.07221978e-07, -7.29081003e-05]
-      rotation: [0, -77.027565, 0]
-      scale: [1, 1, 1]
-      parent: 15
-  - name: Skeleton_neck_joint_1
-    id: 17
-    transform:
-      location: [-2.36603e-06, 2.41398993e-06, 0.0648362115]
-      rotation: [-0, 82.6965561, -0]
-      scale: [1, 1, 1]
-      parent: 16
-  - name: Skeleton_neck_joint_2
-    id: 18
-    transform:
-      location: [-0.0520401709, -3.39932988e-08, -2.66078996e-06]
-      rotation: [180, 2.85124421, 180]
-      scale: [1.00000012, 1, 1.00000012]
-      parent: 17
-  - name: Skeleton_arm_joint_L__4_
-    id: 19
-    transform:
-      location: [-3.83746992e-05, 0.0910136029, -6.14333985e-05]
-      rotation: [180, 10.2824364, 180]
-      scale: [1, 1, 1]
-      parent: 16
-  - name: Skeleton_arm_joint_L__3_
-    id: 20
-    transform:
-      location: [0.0132216197, 0.215499505, 0.1093321]
-      rotation: [-0, 8.16231632, -0]
-      scale: [1, 1, 1]
-      parent: 19
-  - name: Skeleton_arm_joint_L__2_
-    id: 21
-    transform:
-      location: [-0.0933246166, 0.143000096, 0.0781479105]
-      rotation: [-0, 2.58336782, -0]
-      scale: [1, 1, 1]
-      parent: 20
-  - name: Skeleton_arm_joint_R
-    id: 22
-    transform:
-      location: [-3.83024999e-05, -0.0909877494, -6.20323044e-05]
-      rotation: [180, -15.4437943, 180]
-      scale: [1, 1, 1]
-      parent: 16
-  - name: Skeleton_arm_joint_R__2_
-    id: 23
-    transform:
-      location: [-0.03554634, -0.215498999, 0.1042329]
-      rotation: [180, 52.6874657, 180]
-      scale: [0.99999994, 1, 0.99999994]
-      parent: 22
-  - name: Skeleton_arm_joint_R__3_
-    id: 24
-    transform:
-      location: [0.0313702188, -0.143001005, -0.117611699]
-      rotation: [0, -44.5704041, 0]
-      scale: [1.00000012, 1, 1.00000012]
-      parent: 23
-  - name: leg_joint_L_1
-    id: 25
-    transform:
-      location: [0.0285199992, 0.0680394471, -0.0629593581]
-      rotation: [-0, 37.8867531, -0]
-      scale: [1, 1, 1]
-      parent: 14
-  - name: leg_joint_L_2
-    id: 26
-    transform:
-      location: [0.209163904, 0.00905550271, -0.164269507]
-      rotation: [-0, 63.9348488, -0]
-      scale: [1.00000012, 1, 1.00000012]
-      parent: 25
-  - name: leg_joint_L_3
-    id: 27
-    transform:
-      location: [0.275790095, 0.00139725197, 0.00412247982]
-      rotation: [-180, 66.1903763, -180]
-      scale: [1, 0.99999994, 1]
-      parent: 26
-  - name: leg_joint_L_5
-    id: 28
-    transform:
-      location: [-0.0655838102, 0.00109065301, 0.0292914603]
-      rotation: [0, -36.4857712, 0]
-      scale: [1, 1, 1]
-      parent: 27
-  - name: leg_joint_R_1
-    id: 29
-    transform:
-      location: [0.0285571907, -0.0680391416, -0.0629586428]
-      rotation: [-0, 87.2332458, -0]
-      scale: [1, 1, 1]
-      parent: 14
-  - name: leg_joint_R_2
-    id: 30
-    transform:
-      location: [0.260890812, -0.00902605057, 0.0516708903]
-      rotation: [-0, 10.8006296, -0]
-      scale: [1.00000012, 1, 1.00000012]
-      parent: 29
-  - name: leg_joint_R_3
-    id: 31
-    transform:
-      location: [0.275460303, -0.00143172592, -0.0141048301]
-      rotation: [180, 59.8588104, 180]
-      scale: [1, 1, 1]
-      parent: 30
-  - name: leg_joint_R_5
-    id: 32
-    transform:
-      location: [-0.0668196306, -0.00107226497, 0.0263513103]
-      rotation: [0, -38.1632385, 0]
-      scale: [1, 1, 1]
-      parent: 31
-  - name: Cesium_Man
-    id: 33
-    transform:
-      location: [0, 0, 0]
-      rotation: [0, -0, 0]
-      scale: [1, 1, 1]
-      parent: 13
-    skeletal_mesh:
-      mesh: df1f5d44-d5e5-4d2e-a07d-0bba1cb6d16e
-      skeleton: bd528466-df68-4376-9ab0-88576b95b111
-      override_materials:
-        slot0: ~
-    animation:
-      animation: 3f1d18cc-dd0e-404a-8c22-c49e9f62212e
-      speed: 1
-      loop: true
-      playing: true
+    light:
+      type: 0
+      color: [0.2, 0.3, 1]
+      intensity: 30
+      range: 20
+      inner_cone: 0
+      outer_cone: 0
+      cast_shadow: false
