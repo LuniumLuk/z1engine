@@ -21,7 +21,7 @@ namespace z1 {
 		EventCategoryMouseButton    = (1 << 4),
 	};
 
-#define EVENT_STRUCT_TYPE(type) static EventType get_static_type() { return EventType::##type; } \
+#define EVENT_STRUCT_TYPE(type) static EventType get_static_type() { return EventType::type; } \
 								virtual EventType get_event_type() const override { return get_static_type(); } \
 								virtual const char* get_name() const override { return #type; }
 

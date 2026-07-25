@@ -30,6 +30,8 @@ project "bakery"
 	filter "system:windows"
 		systemversion "latest"
 
+	filter "system:macosx"
+
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "on"

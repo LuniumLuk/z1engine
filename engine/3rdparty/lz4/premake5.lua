@@ -15,6 +15,8 @@ project "lz4"
 	filter "system:windows"
 		systemversion "latest"
 
+	filter "system:macosx"
+
 	filter "configurations:Debug"
 		runtime "Debug"
 		symbols "on"

@@ -57,7 +57,6 @@ project "glfw"
 			"src/cocoa_time.c",
 			"src/nsgl_context.m",
 			"src/posix_thread.c",
-			"src/posix_module.c",
 			"src/osmesa_context.c",
 			"src/egl_context.c"
 		}

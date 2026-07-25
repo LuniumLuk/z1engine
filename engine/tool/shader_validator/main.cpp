@@ -11,6 +11,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#ifdef __APPLE__
+#define PLATFORM_MACOS
+#endif
+
 // Macros replacement - with better formatting
 #define COLOR_RED     "\033[31m"
 #define COLOR_YELLOW  "\033[33m"
@@ -339,7 +343,11 @@ bool validate_shader_file(fs::path const& path) {
 			auto src = code.substr(bracket_beg + 1, bracket_end - bracket_beg - 1);
 			src = full_uniforms + src;
 			src = process_includes(src, path.parent_path().string() + "/");
-			src = "#version 460 core\n" + src;
+#ifdef PLATFORM_MACOS
+			src = "#version 410 core\n#define LOCATION(x)\n" + src;
+#else
+			src = "#version 460 core\n#define LOCATION(x) layout(location = x)\n" + src;
+#endif
 
 			Stage stage = str_to_shader_stage(type);
 			if (stage == Stage::None) {
@@ -410,6 +418,12 @@ int main(int argc, char** argv) {
 	}
 
 	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+#ifdef PLATFORM_MACOS
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#endif
 	GLFWwindow* window = glfwCreateWindow(640, 480, "ShaderValidator", NULL, NULL);
 	if (!window) {
 		CORE_ERROR("Failed to create GLFW window");

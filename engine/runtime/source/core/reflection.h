@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <type_traits>
 #include <memory>
+#include "core/guid.h"
 
 namespace z1 {
 
@@ -182,6 +183,10 @@ namespace z1 {
 			return default_value;
 		}
 	};
+
+	// Forward declarations for field metadata helpers
+	template<typename T> struct ContainerInfoResolver;
+	template<typename T> struct EnumInfoResolver;
 
 	// Helper to configure field metadata at registration time
 	template<typename FieldType>

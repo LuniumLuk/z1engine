@@ -144,12 +144,23 @@ namespace z1 {
 		PROFILE_FUNCTION();
 		size_t bytePerPixel = image_format_to_opengl_data_size(m_description.m_format);
 		CORE_ASSERT(size == m_description.m_width * m_description.m_height * bytePerPixel, "data size must match the whole image!");
+#ifdef PLATFORM_MACOS
+		glBindTexture(GL_TEXTURE_2D, m_handle);
+		glTexSubImage2D(
+			GL_TEXTURE_2D, 0, 0, 0,
+			m_description.m_width, m_description.m_height,
+			image_format_to_opengl_format(m_description.m_format),
+			image_format_to_opengl_data_type(m_description.m_format),
+			data);
+		glBindTexture(GL_TEXTURE_2D, 0);
+#else
 		glTextureSubImage2D(
 			m_handle, 0, 0, 0,
 			m_description.m_width, m_description.m_height,
 			image_format_to_opengl_format(m_description.m_format),
 			image_format_to_opengl_data_type(m_description.m_format),
 			data);
+#endif
 	}
 
 	// OpenGLImage2DArray definitions
@@ -209,12 +220,23 @@ namespace z1 {
 		PROFILE_FUNCTION();
 		size_t bytePerPixel = image_format_to_opengl_data_size(m_description.m_format);
 		CORE_ASSERT(size == m_description.m_width * m_description.m_height * m_description.m_depth * bytePerPixel, "data size must match the whole image!");
+#ifdef PLATFORM_MACOS
+		glBindTexture(GL_TEXTURE_2D_ARRAY, m_handle);
+		glTexSubImage3D(
+			GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
+			m_description.m_width, m_description.m_height, m_description.m_depth,
+			image_format_to_opengl_format(m_description.m_format),
+			image_format_to_opengl_data_type(m_description.m_format),
+			data);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+#else
 		glTextureSubImage3D(
 			m_handle, 0, 0, 0, 0,
 			m_description.m_width, m_description.m_height, m_description.m_depth,
 			image_format_to_opengl_format(m_description.m_format),
 			image_format_to_opengl_data_type(m_description.m_format),
 			data);
+#endif
 	}
 
 	static void* GetDataFromFaces(GLenum target, ImageCube::Faces const& data) {
@@ -287,12 +309,23 @@ namespace z1 {
 		PROFILE_FUNCTION();
 		size_t bytePerPixel = image_format_to_opengl_data_size(m_description.m_format);
 		CORE_ASSERT(size == m_description.m_width * m_description.m_height * 6 * bytePerPixel, "data size must match the whole image!");
+#ifdef PLATFORM_MACOS
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_handle);
+		glTexSubImage2D(
+			GL_TEXTURE_CUBE_MAP, 0, 0, 0,
+			m_description.m_width, m_description.m_height,
+			image_format_to_opengl_format(m_description.m_format),
+			image_format_to_opengl_data_type(m_description.m_format),
+			data);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+#else
 		glTextureSubImage2D(
 			m_handle, 0, 0, 0,
 			m_description.m_width, m_description.m_height,
 			image_format_to_opengl_format(m_description.m_format),
 			image_format_to_opengl_data_type(m_description.m_format),
 			data);
+#endif
 	}
 
 }

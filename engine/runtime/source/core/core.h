@@ -10,8 +10,10 @@
 #    else
 #        define API
 #    endif
+#elif defined(PLATFORM_MACOS)
+#    define API
 #else
-#    error z1engine only support windows platform!
+#    error z1engine only supports Windows and macOS platforms!
 #endif
 
 #define BIND_EVENT_FN(x) std::bind(&x, this, std::placeholders::_1)
@@ -106,17 +108,30 @@ namespace z1 {
 #define CLIENT_FATAL(fmt, ...)  g_runtime_context.m_logger->get_client_logger()->critical(LOG_ARGS_PREFIX(fmt, ##__VA_ARGS__))
 
 #ifdef ENABLE_ASSERTS
-#    define CORE_ASSERT(x, ...) { if(!(x)) { CORE_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }
-#    define ASSERT(x, ...) { if(!(x)) { CLIENT_ERROR("assertion failed: {0}!", __VA_ARGS__); __debugbreak(); } }
+#    ifdef _MSC_VER
+#        define DEBUGBREAK() __debugbreak()
+#    elif defined(__clang__) || defined(__GNUC__)
+#        define DEBUGBREAK() __builtin_debugtrap()
+#    else
+#        define DEBUGBREAK() __builtin_trap()
+#    endif
+#    define CORE_ASSERT(x, ...) { if(!(x)) { CORE_ERROR("assertion failed: {0}!", __VA_ARGS__); DEBUGBREAK(); } }
+#    define ASSERT(x, ...) { if(!(x)) { CLIENT_ERROR("assertion failed: {0}!", __VA_ARGS__); DEBUGBREAK(); } }
 #else
 #    define CORE_ASSERT(x, ...)
 #    define ASSERT(x, ...)
 #endif
 
+#ifdef _MSC_VER
+#    define FUNC_SIG __FUNCSIG__
+#else
+#    define FUNC_SIG __PRETTY_FUNCTION__
+#endif
+
 #define CORE_ENSURE(x, ...) { if(!(x)) { CORE_ERROR("ensure failed: {0}!", __VA_ARGS__); } }
 #define ENSURE(x, ...) { if(!(x)) { CLIENT_ERROR("ensure failed: {0}!", __VA_ARGS__); } }
 
-#define UNIMPLEMENTED_FUNCTION() CORE_WARN("{0} not implemented yet!", __FUNCSIG__)
+#define UNIMPLEMENTED_FUNCTION() CORE_WARN("{0} not implemented yet!", FUNC_SIG)
 
 #include "util/instrumentor.h"
 
@@ -150,7 +165,7 @@ namespace z1 {
 // }
 #    define PROFILE_FLOW_BEGIN(id)                 z1::report_flow(id, "s")
 #    define PROFILE_FLOW_END(id)                   z1::report_flow(id, "f")
-#    define PROFILE_FUNCTION()                     PROFILE_SCOPE(__FUNCSIG__)
+#    define PROFILE_FUNCTION()                     PROFILE_SCOPE(FUNC_SIG)
 #else
 #    define PROFILE_BEGIN_SESSION(name, filepath)
 #    define PROFILE_END_SESSION()
@@ -242,7 +257,7 @@ namespace z1 {
 	{                                                                  \
 		if (!(expr)) {                                                 \
 			CORE_ERROR("debug check failed: " __VA_ARGS__);            \
-			__debugbreak();                                            \
+			DEBUGBREAK();                                              \
 		}                                                              \
 	}
 #else

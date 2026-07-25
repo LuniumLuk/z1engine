@@ -122,7 +122,8 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 			auto view = scene->m_registry.view<TransformComponent const, SpriteComponent const, TagComponent const>();
 			for (auto [entity, transform, sprite, tag] : view.each()) {
 				float object_id = static_cast<float>(tag.m_id) + 1.0f;
-				m_sprite_pipeline->m_shader->set_uniform("u_model", &transform.get_world_transform());
+				glm::mat4 world_transform = transform.get_world_transform();
+				m_sprite_pipeline->m_shader->set_uniform("u_model", &world_transform);
 				m_sprite_pipeline->m_shader->set_uniform("u_object_id", &object_id);
 				m_quad_vao->draw(PrimitiveType::Triangles);
 			}

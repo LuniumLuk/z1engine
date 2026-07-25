@@ -3,18 +3,28 @@
 
 import argparse
 import fnmatch
+import os
 from pathlib import Path
 from commands._common import (
 	EXIT_CONFIG_ERROR, EXIT_RUNTIME_ERROR, Timer, make_result, print_fail,
 	print_info, print_ok, print_run, print_skip, repo_root, run_subprocess,
-	normalize_config,
+	normalize_config, get_executable_extension, is_macos,
 )
 
 def _discover_tests(test_dir, pattern=None, names=None):
-	"""Find test_*.exe files in the given directory."""
+	"""Find test executables in the given directory."""
 	if not test_dir.exists():
 		return []
-	tests = sorted(test_dir.glob("test_*.exe"))
+	ext = get_executable_extension()
+	if is_macos():
+		# On macOS, find executables by checking file permissions
+		tests = sorted([
+			f for f in test_dir.iterdir()
+			if f.is_file() and f.name.startswith("test_")
+			and os.access(f, os.X_OK)
+		])
+	else:
+		tests = sorted(test_dir.glob(f"test_*{ext}"))
 	if names:
 		norm = set()
 		for n in names:
@@ -22,10 +32,10 @@ def _discover_tests(test_dir, pattern=None, names=None):
 			if not ns:
 				continue
 			norm.add(ns)
-			if ns.endswith(".exe"):
-				norm.add(ns[:-4])
+			if ns.endswith(ext):
+				norm.add(ns[:-len(ext)])
 			else:
-				norm.add(ns + ".exe")
+				norm.add(ns + ext)
 		tests = [t for t in tests if t.name in norm or t.stem in norm]
 	if pattern:
 		tests = [t for t in tests if fnmatch.fnmatch(t.name, pattern)]

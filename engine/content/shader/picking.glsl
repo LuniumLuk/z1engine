@@ -1,7 +1,7 @@
 @uniforms: {
 	#include <include/uniforms.glsl>
 
-	layout(location = 2) uniform float u_object_id;
+	LOCATION(2) uniform float u_object_id;
 }
 @stage: vert {
 	#include <include/vert.glsl>

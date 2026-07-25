@@ -1,9 +1,9 @@
 @uniforms: {
-	layout(location = 0) uniform mat4 u_projview;
-	layout(location = 1) uniform mat4 u_model;
-	layout(location = 2) uniform vec4 u_color;
-	layout(location = 3) uniform sampler2D u_texture;
-	layout(location = 4) uniform vec4 u_tiling_factor;
+	LOCATION(0) uniform mat4 u_projview;
+	LOCATION(1) uniform mat4 u_model;
+	LOCATION(2) uniform vec4 u_color;
+	LOCATION(3) uniform sampler2D u_texture;
+	LOCATION(4) uniform vec4 u_tiling_factor;
 }
 @reflections: {
 	u_projview      [invisible]            // mat4, set by the engine

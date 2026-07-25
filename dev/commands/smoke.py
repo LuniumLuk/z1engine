@@ -6,6 +6,7 @@ from pathlib import Path
 from commands._common import (
 	EXIT_CONFIG_ERROR, EXIT_RUNTIME_ERROR, Timer, make_result, print_fail,
 	print_info, print_ok, print_run, repo_root, run_subprocess, normalize_config,
+	get_executable_extension,
 )
 
 def main(argv=None):
@@ -23,11 +24,12 @@ def main(argv=None):
 
 	config = normalize_config(args.config) or "Debug"
 	root = repo_root()
+	ext = get_executable_extension()
 
-	# Try game.exe, then editor.exe
+	# Try game, then editor
 	candidates = [
-		root / "engine" / "bin" / config / "game.exe",
-		root / "engine" / "bin" / config / "editor.exe",
+		root / "engine" / "bin" / config / f"game{ext}",
+		root / "engine" / "bin" / config / f"editor{ext}",
 	]
 	exe = None
 	for c in candidates:
@@ -36,7 +38,7 @@ def main(argv=None):
 			break
 
 	if exe is None:
-		print_fail("No game.exe or editor.exe found")
+		print_fail(f"No game{ext} or editor{ext} found")
 		print_info("Build the solution first: python dev/z1.py compile")
 		return make_result("fail", "smoke", exit_code=EXIT_CONFIG_ERROR,
 						   detail="executable not found")

@@ -1,3 +1,4 @@
+#ifdef PLATFORM_WINDOWS
 #include "pybind11/embed.h"
 #include <iostream>
 #include <filesystem>
@@ -80,3 +81,5 @@ int main() {
 	Py_Finalize();
 	return ok ? 0 : 1;
 }
+
+#endif // PLATFORM_WINDOWS

@@ -1,9 +1,9 @@
 @uniforms: {
 	#include <include/uniforms.glsl>
 
-	layout(location = 0) uniform sampler2D u_src_texture;
-	layout(location = 1) uniform vec2 u_src_resolution;
-	layout(location = 2) uniform int u_mip_level;
+	LOCATION(0) uniform sampler2D u_src_texture;
+	LOCATION(1) uniform vec2 u_src_resolution;
+	LOCATION(2) uniform int u_mip_level;
 }
 @stage: vert {
 	#include <include/quad.glsl>

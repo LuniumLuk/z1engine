@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from commands._common import (
 	EXIT_VALIDATION_ERROR, Timer, make_result, print_fail, print_info,
-	print_ok, print_run, print_warn, repo_root,
+	print_ok, print_run, print_warn, repo_root, is_windows,
 )
 
 EXTENSIONS = {".h", ".cpp", ".glsl", ".py"}
@@ -69,11 +69,12 @@ def _process_file(filepath, dry_run):
 		current = _convert_to_tabs(current)
 		new_lines.append(current)
 
-	# CRLF
+	# Line endings: CRLF on Windows, LF on macOS/Linux
+	line_ending = "\r\n" if is_windows() else "\n"
 	if not new_lines:
 		new_content = ""
 	else:
-		new_content = "\r\n".join(new_lines) + "\r\n"
+		new_content = line_ending.join(new_lines) + line_ending
 
 	new_bytes = new_content.encode("utf-8")
 	modified = (content_bytes != new_bytes)

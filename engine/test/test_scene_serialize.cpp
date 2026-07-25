@@ -2,8 +2,10 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#ifdef PLATFORM_WINDOWS
 #include "python/python_layer.h"
 #include "python/python_script.h"
+#endif
 
 using namespace z1;
 
@@ -191,6 +193,7 @@ int main() {
 #endif
 
 	// Python Script Test
+#ifdef PLATFORM_WINDOWS
 	if (g_runtime_context.m_python_layer) {
 		std::cout << "Starting Python Script Test..." << std::endl;
 		g_runtime_context.m_global->script_enabled = true;
@@ -217,6 +220,7 @@ int main() {
 
 		g_runtime_context.m_python_layer->on_detach();
 	}
+#endif
 
 	scene->save();
 	cleanup_scene();

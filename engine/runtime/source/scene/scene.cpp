@@ -190,7 +190,9 @@ namespace z1 {
 		AnimationSystem::update(this, Timer::fixed_update_delta);
 		ParticleSystem::update(this, Timer::fixed_update_delta);
 		ScriptSystem::update(this, Timer::fixed_update_delta);
+#ifdef PLATFORM_WINDOWS
 		PhysicsSystem::update(this, Timer::fixed_update_delta);
+#endif
 	}
 
 	std::shared_ptr<Scene> Scene::create(Filepath const& path) {
@@ -507,6 +509,7 @@ namespace z1 {
 				}
 			}
 
+#ifdef PLATFORM_WINDOWS
 		// ColliderComponent
 		if (entity_yaml["collider"]) {
 			auto const& c = entity_yaml["collider"];
@@ -524,6 +527,7 @@ namespace z1 {
 			if (p["use_gravity"]) physics.m_use_gravity = p["use_gravity"].as<bool>();
 			if (p["linear_damping"]) physics.m_linear_damping = p["linear_damping"].as<float>();
 		}
+#endif
 		}
 
 		// resolve parent references
@@ -851,6 +855,7 @@ namespace z1 {
 				yaml << YAML::EndSeq;
 			}
 
+#ifdef PLATFORM_WINDOWS
 			// ColliderComponent
 			if (entity->has_component<ColliderComponent>()) {
 				auto const& collider = entity->get_component<ColliderComponent>();
@@ -872,6 +877,7 @@ namespace z1 {
 				yaml << YAML::Key << "linear_damping" << YAML::Value << physics.m_linear_damping;
 				yaml << YAML::EndMap;
 			}
+#endif
 
 			yaml << YAML::EndMap;
 		}

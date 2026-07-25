@@ -4,7 +4,6 @@ project "shader_validator"
 	cppdialect "C++17"
 	staticruntime "on"
 	optimize "on"
-	systemversion "latest"
 	targetdir ("%{wks.location}/engine/bin")
 	objdir ("%{wks.location}/engine/intermediate")
 	debugdir ("%{wks.location}")
@@ -16,5 +15,17 @@ project "shader_validator"
 	links {
 		"glfw",
 		"glad",
-		"opengl32.lib"
 	}
+
+	filter "system:windows"
+		systemversion "latest"
+		links { "opengl32.lib" }
+
+	filter "system:macosx"
+		links { "OpenGL.framework", "Cocoa.framework", "IOKit.framework", "CoreVideo.framework" }
+
+	filter "configurations:Debug"
+		symbols "on"
+
+	filter "configurations:Release"
+		optimize "on"

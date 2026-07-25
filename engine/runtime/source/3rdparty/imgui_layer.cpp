@@ -41,7 +41,11 @@ namespace z1 {
 		auto window = static_cast<GLFWwindow*>(g_runtime_context.m_window->get_native_window());
 
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef PLATFORM_MACOS
+		ImGui_ImplOpenGL3_Init("#version 410");
+#else
 		ImGui_ImplOpenGL3_Init("#version 460");
+#endif
 	}
 
 	void ImGuiLayer::on_detach() {

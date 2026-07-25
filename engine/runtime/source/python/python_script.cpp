@@ -19,7 +19,7 @@ namespace z1 {
 			m_instance = cls();
 
 			if (is_entity_valid()) {
-				std::shared_ptr<Entity> entity = m_entity.lock();
+				std::shared_ptr<Entity> entity = std::static_pointer_cast<Entity>(m_entity.lock());
 				if (entity) {
 					m_instance.attr("entity") = pybind11::cast(entity);
 				}

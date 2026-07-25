@@ -1,53 +1,42 @@
 #include "z1engine.h"
 #include "gui.h"
 
-#include <windows.h>
-#include <commdlg.h>
-#include <glfw/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <glfw/glfw3native.h>
+#include <nfd.h>
+#include <cstring>
 
 using namespace z1;
 
 std::string open_file_dialog(char const* filter) {
-	OPENFILENAMEA ofn;      // common dialog box structure
-	char file[256] = { 0 }; // buffer for file name
+	NFD_Init();
 
-	ZeroMemory(&ofn, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)g_runtime_context.m_window->get_native_window());
-	ofn.lpstrFile = file;
-	ofn.lpstrFile[0] = '\0';
-	ofn.nMaxFile = sizeof(file);
-	ofn.lpstrFilter = filter;
-	ofn.nFilterIndex = 1;
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+	nfdchar_t* out_path = nullptr;
+	nfdresult_t result = NFD_OpenDialog(&out_path, nullptr, 0, nullptr);
 
-	if (GetOpenFileNameA(&ofn) == TRUE) {
-		return ofn.lpstrFile;
+	if (result == NFD_OKAY && out_path) {
+		std::string path(out_path);
+		NFD_FreePath(out_path);
+		NFD_Quit();
+		return path;
 	}
 
+	NFD_Quit();
 	return std::string(); // empty if canceled
 }
 
 std::string save_file_dialog(char const* filter) {
-	OPENFILENAMEA ofn;      // common dialog box structure
-	char file[256] = { 0 }; // buffer for file name
+	NFD_Init();
 
-	ZeroMemory(&ofn, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = glfwGetWin32Window((GLFWwindow*)g_runtime_context.m_window->get_native_window());
-	ofn.lpstrFile = file;
-	ofn.lpstrFile[0] = '\0';
-	ofn.nMaxFile = sizeof(file);
-	ofn.lpstrFilter = filter;
-	ofn.nFilterIndex = 1;
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+	nfdchar_t* out_path = nullptr;
+	nfdresult_t result = NFD_SaveDialog(&out_path, nullptr, 0, nullptr, nullptr);
 
-	if (GetSaveFileNameA(&ofn) == TRUE) {
-		return ofn.lpstrFile;
+	if (result == NFD_OKAY && out_path) {
+		std::string path(out_path);
+		NFD_FreePath(out_path);
+		NFD_Quit();
+		return path;
 	}
 
+	NFD_Quit();
 	return std::string(); // empty if canceled
 }
 

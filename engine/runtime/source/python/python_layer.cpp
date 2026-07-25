@@ -15,7 +15,45 @@
 #include "pybind11/embed.h"
 namespace py = pybind11;
 
+#ifdef PLATFORM_WINDOWS
 #include <conio.h> // Windows specific for _kbhit and _getch
+#else
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+static int _kbhit(void) {
+	struct termios oldt, newt;
+	int ch;
+	int oldf;
+	tcgetattr(STDIN_FILENO, &oldt);
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+	oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+	ch = getchar();
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	fcntl(STDIN_FILENO, F_SETFL, oldf);
+	if (ch != EOF) {
+		ungetc(ch, stdin);
+		return 1;
+	}
+	return 0;
+}
+
+static int _getch(void) {
+	struct termios oldt, newt;
+	int ch;
+	tcgetattr(STDIN_FILENO, &oldt);
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+	ch = getchar();
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	return ch;
+}
+#endif
 
 extern void ForceLinkPythonEngine();
 
@@ -23,6 +61,38 @@ namespace z1 {
 
 	static std::filesystem::path get_embedded_python_home() {
 		auto cwd = std::filesystem::current_path();
+
+#ifdef PLATFORM_MACOS
+		// 1. On macOS, detect pyenv Python from .python-version file first
+		{
+			auto version_file = cwd / ".python-version";
+			if (std::filesystem::exists(version_file)) {
+				std::ifstream in(version_file);
+				std::string version;
+				std::getline(in, version);
+				if (!version.empty()) {
+					version.erase(0, version.find_first_not_of(" \t\r\n"));
+					version.erase(version.find_last_not_of(" \t\r\n") + 1);
+					const char* home_dir = getenv("HOME");
+					if (home_dir) {
+						auto pyenv_home = std::filesystem::path(home_dir) / ".pyenv" / "versions" / version;
+						if (std::filesystem::exists(pyenv_home / "lib")) {
+							return pyenv_home;
+						}
+					}
+				}
+			}
+		}
+		// 2. Fallback: use PYTHONHOME from environment
+		{
+			const char* env_home = getenv("PYTHONHOME");
+			if (env_home && env_home[0]) {
+				return std::filesystem::path(env_home);
+			}
+		}
+#endif
+
+		// Check bundled Python in engine/3rdparty/python314 (Windows + fallback)
 		auto candidate = cwd / "engine" / "3rdparty" / "python314";
 		if (std::filesystem::exists(candidate / "python314.zip")) {
 			return std::filesystem::absolute(candidate);
@@ -49,29 +119,15 @@ namespace z1 {
 
 		// 1. Initialize PyConfig
 		PyConfig config;
-		PyConfig_InitIsolatedConfig(&config); // Isolated means ignore environment variables
+		PyConfig_InitPythonConfig(&config);
 
-		// 2. Set the Python Home (the directory containing python314.zip or Lib/)
-		// This replaces Py_SetPythonHome
+		// 2. Set the Python Home (the directory containing lib/python3.14/)
 		auto python_home_path = get_embedded_python_home();
 		std::wstring home = python_home_path.wstring();
 		PyStatus status = PyConfig_SetString(&config, &config.home, home.c_str());
 		if (PyStatus_Exception(status)) {
 			PyConfig_Clear(&config);
 			CORE_ASSERT(false, "Failed to set Python Home");
-		}
-
-		config.module_search_paths_set = 1;
-		std::wstring python_zip = (python_home_path / "python314.zip").wstring();
-		status = PyWideStringList_Append(&config.module_search_paths, python_zip.c_str());
-		if (PyStatus_Exception(status)) {
-			PyConfig_Clear(&config);
-			CORE_ASSERT(false, "Failed to append python zip path");
-		}
-		status = PyWideStringList_Append(&config.module_search_paths, home.c_str());
-		if (PyStatus_Exception(status)) {
-			PyConfig_Clear(&config);
-			CORE_ASSERT(false, "Failed to append python home path");
 		}
 
 		// Configure pycache prefix to redirect .pyc files to a central location

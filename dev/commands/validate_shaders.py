@@ -6,6 +6,7 @@ from pathlib import Path
 from commands._common import (
 	EXIT_CONFIG_ERROR, EXIT_VALIDATION_ERROR, Timer, make_result, print_fail,
 	print_ok, print_run, print_info, repo_root, run_subprocess, normalize_config,
+	get_executable_extension,
 )
 
 def main(argv=None):
@@ -14,17 +15,17 @@ def main(argv=None):
 		description="Validate all GLSL shaders using shader_validator.",
 	)
 	parser.add_argument("--config", default="Debug",
-						help="Build config to find shader_validator.exe (default: Debug)")
+						help="Build config to find shader_validator (default: Debug)")
 	args = parser.parse_args(argv)
 
 	config = normalize_config(args.config) or "Debug"
 	root = repo_root()
+	ext = get_executable_extension()
 
 	# Try multiple known paths for shader_validator
 	candidates = [
-		root / "engine" / "bin" / config / "shader_validator.exe",
-		root / "engine" / "bin" / "shader_validator.exe",
-		root / "engine" / "bin" / "test" / config / "shader_validator.exe",
+		root / "engine" / "bin" / config / f"shader_validator{ext}",
+		root / "engine" / "bin" / f"shader_validator{ext}",
 	]
 
 	validator = None
@@ -34,11 +35,11 @@ def main(argv=None):
 			break
 
 	if validator is None:
-		print_fail("shader_validator.exe not found")
+		print_fail(f"shader_validator{ext} not found")
 		print_info(f"Searched: {', '.join(str(c) for c in candidates)}")
 		print_info("Build the solution first: python dev/z1.py compile")
 		return make_result("fail", "validate-shaders", exit_code=EXIT_CONFIG_ERROR,
-						   detail="shader_validator.exe not found")
+						   detail=f"shader_validator{ext} not found")
 
 	timer = Timer()
 	print_run("validate-shaders")

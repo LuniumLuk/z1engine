@@ -83,15 +83,17 @@ namespace z1 {
 			return false;
 
 		// 1. Reserved Windows Device Names (cannot be filenames)
+#ifdef PLATFORM_WINDOWS
 		static const std::set<std::string> reserved_names = {
 			"CON",	"PRN",	"AUX",	"NUL",	"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
 			"COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
+#endif
 
 		const std::string illegal_chars = "<>:\"|?*";
 		Filepath legal_path;
 
 		// Iterate through each part of the path (e.g., "folder", "subfolder", "file.txt")
-		for (auto& part : path) {
+		for (const auto& part : path) {
 			std::string name = part.string();
 
 			// Skip root directory (e.g., "C:/") to avoid breaking drive letters
@@ -114,11 +116,13 @@ namespace z1 {
 
 			// 4. Check for Reserved Names (e.g., "CON.txt" is illegal)
 			// We check the stem (filename without extension)
+#ifdef PLATFORM_WINDOWS
 			std::string stem = Filepath(name).stem().string();
 			std::transform(stem.begin(), stem.end(), stem.begin(), ::toupper);
 			if (reserved_names.count(stem)) {
 				name = "_" + name;
 			}
+#endif
 
 			if (!name.empty()) {
 				legal_path /= name;

@@ -133,16 +133,22 @@ namespace z1 {
 	}
 
 	void OpenGLContext::push_debug_group(std::string const& name) {
+#ifdef PLATFORM_MACOS
+		(void)name; // glPushDebugGroup requires GL 4.3+ (not available on macOS 4.1)
+#else
 		glPushDebugGroup(
 			GL_DEBUG_SOURCE_APPLICATION,
 			0,
 			-1,
 			name.c_str()
 		);
+#endif
 	}
 
 	void OpenGLContext::pop_debug_group() {
+#ifndef PLATFORM_MACOS
 		glPopDebugGroup();
+#endif
 	}
 
 	void OpenGLContext::blit_attachment(

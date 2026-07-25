@@ -7,6 +7,7 @@ from pathlib import Path
 from commands._common import (
 	EXIT_CONFIG_ERROR, EXIT_RUNTIME_ERROR, Timer, make_result, print_fail,
 	print_info, print_ok, print_run, repo_root,
+	get_executable_extension, get_shared_lib_extension, is_windows,
 )
 
 def main(argv=None):
@@ -43,11 +44,19 @@ def main(argv=None):
 			print_info(f"Skipped {src.name} (not found)")
 
 	# Copy binaries
+	ext = get_executable_extension()
+	dylib = get_shared_lib_extension()
+	python_dir = root / "engine" / "3rdparty" / "python314"
+
 	file_copies = [
-		(root / "engine" / "bin" / "Release" / "editor.exe", release_dir / "editor.exe"),
-		(root / "3rdparty" / "python314" / "python314.dll", release_dir / "python314.dll"),
-		(root / "3rdparty" / "python314" / "python314.zip", release_dir / "python314.zip"),
+		(root / "engine" / "bin" / "Release" / f"editor{ext}", release_dir / f"editor{ext}"),
+		(root / "engine" / "bin" / "Release" / f"game{ext}", release_dir / f"game{ext}"),
 	]
+	if is_windows():
+		file_copies += [
+			(python_dir / "python314.dll", release_dir / "python314.dll"),
+			(python_dir / "python314.zip", release_dir / "python314.zip"),
+		]
 	copied = 0
 	missing = 0
 	for src, dst in file_copies:

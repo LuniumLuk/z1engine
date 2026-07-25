@@ -6,6 +6,12 @@
 
 namespace z1 {
 
+#ifdef PLATFORM_MACOS
+	static const char* GLSL_VERSION = "#version 410 core\n#define LOCATION(x)\n";
+#else
+	static const char* GLSL_VERSION = "#version 460 core\n#define LOCATION(x) layout(location = x)\n";
+#endif
+
 	static DataType opengl_type_to_data_type(GLenum type) {
 		switch (type) {
 		case GL_FLOAT: return DataType::Float;
@@ -114,7 +120,7 @@ namespace z1 {
 
 			src = uniforms + src;
 			src = process_includes(src, path.parent_path().generic_string() + "/");
-			src = "#version 460 core\n" + src;
+			src = GLSL_VERSION + src;
 
 			CORE_DEBUG("loading shader stage [{0}] from file {1}", type, path.generic_string());
 			shaders.push_back(new OpenGLShaderModule(str_to_shader_stage(type), src));
@@ -182,7 +188,7 @@ namespace z1 {
 
 			src = uniforms + src;
 			src = process_includes(src, path.parent_path().generic_string() + "/");
-			src = "#version 460 core\n" + src;
+			src = GLSL_VERSION + src;
 
 			CORE_DEBUG("loading shader stage [{0}] variant 0x{1:x} from file {2}", type, variant_key, path.generic_string());
 			shaders.push_back(new OpenGLShaderModule(str_to_shader_stage(type), src));

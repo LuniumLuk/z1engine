@@ -8,7 +8,7 @@ workspace "z1engine"
 	startproject "game"
 	configurations { "Debug", "Release", "Profile" }
 
-	filter { "action:vs2022", "options:vs2026" }
+	filter { "action:vs2022", "options:vs2026", "system:windows" }
 		toolset "v145"
 
 	filter {}
@@ -44,17 +44,23 @@ workspace "z1engine"
 				"engine/3rdparty/glm",
 				"engine/3rdparty/entt",
 				"engine/3rdparty/yaml-cpp/include",
-				"engine/3rdparty/python314/include",
 				"engine/bakery/source"
 			}
-			libdirs { "engine/3rdparty/python314/lib" }
-			links { "runtime", "python314" }
-			postbuildcommands {
-				"if not exist \"%{cfg.targetdir}/python314.dll\" {COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
-			}
+			links { "runtime" }
 			filter "system:windows"
+				includedirs { "engine/3rdparty/python314/include" }
+				libdirs { "engine/3rdparty/python314/lib" }
+				links { "python314" }
 				systemversion "latest"
 				defines "PLATFORM_WINDOWS"
+				postbuildcommands {
+					"if not exist \"%{cfg.targetdir}/python314.dll\" {COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
+				}
+			filter "system:macosx"
+				includedirs { path.join(os.outputof("python3 -c \"import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))\""), "") }
+				libdirs { path.join(os.outputof("python3 -c \"import sysconfig; print(sysconfig.get_config_var('LIBDIR'))\""), "") }
+				linkoptions { "-lpython3.14" }
+				defines "PLATFORM_MACOS"
 			filter "configurations:Debug"
 				defines { "DEBUG", "ENABLE_ASSERTS" }
 				staticruntime "on"
@@ -73,6 +79,7 @@ workspace "z1engine"
 		include "engine/3rdparty/lz4"
 		include "engine/3rdparty/yaml-cpp"
 		include "engine/3rdparty/imguizmo"
+		include "engine/3rdparty/nfd"
 		include "engine/bakery"
 
 	group "test"

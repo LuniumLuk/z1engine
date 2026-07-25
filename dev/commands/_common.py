@@ -3,6 +3,7 @@
 
 import json
 import os
+import platform
 import subprocess
 import sys
 import time
@@ -73,6 +74,45 @@ _VALID_CONFIGS = {"debug": "Debug", "release": "Release", "profile": "Profile"}
 def normalize_config(name):
 	"""Normalize a build config name (case-insensitive). Returns None if invalid."""
 	return _VALID_CONFIGS.get(name.lower()) if name else None
+
+# ---------------------------------------------------------------------------
+# Platform detection
+# ---------------------------------------------------------------------------
+def is_macos():
+	"""Return True if running on macOS."""
+	return sys.platform == "darwin"
+
+def is_windows():
+	"""Return True if running on Windows."""
+	return sys.platform == "win32"
+
+def get_executable_extension():
+	"""Return the platform-appropriate executable extension."""
+	return ".exe" if is_windows() else ""
+
+def get_shared_lib_extension():
+	"""Return the platform-appropriate shared library extension."""
+	return ".dll" if is_windows() else ".dylib"
+
+def get_premake5_path():
+	"""Find the premake5 binary appropriate for this platform."""
+	# Check PATH first
+	import shutil
+	path = shutil.which("premake5")
+	if path:
+		return path
+	# Fall back to bundled binary
+	root = repo_root()
+	ext = get_executable_extension()
+	premake = root / "utils" / "premake" / f"premake5{ext}"
+	if premake.exists():
+		return str(premake)
+	return None
+
+def find_make():
+	"""Find make on PATH. Returns path string or None."""
+	import shutil
+	return shutil.which("make")
 
 # ---------------------------------------------------------------------------
 # Visual Studio detection

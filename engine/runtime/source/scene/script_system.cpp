@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "scene/script_system.h"
 #include "scene/component/base.h"
-#include "python/python_script.h"
 #include "render/global.h"
 
 namespace z1 {

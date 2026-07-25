@@ -1,7 +1,7 @@
 @uniforms: {
-	layout(location = 0) uniform mat4 u_projview;
-	layout(location = 1) uniform mat4 u_model;
-	layout(location = 2) uniform float u_object_id;
+	LOCATION(0) uniform mat4 u_projview;
+	LOCATION(1) uniform mat4 u_model;
+	LOCATION(2) uniform float u_object_id;
 }
 @reflections: {
 	u_projview [invisible] // mat4, set by the engine

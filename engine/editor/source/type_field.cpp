@@ -1,4 +1,5 @@
 #include "type_field.h"
+#include "python/python_script.h"
 
 void accept_payload(std::string const& data_type, std::function<void(void*)> callback) {
 	auto payload = ImGui::GetDragDropPayload();
@@ -254,7 +255,7 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 	else if (type == typeid(std::string)) {
 		std::string& value = *reinterpret_cast<std::string*>(ptr);
 		static char str_buffer[256] = {};
-		strcpy_s(str_buffer, value.c_str());
+		strcpy(str_buffer, value.c_str());
 		if (ImGui::InputText(widget_name.c_str(), str_buffer, IM_ARRAYSIZE(str_buffer))) {
 			value = std::string(str_buffer);
 		}
@@ -485,15 +486,15 @@ void show_properties(std::shared_ptr<Entity> const& selected_entity) {
 							}
 							// Add script button
 							if (ImGui::BeginCombo("add script", "select script...")) {
-								auto const& metas = g_runtime_context.m_asset_manager->get_all_metas();
-								for (auto const& meta : metas) {
-									if (meta.type == "script") {
-										std::string name = meta.path.stem().string();
-										if (ImGui::Selectable(name.c_str())) {
-											selected_entity->attach_script<PythonScript>(name, "Script");
-										}
+							auto const& metas = g_runtime_context.m_asset_manager->get_all_metas();
+							for (auto const& meta : metas) {
+								if (meta.type == "script") {
+									std::string name = meta.path.stem().string();
+									if (ImGui::Selectable(name.c_str())) {
+										selected_entity->attach_script<PythonScript>(name, "Script");
 									}
 								}
+							}
 								ImGui::EndCombo();
 							}
 						}

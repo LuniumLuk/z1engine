@@ -40,6 +40,12 @@ namespace z1 {
 		{
 			PROFILE_SCOPE("glfwCreateWindow");
 			glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+#ifdef PLATFORM_MACOS
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+			glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#endif
 			m_window = glfwCreateWindow((int)config.width, (int)config.height, config.title.c_str(), nullptr, nullptr);
 			glfwSetWindowUserPointer(m_window, &m_data);
 		}

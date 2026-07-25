@@ -1,4 +1,5 @@
 #include "pch.h"
+#ifdef PLATFORM_WINDOWS
 #include "scene/physics_system.h"
 #include "scene/scene.h"
 #include "scene/component/collider.h"
@@ -225,3 +226,5 @@ namespace {
 	}
 
 }
+
+#endif // PLATFORM_WINDOWS

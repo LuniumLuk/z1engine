@@ -28,12 +28,18 @@ project "editor"
 		"%{wks.location}/engine/3rdparty/glm",
 		"%{wks.location}/engine/3rdparty/entt",
 		"%{wks.location}/engine/3rdparty/yaml-cpp/include",
-		"%{wks.location}/engine/3rdparty/python314/include",
+		"%{wks.location}/engine/3rdparty/nfd/src/include",
 	}
+
+	filter "system:windows"
+		includedirs { "%{wks.location}/engine/3rdparty/python314/include" }
+	filter "system:macosx"
+		includedirs { path.join(os.outputof("python3 -c \"import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))\""), "") }
 
 	links
 	{
-		"runtime"
+		"runtime",
+		"nfd"
 	}
 
 	filter "system:windows"
@@ -41,6 +47,12 @@ project "editor"
 		defines
 		{
 			"PLATFORM_WINDOWS",
+		}
+
+	filter "system:macosx"
+		defines
+		{
+			"PLATFORM_MACOS",
 		}
 
 	filter "configurations:Debug"

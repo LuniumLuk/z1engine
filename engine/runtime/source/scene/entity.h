@@ -123,4 +123,7 @@ namespace z1 {
 		bool m_is_destroyed = false;
 	};
 
+	// Include ScriptBase template definitions (needs complete Entity type)
 }
+
+#include "scene/component/base.inl"

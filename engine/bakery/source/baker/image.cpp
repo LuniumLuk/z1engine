@@ -62,7 +62,7 @@ namespace z1::bakery {
 	const unsigned char* load_uncompressed_image(std::filesystem::path const& path, int* width, int* height) {
 		if (!is_supported_format(path)) {
 			log_error("unsupported image format: " + path.string());
-			return false;
+			return nullptr;
 		}
 
 		// load image data
@@ -71,7 +71,7 @@ namespace z1::bakery {
 		stbi_uc* data = stbi_load(path.string().c_str(), width, height, &channels, STBI_rgb_alpha);
 		if (!data) {
 			log_error("failed to load image:" + path.string());
-			return false;
+			return nullptr;
 		}
 
 		return data;

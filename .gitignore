@@ -9,6 +9,7 @@ __pycache__
 *.ini
 *.args.json
 screenshot*
+Makefile
 engine/bin
 engine/intermediate
 cache

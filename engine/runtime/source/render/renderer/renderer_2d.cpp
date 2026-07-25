@@ -75,7 +75,7 @@ namespace z1 {
 		draw_quads(quads);
 		prepare_draw(framebuffer);
 
-		auto& rg = RenderGraph();
+		auto rg = RenderGraph();
 
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);

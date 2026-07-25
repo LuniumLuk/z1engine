@@ -26,13 +26,17 @@ project "importer"
 
 	links { "runtime", "python314" }
 
-	postbuildcommands {
-		"if not exist \"%{cfg.targetdir}/python314.dll\" {COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
-	}
+	filter "system:windows"
+		postbuildcommands {
+			"if not exist \"%{cfg.targetdir}/python314.dll\" {COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
+		}
 
 	filter "system:windows"
 		systemversion "latest"
 		defines "PLATFORM_WINDOWS"
+
+	filter "system:macosx"
+		defines "PLATFORM_MACOS"
 
 	filter "configurations:Debug"
 		defines { "DEBUG", "ENABLE_ASSERTS" }

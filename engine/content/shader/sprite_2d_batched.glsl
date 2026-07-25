@@ -1,6 +1,6 @@
 @uniforms: {
-	layout(location = 0) uniform mat4 u_projview;
-	layout(location = 1) uniform sampler2D u_texture[32];
+	LOCATION(0) uniform mat4 u_projview;
+	LOCATION(1) uniform sampler2D u_texture[32];
 }
 @stage: vert {
 	layout(location = 0) in vec3 a_position;

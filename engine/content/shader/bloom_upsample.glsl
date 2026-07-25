@@ -1,8 +1,8 @@
 @uniforms: {
 	#include <include/uniforms.glsl>
 
-	layout(location = 0) uniform sampler2D u_src_texture;
-	layout(location = 1) uniform float u_filter_radius;
+	LOCATION(0) uniform sampler2D u_src_texture;
+	LOCATION(1) uniform float u_filter_radius;
 }
 @stage: vert {
 	#include <include/quad.glsl>

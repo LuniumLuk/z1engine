@@ -135,6 +135,8 @@ namespace z1 {
 
 	struct API ScriptBase {
 
+		virtual ~ScriptBase() = default;
+
 		virtual void on_attach() = 0;
 		virtual void on_start() {}
 		virtual void on_update(float delta_time) = 0;
@@ -143,36 +145,20 @@ namespace z1 {
 
 		virtual std::string get_script_name() const { return "unregistered"; }
 
-		template<typename T>
-		bool has_component() const {
-			return m_entity.lock()->has_component<T>();
-		}
+		template<typename T, typename Dummy = void>
+		bool has_component() const;
 
-		template<typename T>
-		T& get_component() const {
-			return m_entity.lock()->get_component<T>();
-		}
+		template<typename T, typename Dummy = void>
+		T& get_component() const;
 
-		template<typename T, typename... Args>
-		T& add_component(Args&&... args) {
-			return m_entity.lock()->add_component<T>(std::forward<Args>(args)...);
-		}
+		template<typename T, typename... Args, typename Dummy = void>
+		T& add_component(Args&&... args);
 
-		template<typename T>
-		void remove_component() {
-			return m_entity.lock()->remove_component<T>();
-		}
+		template<typename T, typename Dummy = void>
+		void remove_component();
 
 		template <typename T = void>
-		// we use a template here to ensure that the function compiles correctly.
-		// without this template, the compiler would be unable to instantiate the function
-		// because the full definition of 'Entity' is not available at this point.
-		// The 'Entity' used in this context is only a forward declaration, so the compiler
-		// needs the template to delay the function instantiation until the full type definition
-		// of 'Entity' is accessible, allowing the function to work properly when the definition is known.
-		bool is_entity_valid() const {
-			return !m_entity.expired() && m_entity.lock()->is_valid();
-		}
+		bool is_entity_valid() const;
 
 		bool is_valid() const {
 			return m_is_valid;
@@ -182,11 +168,19 @@ namespace z1 {
 			m_is_valid = false;
 		}
 
+		// Helper for friends to access the entity
+		template<typename Dummy = void>
+		std::shared_ptr<Entity> get_entity() const;
+
+		void set_entity(std::weak_ptr<void> const& entity) {
+			m_entity = entity;
+		}
+
 	private:
 		friend struct ScriptSystem;
 		friend struct ScriptComponent;
 		friend struct PythonScript;
-		std::weak_ptr<Entity> m_entity;
+		std::weak_ptr<void> m_entity;
 		bool m_is_valid = true;
 		ScriptState m_state = ScriptState::None;
 
@@ -231,6 +225,7 @@ namespace z1 {
 					if (script.detach_func) {
 						script.detach_func(script);
 					}
+					script.instance->set_entity(std::weak_ptr<void>());
 					script.instance.reset();
 				}
 			}

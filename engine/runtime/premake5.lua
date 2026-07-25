@@ -10,7 +10,7 @@ project "runtime"
 	pchheader "pch.h"
 	pchsource "source/pch.cpp"
 
-	defines { "YAML_CPP_STATIC_DEFINE", "PX_PHYSX_STATIC_LIB" }
+	defines { "YAML_CPP_STATIC_DEFINE" }
 
 	files
 	{
@@ -30,18 +30,31 @@ project "runtime"
 		"%{wks.location}/engine/3rdparty/glm",
 		"%{wks.location}/engine/3rdparty/entt",
 		"%{wks.location}/engine/3rdparty/yaml-cpp/include",
-		"%{wks.location}/engine/3rdparty/python314/include",
-		"%{wks.location}/engine/3rdparty/physx/include",
+		"%{wks.location}/engine/3rdparty/nfd/src/include",
 	}
+
+	filter "system:windows"
+		includedirs { "%{wks.location}/engine/3rdparty/python314/include" }
+	filter "system:macosx"
+		includedirs { path.join(os.outputof("python3 -c \"import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))\""), "") }
+
+	filter "system:windows"
+		includedirs { "%{wks.location}/engine/3rdparty/physx/include" }
+		defines { "PX_PHYSX_STATIC_LIB" }
+	filter {}
 
 	libdirs
 	{
-		"%{wks.location}/engine/3rdparty/python314/lib",
 	}
 
-	filter "configurations:Debug"
+	filter "system:windows"
+		libdirs { "%{wks.location}/engine/3rdparty/python314/lib" }
+	filter "system:macosx"
+		libdirs { path.join(os.outputof("python3 -c \"import sysconfig; print(sysconfig.get_config_var('LIBDIR'))\""), "") }
+
+	filter { "system:windows", "configurations:Debug" }
 		libdirs { "%{wks.location}/engine/3rdparty/physx/lib/Debug" }
-	filter "configurations:Release"
+	filter { "system:windows", "configurations:Release" }
 		libdirs { "%{wks.location}/engine/3rdparty/physx/lib/Release" }
 	filter {}
 
@@ -53,20 +66,36 @@ project "runtime"
 		"imguizmo",
 		"bakery",
 		"yaml-cpp",
-		"opengl32.lib",
-		"python314",
-		"PhysX_static_64",
-		"PhysXCommon_static_64",
-		"PhysXCooking_static_64",
-		"PhysXExtensions_static_64",
-		"PhysXFoundation_static_64",
-		"PhysXPvdSDK_static_64",
+		"nfd",
 	}
 
-	linkoptions { "/IGNORE:4006" }
+	filter "system:windows"
+		links { "python314" }
+	filter "system:macosx"
+		linkoptions { "-lpython3.14" }
 
-	-- Support large generated files (py_engine.gen.cpp has many pybind11 templates)
-	buildoptions { "/bigobj" }
+	filter "system:windows"
+		links
+		{
+			"opengl32.lib",
+			"PhysX_static_64",
+			"PhysXCommon_static_64",
+			"PhysXCooking_static_64",
+			"PhysXExtensions_static_64",
+			"PhysXFoundation_static_64",
+			"PhysXPvdSDK_static_64",
+		}
+		linkoptions { "/IGNORE:4006" }
+		buildoptions { "/bigobj" }
+	filter "system:macosx"
+		links
+		{
+			"OpenGL.framework",
+			"Cocoa.framework",
+			"IOKit.framework",
+			"CoreVideo.framework",
+		}
+	filter {}
 
 	filter "system:windows"
 		systemversion "latest"
@@ -75,6 +104,14 @@ project "runtime"
 		{
 			"PLATFORM_WINDOWS",
 			"BUILD_DLL",
+			"ENGINE_DIR=\"" .. path.getabsolute("%{prj.name}") .. "/\"",
+			"glfw_INCLUDE_NONE",
+		}
+
+	filter "system:macosx"
+		defines
+		{
+			"PLATFORM_MACOS",
 			"ENGINE_DIR=\"" .. path.getabsolute("%{prj.name}") .. "/\"",
 			"glfw_INCLUDE_NONE",
 		}

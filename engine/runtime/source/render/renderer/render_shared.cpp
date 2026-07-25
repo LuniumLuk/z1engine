@@ -456,7 +456,7 @@ namespace z1 {
 			.add_input("scene-color")
 			.add_input("velocity")
 			.execute([this, history_read](RenderGraphNode& node, GraphicsContext& ctx) {
-				auto& h = history_read->get_attachment_image(0);
+				auto h = history_read->get_attachment_image(0);
 				h->bind();
 
 				m_pipeline_taa->bind();
@@ -498,7 +498,7 @@ namespace z1 {
 			.add_output("taa-sharpen", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.set_pass_desc(desc)
 			.execute([this, source](RenderGraphNode& node, GraphicsContext& ctx) {
-				auto& src_img = source->get_attachment_image(0);
+				auto src_img = source->get_attachment_image(0);
 				src_img->bind();
 
 				m_pipeline_taa_sharpen->bind();
@@ -621,14 +621,14 @@ namespace z1 {
 					"Global",
 					g_runtime_context.m_global->get_binding());
 
-				auto& scene = node.get_input_image_index(0); // "taa-sharpen"
+				auto scene = node.get_input_image_index(0); // "taa-sharpen"
 				scene->bind();
 				s->set_uniform_binding(
 					"u_scene",
 					scene->get_binding());
 
 				if (g_runtime_context.m_global->pp_bloom_enabled && !m_bloom_textures.empty()) {
-					auto& bloom = m_bloom_textures[0]->get_attachment_image(0);
+					auto bloom = m_bloom_textures[0]->get_attachment_image(0);
 					bloom->bind();
 					s->set_uniform_binding("u_bloom_texture", bloom->get_binding());
 				}

@@ -29,25 +29,50 @@ project "game"
 		"%{wks.location}/engine/3rdparty/glm",
 		"%{wks.location}/engine/3rdparty/entt",
 		"%{wks.location}/engine/3rdparty/yaml-cpp/include",
-		"%{wks.location}/engine/3rdparty/python314/include",
 	}
 
-	libdirs { "%{wks.location}/engine/3rdparty/python314/lib" }
+	filter "system:windows"
+		includedirs { "%{wks.location}/engine/3rdparty/python314/include" }
+		libdirs { "%{wks.location}/engine/3rdparty/python314/lib" }
+	filter "system:macosx"
+		includedirs { path.join(os.outputof("python3 -c \"import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))\""), "") }
+		libdirs { path.join(os.outputof("python3 -c \"import sysconfig; print(sysconfig.get_config_var('LIBDIR'))\""), "") }
+	filter {}
 	links
 	{
-		"runtime", "editor", "python314"
+		"runtime", "editor", "nfd", "imgui", "imguizmo", "bakery", "yaml-cpp", "glfw", "glad", "LZ4",
 	}
 
-	postbuildcommands {
-		"{COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\"",
-		"{COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.zip\" \"%{cfg.targetdir}\"",
-	}
+	filter "system:windows"
+		links { "python314" }
+	filter "system:macosx"
+		linkoptions { "-lpython3.14" }
+
+	filter "system:windows"
+		postbuildcommands {
+			"{COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\"",
+			"{COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.zip\" \"%{cfg.targetdir}\"",
+		}
 
 	filter "system:windows"
 		systemversion "latest"
 		defines
 		{
 			"PLATFORM_WINDOWS",
+		}
+
+	filter "system:macosx"
+		defines
+		{
+			"PLATFORM_MACOS",
+		}
+		links
+		{
+			"OpenGL.framework",
+			"Cocoa.framework",
+			"IOKit.framework",
+			"CoreVideo.framework",
+			"UniformTypeIdentifiers.framework",
 		}
 	filter "configurations:Debug"
 		defines
