@@ -68,8 +68,9 @@ private:
 
 	int m_fps_counter = 0;
 	float m_fps_timer = 0.0;
-	int m_one_frame = -1;
+	int m_frames_to_run = -1;
 	int m_frame_count = 0;
+	bool m_screenshot_on_exit = false;
 
 	void use_editor_camera();
 	void show_scene_graph();

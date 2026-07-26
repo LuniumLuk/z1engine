@@ -35,7 +35,7 @@ All new and modified shaders MUST pass the `shader_validator` tool, which compil
 The engine MUST run without errors after the changes are applied.
 
 #### Scenario: Headless Runtime Verification
-- **WHEN** `engine\bin\Debug\game.exe --one-frame=10` is executed from the repository root
+- **WHEN** `engine\bin\Debug\game.exe --frames=10` is executed from the repository root
 - **THEN** the editor MUST initialize, render 10 frames, and exit gracefully.
 - **AND** the process MUST exit with code 0.
 - **AND** no crashes, assertions, or GPU errors MUST occur during the run.

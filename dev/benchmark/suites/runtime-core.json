@@ -34,7 +34,7 @@
     {
       "id": "runtime_forest_medium",
       "args": [
-        "--one-frame=200",
+        "--frames=200",
         "--scene=content/forest.yaml"
       ],
       "samples": 200
@@ -42,7 +42,7 @@
     {
       "id": "runtime_new_scene",
       "args": [
-        "--one-frame=200",
+        "--frames=200",
         "--scene=content/new_scene.yaml"
       ],
       "samples": 200

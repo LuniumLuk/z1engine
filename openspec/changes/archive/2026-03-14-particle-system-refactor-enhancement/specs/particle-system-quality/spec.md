@@ -126,5 +126,5 @@ All changes MUST compile and the engine MUST run without errors.
 - **THEN** all shaders (including modified `particle.glsl`) MUST pass validation
 
 #### Scenario: Runtime verification
-- **WHEN** `engine\bin\Debug\game.exe --one-frame=10` is executed
+- **WHEN** `engine\bin\Debug\game.exe --frames=10` is executed
 - **THEN** the engine MUST run 10 frames and exit gracefully with code 0

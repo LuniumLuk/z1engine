@@ -19,4 +19,4 @@
 ## 4. Verification
 
 - [x] 4.1 Build the project using `dev\build_vs2026.bat` to ensure no compilation errors.
-- [x] 4.2 Verify runtime stability by running `engine\bin\Debug\game.exe --one-frame=10` and ensuring it runs for 10 frames and exits without crashing.
+- [x] 4.2 Verify runtime stability by running `engine\bin\Debug\game.exe --frames=10` and ensuring it runs for 10 frames and exits without crashing.

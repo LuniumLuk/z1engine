@@ -77,4 +77,4 @@
 
 - [ ] 12.1 Full build: `dev\build_vs2026.bat` succeeds with zero errors.
 - [ ] 12.2 Shader validation: `validate_shaders.bat` passes for all shaders.
-- [ ] 12.3 Runtime: `engine\bin\Debug\game.exe --one-frame=10` exits gracefully with code 0.
+- [ ] 12.3 Runtime: `engine\bin\Debug\game.exe --frames=10` exits gracefully with code 0.

@@ -86,7 +86,7 @@ dev/
     format.py                 -- absorbs utils/format_code.py logic
     validate_shaders.py       -- wraps shader_validator.exe
     test.py                   -- discovers test_*.exe, runs them, aggregates results
-    smoke.py                  -- wraps game.exe --one-frame
+    smoke.py                  -- wraps game.exe --frames
     dcv.py                    -- orchestrates generate->compile->format->shaders->test->smoke
     release.py                -- wraps create_release logic
 ```

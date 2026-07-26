@@ -23,7 +23,7 @@ All development scripts MUST be implemented in Python and accessible through a s
     validate-shaders  Validate all GLSL shaders
     test              Discover and run test executables
     benchmark         Run benchmark suites and compare baselines
-    smoke             Run editor smoke test (--one-frame)
+    smoke             Run editor smoke test (--frames)
     dcv               Full develop-compile-verify loop
     release           Package release folder
   ```
@@ -153,7 +153,7 @@ All commands MUST accept input in any reasonable format without requiring shell-
 
 #### Scenario: Smoke test execution
 - **WHEN** `python dev/z1.py smoke [--frames 10]` is run
-- **THEN** it MUST invoke `engine/bin/Debug/game.exe --one-frame=<N>`
+- **THEN** it MUST invoke `engine/bin/Debug/game.exe --frames=<N>`
 - **AND** capture stdout and stderr
 - **AND** report `[OK] Editor started and rendered N frames` or `[FAIL] Editor crashed: <stderr snippet>`
 

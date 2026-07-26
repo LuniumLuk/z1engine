@@ -48,7 +48,7 @@ dev/
     format.py                 -- code formatting (absorbs utils/format_code.py)
     validate_shaders.py       -- shader validation with per-shader results
     test.py                   -- test runner: discovers and runs test_*.exe
-    smoke.py                  -- editor smoke test (--one-frame)
+    smoke.py                  -- editor smoke test (--frames)
     dcv.py                    -- full DCV loop orchestrator (calls all above in sequence)
     release.py                -- package release folder
 ```

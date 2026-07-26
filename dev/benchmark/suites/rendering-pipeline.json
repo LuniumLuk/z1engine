@@ -36,7 +36,7 @@
     {
       "id": "render_courtyard",
       "args": [
-        "--one-frame=220",
+        "--frames=220",
         "--scene=content/new_scene_1.yaml"
       ],
       "samples": 220
@@ -44,7 +44,7 @@
     {
       "id": "render_alpha_blend_stress",
       "args": [
-        "--one-frame=220",
+        "--frames=220",
         "--scene=content/AlphaBlendModeTest/AlphaBlendModeTest.prefab.yaml"
       ],
       "samples": 220

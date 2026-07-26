@@ -20,7 +20,7 @@ All build commands go through `python dev/z1.py <command>`:
 | `format` | Format source code (tabs, whitespace, CRLF) |
 | `validate-shaders` | Validate all GLSL shaders |
 | `test` | Discover and run `test_*.exe` |
-| `smoke` | Run editor smoke test (`--one-frame`) |
+| `smoke` | Run editor smoke test (`--frames`) |
 | `dcv` | Full develop-compile-verify loop |
 | `release` | Package release folder |
 

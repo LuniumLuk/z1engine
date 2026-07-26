@@ -23,7 +23,7 @@ All development scripts MUST be implemented in Python and accessible through a s
     validate-shaders  Validate all GLSL shaders
     test              Discover and run test executables
     benchmark         Run benchmark suites and compare baselines
-    smoke             Run editor smoke test (--one-frame)
+    smoke             Run editor smoke test (--frames)
     dcv               Full develop-compile-verify loop
     release           Package release folder
   ```

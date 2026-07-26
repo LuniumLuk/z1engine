@@ -46,7 +46,8 @@ EditorLayer::EditorLayer() {
 	// even when the Python layer is not active
 	ForceLinkReflectionHooks();
 
-	m_one_frame = g_args.get<int>("one-frame", -1);
+	m_frames_to_run = g_args.get<int>("frames", -1);
+	m_screenshot_on_exit = g_args.get<bool>("screenshot", false);
 	m_settings.load();
 	m_gui = std::make_shared<EditorGUI>(m_settings.curr_resolution);
 	m_browser = std::make_unique<ContentBrowser>();
@@ -323,8 +324,10 @@ void EditorLayer::on_update(float delta_time) {
 
 	g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 
-	if (m_one_frame >= 0 && m_one_frame == m_frame_count) {
-		save_screenshot();
+	if (m_frames_to_run >= 0 && m_frames_to_run == m_frame_count) {
+		if (m_screenshot_on_exit) {
+			save_screenshot();
+		}
 		terminate();
 	}
 	m_frame_count += 1;

@@ -452,7 +452,7 @@ The Visual Studio 2026 build targets Debug x64 and uses Premake5 for project gen
 
 2. **Standard test**:
    - `dev/build_vs2026.bat` - Full build (must succeed)
-   - `engine/bin/Debug/game.exe --one-frame=10` - Executable test (should run without crashes)
+   - `engine/bin/Debug/game.exe --frames=10` - Executable test (should run without crashes)
 
 3. **Validation**: If tests pass, the feature is integration-ready.
 

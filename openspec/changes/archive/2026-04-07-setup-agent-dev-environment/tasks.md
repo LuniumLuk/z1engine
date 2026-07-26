@@ -8,7 +8,7 @@
 - [x] 1.6 Create `dev/commands/format.py` -- absorb logic from `utils/format_code.py` (tabs, trailing whitespace, CRLF, ASCII check). Support `--dry-run`. Report `[INFO] Fixed: <path>` and `[WARN] Non-ASCII: <path>:<line>`. Summary with `"files_fixed": N`.
 - [x] 1.7 Create `dev/commands/validate_shaders.py` -- wraps `engine/bin/Debug/shader_validator.exe`, parses per-shader pass/fail, exit code 0 or 2.
 - [x] 1.8 Create `dev/commands/test.py` -- discovers `engine/bin/test/Debug/test_*.exe`, runs each as subprocess, reports `[OK]`/`[FAIL]` per test, summary with `"passed"/"failed"/"total"`. Support `--filter <glob>`. Exit code 0 or 3.
-- [x] 1.9 Create `dev/commands/smoke.py` -- runs `engine/bin/Debug/game.exe --one-frame=<N>`, captures stdout/stderr, reports ok or crash. Exit code 0 or 3.
+- [x] 1.9 Create `dev/commands/smoke.py` -- runs `engine/bin/Debug/game.exe --frames=<N>`, captures stdout/stderr, reports ok or crash. Exit code 0 or 3.
 - [x] 1.10 Create `dev/commands/dcv.py` -- orchestrates generate->compile->format->validate-shaders->test->smoke in order. Support `--auto` (git diff file detection), `--generate`, `--shaders`, `--test`, `--smoke` flags. Stop on first failure. Output per-step `[OK]`/`[SKIP]`/`[FAIL]` lines plus aggregate `RESULT` JSON.
 - [x] 1.11 Create `dev/commands/release.py` -- wraps existing `create_release.bat` logic (copy binaries+content to release folder).
 - [x] 1.12 Verify: run `python dev/z1.py` (no args) and confirm it prints the command listing. Run `python dev/z1.py compile --help` and confirm it prints usage.
