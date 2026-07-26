@@ -27,6 +27,23 @@ namespace z1 {
 		}
 	}
 
+	static void APIENTRY gl_debug_message_callback(
+		GLenum source,
+		GLenum type,
+		GLuint id,
+		GLenum severity,
+		GLsizei length,
+		GLchar const* message,
+		void const* userParam) {
+		(void)source;
+		(void)type;
+		(void)id;
+		(void)severity;
+		(void)length;
+		(void)userParam;
+		CORE_WARN("OpenGL Debug: {0}", message);
+	}
+
 	OpenGLContext::OpenGLContext()
 		: m_window{ static_cast<GLFWwindow*>(g_runtime_context.m_window->get_native_window()) } {
 		CORE_ASSERT(m_window, "window handle is null!")
@@ -44,10 +61,14 @@ namespace z1 {
 		CORE_DEBUG("    version: {0}", (char*)glGetString(GL_VERSION));
 
 		if (glDebugMessageCallback) {
+			glDebugMessageCallback(gl_debug_message_callback, nullptr);
 			glEnable(GL_DEBUG_OUTPUT);
 			DEBUG_RUN(glCheckError());
+#ifdef DEBUG
+			// Synchronous debug output adds overhead; enable only in debug builds
 			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 			DEBUG_RUN(glCheckError());
+#endif
 		}
 
 		GLint val;

@@ -3,6 +3,7 @@
 #include "render/shader.h"
 #include "render/buffer.h"
 #include "render/vertex_array.h"
+#include "render/graphics_context.h"
 #include "render/global.h"
 #include "scene/component/particle.h"
 #include "scene/component/base.h"
@@ -47,8 +48,8 @@ namespace z1 {
 		ParticleQuadVertex quad_verts[] = {
 			{ {-1.0f, -1.0f}, {0.0f, 0.0f} },  // bottom-left
 			{ { 1.0f, -1.0f}, {1.0f, 0.0f} },  // bottom-right
-			{ { 1.0f,  1.0f}, {1.0f, 1.0f} },  // top-right
 			{ {-1.0f,  1.0f}, {0.0f, 1.0f} },  // top-left
+			{ { 1.0f,  1.0f}, {1.0f, 1.0f} },  // top-right
 		};
 
 		m_quad_vbo = VertexBuffer::create(quad_verts, sizeof(quad_verts),
@@ -57,10 +58,15 @@ namespace z1 {
 				{DataType::Float2},  // texcoord
 			}, BufferUsage::Static);
 
-		uint32_t quad_indices[] = { 0, 1, 2, 2, 3, 0 };
-		m_quad_ibo = IndexBuffer::create(quad_indices, sizeof(quad_indices), BufferUsage::Static);
+		unsigned char white_pixel[] = { 255, 255, 255, 255 };
+		m_default_image = Image2D::create(
+			white_pixel, sizeof(white_pixel),
+			1, 1,
+			ImageFormat::RGBA8,
+			SamplerMode::Nearest,
+			WrapMode::Repeat);
 
-		m_quad_vao = VertexArray::create({ m_quad_vbo }, m_quad_ibo);
+		m_quad_vao = VertexArray::create({ m_quad_vbo });
 
 		// Shadow pipeline (depth-only, no blend)
 		{
@@ -79,8 +85,9 @@ namespace z1 {
 		m_pipeline_soft.reset();
 		m_pipeline_shadow.reset();
 		m_quad_vbo.reset();
-		m_quad_ibo.reset();
 		m_quad_vao.reset();
+		m_default_image.reset();
+		m_soft_depth_copy_fb.reset();
 	}
 
 	std::shared_ptr<Pipeline> ParticleRenderer::select_pipeline(ParticleBlendMode mode) {
@@ -106,15 +113,46 @@ namespace z1 {
 
 				// Find depth attachment image from passthrough framebuffer (once per frame)
 				std::shared_ptr<Image> depth_image;
+				ImageFormat depth_format = ImageFormat::None;
 				auto const& fb = node.get_output();
 				if (fb) {
 					auto const& attachments = fb->get_attachments();
 					for (uint32_t i = 0; i < attachments.size(); ++i) {
 						if (attachments[i].format == ImageFormat::Depth || attachments[i].format == ImageFormat::DepthStencil) {
 							depth_image = fb->get_attachment_image(i);
+							depth_format = attachments[i].format;
 							break;
 						}
 					}
+				}
+
+				std::shared_ptr<Image> soft_depth_image;
+				uint32_t depth_binding = INVALID_BINDING;
+				if (fb && depth_image) {
+					if (!m_soft_depth_copy_fb ||
+						m_soft_depth_copy_fb->get_width() != fb->get_width() ||
+						m_soft_depth_copy_fb->get_height() != fb->get_height() ||
+						m_soft_depth_copy_fb->get_attachments().empty() ||
+						m_soft_depth_copy_fb->get_attachments()[0].format != depth_format) {
+						m_soft_depth_copy_fb = Framebuffer::create(fb->get_width(), fb->get_height(), {
+							{ depth_format },
+						});
+					}
+
+					ctx.blit_depth_stencil(fb, m_soft_depth_copy_fb);
+					ctx.bind_framebuffer(fb);
+
+					soft_depth_image = m_soft_depth_copy_fb->get_attachment_image(0);
+					if (soft_depth_image) {
+						soft_depth_image->bind();
+						depth_binding = soft_depth_image->get_binding();
+					}
+				}
+
+				uint32_t shadow_binding = INVALID_BINDING;
+				if (shadow_image) {
+					shadow_image->bind();
+					shadow_binding = shadow_image->get_binding();
 				}
 
 				for (auto entity : view) {
@@ -188,56 +226,65 @@ namespace z1 {
 
 					// Bind texture if available
 					int has_texture = 0;
+					std::shared_ptr<Image> particle_image = m_default_image;
 					if (pc.m_texture && pc.m_texture->m_image) {
-						pc.m_texture->m_image->bind();
-						int binding = (int)pc.m_texture->m_image->get_binding();
-						pipeline->m_shader->set_uniform("u_texture", &binding);
+						particle_image = pc.m_texture->m_image;
 						has_texture = 1;
+					}
+					if (particle_image) {
+						particle_image->bind();
+						int binding = (int)particle_image->get_binding();
+						pipeline->m_shader->set_uniform("u_texture", &binding);
 					}
 					pipeline->m_shader->set_uniform("u_has_texture", &has_texture);
 
 					// Soft particle depth blending
 					int soft_blend = 0;
 					if (pc.m_blend_mode == ParticleBlendMode::Soft && depth_image) {
-						depth_image->bind();
-						pipeline->m_shader->set_uniform_binding("u_depth_texture", depth_image->get_binding());
 						float near_val = camera_comp.m_near;
 						float far_val = camera_comp.m_far;
 						pipeline->m_shader->set_uniform("u_near", &near_val);
 						pipeline->m_shader->set_uniform("u_far", &far_val);
 						soft_blend = 1;
 					}
+					if (depth_binding != INVALID_BINDING) {
+						pipeline->m_shader->set_uniform_binding("u_depth_texture", depth_binding);
+					}
+					else {
+						// Avoid stale sampler state
+						pipeline->m_shader->set_uniform_binding("u_depth_texture", particle_image->get_binding());
+					}
 					pipeline->m_shader->set_uniform("u_soft_blend", &soft_blend);
 
 					// Shadow reception
-					bool effective_shadow = (shadow_image != nullptr) && pc.m_receive_shadows;
-					if (effective_shadow) {
-						shadow_image->bind();
-						pipeline->m_shader->set_uniform_binding("u_shadow_map", shadow_image->get_binding());
+					bool effective_shadow = (shadow_binding != INVALID_BINDING) && pc.m_receive_shadows;
+					if (shadow_binding != INVALID_BINDING) {
+						pipeline->m_shader->set_uniform_binding("u_shadow_map", shadow_binding);
+					} else {
+						// Avoid stale sampler state
+						pipeline->m_shader->set_uniform_binding("u_shadow_map", particle_image->get_binding());
 					}
 					int receive_shadows_val = effective_shadow ? 1 : 0;
 					pipeline->m_shader->set_uniform("u_receive_shadows", &receive_shadows_val);
 
 					// Draw instanced: shared quad VAO + per-particle instance buffer
 					m_quad_vao->bind();
-					m_quad_vao->draw_instanced(PrimitiveType::Triangles, static_cast<uint32_t>(instances.size()),
+					m_quad_vao->draw_instanced(PrimitiveType::TriangleStrip, static_cast<uint32_t>(instances.size()),
 											pc.m_runtime.m_vbo, 2, 1);
 					m_quad_vao->unbind();
 
-					// Unbind resources
-					if (effective_shadow) {
-						shadow_image->unbind();
-					}
-
-					if (soft_blend && depth_image) {
-						depth_image->unbind();
-					}
-
-					if (pc.m_texture && pc.m_texture->m_image) {
-						pc.m_texture->m_image->unbind();
+					if (particle_image) {
+						particle_image->unbind();
 					}
 
 					pipeline->unbind();
+				}
+
+				if (shadow_binding != INVALID_BINDING) {
+					shadow_image->unbind();
+				}
+				if (soft_depth_image) {
+					soft_depth_image->unbind();
 				}
 			});
 	}
@@ -325,21 +372,25 @@ namespace z1 {
 						s->set_uniform("u_csm_index", &cascade);
 
 						int has_texture = 0;
+						std::shared_ptr<Image> particle_image = m_default_image;
 						if (pc.m_texture && pc.m_texture->m_image) {
-							pc.m_texture->m_image->bind();
-							int binding = (int)pc.m_texture->m_image->get_binding();
-							s->set_uniform("u_texture", &binding);
+							particle_image = pc.m_texture->m_image;
 							has_texture = 1;
+						}
+						if (particle_image) {
+							particle_image->bind();
+							int binding = (int)particle_image->get_binding();
+							s->set_uniform("u_texture", &binding);
 						}
 						s->set_uniform("u_has_texture", &has_texture);
 
 						m_quad_vao->bind();
-						m_quad_vao->draw_instanced(PrimitiveType::Triangles, static_cast<uint32_t>(instances.size()),
+						m_quad_vao->draw_instanced(PrimitiveType::TriangleStrip, static_cast<uint32_t>(instances.size()),
 												pc.m_runtime.m_vbo, 2, 1);
 						m_quad_vao->unbind();
 
-						if (pc.m_texture && pc.m_texture->m_image) {
-							pc.m_texture->m_image->unbind();
+						if (particle_image) {
+							particle_image->unbind();
 						}
 
 						m_pipeline_shadow->unbind();

@@ -33,8 +33,9 @@ namespace z1 {
 
 		// Shared unit quad geometry (created once)
 		std::shared_ptr<VertexBuffer> m_quad_vbo;
-		std::shared_ptr<IndexBuffer> m_quad_ibo;
 		std::shared_ptr<VertexArray> m_quad_vao;
+		std::shared_ptr<Image> m_default_image;
+		std::shared_ptr<Framebuffer> m_soft_depth_copy_fb;
 
 		void init();
 		void shutdown();

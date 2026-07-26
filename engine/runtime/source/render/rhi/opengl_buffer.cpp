@@ -52,9 +52,9 @@ namespace z1 {
 		if (size == WHOLE_SIZE) size = totalSize;
 		CORE_ASSERT(offset + size <= totalSize, "buffer overflow!");
 		glBindBuffer(target, handle);
-		auto mapped = glMapBuffer(target, GL_WRITE_ONLY);
-		memcpy((char*)mapped + offset, data, size);
-		glUnmapBuffer(target);
+		// Orphan old buffer backing to avoid GPU/CPU pipeline stalls
+		glBufferData(target, totalSize, nullptr, GL_STREAM_DRAW);
+		glBufferSubData(target, offset, size, data);
 		glBindBuffer(target, 0);
 	}
 
