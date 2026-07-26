@@ -207,133 +207,145 @@ namespace z1 {
 						pipeline->m_shader->set_uniform("u_far", &far_val);
 						soft_blend = 1;
 					}
-pipeline->m_shader->set_uniform("u_soft_blend", &soft_blend);
+					pipeline->m_shader->set_uniform("u_soft_blend", &soft_blend);
 
-// Shadow reception
-bool effective_shadow = (shadow_image != nullptr) && pc.m_receive_shadows;
-if (effective_shadow) {
-shadow_image->bind();
-pipeline->m_shader->set_uniform_binding("u_shadow_map", shadow_image->get_binding());
-}
-int receive_shadows_val = effective_shadow ? 1 : 0;
-pipeline->m_shader->set_uniform("u_receive_shadows", &receive_shadows_val);
+					// Shadow reception
+					bool effective_shadow = (shadow_image != nullptr) && pc.m_receive_shadows;
+					if (effective_shadow) {
+						shadow_image->bind();
+						pipeline->m_shader->set_uniform_binding("u_shadow_map", shadow_image->get_binding());
+					}
+					int receive_shadows_val = effective_shadow ? 1 : 0;
+					pipeline->m_shader->set_uniform("u_receive_shadows", &receive_shadows_val);
 
-// Draw instanced: shared quad VAO + per-particle instance buffer
-m_quad_vao->bind();
-m_quad_vao->draw_instanced(PrimitiveType::Triangles, static_cast<uint32_t>(instances.size()), pc.m_runtime.m_vbo, 2, 1);
-m_quad_vao->unbind();
+					// Draw instanced: shared quad VAO + per-particle instance buffer
+					m_quad_vao->bind();
+					m_quad_vao->draw_instanced(PrimitiveType::Triangles, static_cast<uint32_t>(instances.size()),
+											pc.m_runtime.m_vbo, 2, 1);
+					m_quad_vao->unbind();
 
-// Unbind resources
-if (effective_shadow) {
-shadow_image->unbind();
-}
+					// Unbind resources
+					if (effective_shadow) {
+						shadow_image->unbind();
+					}
 
-if (soft_blend && depth_image) {
-depth_image->unbind();
-}
+					if (soft_blend && depth_image) {
+						depth_image->unbind();
+					}
 
-if (pc.m_texture && pc.m_texture->m_image) {
-pc.m_texture->m_image->unbind();
-}
+					if (pc.m_texture && pc.m_texture->m_image) {
+						pc.m_texture->m_image->unbind();
+					}
 
-pipeline->unbind();
-}
-});
-}
+					pipeline->unbind();
+				}
+			});
+	}
 
-void ParticleRenderer::add_particle_shadow_passes(RenderGraph& rg, Scene* scene, std::shared_ptr<Framebuffer> const& shadow_fb, int csm_layers) {
-if (!scene || !shadow_fb || !m_pipeline_shadow) return;
+	void ParticleRenderer::add_particle_shadow_passes(
+		RenderGraph& rg, Scene* scene,
+		std::shared_ptr<Framebuffer> const& shadow_fb, int csm_layers) {
+		if (!scene || !shadow_fb || !m_pipeline_shadow)
+			return;
 
-for (int cascade = 0; cascade < csm_layers; ++cascade) {
-RenderPass::Description desc;
-desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
+		for (int cascade = 0; cascade < csm_layers; ++cascade) {
+			RenderPass::Description desc;
+			desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
 
-std::string pass_name = std::string("particle-shadow-CSM") + std::to_string(cascade);
-rg.add_pass(pass_name)
-.set_output(shadow_fb)
-.set_pass_desc(desc)
-.pre_pass([shadow_fb, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
-shadow_fb->set_attachment_layer(0, cascade);
-})
-.execute([this, scene, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
-auto view = scene->m_registry.view<ParticleComponent, TransformComponent const>();
+			std::string pass_name = std::string("particle-shadow-CSM") + std::to_string(cascade);
+			rg.add_pass(pass_name)
+				.set_output(shadow_fb)
+				.set_pass_desc(desc)
+				.pre_pass([shadow_fb, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
+					shadow_fb->set_attachment_layer(0, cascade);
+				})
+				.execute([this, scene, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
+					auto view = scene->m_registry.view<ParticleComponent, TransformComponent const>();
 
-auto cam_entity = scene->get_main_camera();
-if (!cam_entity) return;
-auto& camera_comp = cam_entity->get_component<CameraComponent>();
-auto view_mat = camera_comp.get_view();
-glm::vec3 cam_right = glm::vec3(view_mat[0][0], view_mat[1][0], view_mat[2][0]);
-glm::vec3 cam_up    = glm::vec3(view_mat[0][1], view_mat[1][1], view_mat[2][1]);
+					auto cam_entity = scene->get_main_camera();
+					if (!cam_entity)
+						return;
+					auto& camera_comp = cam_entity->get_component<CameraComponent>();
+					auto view_mat = camera_comp.get_view();
+					glm::vec3 cam_right = glm::vec3(view_mat[0][0], view_mat[1][0], view_mat[2][0]);
+					glm::vec3 cam_up = glm::vec3(view_mat[0][1], view_mat[1][1], view_mat[2][1]);
 
-for (auto entity : view) {
-auto& pc = view.get<ParticleComponent>(entity);
-auto& transform = view.get<TransformComponent const>(entity);
+					for (auto entity : view) {
+						auto& pc = view.get<ParticleComponent>(entity);
+						auto& transform = view.get<TransformComponent const>(entity);
 
-if (pc.m_runtime.m_alive_count == 0) continue;
-if (!pc.m_cast_shadows) continue;
+						if (pc.m_runtime.m_alive_count == 0)
+							continue;
+						if (!pc.m_cast_shadows)
+							continue;
 
-size_t required_size = static_cast<size_t>(pc.m_max_particles) * sizeof(ParticleInstanceData);
-if (!pc.m_runtime.m_vbo || pc.m_runtime.m_vbo->get_size() < required_size) {
-pc.m_runtime.m_vbo = VertexBuffer::create(nullptr, required_size,
-{
-{DataType::Float3},
-{DataType::Float},
-{DataType::Float4},
-{DataType::Float},
-}, BufferUsage::Stream);
-}
+						size_t required_size = static_cast<size_t>(pc.m_max_particles) * sizeof(ParticleInstanceData);
+						if (!pc.m_runtime.m_vbo || pc.m_runtime.m_vbo->get_size() < required_size) {
+							pc.m_runtime.m_vbo = VertexBuffer::create(
+								nullptr, required_size,
+								{
+									{DataType::Float3},
+									{DataType::Float},
+									{DataType::Float4},
+									{DataType::Float},
+								}, BufferUsage::Stream);
+						}
 
-std::vector<ParticleInstanceData> instances;
-instances.reserve(pc.m_runtime.m_alive_count);
+						std::vector<ParticleInstanceData> instances;
+						instances.reserve(pc.m_runtime.m_alive_count);
 
-for (auto const& particle : pc.m_runtime.m_particles) {
-if (!particle.alive) continue;
-ParticleInstanceData inst;
-if (pc.m_world_space) {
-inst.position = particle.position;
-}
-else {
-inst.position = glm::vec3(transform.get_world_transform() * glm::vec4(particle.position, 1.0f));
-}
-inst.size = particle.size;
-inst.color = particle.color;
-inst.rotation = particle.rotation;
-instances.push_back(inst);
-}
+						for (auto const& particle : pc.m_runtime.m_particles) {
+							if (!particle.alive)
+								continue;
+							ParticleInstanceData inst;
+							if (pc.m_world_space) {
+								inst.position = particle.position;
+							}
+							else {
+								inst.position =
+									glm::vec3(transform.get_world_transform() * glm::vec4(particle.position, 1.0f));
+							}
+							inst.size = particle.size;
+							inst.color = particle.color;
+							inst.rotation = particle.rotation;
+							instances.push_back(inst);
+						}
 
-if (instances.empty()) continue;
+						if (instances.empty())
+							continue;
 
-pc.m_runtime.m_vbo->write(instances.data(), instances.size() * sizeof(ParticleInstanceData));
+						pc.m_runtime.m_vbo->write(instances.data(), instances.size() * sizeof(ParticleInstanceData));
 
-m_pipeline_shadow->bind();
-auto& s = m_pipeline_shadow->m_shader;
+						m_pipeline_shadow->bind();
+						auto& s = m_pipeline_shadow->m_shader;
 
-s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
-s->set_uniform("u_cam_right", &cam_right);
-s->set_uniform("u_cam_up", &cam_up);
-s->set_uniform("u_csm_index", &cascade);
+						s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+						s->set_uniform("u_cam_right", &cam_right);
+						s->set_uniform("u_cam_up", &cam_up);
+						s->set_uniform("u_csm_index", &cascade);
 
-int has_texture = 0;
-if (pc.m_texture && pc.m_texture->m_image) {
-pc.m_texture->m_image->bind();
-int binding = (int)pc.m_texture->m_image->get_binding();
-s->set_uniform("u_texture", &binding);
-has_texture = 1;
-}
-s->set_uniform("u_has_texture", &has_texture);
+						int has_texture = 0;
+						if (pc.m_texture && pc.m_texture->m_image) {
+							pc.m_texture->m_image->bind();
+							int binding = (int)pc.m_texture->m_image->get_binding();
+							s->set_uniform("u_texture", &binding);
+							has_texture = 1;
+						}
+						s->set_uniform("u_has_texture", &has_texture);
 
-m_quad_vao->bind();
-m_quad_vao->draw_instanced(PrimitiveType::Triangles, static_cast<uint32_t>(instances.size()), pc.m_runtime.m_vbo, 2, 1);
-m_quad_vao->unbind();
+						m_quad_vao->bind();
+						m_quad_vao->draw_instanced(PrimitiveType::Triangles, static_cast<uint32_t>(instances.size()),
+												pc.m_runtime.m_vbo, 2, 1);
+						m_quad_vao->unbind();
 
-if (pc.m_texture && pc.m_texture->m_image) {
-pc.m_texture->m_image->unbind();
-}
+						if (pc.m_texture && pc.m_texture->m_image) {
+							pc.m_texture->m_image->unbind();
+						}
 
-m_pipeline_shadow->unbind();
-}
-});
-}
-}
+						m_pipeline_shadow->unbind();
+					}
+				});
+		}
+	}
 
-}
+} // namespace z1
