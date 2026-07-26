@@ -260,6 +260,8 @@ namespace z1 {
 			DEBUGBREAK();                                              \
 		}                                                              \
 	}
+#define DEBUG_RUN(expr) expr
 #else
 #define DEBUG_CHECK(expr, ...)
+#define DEBUG_RUN(expr)
 #endif

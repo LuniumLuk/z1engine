@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/rhi/opengl_vertex_array.h"
 #include "render/rhi/opengl_buffer.h"
+#include "render/rhi/opengl_context.h"
 #include "render/graphics_context.h"
 #include "glad/glad.h"
 
@@ -78,6 +79,7 @@ namespace z1 {
 		else {
 			glDrawArrays(primitive_type_to_opengl_type(type), 0, num == NUM_MAX ? m_element_count : num);
 		}
+		DEBUG_RUN(glCheckError());
 		g_runtime_context.m_graphics_context->m_stats.increment_counter();
 	}
 
@@ -94,6 +96,8 @@ namespace z1 {
 		else {
 			glDrawArraysInstanced(primitive_type_to_opengl_type(type), 0, (uint32_t)m_element_count, num);
 		}
+
+		DEBUG_RUN(glCheckError());
 		g_runtime_context.m_graphics_context->m_stats.increment_counter();
 	}
 

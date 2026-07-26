@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "render/rhi/opengl_framebuffer.h"
+#include "render/rhi/opengl_context.h"
 #include "glad/glad.h"
 
 namespace z1 {
@@ -39,6 +40,7 @@ namespace z1 {
 	void OpenGLFramebuffer::create() {
 		glGenFramebuffers(1, &m_handle);
 		glBindFramebuffer(GL_FRAMEBUFFER, m_handle);
+		DEBUG_RUN(glCheckError());
 
 		uint32_t binding = 0;
 
@@ -80,6 +82,7 @@ namespace z1 {
 				glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, native_handle, 0);
 				glBindTexture(GL_TEXTURE_2D, 0);
 			}
+			DEBUG_RUN(glCheckError());
 
 			m_attachment_ids.push_back(attachment_id);
 
@@ -126,6 +129,7 @@ namespace z1 {
 			color_attachments.push_back(m_attachment_ids[i]);
 		}
 		glDrawBuffers((GLsizei)color_attachments.size(), color_attachments.data());
+		DEBUG_RUN(glCheckError());
 	}
 
 	void OpenGLFramebuffer::unbind() const {

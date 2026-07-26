@@ -45,7 +45,9 @@ namespace z1 {
 
 		if (glDebugMessageCallback) {
 			glEnable(GL_DEBUG_OUTPUT);
+			DEBUG_RUN(glCheckError());
 			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+			DEBUG_RUN(glCheckError());
 		}
 
 		GLint val;
@@ -81,6 +83,7 @@ namespace z1 {
 		}
 		else {
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			DEBUG_RUN(glCheckError());
 		}
 	}
 
@@ -98,18 +101,24 @@ namespace z1 {
 			auto& attachment = desc.color_attachments[i];
 			if (attachment.load_op == LoadOp::Clear) {
 				glColorMaski(i, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+				DEBUG_RUN(glCheckError());
 				glClearBufferfv(GL_COLOR, i, &attachment.clear_value[0]);
+				DEBUG_RUN(glCheckError());
 			}
 		}
 
 		if (desc.depth_stencil_attachment.depth_load_op == LoadOp::Clear) {
 			glDepthMask(GL_TRUE);
+			DEBUG_RUN(glCheckError());
 			glClearBufferfv(GL_DEPTH, 0, &desc.depth_stencil_attachment.clear_depth_value);
+			DEBUG_RUN(glCheckError());
 		}
 
 		if (desc.depth_stencil_attachment.stencil_load_op == LoadOp::Clear) {
 			glStencilMask(0xff);
+			DEBUG_RUN(glCheckError());
 			glClearBufferiv(GL_STENCIL, 0, (GLint*)&desc.depth_stencil_attachment.clear_stencil_value);
+			DEBUG_RUN(glCheckError());
 		}
 
 		if (desc.dynamic_viewport) {
@@ -118,6 +127,7 @@ namespace z1 {
 
 		if (desc.dynamic_scissor) {
 			glDisable(GL_SCISSOR_TEST);
+			DEBUG_RUN(glCheckError());
 		}
 
 		render_pass->execute(*this);
@@ -125,11 +135,14 @@ namespace z1 {
 
 	void OpenGLContext::set_viewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
 		glViewport(x, y, width, height);
+		DEBUG_RUN(glCheckError());
 	}
 
 	void OpenGLContext::set_scissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
 		glEnable(GL_SCISSOR_TEST);
+		DEBUG_RUN(glCheckError());
 		glScissor(x, y, width, height);
+		DEBUG_RUN(glCheckError());
 	}
 
 	void OpenGLContext::push_debug_group(std::string const& name) {
@@ -170,18 +183,24 @@ namespace z1 {
 		GLuint dst_handle = (GLuint)reinterpret_cast<uintptr_t>(dst->get_native_handle());
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, src_handle);
+		DEBUG_RUN(glCheckError());
 		glReadBuffer(GL_COLOR_ATTACHMENT0 + src_attachment);
+		DEBUG_RUN(glCheckError());
 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_handle);
+		DEBUG_RUN(glCheckError());
 		glDrawBuffer(GL_COLOR_ATTACHMENT0 + dst_attachment);
+		DEBUG_RUN(glCheckError());
 
 		glColorMaski(dst_attachment, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		DEBUG_RUN(glCheckError());
 		glBlitFramebuffer(
 			src_x, src_y, w, h,
 			dst_x, dst_y, w, h,
 			GL_COLOR_BUFFER_BIT,
 			GL_NEAREST
 		);
+		DEBUG_RUN(glCheckError());
 	}
 
 	void OpenGLContext::blit_depth_stencil(
@@ -201,17 +220,21 @@ namespace z1 {
 		GLuint dst_handle = (GLuint)reinterpret_cast<uintptr_t>(dst->get_native_handle());
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, src_handle);
+		DEBUG_RUN(glCheckError());
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_handle);
+		DEBUG_RUN(glCheckError());
 
 		glDepthMask(GL_TRUE);
+		DEBUG_RUN(glCheckError());
 		glStencilMask(0xff);
+		DEBUG_RUN(glCheckError());
 		glBlitFramebuffer(
 			src_x, src_y, w, h,
 			dst_x, dst_y, w, h,
 			GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,
 			GL_NEAREST
 		);
-		glCheckError();
+		DEBUG_RUN(glCheckError());
 	}
 
 }

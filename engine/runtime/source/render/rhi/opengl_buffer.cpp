@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "render/rhi/opengl_buffer.h"
+#include "render/rhi/opengl_context.h"
 #include "glad/glad.h"
 
 namespace z1 {
@@ -125,6 +126,7 @@ namespace z1 {
 
 	uint32_t OpenGLVertexBuffer::bind_instance_attributes(uint32_t start, uint32_t divisor) {
 		glBindBuffer(GL_ARRAY_BUFFER, m_handle);
+		DEBUG_RUN(glCheckError());
 		uint32_t location = start;
 		for (auto const& element : m_layout.m_elements) {
 			int32_t count = (int32_t)get_data_type_element_count(element.m_type);
@@ -138,6 +140,7 @@ namespace z1 {
 				glEnableVertexAttribArray(location);
 				glVertexAttribPointer(location, count, data_type_to_opengl_type(element.m_type), element.m_normalized ? GL_TRUE : GL_FALSE, (GLsizei)m_layout.m_stride, (void*)(uint64_t)element.m_offset);
 				glVertexAttribDivisor(location, divisor);
+				DEBUG_RUN(glCheckError());
 				location++;
 				break;
 			case DataType::Int:
@@ -147,6 +150,7 @@ namespace z1 {
 				glEnableVertexAttribArray(location);
 				glVertexAttribIPointer(location, count, data_type_to_opengl_type(element.m_type), (GLsizei)m_layout.m_stride, (void*)(uint64_t)element.m_offset);
 				glVertexAttribDivisor(location, divisor);
+				DEBUG_RUN(glCheckError());
 				location++;
 				break;
 			case DataType::Mat3:
@@ -155,6 +159,7 @@ namespace z1 {
 					glEnableVertexAttribArray(location);
 					glVertexAttribPointer(location, count, data_type_to_opengl_type(element.m_type), element.m_normalized ? GL_TRUE : GL_FALSE, (GLsizei)m_layout.m_stride, (void*)(element.m_offset + sizeof(float) * count * i));
 					glVertexAttribDivisor(location, divisor);
+					DEBUG_RUN(glCheckError());
 					location++;
 				}
 				break;
