@@ -43,7 +43,7 @@ namespace z1 {
 		Pipeline::Description desc{};
 		desc.depth_test = true;
 		desc.blend = true;
-		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/sprite_2d_batched");
+		desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/sprite_2d_batched"));
 		m_pipeline = Pipeline::build(desc);
 
 		uint32_t white = 0xffffffff;

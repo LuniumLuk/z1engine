@@ -26,6 +26,16 @@ constexpr auto INVALID_BINDING = ~0U;
 
 #define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
 
+// Root separator for asset paths: ":engine/shader/pbr" means "shader/pbr" in the "engine" root.
+// Change this to e.g. "$" if the colon conflicts with your platform conventions.
+#define ROOT_SEPARATOR ":"
+
+// Build an asset path qualified by a named root
+#define RESOURCE_PATH(root, subpath) ROOT_SEPARATOR root "/" subpath
+
+// Shorthand for engine built-in assets
+#define ENGINE_RESOURCE(subpath) RESOURCE_PATH("engine", subpath)
+
 namespace z1 {
 
 	struct Window;

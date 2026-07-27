@@ -29,7 +29,7 @@ namespace z1 {
 		if (meta.root.empty()) {
 			return meta.path.string();
 		}
-		return "$" + meta.root + "/" + meta.path.string();
+		return ROOT_SEPARATOR + meta.root + "/" + meta.path.string();
 	}
 
 	void AssetManager::scan_content() {
@@ -358,7 +358,7 @@ namespace z1 {
 
 		std::string internal_key = root_name.empty()
 			? sub_path.string()
-			: ("$" + root_name + "/" + sub_path.string());
+			: (ROOT_SEPARATOR + root_name + "/" + sub_path.string());
 
 		auto it = m_path_to_guid_mapping.find(internal_key);
 		if (it != m_path_to_guid_mapping.end()) {
@@ -373,8 +373,8 @@ namespace z1 {
 
 		std::string path_str = path.generic_string();
 
-		// $rootname/ prefix explicitly targets a named root
-		if (!path_str.empty() && path_str[0] == '$') {
+		// ROOT_SEPARATOR + rootname/ prefix explicitly targets a named root
+		if (!path_str.empty() && path_str[0] == ROOT_SEPARATOR[0]) {
 			auto slash_pos = path_str.find('/');
 			if (slash_pos != std::string::npos) {
 				std::string root_name = path_str.substr(1, slash_pos - 1);
@@ -387,7 +387,7 @@ namespace z1 {
 			}
 		}
 
-		// No $ prefix: behavior depends on mode
+		// No ROOT_SEPARATOR prefix: behavior depends on mode
 		if (mode == PathResolveMode::Query) {
 			// Search through all roots by priority to find an existing asset
 			auto ordered_roots = FileSystem::get_roots_ordered();
@@ -397,7 +397,7 @@ namespace z1 {
 					internal_key = path_str;
 				}
 				else {
-					internal_key = "$" + root_config->name + "/" + path_str;
+					internal_key = ROOT_SEPARATOR + root_config->name + "/" + path_str;
 				}
 				if (m_path_to_guid_mapping.find(internal_key) != m_path_to_guid_mapping.end()) {
 					return { root_config->name, path };

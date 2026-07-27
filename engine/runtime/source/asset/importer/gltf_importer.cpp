@@ -669,13 +669,13 @@ namespace z1 {
 			// mat.doubleSided;
 
 			// base material for material instance
-			auto base = g_runtime_context.m_asset_manager->get<Material>("$engine/material/M_pbr");
+			auto base = g_runtime_context.m_asset_manager->get<Material>(ENGINE_RESOURCE("material/M_pbr"));
 
 			// Check for KHR_materials_pbrSpecularGlossiness
 			bool has_specular_glossiness = false;
 			if (mat.extensions.find("KHR_materials_pbrSpecularGlossiness") != mat.extensions.end()) {
 				has_specular_glossiness = true;
-				base = g_runtime_context.m_asset_manager->get<Material>("$engine/material/M_pbr_sg");
+				base = g_runtime_context.m_asset_manager->get<Material>(ENGINE_RESOURCE("material/M_pbr_sg"));
 			}
 			auto mi = MaterialInstance::create(settings.path / name, base);
 

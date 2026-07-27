@@ -92,7 +92,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_0");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("$engine/mesh/SM_Cube")
+			g_runtime_context.m_asset_manager->get<StaticMesh>(ENGINE_RESOURCE("mesh/SM_Cube"))
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(0.5f, 0.5f, -5.0f);
 	}
@@ -100,7 +100,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_1");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("$engine/mesh/SM_Sphere")
+			g_runtime_context.m_asset_manager->get<StaticMesh>(ENGINE_RESOURCE("mesh/SM_Sphere"))
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(1.0f, -2.0f, -4.0f);
 	}
@@ -108,7 +108,7 @@ int main() {
 	{
 		auto ent = scene->create_entity("Mesh_2");
 		ent->add_component<StaticMeshComponent>(
-			g_runtime_context.m_asset_manager->get<StaticMesh>("$engine/mesh/SM_Cone")
+			g_runtime_context.m_asset_manager->get<StaticMesh>(ENGINE_RESOURCE("mesh/SM_Cone"))
 		);
 		ent->get_component<TransformComponent>().m_location = glm::vec3(-1.5f, 0.0f, -1.0f);
 		ent->get_component<TransformComponent>().m_rotation = glm::vec3(90.0f, 0.0f, 0.0f);
@@ -120,7 +120,7 @@ int main() {
 		{
 			auto ground = scene->create_entity("Ground");
 			ground->add_component<StaticMeshComponent>(
-				g_runtime_context.m_asset_manager->get<StaticMesh>(std::string("$engine/mesh/SM_Cube"))
+				g_runtime_context.m_asset_manager->get<StaticMesh>(std::string(ENGINE_RESOURCE("mesh/SM_Cube")))
 			);
 			auto& gtc = ground->get_component<TransformComponent>();
 			gtc.m_location = glm::vec3(0.0f, -3.4f, -4.5f);
@@ -142,7 +142,7 @@ int main() {
 				std::string ename = std::string("EngineMesh_") + mname + "_" + std::to_string(d);
 				auto ent = scene->create_entity(ename);
 				ent->add_component<StaticMeshComponent>(
-					g_runtime_context.m_asset_manager->get<StaticMesh>(std::string("$engine/mesh/") + mname)
+					g_runtime_context.m_asset_manager->get<StaticMesh>(std::string(ENGINE_RESOURCE("mesh/")) + mname)
 				);
 
 				auto& tc = ent->get_component<TransformComponent>();

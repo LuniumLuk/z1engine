@@ -20,12 +20,12 @@
 namespace z1 {
 
 	RendererDeferred::RendererDeferred() {
-		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>("$engine/material/MI_phone");
+		m_default_material = g_runtime_context.m_asset_manager->get<MaterialInstance>(ENGINE_RESOURCE("material/MI_phone"));
 
 		{
 			Pipeline::Description desc{};
 			desc.cull_mode = CullMode::None;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/deferred_lighting");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/deferred_lighting"));
 			m_pipeline_deferred_lighting = Pipeline::build(desc);
 		}
 
@@ -33,7 +33,7 @@ namespace z1 {
 			Pipeline::Description desc{};
 			desc.depth_test = true;
 			desc.cull_mode = CullMode::None;
-			desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/deferred_skybox");
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/deferred_skybox"));
 			m_pipeline_skybox = Pipeline::build(desc);
 		}
 

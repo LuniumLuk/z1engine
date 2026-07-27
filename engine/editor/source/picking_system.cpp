@@ -13,7 +13,7 @@ PickingSystem::PickingSystem(uint32_t w, uint32_t h) {
 		desc.depth_write = true;
 		desc.blend = false;
 		desc.cull_mode = CullMode::Back;
-		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/picking");
+		desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/picking"));
 		m_pipeline = Pipeline::build(desc);
 	}
 
@@ -23,7 +23,7 @@ PickingSystem::PickingSystem(uint32_t w, uint32_t h) {
 		desc.depth_write = true;
 		desc.blend = false;
 		desc.cull_mode = CullMode::Back;
-		desc.shader = g_runtime_context.m_asset_manager->get<Shader>("$engine/shader/picking_sprite");
+		desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/picking_sprite"));
 		m_sprite_pipeline = Pipeline::build(desc);
 	}
 
