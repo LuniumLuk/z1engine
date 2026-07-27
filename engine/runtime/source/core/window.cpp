@@ -45,17 +45,10 @@ namespace z1 {
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+			glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
 #endif
 			m_window = glfwCreateWindow((int)config.width, (int)config.height, config.title.c_str(), nullptr, nullptr);
 			glfwSetWindowUserPointer(m_window, &m_data);
-
-			// Track framebuffer pixel size (not window coords) for correct viewport on HiDPI
-			{
-				int fb_width, fb_height;
-				glfwGetFramebufferSize(m_window, &fb_width, &fb_height);
-				m_data.width = (uint32_t)fb_width;
-				m_data.height = (uint32_t)fb_height;
-			}
 		}
 
 		glfwSetFramebufferSizeCallback(m_window,

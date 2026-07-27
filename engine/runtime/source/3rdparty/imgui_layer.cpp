@@ -64,11 +64,8 @@ namespace z1 {
 
 	void ImGuiLayer::end() {
 		PROFILE_FUNCTION();
-		ImGuiIO& io = ImGui::GetIO();
-		// DisplaySize is in framebuffer pixels now — reset scale so ImGui doesn't double-scale
-		io.DisplaySize = ImVec2((float)g_runtime_context.m_window->get_width(), (float)g_runtime_context.m_window->get_height());
-		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
+		ImGuiIO& io = ImGui::GetIO();
 		g_runtime_context.m_graphics_context->push_debug_group("ImGui");
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
