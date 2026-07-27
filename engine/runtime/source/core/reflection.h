@@ -141,6 +141,10 @@ namespace z1 {
 		// Whether this field is of type Guid (for read-only display in editor, string in YAML)
 		bool is_guid = false;
 
+		// For asset-ref fields: load asset by GUID string and assign to field.
+		// Set by configure_field_meta when is_asset_ref is true.
+		bool (*load_asset_by_guid)(void* field_ptr, std::string const& guid_str) = nullptr;
+
 		template<typename T, typename C>
 		T& get(C* instance) const {
 			if (custom_getter) {
@@ -201,6 +205,18 @@ namespace z1 {
 				auto* sp = reinterpret_cast<FieldType*>(instance);
 				sp->reset();
 			};
+			field_info.load_asset_by_guid = [](void* field_ptr, std::string const& guid_str) -> bool {
+				using AssetType = typename FieldType::element_type;
+				if (guid_str.empty()) return false;
+				Guid guid = Guid::make(guid_str);
+				if (!guid.is_valid()) return false;
+				auto asset = AssetType::load(guid);
+				if (asset) {
+					*static_cast<FieldType*>(field_ptr) = std::move(asset);
+					return true;
+				}
+				return false;
+			};
 		}
 	}
 
@@ -213,6 +229,7 @@ namespace z1 {
 		// Type-erased hooks
 		std::function<void(void* buffer)> construct = nullptr;
 		std::function<void(Entity& entity)> add_to = nullptr;
+		std::function<void*(Entity& entity)> get_from = nullptr;
 		std::function<void(Entity& entity)> remove_from = nullptr;
 		std::function<bool(Entity const& entity)> has_in = nullptr;
 

@@ -17,12 +17,8 @@
 
 namespace z1 {
 
-	// Register component hooks for ECS component types.
-	// Must be in a .cpp where Entity is fully defined.
-	//
-	// Note: StaticMeshComponent, SkeletalMeshComponent, and ScriptComponent
-	// do not have default constructors, so they are registered with a
-	// manual construct hook instead of the REGISTER_COMPONENT_HOOKS macro.
+	// Register ECS component hooks (this TU has Entity fully defined).
+	// StaticMesh/SkeletalMesh/Script components have manual hooks (no default ctors).
 
 	REGISTER_COMPONENT_HOOKS(TagComponent)
 	REGISTER_COMPONENT_HOOKS(TransformComponent)
@@ -42,8 +38,17 @@ namespace z1 {
 			auto* info = const_cast<TypeInfo*>(TypeRegistry::instance().get("StaticMeshComponent"));
 			if (info) {
 				info->add_to = [](Entity& entity) { entity.add_component<StaticMeshComponent>(nullptr); };
+				info->get_from = [](Entity& entity) -> void* { return &entity.get_component<StaticMeshComponent>(); };
 				info->remove_from = [](Entity& entity) { entity.remove_component<StaticMeshComponent>(); };
 				info->has_in = [](Entity const& entity) -> bool { return entity.has_component<StaticMeshComponent>(); };
+
+				// Backward compat: override m_mesh yaml key to "guid" (legacy format)
+				for (auto& field : info->fields) {
+					if (field.name == "m_mesh") {
+						field.yaml_key = "guid"; // match legacy YAML format
+						break;
+					}
+				}
 			}
 		}
 	};
@@ -55,6 +60,7 @@ namespace z1 {
 			auto* info = const_cast<TypeInfo*>(TypeRegistry::instance().get("SkeletalMeshComponent"));
 			if (info) {
 				info->add_to = [](Entity& entity) { entity.add_component<SkeletalMeshComponent>(nullptr); };
+				info->get_from = [](Entity& entity) -> void* { return &entity.get_component<SkeletalMeshComponent>(); };
 				info->remove_from = [](Entity& entity) { entity.remove_component<SkeletalMeshComponent>(); };
 				info->has_in = [](Entity const& entity) -> bool { return entity.has_component<SkeletalMeshComponent>(); };
 			}
@@ -70,6 +76,9 @@ namespace z1 {
 				info->add_to = [](Entity& entity) {
 					entity.add_component<ScriptComponent>(entity.get_weak_ptr());
 				};
+				info->get_from = [](Entity& entity) -> void* {
+					return &entity.get_component<ScriptComponent>();
+				};
 				info->remove_from = [](Entity& entity) {
 					entity.remove_component<ScriptComponent>();
 				};
@@ -80,6 +89,26 @@ namespace z1 {
 		}
 	};
 	static _REFLECT_HOOK_REGISTER_ScriptComponent _REFLECT_HOOK_INSTANCE_ScriptComponent;
+
+	// CameraComponent: register custom "intrinsic" field for union m_intrinsic.fov
+	struct _REFLECT_REGISTER_CameraComponent_intrinsic {
+		_REFLECT_REGISTER_CameraComponent_intrinsic() {
+			FieldInfo field_info = {};
+			field_info.name = "m_intrinsic";
+			field_info.yaml_key = "intrinsic";
+			field_info.size = sizeof(float);
+			field_info.type = &typeid(float);
+			field_info.flag = FF_Default;
+			field_info.custom_getter = [](void* instance) -> void* {
+				return &static_cast<CameraComponent*>(instance)->m_intrinsic.fov;
+			};
+			field_info.custom_setter = [](void* instance, void const* value) {
+				static_cast<CameraComponent*>(instance)->m_intrinsic.fov = *static_cast<float const*>(value);
+			};
+			TypeRegistry::instance().register_field("CameraComponent", field_info);
+		}
+	};
+	static _REFLECT_REGISTER_CameraComponent_intrinsic _REFLECT_REGISTER_INSTANCE_CameraComponent_intrinsic;
 
 	void ForceLinkReflectionHooks() {}
 

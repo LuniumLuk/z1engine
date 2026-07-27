@@ -364,13 +364,55 @@ namespace z1 {
 		}
 
 		if (field.is_asset_ref) {
-			// Asset ref deserialization needs type-specific logic (lookup by guid)
-			// Handled in the scene load path for now
-			return false;
+			// Type-safe load via load_asset_by_guid callback; falls back to legacy string dispatch
+			std::string guid_str = value_node.IsNull() ? "" : value_node.as<std::string>();
+			if (field.load_asset_by_guid) {
+				return field.load_asset_by_guid(ptr, guid_str);
+			}
+			// Fallback: use string-based dispatch (legacy path for edge cases)
+			return asset_ref_from_guid_string(ptr, guid_str, field.get_widget_value<std::string>("type", ""));
 		}
 
 		if (field.custom_getter) {
-			// Custom setter path not used during deserialization - handled specially
+			// Deserialize to stack temp, then delegate to custom_setter for common types
+			if (field.custom_setter) {
+				if (*field.type == typeid(float)) {
+					float val = value_node.as<float>();
+					field.custom_setter(instance, &val);
+					return true;
+				}
+				else if (*field.type == typeid(int)) {
+					int val = value_node.as<int>();
+					field.custom_setter(instance, &val);
+					return true;
+				}
+				else if (*field.type == typeid(bool)) {
+					bool val = value_node.as<bool>();
+					field.custom_setter(instance, &val);
+					return true;
+				}
+				else if (*field.type == typeid(std::string)) {
+					std::string val = value_node.as<std::string>();
+					field.custom_setter(instance, &val);
+					return true;
+				}
+				else if (*field.type == typeid(glm::vec2)) {
+					glm::vec2 val = value_node.as<glm::vec2>();
+					field.custom_setter(instance, &val);
+					return true;
+				}
+				else if (*field.type == typeid(glm::vec3)) {
+					glm::vec3 val = value_node.as<glm::vec3>();
+					field.custom_setter(instance, &val);
+					return true;
+				}
+				else if (*field.type == typeid(glm::vec4)) {
+					glm::vec4 val = value_node.as<glm::vec4>();
+					field.custom_setter(instance, &val);
+					return true;
+				}
+			}
+			// Custom getter without setter - cannot deserialize generically
 			return false;
 		}
 
@@ -409,10 +451,7 @@ namespace z1 {
 	}
 
 	std::string asset_ref_to_guid_string(void* shared_ptr_to_asset) {
-		// Extract GUID from a shared_ptr<AssetT> by accessing the underlying AssetMeta.
-		// shared_ptr layout: first pointer-sized field is the raw object pointer.
-		// AssetBase has a virtual dtor, so the vtable pointer is at object offset 0;
-		// AssetMeta m_meta is at offset sizeof(void*).
+		// Access AssetBase::m_meta.guid via vtable-skipping pointer arithmetic
 		void* const* raw = static_cast<void* const*>(shared_ptr_to_asset);
 		void* object = raw ? *raw : nullptr;
 		if (!object) return "";

@@ -221,6 +221,9 @@ namespace z1 {
 				info->add_to = [](Entity& entity) {                    \
 					entity.add_component<type>();                      \
 				};                                                     \
+				info->get_from = [](Entity& entity) -> void* {         \
+					return &entity.get_component<type>();              \
+				};                                                     \
 				info->remove_from = [](Entity& entity) {               \
 					entity.remove_component<type>();                   \
 				};                                                     \

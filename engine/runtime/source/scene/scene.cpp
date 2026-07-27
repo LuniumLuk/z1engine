@@ -283,40 +283,50 @@ namespace z1 {
 		std::unordered_map<uint32_t, TransformComponent*> id_to_transform;
 		std::vector<std::pair<TransformComponent*, uint32_t>> transform_parent_pairs;
 
+		// Build YAML key -> component TypeInfo lookup for all registered components
+		std::unordered_map<std::string, const TypeInfo*> yaml_key_to_component;
+		for (auto const* comp_type : TypeRegistry::instance().get_all_components()) {
+			std::string yk = type_to_yaml_key(comp_type->name);
+			if (!yk.empty()) {
+				yaml_key_to_component[yk] = comp_type;
+			}
+		}
+
 		for (auto const& entity_yaml : entities) {
-			// TagComponent
 			auto entity = create_entity(entity_yaml["name"].as<std::string>());
 			created_entities.push_back(entity);
 
 			// Map the ID from YAML (local to file) to the component
-			// Note: We don't overwrite the entity's actual runtime ID here,
-			// because create_entity() assigns a new unique runtime ID.
-			// This mapping is solely for resolving parent pointers within this batch.
 			if (entity_yaml["id"]) {
 				id_to_transform[entity_yaml["id"].as<uint32_t>()] = &entity->get_component<TransformComponent>();
 			}
 
-			// TransformComponent
+			// TransformComponent: deserialize reflected fields, then resolve parent
 			auto& transform = entity->get_component<TransformComponent>();
 			auto const& transform_yaml = entity_yaml["transform"];
-			transform.m_location = transform_yaml["location"].as<glm::vec3>();
-			transform.m_rotation = transform_yaml["rotation"].as<glm::vec3>();
-			transform.m_scale = transform_yaml["scale"].as<glm::vec3>();
-			if (transform_yaml["parent"] && !transform_yaml["parent"].IsNull()) {
-				transform_parent_pairs.push_back({ &transform, transform_yaml["parent"].as<uint32_t>() });
+			if (transform_yaml) {
+				deserialize_type(transform_yaml, &transform, "TransformComponent");
+				if (transform_yaml["parent"] && !transform_yaml["parent"].IsNull()) {
+					transform_parent_pairs.push_back({ &transform, transform_yaml["parent"].as<uint32_t>() });
+				}
 			}
 
-			// CameraComponent
+			// CameraComponent: deserialize + handle is_primary special case
 			if (entity_yaml["camera"]) {
-				auto const& camera_yaml = entity_yaml["camera"];
-				auto& camera = entity->add_component<CameraComponent>();
-				camera.m_is_perspective = camera_yaml["is_perspective"].as<bool>();
-				camera.m_intrinsic.fov = camera_yaml["intrinsic"].as<float>();
-				camera.m_near = camera_yaml["near"].as<float>();
-				camera.m_far = camera_yaml["far"].as<float>();
-				camera.m_aspect = camera_yaml["aspect"].as<float>();
-				camera.m_use_fixed_aspect = camera_yaml["use_fixed_aspect"].as<bool>();
-				camera.m_is_primary = camera_yaml["is_primary"].as<bool>();
+				entity->add_component<CameraComponent>();
+				void* cam_ptr = nullptr;
+				auto const* cam_info = TypeRegistry::instance().get("CameraComponent");
+				if (cam_info && cam_info->get_from) {
+					cam_ptr = cam_info->get_from(*entity);
+				}
+				if (cam_ptr) {
+					deserialize_type(entity_yaml["camera"], cam_ptr, "CameraComponent");
+				}
+				// m_is_primary is FF_ReadOnly (not auto-serialized), so read it manually
+				auto& camera = entity->get_component<CameraComponent>();
+				if (entity_yaml["camera"]["is_primary"]) {
+					camera.m_is_primary = entity_yaml["camera"]["is_primary"].as<bool>();
+				}
 				if (camera.m_is_primary) {
 					if (m_main_camera) {
 						CORE_WARN("scene has multiple primary cameras, overriding previous primary camera");
@@ -325,174 +335,7 @@ namespace z1 {
 				}
 			}
 
-			// StaticMeshComponent
-			if (entity_yaml["static_mesh"]) {
-				auto const& mesh_yaml = entity_yaml["static_mesh"];
-				if (mesh_yaml["guid"] && !mesh_yaml["guid"].IsNull()) {
-					auto sm = g_runtime_context.m_asset_manager->get<StaticMesh>(g_runtime_context.m_asset_manager->resolve_guid(mesh_yaml["guid"].as<std::string>()));
-					auto& mesh = entity->add_component<StaticMeshComponent>(sm);
-					// Deserialize override materials
-					if (mesh_yaml["override_materials"] && mesh_yaml["override_materials"].IsMap()) {
-						for (auto it = mesh_yaml["override_materials"].begin(); it != mesh_yaml["override_materials"].end(); ++it) {
-							std::string slot = it->first.as<std::string>();
-							if (!it->second.IsNull()) {
-								auto mat_guid = g_runtime_context.m_asset_manager->resolve_guid(it->second.as<std::string>());
-								mesh.m_override_materials[slot] = g_runtime_context.m_asset_manager->get<MaterialInstance>(mat_guid);
-							}
-						}
-					}
-				}
-			}
-
-			// SkeletalMeshComponent
-			if (entity_yaml["skeletal_mesh"]) {
-				auto const& mesh_yaml = entity_yaml["skeletal_mesh"];
-				if (mesh_yaml["mesh"] && !mesh_yaml["mesh"].IsNull()) {
-					auto sk = g_runtime_context.m_asset_manager->get<SkeletalMesh>(
-						g_runtime_context.m_asset_manager->resolve_guid(mesh_yaml["mesh"].as<std::string>()));
-					std::shared_ptr<Skeleton> skel = nullptr;
-					if (mesh_yaml["skeleton"] && !mesh_yaml["skeleton"].IsNull()) {
-						skel = g_runtime_context.m_asset_manager->get<Skeleton>(
-							g_runtime_context.m_asset_manager->resolve_guid(mesh_yaml["skeleton"].as<std::string>()));
-					}
-					auto& mesh = entity->add_component<SkeletalMeshComponent>(sk, skel);
-					// Deserialize override materials
-					if (mesh_yaml["override_materials"] && mesh_yaml["override_materials"].IsMap()) {
-						for (auto it = mesh_yaml["override_materials"].begin(); it != mesh_yaml["override_materials"].end(); ++it) {
-							std::string slot = it->first.as<std::string>();
-							if (!it->second.IsNull()) {
-								auto mat_guid = g_runtime_context.m_asset_manager->resolve_guid(it->second.as<std::string>());
-								mesh.m_override_materials[slot] = g_runtime_context.m_asset_manager->get<MaterialInstance>(mat_guid);
-							}
-						}
-					}
-				}
-			}
-
-			// SpriteComponent
-			if (entity_yaml["sprite"]) {
-				auto const& sprite_yaml = entity_yaml["sprite"];
-				auto& sprite = entity->add_component<SpriteComponent>();
-				sprite.m_color = sprite_yaml["color"].as<glm::vec4>();
-				if (sprite_yaml["texture"] && !sprite_yaml["texture"].IsNull()) {
-					auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(sprite_yaml["texture"].as<std::string>());
-					sprite.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
-				}
-				sprite.m_tiling_scale = sprite_yaml["tiling_scale"].as<glm::vec2>();
-				sprite.m_tiling_offset = sprite_yaml["tiling_offset"].as<glm::vec2>();
-				auto const& texcoords_yaml = sprite_yaml["texcoords"];
-				for (size_t i = 0; i < 4; ++i) {
-					sprite.m_texcoords[i] = texcoords_yaml[i].as<glm::vec2>();
-				}
-			}
-
-			// LightComponent
-			if (entity_yaml["light"]) {
-				auto const& light_yaml = entity_yaml["light"];
-				auto& light = entity->add_component<LightComponent>();
-				light.m_type = (LightType)light_yaml["type"].as<int>();
-				light.m_color = light_yaml["color"].as<glm::vec3>();
-				light.m_intensity = light_yaml["intensity"].as<float>();
-				light.m_range = light_yaml["range"].as<float>();
-				light.m_inner_cone = light_yaml["inner_cone"].as<float>();
-				light.m_outer_cone = light_yaml["outer_cone"].as<float>();
-				light.m_cast_shadow = light_yaml["cast_shadow"].as<bool>();
-			}
-
-			// SkyLightComponent
-			if (entity_yaml["sky_light"]) {
-				auto const& skylight_yaml = entity_yaml["sky_light"];
-				auto& skylight = entity->add_component<SkyLightComponent>();
-				if (skylight_yaml["texture"] && !skylight_yaml["texture"].IsNull()) {
-					auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(skylight_yaml["texture"].as<std::string>());
-					skylight.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
-				}
-				skylight.m_intensity = skylight_yaml["intensity"].as<float>();
-				skylight.m_rotation = skylight_yaml["rotation"].as<float>();
-				skylight.m_mip_level = skylight_yaml["mip_level"].as<float>();
-			}
-
-			// PostprocessVolumeComponent
-			if (entity_yaml["postprocess_volume"]) {
-				auto const& pp_yaml = entity_yaml["postprocess_volume"];
-				auto& pp = entity->add_component<PostprocessVolumeComponent>();
-
-				pp.enabled = pp_yaml["enabled"].as<bool>();
-				pp.is_global = pp_yaml["is_global"].as<bool>();
-				pp.priority = pp_yaml["priority"].as<float>();
-				pp.blend_distance = pp_yaml["blend_distance"].as<float>();
-
-				pp.override_exposure = pp_yaml["override_exposure"].as<bool>();
-				pp.exposure = pp_yaml["exposure"].as<float>();
-
-				pp.override_gamma = pp_yaml["override_gamma"].as<bool>();
-				pp.gamma = pp_yaml["gamma"].as<float>();
-
-				pp.override_tint = pp_yaml["override_tint"].as<bool>();
-				pp.tint = pp_yaml["tint"].as<glm::vec4>();
-
-				pp.override_bloom_enabled = pp_yaml["override_bloom_enabled"].as<bool>();
-				pp.bloom_enabled = pp_yaml["bloom_enabled"].as<bool>();
-
-				pp.override_bloom_threshold = pp_yaml["override_bloom_threshold"].as<bool>();
-				pp.bloom_threshold = pp_yaml["bloom_threshold"].as<float>();
-
-				pp.override_bloom_intensity = pp_yaml["override_bloom_intensity"].as<bool>();
-				pp.bloom_intensity = pp_yaml["bloom_intensity"].as<float>();
-
-				pp.override_bloom_knee = pp_yaml["override_bloom_knee"].as<bool>();
-				pp.bloom_knee = pp_yaml["bloom_knee"].as<float>();
-			}
-
-			// AnimationComponent
-			if (entity_yaml["animation"]) {
-				auto const& anim_yaml = entity_yaml["animation"];
-				auto& anim = entity->add_component<AnimationComponent>();
-				if (anim_yaml["animation"] && !anim_yaml["animation"].IsNull()) {
-					auto anim_guid = g_runtime_context.m_asset_manager->resolve_guid(anim_yaml["animation"].as<std::string>());
-					anim.animation_asset = g_runtime_context.m_asset_manager->get<Animation>(anim_guid);
-				}
-				anim.speed = anim_yaml["speed"].as<float>();
-				anim.loop = anim_yaml["loop"].as<bool>();
-				anim.playing = anim_yaml["playing"].as<bool>();
-			}
-
-			// ParticleComponent
-			if (entity_yaml["particle"]) {
-				auto const& p = entity_yaml["particle"];
-				auto& pc = entity->add_component<ParticleComponent>();
-				if (p["max_particles"]) pc.m_max_particles = p["max_particles"].as<uint32_t>();
-				if (p["emission_rate"]) pc.m_emission_rate = p["emission_rate"].as<float>();
-				if (p["burst_count"]) pc.m_burst_count = p["burst_count"].as<uint32_t>();
-				if (p["lifetime"]) pc.m_lifetime = p["lifetime"].as<glm::vec2>();
-				if (p["initial_speed"]) pc.m_initial_speed = p["initial_speed"].as<glm::vec2>();
-				if (p["direction"]) pc.m_direction = p["direction"].as<glm::vec3>();
-				if (p["direction_spread"]) pc.m_direction_spread = p["direction_spread"].as<float>();
-				if (p["gravity"]) pc.m_gravity = p["gravity"].as<glm::vec3>();
-				if (p["damping"]) pc.m_damping = p["damping"].as<float>();
-				if (p["initial_size"]) pc.m_initial_size = p["initial_size"].as<glm::vec2>();
-				if (p["size_over_life"]) pc.m_size_over_life = p["size_over_life"].as<glm::vec2>();
-				if (p["initial_color"]) pc.m_initial_color = p["initial_color"].as<glm::vec4>();
-				if (p["end_color"]) pc.m_end_color = p["end_color"].as<glm::vec4>();
-				if (p["texture"] && !p["texture"].IsNull()) {
-					auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(p["texture"].as<std::string>());
-					pc.m_texture = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
-				}
-				if (p["blend_mode"]) pc.m_blend_mode = static_cast<ParticleBlendMode>(p["blend_mode"].as<uint8_t>());
-				if (p["emitter_shape"]) pc.m_emitter_shape = static_cast<EmitterShape>(p["emitter_shape"].as<uint8_t>());
-				if (p["shape_radius"]) pc.m_shape_radius = p["shape_radius"].as<float>();
-				if (p["shape_extents"]) pc.m_shape_extents = p["shape_extents"].as<glm::vec3>();
-				if (p["world_space"]) pc.m_world_space = p["world_space"].as<bool>();
-				if (p["loop"]) pc.m_loop = p["loop"].as<bool>();
-				if (p["playing"]) pc.m_playing = p["playing"].as<bool>();
-				if (p["sort_by_depth"]) pc.m_sort_by_depth = p["sort_by_depth"].as<bool>();
-				if (p["receive_shadows"]) pc.m_receive_shadows = p["receive_shadows"].as<bool>();
-				if (p["cast_shadows"]) pc.m_cast_shadows = p["cast_shadows"].as<bool>();
-				if (p["initial_rotation"]) pc.m_initial_rotation = p["initial_rotation"].as<glm::vec2>();
-				if (p["rotation_speed"]) pc.m_rotation_speed = p["rotation_speed"].as<glm::vec2>();
-			}
-
-			// ScriptComponent
+			// ScriptComponent: special - "script_component" key with list of "module.Class" strings
 			if (entity_yaml["script_component"]) {
 				auto const& scripts_yaml = entity_yaml["script_component"];
 				for (auto const& script_entry : scripts_yaml) {
@@ -509,31 +352,47 @@ namespace z1 {
 				}
 			}
 
-#ifdef PLATFORM_WINDOWS
-		// ColliderComponent
-		if (entity_yaml["collider"]) {
-			auto const& c = entity_yaml["collider"];
-			auto& collider = entity->add_component<ColliderComponent>();
-			if (c["shape"]) collider.m_shape = (ColliderShape)c["shape"].as<int>();
-			if (c["half_extents"]) collider.m_half_extents = c["half_extents"].as<glm::vec3>();
-		}
+			// All other components: fully reflection-driven
+			// Iterate YAML keys of this entity and match against known component types.
+			for (auto yaml_it = entity_yaml.begin(); yaml_it != entity_yaml.end(); ++yaml_it) {
+				std::string key = yaml_it->first.as<std::string>();
+				// Skip keys we handle specially
+				if (key == "name" || key == "id" || key == "transform"
+				    || key == "camera" || key == "script_component") {
+					continue;
+				}
 
-		// PhysicsComponent
-		if (entity_yaml["physics"]) {
-			auto const& p = entity_yaml["physics"];
-			auto& physics = entity->add_component<PhysicsComponent>();
-			if (p["mode"]) physics.m_mode = (PhysicsMode)p["mode"].as<int>();
-			if (p["mass"]) physics.m_mass = p["mass"].as<float>();
-			if (p["use_gravity"]) physics.m_use_gravity = p["use_gravity"].as<bool>();
-			if (p["linear_damping"]) physics.m_linear_damping = p["linear_damping"].as<float>();
-		}
-#endif
+				auto comp_it = yaml_key_to_component.find(key);
+				if (comp_it == yaml_key_to_component.end()) continue;
+
+				auto const* comp_type = comp_it->second;
+				std::string const& type_name = comp_type->name;
+
+				// Skip types already handled
+				if (type_name == "TagComponent" || type_name == "TransformComponent"
+				    || type_name == "CameraComponent" || type_name == "ScriptComponent") {
+					continue;
+				}
+
+				// Add the component (uses default/nullary constructor via add_to hook)
+				if (comp_type->add_to) {
+					comp_type->add_to(*entity);
+				}
+
+				// Deserialize fields
+				void* comp_ptr = comp_type->get_from
+					? comp_type->get_from(*entity)
+					: nullptr;
+				if (comp_ptr) {
+					deserialize_type(yaml_it->second, comp_ptr, type_name);
+				}
+			}
 		}
 
 		// resolve parent references
-		for (auto const& [transform, parent_id] : transform_parent_pairs) {
+		for (auto const& [transform_ptr, parent_id] : transform_parent_pairs) {
 			if (id_to_transform.find(parent_id) != id_to_transform.end()) {
-				transform->m_parent = id_to_transform[parent_id];
+				transform_ptr->m_parent = id_to_transform[parent_id];
 			}
 		}
 
@@ -599,248 +458,69 @@ namespace z1 {
 
 			yaml << YAML::BeginMap;
 
-			// TagComponent
+			// TagComponent fields promoted to entity level
 			auto const& tag = entity->get_component<TagComponent>();
 			yaml << YAML::Key << "name" << YAML::Value << tag.m_tag;
 			yaml << YAML::Key << "id" << YAML::Value << tag.m_id;
 
-			// TransformComponent
+			// TransformComponent: serialize reflected fields, then add parent (special)
 			auto const& transform = entity->get_component<TransformComponent>();
 			yaml << YAML::Key << "transform" << YAML::Value;
 			yaml << YAML::BeginMap;
-			yaml << YAML::Key << "location" << YAML::Value << transform.m_location;
-			yaml << YAML::Key << "rotation" << YAML::Value << transform.m_rotation;
-			yaml << YAML::Key << "scale" << YAML::Value << transform.m_scale;
+			auto const* transform_info = TypeRegistry::instance().get("TransformComponent");
+			if (transform_info) {
+				for (auto const& field : transform_info->fields) {
+					if ((field.flag & FF_Serializable) == 0) continue;
+					serialize_field(yaml, const_cast<TransformComponent*>(&transform), field);
+				}
+			}
+			// Parent reference: map raw pointer to entity ID
+			yaml << YAML::Key << "parent" << YAML::Value;
 			if (transform.m_parent) {
-				yaml << YAML::Key << "parent" << YAML::Value << transform_ptr_to_id[transform.m_parent];
+				yaml << transform_ptr_to_id[transform.m_parent];
 			}
 			else {
-				yaml << YAML::Key << "parent" << YAML::Value << YAML::Null;
+				yaml << YAML::Null;
 			}
-			yaml << YAML::EndMap;
+			yaml << YAML::EndMap; // transform
 
-			// CameraComponent
+			// CameraComponent: special handling for is_primary restoration
 			if (entity->has_component<CameraComponent>()) {
 				auto const& camera = entity->get_component<CameraComponent>();
 				yaml << YAML::Key << "camera" << YAML::Value;
 				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "is_perspective" << YAML::Value << camera.m_is_perspective;
-				yaml << YAML::Key << "intrinsic" << YAML::Value << camera.m_intrinsic.fov;
-				yaml << YAML::Key << "near" << YAML::Value << camera.m_near;
-				yaml << YAML::Key << "far" << YAML::Value << camera.m_far;
-				yaml << YAML::Key << "aspect" << YAML::Value << camera.m_aspect;
-				yaml << YAML::Key << "use_fixed_aspect" << YAML::Value << camera.m_use_fixed_aspect;
-				// Restore is_primary for the origin main camera (editor camera took over at runtime)
-				bool is_primary = (tag.m_id == m_editor_camera_data.origin_main_camera_id);
-				yaml << YAML::Key << "is_primary" << YAML::Value << is_primary;
-				yaml << YAML::EndMap;
-			}
-
-			// StaticMeshComponent
-			if (entity->has_component<StaticMeshComponent>()) {
-				auto const& mesh = entity->get_component<StaticMeshComponent>();
-				yaml << YAML::Key << "static_mesh" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "guid" << YAML::Value << mesh.m_mesh->m_meta.guid;
-				// Serialize override materials
-				if (!mesh.m_override_materials.empty()) {
-					yaml << YAML::Key << "override_materials" << YAML::Value;
-					yaml << YAML::BeginMap;
-					for (auto const& [slot, mat] : mesh.m_override_materials) {
-						yaml << YAML::Key << slot << YAML::Value;
-						if (mat) {
-							yaml << mat->m_meta.guid.value;
-						}
-						else {
-							yaml << YAML::Null;
-						}
+				auto const* cam_info = TypeRegistry::instance().get("CameraComponent");
+				if (cam_info) {
+					for (auto const& field : cam_info->fields) {
+						if ((field.flag & FF_Serializable) == 0) continue;
+						serialize_field(yaml, const_cast<CameraComponent*>(&camera), field);
 					}
-					yaml << YAML::EndMap;
 				}
-				yaml << YAML::EndMap;
+				// Write is_primary separately (FF_ReadOnly, not auto-serialized); restore editor-takeover value
+				yaml << YAML::Key << "is_primary" << YAML::Value
+				     << (tag.m_id == m_editor_camera_data.origin_main_camera_id);
+				yaml << YAML::EndMap; // camera
 			}
 
-			// SkeletalMeshComponent
-			if (entity->has_component<SkeletalMeshComponent>()) {
-				auto const& mesh = entity->get_component<SkeletalMeshComponent>();
-				yaml << YAML::Key << "skeletal_mesh" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "mesh" << YAML::Value << mesh.m_mesh->m_meta.guid;
-				if (mesh.m_skeleton) {
-					yaml << YAML::Key << "skeleton" << YAML::Value << mesh.m_skeleton->m_meta.guid;
+			// All other components: fully reflection-driven
+			for (auto const* comp_type : TypeRegistry::instance().get_all_components()) {
+				std::string const& type_name = comp_type->name;
+				if (type_name == "TagComponent" || type_name == "TransformComponent"
+				    || type_name == "CameraComponent" || type_name == "ScriptComponent") {
+					continue; // handled specially above or below
 				}
-				else {
-					yaml << YAML::Key << "skeleton" << YAML::Value << YAML::Null;
+				if (!comp_type->has_in || !comp_type->has_in(*entity)) continue;
+
+				yaml << YAML::Key << type_to_yaml_key(type_name) << YAML::Value;
+				void* comp_ptr = comp_type->get_from
+					? comp_type->get_from(*const_cast<Entity*>(entity.get()))
+					: nullptr;
+				if (comp_ptr) {
+					serialize_type(yaml, comp_ptr, type_name);
 				}
-				// Serialize override materials
-				if (!mesh.m_override_materials.empty()) {
-					yaml << YAML::Key << "override_materials" << YAML::Value;
-					yaml << YAML::BeginMap;
-					for (auto const& [slot, mat] : mesh.m_override_materials) {
-						yaml << YAML::Key << slot << YAML::Value;
-						if (mat) {
-							yaml << mat->m_meta.guid.value;
-						}
-						else {
-							yaml << YAML::Null;
-						}
-					}
-					yaml << YAML::EndMap;
-				}
-				yaml << YAML::EndMap;
 			}
 
-			// SpriteComponent
-			if (entity->has_component<SpriteComponent>()) {
-				auto const& sprite = entity->get_component<SpriteComponent>();
-				yaml << YAML::Key << "sprite" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "color" << YAML::Value << sprite.m_color;
-				if (sprite.m_texture) {
-					yaml << YAML::Key << "texture" << YAML::Value << sprite.m_texture->m_meta.guid;
-				}
-				else {
-					yaml << YAML::Key << "texture" << YAML::Value << YAML::Null;
-				}
-				yaml << YAML::Key << "tiling_scale" << YAML::Value << sprite.m_tiling_scale;
-				yaml << YAML::Key << "tiling_offset" << YAML::Value << sprite.m_tiling_offset;
-				yaml << YAML::Key << "texcoords" << YAML::Value;
-				yaml << YAML::BeginSeq;
-				for (auto const& uv : sprite.m_texcoords) {
-					yaml << uv;
-				}
-				yaml << YAML::EndSeq;
-				yaml << YAML::EndMap;
-			}
-
-			// LightComponent
-			if (entity->has_component<LightComponent>()) {
-				auto const& light = entity->get_component<LightComponent>();
-				yaml << YAML::Key << "light" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "type" << YAML::Value << (int)light.m_type;
-				yaml << YAML::Key << "color" << YAML::Value << light.m_color;
-				yaml << YAML::Key << "intensity" << YAML::Value << light.m_intensity;
-				yaml << YAML::Key << "range" << YAML::Value << light.m_range;
-				yaml << YAML::Key << "inner_cone" << YAML::Value << light.m_inner_cone;
-				yaml << YAML::Key << "outer_cone" << YAML::Value << light.m_outer_cone;
-				yaml << YAML::Key << "cast_shadow" << YAML::Value << light.m_cast_shadow;
-				yaml << YAML::EndMap;
-			}
-
-			// SkyLightComponent
-			if (entity->has_component<SkyLightComponent>()) {
-				auto const& light = entity->get_component<SkyLightComponent>();
-				yaml << YAML::Key << "sky_light" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "texture" << YAML::Value;
-				if (light.m_texture) {
-					yaml << light.m_texture->m_meta.guid;
-				}
-				else {
-					yaml << YAML::Null;
-				}
-				yaml << YAML::Key << "rotation" << YAML::Value << light.m_rotation;
-				yaml << YAML::Key << "intensity" << YAML::Value << light.m_intensity;
-				yaml << YAML::Key << "mip_level" << YAML::Value << light.m_mip_level;
-				yaml << YAML::EndMap;
-			}
-
-			// PostprocessVolumeComponent
-			if (entity->has_component<PostprocessVolumeComponent>()) {
-				auto const& pp = entity->get_component<PostprocessVolumeComponent>();
-				yaml << YAML::Key << "postprocess_volume" << YAML::Value;
-				yaml << YAML::BeginMap;
-
-				yaml << YAML::Key << "enabled" << YAML::Value << pp.enabled;
-				yaml << YAML::Key << "is_global" << YAML::Value << pp.is_global;
-				yaml << YAML::Key << "priority" << YAML::Value << pp.priority;
-				yaml << YAML::Key << "blend_distance" << YAML::Value << pp.blend_distance;
-
-				yaml << YAML::Key << "override_exposure" << YAML::Value << pp.override_exposure;
-				yaml << YAML::Key << "exposure" << YAML::Value << pp.exposure;
-
-				yaml << YAML::Key << "override_gamma" << YAML::Value << pp.override_gamma;
-				yaml << YAML::Key << "gamma" << YAML::Value << pp.gamma;
-
-				yaml << YAML::Key << "override_tint" << YAML::Value << pp.override_tint;
-				yaml << YAML::Key << "tint" << YAML::Value << pp.tint;
-
-				yaml << YAML::Key << "override_bloom_enabled" << YAML::Value << pp.override_bloom_enabled;
-				yaml << YAML::Key << "bloom_enabled" << YAML::Value << pp.bloom_enabled;
-
-				yaml << YAML::Key << "override_bloom_threshold" << YAML::Value << pp.override_bloom_threshold;
-				yaml << YAML::Key << "bloom_threshold" << YAML::Value << pp.bloom_threshold;
-
-				yaml << YAML::Key << "override_bloom_intensity" << YAML::Value << pp.override_bloom_intensity;
-				yaml << YAML::Key << "bloom_intensity" << YAML::Value << pp.bloom_intensity;
-
-				yaml << YAML::Key << "override_bloom_knee" << YAML::Value << pp.override_bloom_knee;
-				yaml << YAML::Key << "bloom_knee" << YAML::Value << pp.bloom_knee;
-
-				yaml << YAML::EndMap;
-			}
-
-			// AnimationComponent
-			if (entity->has_component<AnimationComponent>()) {
-				auto const& anim = entity->get_component<AnimationComponent>();
-				yaml << YAML::Key << "animation" << YAML::Value;
-				yaml << YAML::BeginMap;
-				if (anim.animation_asset) {
-					yaml << YAML::Key << "animation" << YAML::Value << anim.animation_asset->m_meta.guid;
-				}
-				else {
-					yaml << YAML::Key << "animation" << YAML::Value << YAML::Null;
-				}
-				yaml << YAML::Key << "speed" << YAML::Value << anim.speed;
-				yaml << YAML::Key << "loop" << YAML::Value << anim.loop;
-				yaml << YAML::Key << "playing" << YAML::Value << anim.playing;
-
-				yaml << YAML::EndMap;
-			}
-
-			// ParticleComponent
-			if (entity->has_component<ParticleComponent>()) {
-				auto const& particle = entity->get_component<ParticleComponent>();
-				yaml << YAML::Key << "particle" << YAML::Value;
-				yaml << YAML::BeginMap;
-
-				yaml << YAML::Key << "max_particles" << YAML::Value << particle.m_max_particles;
-				yaml << YAML::Key << "emission_rate" << YAML::Value << particle.m_emission_rate;
-				yaml << YAML::Key << "burst_count" << YAML::Value << particle.m_burst_count;
-				yaml << YAML::Key << "lifetime" << YAML::Value << particle.m_lifetime;
-				yaml << YAML::Key << "initial_speed" << YAML::Value << particle.m_initial_speed;
-				yaml << YAML::Key << "direction" << YAML::Value << particle.m_direction;
-				yaml << YAML::Key << "direction_spread" << YAML::Value << particle.m_direction_spread;
-				yaml << YAML::Key << "gravity" << YAML::Value << particle.m_gravity;
-				yaml << YAML::Key << "damping" << YAML::Value << particle.m_damping;
-				yaml << YAML::Key << "initial_size" << YAML::Value << particle.m_initial_size;
-				yaml << YAML::Key << "size_over_life" << YAML::Value << particle.m_size_over_life;
-				yaml << YAML::Key << "initial_color" << YAML::Value << particle.m_initial_color;
-				yaml << YAML::Key << "end_color" << YAML::Value << particle.m_end_color;
-				if (particle.m_texture) {
-					yaml << YAML::Key << "texture" << YAML::Value << particle.m_texture->m_meta.guid;
-				}
-				else {
-					yaml << YAML::Key << "texture" << YAML::Value << YAML::Null;
-				}
-				yaml << YAML::Key << "blend_mode" << YAML::Value << (int)particle.m_blend_mode;
-				yaml << YAML::Key << "emitter_shape" << YAML::Value << (int)particle.m_emitter_shape;
-				yaml << YAML::Key << "shape_radius" << YAML::Value << particle.m_shape_radius;
-				yaml << YAML::Key << "shape_extents" << YAML::Value << particle.m_shape_extents;
-				yaml << YAML::Key << "world_space" << YAML::Value << particle.m_world_space;
-				yaml << YAML::Key << "loop" << YAML::Value << particle.m_loop;
-				yaml << YAML::Key << "playing" << YAML::Value << particle.m_playing;
-				yaml << YAML::Key << "sort_by_depth" << YAML::Value << particle.m_sort_by_depth;
-				yaml << YAML::Key << "receive_shadows" << YAML::Value << particle.m_receive_shadows;
-				yaml << YAML::Key << "cast_shadows" << YAML::Value << particle.m_cast_shadows;
-				yaml << YAML::Key << "initial_rotation" << YAML::Value << particle.m_initial_rotation;
-				yaml << YAML::Key << "rotation_speed" << YAML::Value << particle.m_rotation_speed;
-
-				yaml << YAML::EndMap;
-			}
-
-			// ScriptComponent
+			// ScriptComponent: special - emit as "script_component" with script names list
 			if (entity->has_component<ScriptComponent>()) {
 				auto& sc = entity->get_component<ScriptComponent>();
 				yaml << YAML::Key << "script_component" << YAML::Value << YAML::BeginSeq;
@@ -855,31 +535,7 @@ namespace z1 {
 				yaml << YAML::EndSeq;
 			}
 
-#ifdef PLATFORM_WINDOWS
-			// ColliderComponent
-			if (entity->has_component<ColliderComponent>()) {
-				auto const& collider = entity->get_component<ColliderComponent>();
-				yaml << YAML::Key << "collider" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "shape" << YAML::Value << (int)collider.m_shape;
-				yaml << YAML::Key << "half_extents" << YAML::Value << collider.m_half_extents;
-				yaml << YAML::EndMap;
-			}
-
-			// PhysicsComponent
-			if (entity->has_component<PhysicsComponent>()) {
-				auto const& physics = entity->get_component<PhysicsComponent>();
-				yaml << YAML::Key << "physics" << YAML::Value;
-				yaml << YAML::BeginMap;
-				yaml << YAML::Key << "mode" << YAML::Value << (int)physics.m_mode;
-				yaml << YAML::Key << "mass" << YAML::Value << physics.m_mass;
-				yaml << YAML::Key << "use_gravity" << YAML::Value << physics.m_use_gravity;
-				yaml << YAML::Key << "linear_damping" << YAML::Value << physics.m_linear_damping;
-				yaml << YAML::EndMap;
-			}
-#endif
-
-			yaml << YAML::EndMap;
+			yaml << YAML::EndMap; // entity
 		}
 		yaml << YAML::EndSeq;
 		yaml << YAML::EndMap;
