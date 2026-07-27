@@ -48,15 +48,23 @@ namespace z1 {
 #endif
 			m_window = glfwCreateWindow((int)config.width, (int)config.height, config.title.c_str(), nullptr, nullptr);
 			glfwSetWindowUserPointer(m_window, &m_data);
+
+			// Track framebuffer pixel size (not window coords) for correct viewport on HiDPI
+			{
+				int fb_width, fb_height;
+				glfwGetFramebufferSize(m_window, &fb_width, &fb_height);
+				m_data.width = (uint32_t)fb_width;
+				m_data.height = (uint32_t)fb_height;
+			}
 		}
 
-		glfwSetWindowSizeCallback(m_window,
+		glfwSetFramebufferSizeCallback(m_window,
 			[](GLFWwindow* handle, int width, int height) {
 				WindowData* data = reinterpret_cast<WindowData*>(glfwGetWindowUserPointer(handle));
-				data->width = width;
-				data->height = height;
+				data->width = (uint32_t)width;
+				data->height = (uint32_t)height;
 
-				WindowResizeEvent event(width, height);
+				WindowResizeEvent event((uint32_t)width, (uint32_t)height);
 				for (auto const& cb : data->event_callbacks) cb(event);
 			});
 
@@ -186,7 +194,9 @@ namespace z1 {
 	}
 
 	void Window::center_cursor() {
-		glfwSetCursorPos(m_window, m_data.width / 2.0, m_data.height / 2.0);
+		int win_width, win_height;
+		glfwGetWindowSize(m_window, &win_width, &win_height);
+		glfwSetCursorPos(m_window, win_width / 2.0, win_height / 2.0);
 	}
 
 	bool Window::is_cursor_hidden() const {

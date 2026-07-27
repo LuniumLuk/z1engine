@@ -21,8 +21,8 @@ namespace z1 {
 
 		struct WindowData {
 			std::string title;
-			uint32_t width = 0;
-			uint32_t height = 0;
+			uint32_t width = 0;   // framebuffer pixels (not screen coords)
+			uint32_t height = 0;  // framebuffer pixels (not screen coords)
 			bool v_sync = true;
 			bool cursor_hidden = false;
 			std::vector<EventCallbackFn> event_callbacks;
