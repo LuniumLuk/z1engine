@@ -29,7 +29,11 @@ namespace z1 {
 		m_file_system = std::make_shared<FileSystem>();
 
 		m_window = std::make_shared<Window>();
-		m_window->init(Window::Config());
+		auto conf = Window::Config{};
+		conf.title = g_args.get<std::string>("title", "z1 engine");
+		conf.width = g_args.get<uint32_t>("width", 1280);
+		conf.height = g_args.get<uint32_t>("height", 720);
+		m_window->init(conf);
 
 		m_input_system = std::make_shared<InputSystem>(m_window);
 

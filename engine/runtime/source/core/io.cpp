@@ -148,7 +148,7 @@ namespace z1 {
 				m_args[key] = value;
 			}
 			else {
-				m_args[arg] = "";
+				m_args[arg] = "1";
 			}
 		}
 	}
