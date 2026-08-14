@@ -70,6 +70,16 @@ namespace z1 {
 
 		m_data.sun_ambient = sun_ambient_color * sun_ambient_intensity;
 
+		// Ambient Occlusion fields
+		m_data.ao_enabled = (float)ao_enabled;
+		m_data.ao_type = (float)ao_type;
+		m_data.ao_radius = ao_radius;
+		m_data.ao_intensity = ao_intensity;
+		m_data.ao_power = ao_power;
+		m_data.ao_bias = ao_bias;
+		m_data.ao_blur_enabled = (float)ao_blur_enabled;
+		m_data.ao_blur_strength = ao_blur_strength;
+
 		m_global_buffer->write(&m_data);
 	}
 

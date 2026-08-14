@@ -246,6 +246,14 @@ class GlobalSettings:
 	sm_near: float
 	sm_far: float
 	sm_ortho_size: float
+	ao_enabled: bool
+	ao_type: int
+	ao_radius: float
+	ao_intensity: float
+	ao_power: float
+	ao_bias: float
+	ao_blur_enabled: bool
+	ao_blur_strength: float
 	anim_enabled: bool
 	script_enabled: bool
 	render_mode: RenderMode

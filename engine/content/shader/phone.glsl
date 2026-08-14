@@ -96,7 +96,8 @@
 		}
 
 		vec3 ambient = base_color * u_sun_ambient.rgb;
-		frag_color = vec4(ambient + L_diffuse + L_specular, color.a);
+		float ao_screen = u_ao_enabled > 0.5 ? texture(u_ao_texture, v_screen_uv).r : 1.0;
+		frag_color = vec4(ambient * ao_screen + L_diffuse + L_specular, color.a);
 	}
 #endif
 }

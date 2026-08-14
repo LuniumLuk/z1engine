@@ -52,6 +52,15 @@ namespace z1 {
 		float     sm_near               = 1.0f;
 		float     sm_far                = 100.0f;
 		float     sm_ortho_size         = 40.0f;
+		// Ambient Occlusion
+		bool      ao_enabled            = true;
+		int       ao_type               = 1;     // 0 = SSAO, 1 = GTAO
+		float     ao_radius             = 1.0f;
+		float     ao_intensity          = 1.0f;
+		float     ao_power              = 1.5f;
+		float     ao_bias               = 0.025f;
+		bool      ao_blur_enabled       = true;
+		float     ao_blur_strength      = 1.0f;
 		// Animation
 		bool      anim_enabled          = true;
 		// Scripting
@@ -118,6 +127,15 @@ namespace z1 {
 			float     taa_jitter_v;
 			float     taa_sharpen_enabled;
 			float     taa_sharpen_strength;
+			// Ambient Occlusion (appended at end to preserve existing layout alignment)
+			float     ao_enabled;
+			float     ao_type;
+			float     ao_radius;
+			float     ao_intensity;
+			float     ao_power;
+			float     ao_bias;
+			float     ao_blur_enabled;
+			float     ao_blur_strength;
 		} m_data = {};
 
 	};
@@ -144,6 +162,14 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, sm_near,               FF_Default, "group=shadow")
 	REFLECTED_FIELD(GlobalSettings, sm_far,                FF_Default, "group=shadow")
 	REFLECTED_FIELD(GlobalSettings, sm_ortho_size,         FF_Default, "group=shadow")
+	REFLECTED_FIELD(GlobalSettings, ao_enabled,            FF_Default, "group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_type,               FF_Default, "[slider]min=0,max=1,group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_radius,             FF_Default, "[drag]min=0.0,group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_intensity,          FF_Default, "[drag]min=0.0,max=2.0,group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_power,              FF_Default, "[drag]min=0.0,group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_bias,               FF_Default, "[drag]min=0.0,group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_blur_enabled,       FF_Default, "group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_blur_strength,      FF_Default, "[drag]min=0.0,max=4.0,group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, anim_enabled,          FF_Default, "group=system")
 	REFLECTED_FIELD(GlobalSettings, script_enabled,        FF_Default, "group=system")
 	REFLECTED_FIELD(GlobalSettings, render_mode,           FF_Default, "group=system")

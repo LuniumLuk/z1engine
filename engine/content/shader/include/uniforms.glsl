@@ -34,9 +34,21 @@ layout (std140) uniform Global {
 	float u_taa_jitter_v;
 	float u_taa_sharpen_enabled;
 	float u_taa_sharpen_strength;
+	// Ambient Occlusion
+	float u_ao_enabled;
+	float u_ao_type;
+	float u_ao_radius;
+	float u_ao_intensity;
+	float u_ao_power;
+	float u_ao_bias;
+	float u_ao_blur_enabled;
+	float u_ao_blur_strength;
 };
 
 uniform sampler2DArray u_shadow_map;
+
+// Screen-space AO texture (bound by the renderer when AO is enabled)
+uniform sampler2D u_ao_texture;
 
 struct Light {
 	vec4 position;  // w = type (0:dir, 1:point, 2:spot)

@@ -91,6 +91,12 @@ namespace z1 {
 		g->projview = projview_jittered;
 		g->cam_position = cam_pos;
 
+		// Per-frame camera matrices for the AO passes (unjittered is fine: the TAA
+		// jitter only shifts NDC xy, not the depth used for reconstruction)
+		m_shared.m_proj = camera_comp.get_proj();
+		m_shared.m_inv_proj = glm::inverse(camera_comp.get_proj());
+		m_shared.m_view = camera_comp.get_view();
+
 		m_shared.update_lights(scene);
 		m_shared.calculate_csm_splits(camera_comp, g->sun_direction);
 
@@ -142,8 +148,9 @@ namespace z1 {
 		m_shared.add_shadow_pass(rg, scene, m_default_material);
 		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, CSM_LAYERS);
 		add_gbuffer_pass(rg, draw_list, framebuffer, scene, projview);
-		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx);
-		add_forward_transparency_pass(rg, framebuffer, draw_list, scene);
+		std::string ao_pass = m_shared.add_ao_pass(rg, "gbuffer-depth", "gbuffer-normal");
+		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx, ao_pass);
+		add_forward_transparency_pass(rg, framebuffer, draw_list, scene, ao_pass);
 		m_particle_renderer.add_particle_pass(rg, scene.get(), "forward-transparency", m_shared.m_shadow_image);
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview, m_default_material);
 		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
@@ -251,7 +258,7 @@ namespace z1 {
 	// Fullscreen quad that reads G-buffer + shadow map + lights UBO
 	// and writes lit scene-color.
 
-	void RendererDeferred::add_deferred_lighting_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx) {
+	void RendererDeferred::add_deferred_lighting_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, std::string const& ao_pass) {
 		auto const width = framebuffer->get_width();
 		auto const height = framebuffer->get_height();
 
@@ -261,8 +268,8 @@ namespace z1 {
 		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
 
-		rg.add_pass("deferred-lighting")
-			.set_resolution_as(framebuffer)
+		auto& pass = rg.add_pass("deferred-lighting");
+		pass.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
 			.add_input("gbuffer-position")
 			.add_input("gbuffer-normal")
@@ -276,101 +283,133 @@ namespace z1 {
 				auto src = node.get_input_framebuffer_name("gbuffer-depth");
 				auto dst = node.get_output();
 				ctx.blit_depth_stencil(src, dst);
-			})
-			.execute([this, history_uninitialized, read_idx, width, height](RenderGraphNode& node, GraphicsContext& ctx) {
-				m_pipeline_deferred_lighting->bind();
-				auto& s = m_pipeline_deferred_lighting->m_shader;
-
-				auto& g = g_runtime_context.m_global;
-				s->set_uniform_block_binding("Global", g->get_binding());
-
-				m_shared.m_lights_buffer->bind();
-				s->set_uniform_block_binding("Lights", m_shared.m_lights_buffer->get_binding());
-
-				// Bind shadow map
-				m_shared.m_shadow_image->bind();
-				s->set_uniform_binding("u_shadow_map", m_shared.m_shadow_image->get_binding());
-
-				// Bind G-buffer textures
-				s->set_uniform_binding("u_gbuffer_position", node.bind_input_index(0));
-				s->set_uniform_binding("u_gbuffer_normal", node.bind_input_index(1));
-				s->set_uniform_binding("u_gbuffer_albedo", node.bind_input_index(2));
-				s->set_uniform_binding("u_gbuffer_metallic_roughness", node.bind_input_index(3));
-				s->set_uniform_binding("u_gbuffer_emissive", node.bind_input_index(4));
-
-				m_shared.m_quad->bind();
-				m_shared.m_quad->draw(PrimitiveType::Triangles);
-				m_shared.m_quad->unbind();
-
-				node.unbind_input_index(0);
-				node.unbind_input_index(1);
-				node.unbind_input_index(2);
-				node.unbind_input_index(3);
-				m_shared.m_shadow_image->unbind();
-				m_shared.m_lights_buffer->unbind();
-				m_pipeline_deferred_lighting->unbind();
-
-				if (history_uninitialized) {
-					ctx.blit_attachment(
-						node.get_output(),
-						m_shared.m_history_colors[read_idx],
-						0, 0,
-						0, 0,
-						0, 0,
-						width, height);
-				}
 			});
+
+		// The AO texture is bound directly (not via add_input), so declare the
+		// ordering explicitly to keep the AO pass ahead of lighting.
+		if (!ao_pass.empty()) {
+			pass.depends_on(ao_pass);
+		}
+
+		pass.execute([this, history_uninitialized, read_idx, width, height](RenderGraphNode& node, GraphicsContext& ctx) {
+			m_pipeline_deferred_lighting->bind();
+			auto& s = m_pipeline_deferred_lighting->m_shader;
+
+			auto& g = g_runtime_context.m_global;
+			s->set_uniform_block_binding("Global", g->get_binding());
+
+			m_shared.m_lights_buffer->bind();
+			s->set_uniform_block_binding("Lights", m_shared.m_lights_buffer->get_binding());
+
+			// Bind shadow map
+			m_shared.m_shadow_image->bind();
+			s->set_uniform_binding("u_shadow_map", m_shared.m_shadow_image->get_binding());
+
+			// Bind screen-space AO texture
+			auto ao_image = m_shared.get_ao_image();
+			if (ao_image) {
+				ao_image->bind();
+				s->set_uniform_binding("u_ao_texture", ao_image->get_binding());
+			}
+
+			// Bind G-buffer textures
+			s->set_uniform_binding("u_gbuffer_position", node.bind_input_index(0));
+			s->set_uniform_binding("u_gbuffer_normal", node.bind_input_index(1));
+			s->set_uniform_binding("u_gbuffer_albedo", node.bind_input_index(2));
+			s->set_uniform_binding("u_gbuffer_metallic_roughness", node.bind_input_index(3));
+			s->set_uniform_binding("u_gbuffer_emissive", node.bind_input_index(4));
+
+			m_shared.m_quad->bind();
+			m_shared.m_quad->draw(PrimitiveType::Triangles);
+			m_shared.m_quad->unbind();
+
+			node.unbind_input_index(0);
+			node.unbind_input_index(1);
+			node.unbind_input_index(2);
+			node.unbind_input_index(3);
+			node.unbind_input_index(4);
+			m_shared.m_shadow_image->unbind();
+			if (ao_image) {
+				ao_image->unbind();
+			}
+			m_shared.m_lights_buffer->unbind();
+			m_pipeline_deferred_lighting->unbind();
+
+			if (history_uninitialized) {
+				ctx.blit_attachment(
+					node.get_output(),
+					m_shared.m_history_colors[read_idx],
+					0, 0,
+					0, 0,
+					0, 0,
+					width, height);
+			}
+		});
 	}
 
 	// Forward transparency pass
 	// Blended objects cannot be deferred. Render them on top of the
 	// lit scene-color using normal forward shading + skybox.
 
-	void RendererDeferred::add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene) {
+	void RendererDeferred::add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::string const& ao_pass) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Load;
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
 
-		rg.add_pass("forward-transparency")
-			.set_resolution_as(framebuffer)
+		auto& pass = rg.add_pass("forward-transparency");
+		pass.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.set_passthrough("deferred-lighting")
-			.execute([this, &draw_list, scene](RenderGraphNode& node, GraphicsContext& ctx) {
-				PerFrameConst per_frame{};
-				per_frame.global_binding = g_runtime_context.m_global->get_binding();
+			.set_passthrough("deferred-lighting");
 
-				m_shared.m_lights_buffer->bind();
-				per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
+		if (!ao_pass.empty()) {
+			pass.depends_on(ao_pass);
+		}
 
-				m_shared.m_shadow_image->bind();
-				per_frame.shadow_map_binding = m_shared.m_shadow_image->get_binding();
+		pass.execute([this, &draw_list, scene](RenderGraphNode& node, GraphicsContext& ctx) {
+			PerFrameConst per_frame{};
+			per_frame.global_binding = g_runtime_context.m_global->get_binding();
 
-				// Render blended geometry
-				for (auto const& item : draw_list.static_meshes) {
-					per_frame.model = item.transform;
-					auto* overrides = item.mesh->override_materials_or_null();
-					item.mesh->m_mesh->draw(per_frame, m_default_material, overrides, [](uint32_t flags) {
-						return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
-					});
+			m_shared.m_lights_buffer->bind();
+			per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
+
+			m_shared.m_shadow_image->bind();
+			per_frame.shadow_map_binding = m_shared.m_shadow_image->get_binding();
+
+			auto ao_image = m_shared.get_ao_image();
+			if (ao_image) {
+				ao_image->bind();
+				per_frame.ao_map_binding = ao_image->get_binding();
+			}
+
+			// Render blended geometry
+			for (auto const& item : draw_list.static_meshes) {
+				per_frame.model = item.transform;
+				auto* overrides = item.mesh->override_materials_or_null();
+				item.mesh->m_mesh->draw(per_frame, m_default_material, overrides, [](uint32_t flags) {
+					return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
+				});
+			}
+
+			for (auto const& item : draw_list.skeletal_meshes) {
+				std::shared_ptr<UniformBuffer> bones = nullptr;
+				if (item.anim) {
+					bones = item.anim->bone_ubo;
 				}
 
-				for (auto const& item : draw_list.skeletal_meshes) {
-					std::shared_ptr<UniformBuffer> bones = nullptr;
-					if (item.anim) {
-						bones = item.anim->bone_ubo;
-					}
+				per_frame.model = item.transform;
+				auto* overrides = item.mesh->override_materials_or_null();
+				item.mesh->m_mesh->draw(per_frame, m_default_material, bones, overrides, [](uint32_t flags) {
+					return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
+				});
+			}
 
-					per_frame.model = item.transform;
-					auto* overrides = item.mesh->override_materials_or_null();
-					item.mesh->m_mesh->draw(per_frame, m_default_material, bones, overrides, [](uint32_t flags) {
-						return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
-					});
-				}
-
-				m_shared.m_lights_buffer->unbind();
-				m_shared.m_shadow_image->unbind();
-			});
+			if (ao_image) {
+				ao_image->unbind();
+			}
+			m_shared.m_lights_buffer->unbind();
+			m_shared.m_shadow_image->unbind();
+		});
 	}
 
 }

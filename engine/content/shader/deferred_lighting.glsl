@@ -14,6 +14,7 @@
 	u_gbuffer_metallic_roughness [invisible]
 	u_gbuffer_emissive           [invisible]
 	u_shadow_map                 [invisible]
+	u_ao_texture                 [invisible]
 }
 @stage: vert {
 	#include <include/quad.glsl>
@@ -119,7 +120,10 @@
 		// Ambient
 		vec3 ambient = base_color * u_sun_ambient.rgb;
 
-		vec3 result = (ambient + L_diffuse) + L_specular + emissive;
+		// Screen-space ambient occlusion (bound by the renderer when enabled)
+		float ao_screen = u_ao_enabled > 0.5 ? texture(u_ao_texture, v_uv).r : 1.0;
+
+		vec3 result = (ambient * ao_screen + L_diffuse) + L_specular + emissive;
 		frag_color = vec4(result, alpha);
 
 		// NaN guard

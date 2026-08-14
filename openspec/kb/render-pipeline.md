@@ -17,8 +17,20 @@
 |------|--------|--------|
 | G-Buffer | `gbuffer.glsl` | Albedo, normal, position, material buffers |
 | Shadow | `shadow.glsl` | Shadow map |
+| AO (SSAO/GTAO) | `ssao.glsl` / `gtao.glsl` | Half-res AO buffer (optional `ao_blur.glsl`) |
 | Lighting | `deferred_lighting.glsl` | Lit color buffer |
 | Skybox | `deferred_skybox.glsl` | Background fill |
+
+### Ambient Occlusion (2026-08-14)
+
+Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `GlobalSettings` AO fields (`ao_enabled`, `ao_type`, `ao_radius`, `ao_intensity`, `ao_power`, `ao_bias`, `ao_blur_enabled`, `ao_blur_strength`) exposed in the editor inspector under `ambient_occlusion`.
+
+- AO computed at **half resolution** (RGBA8) in view space from depth + world-space normal; position reconstructed from depth via inverse projection.
+- `RenderShared::add_ao_pass(rg, depth_input, normal_input)` adds `"ao"` (+ `"ao-blur"` when enabled) and returns the final pass name; consumers call `depends_on()` on it and bind `get_ao_image()`.
+- **Deferred**: AO pass reads `gbuffer-depth`/`gbuffer-normal` after the G-buffer pass; `deferred_lighting.glsl` multiplies ambient by AO.
+- **Forward**: a `prepass` (depth+normal) renders opaque+mask geometry with the GBuffer shader variant before the AO pass; forward PBR/phone shaders sample `u_ao_texture` at `v_screen_uv` (location 8 varying) and multiply ambient.
+- Materials receive the AO texture via `PerFrameConst::ao_map_binding`; shaders gate sampling on the global `u_ao_enabled` flag.
+- Verified algorithm references: `D:\wiki\wiki\concepts\z1engine-gtao-ssao.md` (GTAO per-slice integral `0.25·(cosN + 2h·sin n − cos(2h−n))`, horizon clamping, slice weights).
 
 ### Forward Pipeline (`renderer/renderer_forward.h`)
 
@@ -48,6 +60,9 @@
 | TAA | `taa.glsl` |
 | TAA Sharpen | `taa_sharpen.glsl` |
 | Velocity | `velocity.glsl` |
+| SSAO | `ssao.glsl` |
+| GTAO | `gtao.glsl` |
+| AO blur | `ao_blur.glsl` |
 | Tone mapping | `postprocessing.glsl` |
 
 ### Shared Infrastructure (`renderer/render_shared.h`)

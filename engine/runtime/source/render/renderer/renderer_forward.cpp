@@ -83,6 +83,11 @@ namespace z1 {
 		g->projview = projview_jittered;
 		g->cam_position = cam_pos;
 
+		// Per-frame camera matrices for the AO passes
+		m_shared.m_proj = camera_comp.get_proj();
+		m_shared.m_inv_proj = glm::inverse(camera_comp.get_proj());
+		m_shared.m_view = camera_comp.get_view();
+
 		m_shared.update_lights(scene);
 		m_shared.calculate_csm_splits(camera_comp, g->sun_direction);
 
@@ -133,7 +138,16 @@ namespace z1 {
 		RenderGraph rg;
 		m_shared.add_shadow_pass(rg, scene, m_default_material);
 		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, CSM_LAYERS);
-		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview);
+
+		// Forward screen-space AO needs a depth+normal prepass before lighting.
+		// Both are skipped entirely when AO is disabled.
+		std::string ao_pass = "";
+		if (g->ao_enabled) {
+			m_shared.add_depth_prepass_pass(rg, draw_list, framebuffer, m_default_material);
+			ao_pass = m_shared.add_ao_pass(rg, "prepass-depth", "prepass-normal");
+		}
+
+		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview, ao_pass);
 		m_particle_renderer.add_particle_pass(rg, scene.get(), "main", m_shared.m_shadow_image);
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview, m_default_material);
 		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
@@ -149,7 +163,7 @@ namespace z1 {
 		g->prev_projview = projview;
 	}
 
-	void RendererForward::add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview) {
+	void RendererForward::add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview, std::string const& ao_pass) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
@@ -160,12 +174,19 @@ namespace z1 {
 		auto const width = framebuffer->get_width();
 		auto const height = framebuffer->get_height();
 
-		rg.add_pass("main")
-			.set_resolution_as(framebuffer)
+		auto& pass = rg.add_pass("main");
+		pass.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
 			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
-			.add_output("scene-depth", ImageFormat::Depth)
-			.execute([this, &draw_list, scene, history_uninitialized, read_idx, width, height, projview](RenderGraphNode& node, GraphicsContext& ctx) {
+			.add_output("scene-depth", ImageFormat::Depth);
+
+		// The AO texture is bound directly (not via add_input), so declare the
+		// ordering explicitly to keep the AO pass ahead of the main pass.
+		if (!ao_pass.empty()) {
+			pass.depends_on(ao_pass);
+		}
+
+		pass.execute([this, &draw_list, scene, history_uninitialized, read_idx, width, height, projview](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 
@@ -174,6 +195,12 @@ namespace z1 {
 
 				m_shared.m_shadow_image->bind();
 				per_frame.shadow_map_binding = m_shared.m_shadow_image->get_binding();
+
+				auto ao_image = m_shared.get_ao_image();
+				if (ao_image) {
+					ao_image->bind();
+					per_frame.ao_map_binding = ao_image->get_binding();
+				}
 
 				// Pass 1: Opaque and Mask
 				for (auto const& item : draw_list.static_meshes) {
@@ -248,6 +275,9 @@ namespace z1 {
 
 				m_shared.m_lights_buffer->unbind();
 				m_shared.m_shadow_image->unbind();
+				if (ao_image) {
+					ao_image->unbind();
+				}
 
 				if (history_uninitialized) {
 					ctx.blit_attachment(

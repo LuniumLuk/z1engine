@@ -27,6 +27,9 @@
 | `postprocessing.glsl` | Tone mapping and final post-processing |
 | `taa.glsl` | Temporal anti-aliasing |
 | `velocity.glsl` | Velocity buffer for TAA |
+| `ssao.glsl` | Screen-space AO (hemisphere sampling, 16 samples, per-pixel IGN rotation) |
+| `gtao.glsl` | Ground-truth AO (Jimenez 2016: 6 slices × 8 steps, cosine-weighted slice integral) |
+| `ao_blur.glsl` | Depth-edge-preserving 5×5 Gaussian blur for AO |
 | `picking.glsl` | Entity picking (mouse selection) |
 | `picking_sprite.glsl` | Sprite picking |
 | `sprite_2d.glsl` | 2D sprite rendering |
@@ -36,8 +39,8 @@
 
 ### Include Files (`include/`)
 
-- `uniforms.glsl` -- shared uniform declarations
-- `vert.glsl` -- common vertex shader logic
+- `uniforms.glsl` -- shared uniform declarations (includes the `Global` UBO, `Lights` UBO, `u_shadow_map`, and `u_ao_texture`)
+- `vert.glsl` -- common vertex shader logic (also outputs `v_screen_uv` at location 8 for screen-space sampling)
 - `frag_attrs.glsl` -- fragment attribute definitions
 - `lighting.glsl` -- lighting calculations
 - `pbr_frag.glsl`, `pbr_uniforms.glsl`, `pbr_reflections.glsl` -- PBR fragments

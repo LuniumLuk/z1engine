@@ -51,12 +51,24 @@ namespace z1 {
 		std::shared_ptr<Pipeline> m_pipeline_taa_sharpen;
 		std::shared_ptr<Pipeline> m_pipeline_bloom_downsample;
 		std::shared_ptr<Pipeline> m_pipeline_bloom_upsample;
+		// Ambient occlusion
+		std::shared_ptr<Pipeline> m_pipeline_ssao;
+		std::shared_ptr<Pipeline> m_pipeline_gtao;
+		std::shared_ptr<Pipeline> m_pipeline_ao_blur;
 		std::shared_ptr<Framebuffer> m_shadow_framebuffer;
 		std::shared_ptr<Image> m_shadow_image;
+		std::shared_ptr<Framebuffer> m_ao_framebuffer;
+		std::shared_ptr<Framebuffer> m_ao_blur_framebuffer;
+		glm::vec2 m_ao_texel_size = { 0.0f, 0.0f };
 		std::array<std::shared_ptr<Framebuffer>, 2> m_history_colors;
 		std::vector<std::shared_ptr<Framebuffer>> m_bloom_textures;
 		const int BLOOM_MIP_COUNT = 5;
 		std::shared_ptr<UniformBuffer> m_lights_buffer;
+
+		// Per-frame camera matrices used by the AO passes (set by renderers each frame)
+		glm::mat4 m_proj = {};
+		glm::mat4 m_inv_proj = {};
+		glm::mat4 m_view = {};
 
 		int m_frame_index = 0;
 
@@ -68,6 +80,22 @@ namespace z1 {
 
 		void update_lights(std::shared_ptr<Scene> const& scene);
 		void calculate_csm_splits(CameraComponent& camera, glm::vec3 const& sun_dir);
+
+		// Ambient occlusion
+
+		// Adds the AO (+ optional blur) passes reading the given depth/normal graph
+		// resources. Returns the final AO pass name ("ao" or "ao-blur"), or "" when
+		// AO is disabled. Callers must depends_on() the returned name before sampling
+		// get_ao_image().
+		std::string add_ao_pass(RenderGraph& rg, std::string const& depth_input, std::string const& normal_input);
+
+		// Returns the AO image to sample in lighting (blurred when enabled, raw
+		// otherwise), or nullptr when AO is disabled.
+		std::shared_ptr<Image> get_ao_image() const;
+
+		// Forward-pipeline depth+normal prepass (feeds the AO pass before the main
+		// lighting pass). Renders opaque + masked geometry using the GBuffer variant.
+		void add_depth_prepass_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<MaterialInstance> const& default_material);
 
 		// Pass helpers (add to a RenderGraph)
 

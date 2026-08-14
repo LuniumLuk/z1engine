@@ -20,6 +20,7 @@ layout(location = 2) out vec2 v_texcoord0;
 layout(location = 3) out vec2 v_texcoord1;
 layout(location = 4) out vec4 v_tangent;
 layout(location = 5) out vec4 v_color;
+layout(location = 8) out vec2 v_screen_uv;
 
 #ifdef VARIANT_VELOCITY
 layout(location = 6) out vec4 v_curr_clip;
@@ -77,6 +78,9 @@ void main() {
 	v_texcoord1.y = 1.0 - v_texcoord1.y; // flip y for opengl
 	v_tangent = a_tangent;
 	v_color = a_color;
+
+	// Screen-space UV (used by forward shading to sample screen-space AO)
+	v_screen_uv = (gl_Position.xy / gl_Position.w) * 0.5 + 0.5;
 
 #ifdef VARIANT_VELOCITY
 	v_curr_clip = u_projview * vec4(world_position, 1.0);

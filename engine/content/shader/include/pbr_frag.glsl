@@ -134,8 +134,9 @@
 				N, V, F0, roughness, metallic, base_color, L_diffuse, L_specular);
 		}
 
-		// Simple ambient term
+		// Simple ambient term (modulated by screen-space AO when enabled)
 		vec3 ambient = base_color * u_sun_ambient.rgb;
+		float ao_screen = u_ao_enabled > 0.5 ? texture(u_ao_texture, v_screen_uv).r : 1.0;
 
 		// Emissive term
 		vec3 emissive = texture(s_emissive, get_uv(u_emissive_uv_set)).rgb;
@@ -144,7 +145,7 @@
 		// Occlusion term
 		float ao = texture(s_occlusion, get_uv(u_occlusion_uv_set)).r;
 
-		vec3 result = (ambient + L_diffuse) * ao + L_specular + emissive;
+		vec3 result = (ambient * ao_screen + L_diffuse) * ao + L_specular + emissive;
 		frag_color = vec4(result, alpha);
 
 		frag_color = vec4(

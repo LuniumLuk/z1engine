@@ -79,6 +79,30 @@ namespace z1 {
 			m_pipeline_bloom_upsample = Pipeline::build(desc);
 		}
 
+		// SSAO pipeline
+		{
+			Pipeline::Description desc{};
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/ssao"));
+			m_pipeline_ssao = Pipeline::build(desc);
+		}
+
+		// GTAO pipeline
+		{
+			Pipeline::Description desc{};
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/gtao"));
+			m_pipeline_gtao = Pipeline::build(desc);
+		}
+
+		// AO blur pipeline
+		{
+			Pipeline::Description desc{};
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/ao_blur"));
+			m_pipeline_ao_blur = Pipeline::build(desc);
+		}
+
 		// Shadow framebuffer (shadow pass now uses per-material shader variants)
 		{
 			const uint32_t shadow_res = 2048;
@@ -132,6 +156,24 @@ namespace z1 {
 			m_history_colors[0]->resize(width, height);
 			m_history_colors[1]->resize(width, height);
 			history_uninitialized = true;
+		}
+
+		// AO buffers (half resolution)
+		{
+			uint32_t ao_width = std::max(1u, width / 2);
+			uint32_t ao_height = std::max(1u, height / 2);
+
+			if (!m_ao_framebuffer ||
+				m_ao_framebuffer->get_width() != ao_width ||
+				m_ao_framebuffer->get_height() != ao_height) {
+				std::vector<Framebuffer::Attachment> ao_attachments = {
+					{ ImageFormat::RGBA8, SamplerMode::Linear, WrapMode::ClampToEdge }
+				};
+				m_ao_framebuffer = Framebuffer::create(ao_width, ao_height, ao_attachments);
+				m_ao_blur_framebuffer = Framebuffer::create(ao_width, ao_height, ao_attachments);
+			}
+
+			m_ao_texel_size = { 1.0f / (float)ao_width, 1.0f / (float)ao_height };
 		}
 
 		return history_uninitialized;
@@ -328,6 +370,155 @@ namespace z1 {
 				}
 			});
 		}
+	}
+
+	std::string RenderShared::add_ao_pass(RenderGraph& rg, std::string const& depth_input, std::string const& normal_input) {
+		auto& g = g_runtime_context.m_global;
+		if (!g->ao_enabled) {
+			return "";
+		}
+
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::Clear;
+		desc.color_attachments[0].clear_value = { 1.0f, 1.0f, 1.0f, 1.0f };
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
+
+		bool use_gtao = g->ao_type == 1;
+
+		rg.add_pass("ao")
+			.set_output(m_ao_framebuffer)
+			.set_pass_desc(desc)
+			.add_input(depth_input)
+			.add_input(normal_input)
+			.execute([this, use_gtao](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto pipeline = use_gtao ? m_pipeline_gtao : m_pipeline_ssao;
+				pipeline->bind();
+				auto& s = pipeline->m_shader;
+
+				auto& g = g_runtime_context.m_global;
+				s->set_uniform_block_binding("Global", g->get_binding());
+				s->set_uniform("u_proj", &m_proj);
+				s->set_uniform("u_inv_proj", &m_inv_proj);
+				s->set_uniform("u_view", &m_view);
+				s->set_uniform("u_radius", &g->ao_radius);
+				s->set_uniform("u_bias", &g->ao_bias);
+				s->set_uniform("u_intensity", &g->ao_intensity);
+				s->set_uniform("u_power", &g->ao_power);
+
+				s->set_uniform_binding("u_depth_texture", node.bind_input_index(0));
+				s->set_uniform_binding("u_normal_texture", node.bind_input_index(1));
+
+				m_quad->bind();
+				m_quad->draw(PrimitiveType::Triangles);
+				m_quad->unbind();
+
+				node.unbind_input_index(0);
+				node.unbind_input_index(1);
+				pipeline->unbind();
+			});
+
+		if (!g->ao_blur_enabled) {
+			return "ao";
+		}
+
+		RenderPass::Description blur_desc;
+		blur_desc.color_attachments.resize(1);
+		blur_desc.color_attachments[0].load_op = LoadOp::DontCare;
+		blur_desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
+
+		rg.add_pass("ao-blur")
+			.set_output(m_ao_blur_framebuffer)
+			.set_pass_desc(blur_desc)
+			.add_input(depth_input)
+			.depends_on("ao")
+			.execute([this](RenderGraphNode& node, GraphicsContext& ctx) {
+				m_pipeline_ao_blur->bind();
+				auto& s = m_pipeline_ao_blur->m_shader;
+
+				auto& g = g_runtime_context.m_global;
+				s->set_uniform_block_binding("Global", g->get_binding());
+				s->set_uniform("u_proj", &m_proj);
+				s->set_uniform("u_texel_size", &m_ao_texel_size);
+				s->set_uniform("u_strength", &g->ao_blur_strength);
+
+				auto ao_img = m_ao_framebuffer->get_attachment_image(0);
+				ao_img->bind();
+				s->set_uniform_binding("u_ao_texture", ao_img->get_binding());
+				s->set_uniform_binding("u_depth_texture", node.bind_input_index(0));
+
+				m_quad->bind();
+				m_quad->draw(PrimitiveType::Triangles);
+				m_quad->unbind();
+
+				node.unbind_input_index(0);
+				ao_img->unbind();
+				m_pipeline_ao_blur->unbind();
+			});
+
+		return "ao-blur";
+	}
+
+	std::shared_ptr<Image> RenderShared::get_ao_image() const {
+		auto& g = g_runtime_context.m_global;
+		if (!g->ao_enabled || !m_ao_framebuffer) {
+			return nullptr;
+		}
+		auto framebuffer = g->ao_blur_enabled ? m_ao_blur_framebuffer : m_ao_framebuffer;
+		return framebuffer ? framebuffer->get_attachment_image(0) : nullptr;
+	}
+
+	void RenderShared::add_depth_prepass_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<MaterialInstance> const& default_material) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(2);
+		desc.color_attachments[0].load_op = LoadOp::Clear;
+		desc.color_attachments[0].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+		desc.color_attachments[1].load_op = LoadOp::Clear;
+		desc.color_attachments[1].clear_value = { 0.0f, 0.0f, 0.0f, 0.0f };
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
+		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
+
+		// Renders the GBuffer variant into a reduced framebuffer (position + normal +
+		// depth). The shader's extra MRT outputs (albedo/MR/emissive) are dropped by
+		// OpenGL because no matching attachments exist.
+		rg.add_pass("prepass")
+			.set_resolution_as(framebuffer)
+			.set_pass_desc(desc)
+			.add_output("prepass-position", ImageFormat::RGBA32F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("prepass-normal", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("prepass-depth", ImageFormat::Depth, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.execute([this, &draw_list, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
+				PerFrameConst per_frame{};
+				per_frame.global_binding = g_runtime_context.m_global->get_binding();
+				per_frame.variant_key = ShaderVariant::GBuffer;
+
+				m_lights_buffer->bind();
+				per_frame.lights_binding = m_lights_buffer->get_binding();
+
+				// Render opaque and masked geometry only (blend surfaces come later)
+				for (auto const& item : draw_list.static_meshes) {
+					per_frame.model = item.transform;
+					auto* overrides = item.mesh->override_materials_or_null();
+					item.mesh->m_mesh->draw(per_frame, default_material, overrides, [](uint32_t flags) {
+						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
+					});
+				}
+
+				for (auto const& item : draw_list.skeletal_meshes) {
+					std::shared_ptr<UniformBuffer> bones = nullptr;
+					if (item.anim) {
+						bones = item.anim->bone_ubo;
+					}
+
+					per_frame.model = item.transform;
+					auto* overrides = item.mesh->override_materials_or_null();
+					item.mesh->m_mesh->draw(per_frame, default_material, bones, overrides, [](uint32_t flags) {
+						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
+					});
+				}
+
+				m_lights_buffer->unbind();
+			});
 	}
 
 	void RenderShared::add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview, std::shared_ptr<MaterialInstance> const& default_material) {
