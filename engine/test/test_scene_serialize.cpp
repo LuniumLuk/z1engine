@@ -202,13 +202,17 @@ int main() {
 		auto ent = scene->create_entity("PythonTestEntity");
 		ent->attach_script<PythonScript>("sandbox_tests.test_mover", "TestMover");
 
-		// Run update loop (Attach and Update)
-		scene->on_update(0.1f);
+		// Run enough fixed update steps to exceed min_movement (ScriptSystem::update runs in on_fixed_update).
+		const float min_movement = 0.05f;
+		const int fixed_steps = static_cast<int>(min_movement / Timer::fixed_update_delta) + 1;
+		for (int step = 0; step < fixed_steps; ++step) {
+			scene->on_fixed_update();
+		}
 
 		auto pos = ent->get_component<TransformComponent>().m_location;
 		std::cout << "PythonTestEntity Pos X: " << pos.x << std::endl;
 
-		if (pos.x > 0.05f) {
+		if (pos.x > min_movement) {
 			std::cout << "[SUCCESS] Python Script moved entity!" << std::endl;
 		}
 		else {

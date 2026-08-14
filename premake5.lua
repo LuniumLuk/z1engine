@@ -54,7 +54,8 @@ workspace "z1engine"
 				systemversion "latest"
 				defines "PLATFORM_WINDOWS"
 				postbuildcommands {
-					"if not exist \"%{cfg.targetdir}/python314.dll\" {COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\""
+					"if not exist \"%{cfg.targetdir}/python314.dll\" {COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.dll\" \"%{cfg.targetdir}\"",
+					"if not exist \"%{cfg.targetdir}/python314.zip\" {COPYFILE} \"%{wks.location}/engine/3rdparty/python314/python314.zip\" \"%{cfg.targetdir}\""
 				}
 			filter "system:macosx"
 				includedirs { path.join(os.outputof("python3 -c \"import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))\""), "") }

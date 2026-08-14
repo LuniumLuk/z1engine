@@ -27,7 +27,7 @@ Mirror `engine/game/premake5.lua`: add `{COPYFILE} .../python314.zip` to the tes
 - *Alternative considered:* bundling a shared runtime dir. Rejected: the existing per-target-dir layout already works for the game; mirror it.
 
 ### D2. `test_scene_serialize` drives scripts via `on_fixed_update`
-Change the Python script test from `scene->on_update(0.1f)` to `scene->on_fixed_update()`. `ScriptSystem::update` lazily attaches (`attach_func` → import module, instantiate, bind `entity`), calls `on_start`, then `on_update(delta)`; the script's `on_update` adds `delta_time` to `transform.location.x`, and the test asserts `x > 0.05` (0.1 passes).
+Change the Python script test from `scene->on_update(0.1f)` to repeated `scene->on_fixed_update()` calls. `ScriptSystem::update` lazily attaches (`attach_func` → import module, instantiate, bind `entity`), calls `on_start`, then `on_update(delta)` with `Timer::fixed_update_delta` (0.016) per step; the script's `on_update` adds `delta_time` to `transform.location.x`. A single fixed step would only move x by 0.016 (below the `x > 0.05` assertion), so the test derives the step count from the delta (`int(min_movement / Timer::fixed_update_delta) + 1` → 4 steps at 0.016), accumulating `x ≈ 0.064`, which passes and stays correct if `fixed_update_delta` ever changes.
 
 - *Alternative considered:* routing `ScriptSystem::update` back into `on_update`. Rejected: scripts intentionally run on the fixed timestep (physics/animations) — the test was stale, not the engine.
 

@@ -33,6 +33,11 @@ python dev/z1.py test --config Release
 - Debug: `engine/bin/test/Debug/test_*.exe`
 - Release: `engine/bin/test/Release/test_*.exe`
 
+## Test Runtime (Python)
+
+- Test executables that touch Python need `python314.dll` AND `python314.zip` (stdlib) beside them — `create_test()`'s postbuild in `premake5.lua` copies both (guarded by `if not exist`), mirroring `engine/game/premake5.lua`.
+- Missing `python314.zip` → `Py_InitializeFromConfig` fails with "Failed to import encodings module" (embedded interpreter resolves the stdlib zip from the exe dir) → `CORE_ASSERT` exit `0x80000003`. See archived change `2026-08-14-fix-failing-unit-tests`.
+
 ## Adding a New Test
 
 1. Create `engine/test/test_<name>.cpp` with a `main()` function
