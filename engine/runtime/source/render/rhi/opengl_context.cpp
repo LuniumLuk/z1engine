@@ -38,10 +38,28 @@ namespace z1 {
 		(void)source;
 		(void)type;
 		(void)id;
-		(void)severity;
 		(void)length;
 		(void)userParam;
-		CORE_WARN("OpenGL Debug: {0}", message);
+
+		// Route GL debug messages to the matching log level by severity.
+		// Informational notifications (debug-group markers, driver buffer
+		// allocation hints, etc.) go to trace level, which is hidden by the
+		// default info-level logger, so they no longer spam the log as warns.
+		switch (severity) {
+		case GL_DEBUG_SEVERITY_HIGH:
+			CORE_ERROR("OpenGL: {0}", message);
+			break;
+		case GL_DEBUG_SEVERITY_MEDIUM:
+			CORE_WARN("OpenGL: {0}", message);
+			break;
+		case GL_DEBUG_SEVERITY_LOW:
+			CORE_DEBUG("OpenGL: {0}", message);
+			break;
+		case GL_DEBUG_SEVERITY_NOTIFICATION:
+		default:
+			CORE_TRACE("OpenGL: {0}", message);
+			break;
+		}
 	}
 
 	OpenGLContext::OpenGLContext()
