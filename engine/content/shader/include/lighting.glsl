@@ -179,7 +179,7 @@ vec3 get_normal_from_map(vec3 world_pos, vec3 normal, vec4 tangent, vec3 normal_
 	vec2 duv1 = dFdx(v_texcoord0);
 	vec2 duv2 = dFdy(v_texcoord0);
 
-	if (dot(duv1, duv1) + dot(duv2, duv2) < 1e-6) {
+	if (dot(duv1, duv1) + dot(duv2, duv2) < 1e-12) {
 		return normalize(normal);
 	}
 
