@@ -31,6 +31,13 @@ namespace z1 {
 
 		{
 			Pipeline::Description desc{};
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/ssr"));
+			m_pipeline_ssr = Pipeline::build(desc);
+		}
+
+		{
+			Pipeline::Description desc{};
 			desc.depth_test = true;
 			desc.cull_mode = CullMode::None;
 			desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/deferred_skybox"));
@@ -150,10 +157,19 @@ namespace z1 {
 		add_gbuffer_pass(rg, draw_list, framebuffer, scene, projview);
 		std::string ao_pass = m_shared.add_ao_pass(rg, "gbuffer-depth", "gbuffer-normal");
 		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx, ao_pass);
-		add_forward_transparency_pass(rg, framebuffer, draw_list, scene, ao_pass);
+
+		std::string scene_color_input = "scene-color";
+		std::string passthrough_pass = "deferred-lighting";
+		if (g->ssr_enabled) {
+			add_ssr_pass(rg, framebuffer);
+			scene_color_input = "scene-color-ssr";
+			passthrough_pass = "ssr";
+		}
+
+		add_forward_transparency_pass(rg, framebuffer, draw_list, scene, passthrough_pass, ao_pass);
 		m_particle_renderer.add_particle_pass(rg, scene.get(), "forward-transparency", m_shared.m_shadow_image);
 		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview, m_default_material);
-		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
+		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx], scene_color_input);
 		m_shared.add_taa_sharpen_pass(rg, m_shared.m_history_colors[write_idx]);
 		m_shared.add_bloom_pass(rg);
 		m_shared.add_postprocess_pass(rg, framebuffer);
@@ -347,11 +363,62 @@ namespace z1 {
 		});
 	}
 
+	void RendererDeferred::add_ssr_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::DontCare;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
+
+		rg.add_pass("ssr")
+			.set_resolution_as(framebuffer)
+			.set_pass_desc(desc)
+			.add_input("scene-color")
+			.add_input("gbuffer-position")
+			.add_input("gbuffer-normal")
+			.add_input("gbuffer-albedo")
+			.add_input("gbuffer-metallic-roughness")
+			.add_input("gbuffer-depth")
+			.add_output("scene-color-ssr", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
+			.add_output("scene-depth-ssr", ImageFormat::Depth)
+			.pre_pass([](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto src = node.get_input_framebuffer_name("gbuffer-depth");
+				auto dst = node.get_output();
+				ctx.blit_depth_stencil(src, dst);
+			})
+			.depends_on("deferred-lighting")
+			.execute([this](RenderGraphNode& node, GraphicsContext& ctx) {
+				m_pipeline_ssr->bind();
+				auto& s = m_pipeline_ssr->m_shader;
+
+				auto& g = g_runtime_context.m_global;
+				s->set_uniform_block_binding("Global", g->get_binding());
+
+				s->set_uniform_binding("u_scene_color", node.bind_input_index(0));
+				s->set_uniform_binding("u_gbuffer_position", node.bind_input_index(1));
+				s->set_uniform_binding("u_gbuffer_normal", node.bind_input_index(2));
+				s->set_uniform_binding("u_gbuffer_albedo", node.bind_input_index(3));
+				s->set_uniform_binding("u_gbuffer_metallic_roughness", node.bind_input_index(4));
+				s->set_uniform_binding("u_gbuffer_depth", node.bind_input_index(5));
+
+				m_shared.m_quad->bind();
+				m_shared.m_quad->draw(PrimitiveType::Triangles);
+				m_shared.m_quad->unbind();
+
+				node.unbind_input_index(0);
+				node.unbind_input_index(1);
+				node.unbind_input_index(2);
+				node.unbind_input_index(3);
+				node.unbind_input_index(4);
+				node.unbind_input_index(5);
+				m_pipeline_ssr->unbind();
+			});
+	}
+
 	// Forward transparency pass
 	// Blended objects cannot be deferred. Render them on top of the
 	// lit scene-color using normal forward shading + skybox.
 
-	void RendererDeferred::add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::string const& ao_pass) {
+	void RendererDeferred::add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::string const& input_pass, std::string const& ao_pass) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Load;
@@ -360,7 +427,7 @@ namespace z1 {
 		auto& pass = rg.add_pass("forward-transparency");
 		pass.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.set_passthrough("deferred-lighting");
+			.set_passthrough(input_pass);
 
 		if (!ao_pass.empty()) {
 			pass.depends_on(ao_pass);

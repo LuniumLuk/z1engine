@@ -43,6 +43,14 @@ layout (std140) uniform Global {
 	float u_ao_bias;
 	float u_ao_blur_enabled;
 	float u_ao_blur_strength;
+	// Screen-space reflection (deferred-only)
+	float u_ssr_enabled;
+	float u_ssr_intensity;
+	float u_ssr_max_distance;
+	float u_ssr_thickness;
+	float u_ssr_stride;
+	float u_ssr_max_steps;
+	float u_ssr_jitter_strength;
 };
 
 uniform sampler2DArray u_shadow_map;

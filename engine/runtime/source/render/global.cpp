@@ -80,6 +80,16 @@ namespace z1 {
 		m_data.ao_blur_enabled = (float)ao_blur_enabled;
 		m_data.ao_blur_strength = ao_blur_strength;
 
+		// SSR is only valid for deferred rendering.
+		bool const ssr_runtime_enabled = (render_mode == RenderMode::Deferred) && ssr_enabled;
+		m_data.ssr_enabled = ssr_runtime_enabled ? 1.0f : 0.0f;
+		m_data.ssr_intensity = ssr_intensity;
+		m_data.ssr_max_distance = ssr_max_distance;
+		m_data.ssr_thickness = ssr_thickness;
+		m_data.ssr_stride = ssr_stride;
+		m_data.ssr_max_steps = ssr_max_steps;
+		m_data.ssr_jitter_strength = ssr_jitter_strength;
+
 		m_global_buffer->write(&m_data);
 	}
 

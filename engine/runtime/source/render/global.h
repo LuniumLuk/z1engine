@@ -69,6 +69,14 @@ namespace z1 {
 		float     ao_bias               = 0.025f;
 		bool      ao_blur_enabled       = true;
 		float     ao_blur_strength      = 1.0f;
+		// Screen-space reflections (deferred only)
+		bool      ssr_enabled           = false;
+		float     ssr_intensity         = 0.6f;
+		float     ssr_max_distance      = 30.0f;
+		float     ssr_thickness         = 0.15f;
+		float     ssr_stride            = 0.07f;
+		float     ssr_max_steps         = 128.0f;
+		float     ssr_jitter_strength   = 0.25f;
 		// Animation
 		bool      anim_enabled          = true;
 		// Scripting
@@ -144,6 +152,14 @@ namespace z1 {
 			float     ao_bias;
 			float     ao_blur_enabled;
 			float     ao_blur_strength;
+			// Screen-space reflection (appended at end to preserve existing layout alignment)
+			float     ssr_enabled;
+			float     ssr_intensity;
+			float     ssr_max_distance;
+			float     ssr_thickness;
+			float     ssr_stride;
+			float     ssr_max_steps;
+			float     ssr_jitter_strength;
 		} m_data = {};
 
 	};
@@ -178,6 +194,13 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, ao_bias,               FF_Default, "[drag]min=0.0,group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_blur_enabled,       FF_Default, "group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_blur_strength,      FF_Default, "[drag]min=0.0,max=4.0,group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ssr_enabled,           FF_Default, "group=screen_space_reflection")
+	REFLECTED_FIELD(GlobalSettings, ssr_intensity,         FF_Default, "[slider]min=0.0,max=2.0,group=screen_space_reflection")
+	REFLECTED_FIELD(GlobalSettings, ssr_max_distance,      FF_Default, "[drag]min=0.0,group=screen_space_reflection")
+	REFLECTED_FIELD(GlobalSettings, ssr_thickness,         FF_Default, "[drag]min=0.0,group=screen_space_reflection")
+	REFLECTED_FIELD(GlobalSettings, ssr_stride,            FF_Default, "[drag]min=0.01,group=screen_space_reflection")
+	REFLECTED_FIELD(GlobalSettings, ssr_max_steps,         FF_Default, "[drag]min=1.0,max=256.0,group=screen_space_reflection")
+	REFLECTED_FIELD(GlobalSettings, ssr_jitter_strength,   FF_Default, "[slider]min=0.0,max=1.0,group=screen_space_reflection")
 	REFLECTED_FIELD(GlobalSettings, anim_enabled,          FF_Default, "group=system")
 	REFLECTED_FIELD(GlobalSettings, script_enabled,        FF_Default, "group=system")
 	REFLECTED_FIELD(GlobalSettings, render_mode,           FF_Default, "group=system")

@@ -635,7 +635,7 @@ namespace z1 {
 				});
 	}
 
-	void RenderShared::add_taa_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& history_write, std::shared_ptr<Framebuffer> const& history_read) {
+	void RenderShared::add_taa_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& history_write, std::shared_ptr<Framebuffer> const& history_read, std::string const& scene_color_input) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::DontCare;
@@ -644,7 +644,7 @@ namespace z1 {
 		rg.add_pass("taa")
 			.set_output(history_write)
 			.set_pass_desc(desc)
-			.add_input("scene-color")
+			.add_input(scene_color_input)
 			.add_input("velocity")
 			.execute([this, history_read](RenderGraphNode& node, GraphicsContext& ctx) {
 				auto h = history_read->get_attachment_image(0);

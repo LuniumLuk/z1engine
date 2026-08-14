@@ -18,12 +18,14 @@ namespace z1 {
 	private:
 		void add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Scene> const& scene, glm::mat4 const& unjittered_projview);
 		void add_deferred_lighting_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, std::string const& ao_pass);
-		void add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::string const& ao_pass);
+		void add_ssr_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer);
+		void add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::string const& input_pass, std::string const& ao_pass);
 
 		RenderShared m_shared;
 		ParticleRenderer m_particle_renderer;
 		std::shared_ptr<MaterialInstance> m_default_material;
 		std::shared_ptr<Pipeline> m_pipeline_deferred_lighting;
+		std::shared_ptr<Pipeline> m_pipeline_ssr;
 		std::shared_ptr<Pipeline> m_pipeline_skybox;
 
 	};
