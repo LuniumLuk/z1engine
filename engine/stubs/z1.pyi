@@ -155,6 +155,10 @@ class EventType(Enum):
 	MouseMoved = 10
 	MouseScrolled = 11
 
+class AOMode(Enum):
+	SSAO = 0
+	GTAO = 1
+
 class ColliderShape(Enum):
 	Sphere = 0
 	Box = 1
@@ -247,7 +251,7 @@ class GlobalSettings:
 	sm_far: float
 	sm_ortho_size: float
 	ao_enabled: bool
-	ao_type: int
+	ao_type: AOMode
 	ao_radius: float
 	ao_intensity: float
 	ao_power: float

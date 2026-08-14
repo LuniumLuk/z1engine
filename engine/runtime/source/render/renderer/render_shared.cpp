@@ -384,7 +384,7 @@ namespace z1 {
 		desc.color_attachments[0].clear_value = { 1.0f, 1.0f, 1.0f, 1.0f };
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
 
-		bool use_gtao = g->ao_type == 1;
+		bool use_gtao = g->ao_type == AOMode::GTAO;
 
 		rg.add_pass("ao")
 			.set_output(m_ao_framebuffer)

@@ -25,6 +25,11 @@ using namespace z1;
 
 void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& entity_cls) {
 	// Bind Enums
+	py::enum_<AOMode>(m, "AOMode")
+		.value("SSAO", AOMode::SSAO)
+		.value("GTAO", AOMode::GTAO)
+		.export_values();
+
 	py::enum_<ColliderShape>(m, "ColliderShape")
 		.value("Sphere", ColliderShape::Sphere)
 		.value("Box", ColliderShape::Box)

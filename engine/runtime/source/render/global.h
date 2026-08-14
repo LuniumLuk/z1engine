@@ -16,6 +16,14 @@ namespace z1 {
 	REFLECT_ENUM(RenderMode, Forward)
 	REFLECT_ENUM(RenderMode, Deferred)
 
+	enum struct API AOMode : int {
+		SSAO = 0,
+		GTAO = 1,
+	};
+
+	REFLECT_ENUM(AOMode, SSAO)
+	REFLECT_ENUM(AOMode, GTAO)
+
 	REFLECTED_STRUCT(GlobalSettings) {
 
 		GlobalSettings();
@@ -54,7 +62,7 @@ namespace z1 {
 		float     sm_ortho_size         = 40.0f;
 		// Ambient Occlusion
 		bool      ao_enabled            = true;
-		int       ao_type               = 1;     // 0 = SSAO, 1 = GTAO
+		AOMode    ao_type               = AOMode::GTAO;     // 0 = SSAO, 1 = GTAO
 		float     ao_radius             = 1.0f;
 		float     ao_intensity          = 1.0f;
 		float     ao_power              = 1.5f;
@@ -163,7 +171,7 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, sm_far,                FF_Default, "group=shadow")
 	REFLECTED_FIELD(GlobalSettings, sm_ortho_size,         FF_Default, "group=shadow")
 	REFLECTED_FIELD(GlobalSettings, ao_enabled,            FF_Default, "group=ambient_occlusion")
-	REFLECTED_FIELD(GlobalSettings, ao_type,               FF_Default, "[slider]min=0,max=1,group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_type,               FF_Default, "group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_radius,             FF_Default, "[drag]min=0.0,group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_intensity,          FF_Default, "[drag]min=0.0,max=2.0,group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_power,              FF_Default, "[drag]min=0.0,group=ambient_occlusion")
