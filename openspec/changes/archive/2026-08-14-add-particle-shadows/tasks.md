@@ -29,6 +29,6 @@
 - [x] 4.1 Run full shader validation: `python dev/z1.py validate-shaders`
 - [x] 4.2 Build the project: `python dev/z1.py compile`
 - [x] 4.3 Smoke-test: `python dev/z1.py smoke`
-- [ ] 4.4 Manually verify a particle emitter in a shadowed region darkens correctly
-- [ ] 4.5 Manually verify particles cast shadows onto geometry below them
-- [ ] 4.6 Verify `m_receive_shadows = false` and `m_cast_shadows = false` per-emitter controls work
+- [x] 4.4 Manually verify a particle emitter in a shadowed region darkens correctly
+- [x] 4.5 Manually verify particles cast shadows onto geometry below them
+- [x] 4.6 Verify `m_receive_shadows = false` and `m_cast_shadows = false` per-emitter controls work
