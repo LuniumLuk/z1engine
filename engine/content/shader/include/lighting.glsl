@@ -131,6 +131,108 @@ vec3 fresnel_schlick(float cos_theta, vec3 f0) {
 	return f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);
 }
 
+vec2 sample_spherical_map(vec3 dir) {
+	const vec2 invAtan = vec2(0.1591, 0.3183);
+	vec2 uv = vec2(atan(dir.z, dir.x), asin(dir.y));
+	uv *= invAtan;
+	uv += 0.5;
+	return uv;
+}
+
+vec3 rotate_y(vec3 v, float angle_deg) {
+	float s = sin(radians(angle_deg));
+	float c = cos(radians(angle_deg));
+	return vec3(c * v.x - s * v.z, v.y, s * v.x + c * v.z);
+}
+
+vec2 env_brdf_approx(float roughness, float NoV) {
+	vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+	vec4 c1 = vec4(1.0, 0.0425, 1.040, -0.040);
+	vec4 r = roughness * c0 + c1;
+	float a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
+	return vec2(-1.04, 1.04) * a004 + r.zw;
+}
+
+vec3 eval_sky_sh_radiance(vec3 dir) {
+	float x = dir.x;
+	float y = dir.y;
+	float z = dir.z;
+
+	float b0 = 0.282095;
+	float b1 = 0.488603 * y;
+	float b2 = 0.488603 * z;
+	float b3 = 0.488603 * x;
+	float b4 = 1.092548 * x * y;
+	float b5 = 1.092548 * y * z;
+	float b6 = 0.315392 * (3.0 * z * z - 1.0);
+	float b7 = 1.092548 * x * z;
+	float b8 = 0.546274 * (x * x - y * y);
+
+	return
+		u_sky_sh[0].rgb * b0 +
+		u_sky_sh[1].rgb * b1 +
+		u_sky_sh[2].rgb * b2 +
+		u_sky_sh[3].rgb * b3 +
+		u_sky_sh[4].rgb * b4 +
+		u_sky_sh[5].rgb * b5 +
+		u_sky_sh[6].rgb * b6 +
+		u_sky_sh[7].rgb * b7 +
+		u_sky_sh[8].rgb * b8;
+}
+
+void calculate_sky_ibl(
+	vec3 N,
+	vec3 V,
+	vec3 F0,
+	float roughness,
+	float metallic,
+	vec3 base_color,
+	inout vec3 L_diffuse,
+	inout vec3 L_specular
+) {
+	float sky_rotation = u_sky_params.x;
+	float sky_intensity = u_sky_params.y;
+	float sky_mip_level = u_sky_params.z;
+	float sky_specular_max_mip = u_sky_params.w;
+
+	if (sky_intensity <= 0.0) {
+		return;
+	}
+
+	// Rotate lookup directions to match the visual skybox rotation.
+	vec3 Nr = normalize(rotate_y(N, -sky_rotation));
+	vec3 Vr = normalize(rotate_y(V, -sky_rotation));
+
+	// Diffuse irradiance from SH radiance coefficients using Lambert convolution factors.
+	// l=0: pi, l=1: 2pi/3, l=2: pi/4
+	float x = Nr.x;
+	float y = Nr.y;
+	float z = Nr.z;
+	vec3 irradiance = vec3(0.0);
+	irradiance += u_sky_sh[0].rgb * (0.282095 * 3.14159265359);
+	irradiance += u_sky_sh[1].rgb * (0.488603 * y * (2.0 * 3.14159265359 / 3.0));
+	irradiance += u_sky_sh[2].rgb * (0.488603 * z * (2.0 * 3.14159265359 / 3.0));
+	irradiance += u_sky_sh[3].rgb * (0.488603 * x * (2.0 * 3.14159265359 / 3.0));
+	irradiance += u_sky_sh[4].rgb * (1.092548 * x * y * (3.14159265359 / 4.0));
+	irradiance += u_sky_sh[5].rgb * (1.092548 * y * z * (3.14159265359 / 4.0));
+	irradiance += u_sky_sh[6].rgb * (0.315392 * (3.0 * z * z - 1.0) * (3.14159265359 / 4.0));
+	irradiance += u_sky_sh[7].rgb * (1.092548 * x * z * (3.14159265359 / 4.0));
+	irradiance += u_sky_sh[8].rgb * (0.546274 * (x * x - y * y) * (3.14159265359 / 4.0));
+	irradiance = max(irradiance, vec3(0.0));
+
+	float NoV = max(dot(N, V), 0.0);
+	vec3 F = fresnel_schlick(NoV, F0);
+	vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);
+	L_diffuse += kD * base_color * irradiance * sky_intensity;
+
+	// Specular IBL from the same equirect map with roughness-driven mip.
+	vec3 R = reflect(-Vr, Nr);
+	float lod = clamp(roughness * sky_specular_max_mip + sky_mip_level, 0.0, sky_specular_max_mip);
+	vec3 prefiltered = textureLod(u_sky_ibl_texture, sample_spherical_map(normalize(R)), lod).rgb;
+	vec2 brdf = env_brdf_approx(roughness, NoV);
+	L_specular += prefiltered * (F * brdf.x + brdf.y) * sky_intensity;
+}
+
 void calculate_pbr_illumination(
 	vec3 light_dir, vec3 light_color, float attenuation, float shadow_factor,
 	vec3 N, vec3 V, vec3 F0, float roughness, float metallic, vec3 base_color,

@@ -90,6 +90,11 @@ namespace z1 {
 		m_data.ssr_max_steps = ssr_max_steps;
 		m_data.ssr_jitter_strength = ssr_jitter_strength;
 
+		m_data.sky_params = sky_params;
+		for (int i = 0; i < 9; ++i) {
+			m_data.sky_sh[i] = sky_sh[i];
+		}
+
 		m_global_buffer->write(&m_data);
 	}
 

@@ -261,6 +261,9 @@ namespace z1 {
 			shader->set_uniform_binding("u_shadow_map", per_frame.shadow_map_binding);
 		if (per_frame.ao_map_binding != INVALID_BINDING && shader->has_uniform("u_ao_texture"))
 			shader->set_uniform_binding("u_ao_texture", per_frame.ao_map_binding);
+		if (per_frame.sky_ibl_map_binding != INVALID_BINDING && shader->has_uniform("u_sky_ibl_texture")) {
+			shader->set_uniform_binding("u_sky_ibl_texture", per_frame.sky_ibl_map_binding);
+		}
 
 		for (auto const& [name, var] : m_override_variables) {
 			bind_uniform(shader, name);

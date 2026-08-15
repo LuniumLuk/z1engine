@@ -9,6 +9,7 @@
 #include "render/shader_variant.h"
 #include "scene/component/sky_light.h"
 #include <array>
+#include <cstddef>
 
 #define CSM_LAYERS 4
 
@@ -17,6 +18,7 @@ namespace z1 {
 	struct Scene;
 	struct RenderGraph;
 	struct CameraComponent;
+	struct PerFrameConst;
 
 	// Light UBO layout (shared between forward and deferred)
 
@@ -33,6 +35,17 @@ namespace z1 {
 		glm::vec4 count; // x = count
 		LightData lights[MAX_LIGHTS];
 	};
+
+	// Compile-time std140 layout verification for the Lights UBO block
+	// (must match the GLSL Lights block in include/uniforms.glsl).
+	static_assert(offsetof(LightData, position) == 0, "LightData std140 layout mismatch: position");
+	static_assert(offsetof(LightData, direction) == 16, "LightData std140 layout mismatch: direction");
+	static_assert(offsetof(LightData, color) == 32, "LightData std140 layout mismatch: color");
+	static_assert(offsetof(LightData, cone) == 48, "LightData std140 layout mismatch: cone");
+	static_assert(sizeof(LightData) == 64, "LightData std140 block size mismatch");
+	static_assert(offsetof(LightsBlock, count) == 0, "LightsBlock std140 layout mismatch: count");
+	static_assert(offsetof(LightsBlock, lights) == 16, "LightsBlock std140 layout mismatch: lights");
+	static_assert(sizeof(LightsBlock) == 1040, "LightsBlock std140 block size mismatch");
 
 	struct MaterialInstance;
 
@@ -64,6 +77,15 @@ namespace z1 {
 		std::vector<std::shared_ptr<Framebuffer>> m_bloom_textures;
 		const int BLOOM_MIP_COUNT = 5;
 		std::shared_ptr<UniformBuffer> m_lights_buffer;
+		std::shared_ptr<Image2D> m_sky_ibl_image;
+		glm::vec4 m_sky_sh_coeffs[9] = {};
+		float m_sky_rotation = 0.0f;
+		float m_sky_intensity = 0.0f;
+		float m_sky_mip_level = 0.0f;
+		float m_sky_specular_max_mip = 0.0f;
+		bool m_has_sky_light = false;
+		bool m_sky_sh_ready = false;
+		Guid m_sky_sh_guid = {};
 
 		// Per-frame camera matrices used by the AO passes (set by renderers each frame)
 		glm::mat4 m_proj = {};
@@ -79,6 +101,8 @@ namespace z1 {
 		bool ensure_buffers(uint32_t width, uint32_t height);
 
 		void update_lights(std::shared_ptr<Scene> const& scene);
+		void update_sky_light(std::shared_ptr<Scene> const& scene);
+		void apply_sky_light(PerFrameConst& per_frame) const;
 		void calculate_csm_splits(CameraComponent& camera, glm::vec3 const& sun_dir);
 
 		// Ambient occlusion

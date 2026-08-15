@@ -18,6 +18,7 @@ namespace z1 {
 		uint32_t lights_binding = INVALID_BINDING;
 		uint32_t shadow_map_binding = INVALID_BINDING;
 		uint32_t ao_map_binding = INVALID_BINDING;
+		uint32_t sky_ibl_map_binding = INVALID_BINDING;
 		uint32_t variant_key = 0;
 	};
 

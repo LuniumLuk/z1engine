@@ -105,6 +105,7 @@ namespace z1 {
 		m_shared.m_view = camera_comp.get_view();
 
 		m_shared.update_lights(scene);
+		m_shared.update_sky_light(scene);
 		m_shared.calculate_csm_splits(camera_comp, g->sun_direction);
 
 		g->flush();
@@ -154,7 +155,7 @@ namespace z1 {
 		RenderGraph rg;
 		m_shared.add_shadow_pass(rg, scene, m_default_material);
 		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, CSM_LAYERS);
-		add_gbuffer_pass(rg, draw_list, framebuffer, scene, projview);
+		add_gbuffer_pass(rg, draw_list, framebuffer, projview);
 		std::string ao_pass = m_shared.add_ao_pass(rg, "gbuffer-depth", "gbuffer-normal");
 		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx, ao_pass);
 
@@ -190,7 +191,7 @@ namespace z1 {
 	//   RT3: metallic-roughness (RG16F)
 	//   DS : depth
 
-	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, std::shared_ptr<Scene> const& scene, glm::mat4 const& unjittered_projview) {
+	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& unjittered_projview) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(5);
 		for (int i = 0; i < 5; i++) {
@@ -209,7 +210,7 @@ namespace z1 {
 			.add_output("gbuffer-metallic-roughness", ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-emissive", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.add_output("gbuffer-depth", ImageFormat::Depth)
-			.execute([this, &draw_list, scene, unjittered_projview](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, &draw_list, unjittered_projview](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 				per_frame.variant_key = ShaderVariant::GBuffer;
@@ -239,33 +240,29 @@ namespace z1 {
 					});
 				}
 
-				// Render skybox to emissive channel of G-buffer for now (could be optimized by skipping depth write and only rendering skybox in deferred lighting pass)
-				auto sky_view = scene->m_registry.view<SkyLightComponent const>();
-				for (auto [entity, sky] : sky_view.each()) {
-					if (sky.m_texture && sky.m_texture->m_image) {
-						m_pipeline_skybox->bind();
+				// Render skybox to emissive channel of G-buffer.
+				if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
+					m_pipeline_skybox->bind();
 
-						sky.m_texture->m_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
+					m_shared.m_sky_ibl_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
 
-						auto& s = m_pipeline_skybox->m_shader;
-						s->set_uniform("u_rotation", &sky.m_rotation);
-						s->set_uniform("u_intensity", &sky.m_intensity);
-						s->set_uniform("u_mip_level", &sky.m_mip_level);
+					auto& s = m_pipeline_skybox->m_shader;
+					s->set_uniform("u_rotation", &m_shared.m_sky_rotation);
+					s->set_uniform("u_intensity", &m_shared.m_sky_intensity);
+					s->set_uniform("u_mip_level", &m_shared.m_sky_mip_level);
 
-						auto& g = g_runtime_context.m_global;
-						// Use unjittered projview so the skybox is stable across TAA frames
-						glm::mat4 inv_projview = glm::inverse(unjittered_projview);
-						s->set_uniform("u_inv_projview", &inv_projview);
-						s->set_uniform("u_cam_position", &g->cam_position);
+					auto& g = g_runtime_context.m_global;
+					// Use unjittered projview so the skybox is stable across TAA frames
+					glm::mat4 inv_projview = glm::inverse(unjittered_projview);
+					s->set_uniform("u_inv_projview", &inv_projview);
+					s->set_uniform("u_cam_position", &g->cam_position);
 
-						m_shared.m_quad->bind();
-						m_shared.m_quad->draw(PrimitiveType::Triangles);
-						m_shared.m_quad->unbind();
+					m_shared.m_quad->bind();
+					m_shared.m_quad->draw(PrimitiveType::Triangles);
+					m_shared.m_quad->unbind();
 
-						sky.m_texture->m_image->unbind();
-						m_pipeline_skybox->unbind();
-					}
-					break;
+					m_shared.m_sky_ibl_image->unbind();
+					m_pipeline_skybox->unbind();
 				}
 			});
 	}
@@ -328,6 +325,11 @@ namespace z1 {
 				s->set_uniform_binding("u_ao_texture", ao_image->get_binding());
 			}
 
+			if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
+				m_shared.m_sky_ibl_image->bind();
+				s->set_uniform_binding("u_sky_ibl_texture", m_shared.m_sky_ibl_image->get_binding());
+			}
+
 			// Bind G-buffer textures
 			s->set_uniform_binding("u_gbuffer_position", node.bind_input_index(0));
 			s->set_uniform_binding("u_gbuffer_normal", node.bind_input_index(1));
@@ -347,6 +349,9 @@ namespace z1 {
 			m_shared.m_shadow_image->unbind();
 			if (ao_image) {
 				ao_image->unbind();
+			}
+			if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
+				m_shared.m_sky_ibl_image->unbind();
 			}
 			m_shared.m_lights_buffer->unbind();
 			m_pipeline_deferred_lighting->unbind();
@@ -449,6 +454,8 @@ namespace z1 {
 				per_frame.ao_map_binding = ao_image->get_binding();
 			}
 
+			m_shared.apply_sky_light(per_frame);
+
 			// Render blended geometry
 			for (auto const& item : draw_list.static_meshes) {
 				per_frame.model = item.transform;
@@ -473,6 +480,9 @@ namespace z1 {
 
 			if (ao_image) {
 				ao_image->unbind();
+			}
+			if (per_frame.sky_ibl_map_binding != INVALID_BINDING) {
+				m_shared.m_sky_ibl_image->unbind();
 			}
 			m_shared.m_lights_buffer->unbind();
 			m_shared.m_shadow_image->unbind();

@@ -89,6 +89,7 @@ namespace z1 {
 		m_shared.m_view = camera_comp.get_view();
 
 		m_shared.update_lights(scene);
+		m_shared.update_sky_light(scene);
 		m_shared.calculate_csm_splits(camera_comp, g->sun_direction);
 
 		g->flush();
@@ -201,6 +202,7 @@ namespace z1 {
 					ao_image->bind();
 					per_frame.ao_map_binding = ao_image->get_binding();
 				}
+				m_shared.apply_sky_light(per_frame);
 
 				// Pass 1: Opaque and Mask
 				for (auto const& item : draw_list.static_meshes) {
@@ -246,37 +248,36 @@ namespace z1 {
 					});
 				}
 
-				auto sky_view = scene->m_registry.view<SkyLightComponent const>();
-				for (auto [entity, sky] : sky_view.each()) {
-					if (sky.m_texture && sky.m_texture->m_image) {
-						m_pipeline_skybox->bind();
+				if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
+					m_pipeline_skybox->bind();
 
-						sky.m_texture->m_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
+					m_shared.m_sky_ibl_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
 
-						auto& s = m_pipeline_skybox->m_shader;
-						s->set_uniform("u_rotation", &sky.m_rotation);
-						s->set_uniform("u_intensity", &sky.m_intensity);
-						s->set_uniform("u_mip_level", &sky.m_mip_level);
+					auto& s = m_pipeline_skybox->m_shader;
+					s->set_uniform("u_rotation", &m_shared.m_sky_rotation);
+					s->set_uniform("u_intensity", &m_shared.m_sky_intensity);
+					s->set_uniform("u_mip_level", &m_shared.m_sky_mip_level);
 
-						auto& g = g_runtime_context.m_global;
-						glm::mat4 inv_projview = glm::inverse(g->projview);
-						s->set_uniform("u_inv_projview", &inv_projview);
-						s->set_uniform("u_cam_position", &g->cam_position);
+					auto& g = g_runtime_context.m_global;
+					glm::mat4 inv_projview = glm::inverse(g->projview);
+					s->set_uniform("u_inv_projview", &inv_projview);
+					s->set_uniform("u_cam_position", &g->cam_position);
 
-						m_shared.m_quad->bind();
-						m_shared.m_quad->draw(PrimitiveType::Triangles);
-						m_shared.m_quad->unbind();
+					m_shared.m_quad->bind();
+					m_shared.m_quad->draw(PrimitiveType::Triangles);
+					m_shared.m_quad->unbind();
 
-						sky.m_texture->m_image->unbind();
-						m_pipeline_skybox->unbind();
-					}
-					break;
+					m_shared.m_sky_ibl_image->unbind();
+					m_pipeline_skybox->unbind();
 				}
 
 				m_shared.m_lights_buffer->unbind();
 				m_shared.m_shadow_image->unbind();
 				if (ao_image) {
 					ao_image->unbind();
+				}
+				if (per_frame.sky_ibl_map_binding != INVALID_BINDING) {
+					m_shared.m_sky_ibl_image->unbind();
 				}
 
 				if (history_uninitialized) {

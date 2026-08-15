@@ -35,9 +35,13 @@
 		vec4 position_alpha = texture(u_gbuffer_position, v_uv);
 		vec3 world_pos = position_alpha.xyz;
 		float alpha = position_alpha.w;
+		vec3 emissive = texture(u_gbuffer_emissive, v_uv).rgb;
 
-		// Early discard for empty pixels (no geometry was written here)
-		if (alpha == 0.0) discard;
+		// Empty pixels carry sky emissive from the deferred sky pass; preserve it.
+		if (alpha == 0.0) {
+			frag_color = vec4(emissive, 1.0);
+			return;
+		}
 
 		vec3 N = normalize(texture(u_gbuffer_normal, v_uv).xyz);
 		vec4 albedo_sample = texture(u_gbuffer_albedo, v_uv);
@@ -45,7 +49,6 @@
 		vec2 mr = texture(u_gbuffer_metallic_roughness, v_uv).rg;
 		float metallic = mr.r;
 		float roughness = mr.g;
-		vec3 emissive = texture(u_gbuffer_emissive, v_uv).rgb;
 
 		// Set up variables expected by lighting functions
 		v_world_position = world_pos;
@@ -116,6 +119,8 @@
 				N, V, F0, roughness, metallic, base_color,
 				L_diffuse, L_specular);
 		}
+
+		calculate_sky_ibl(N, V, F0, roughness, metallic, base_color, L_diffuse, L_specular);
 
 		// Ambient
 		vec3 ambient = base_color * u_sun_ambient.rgb;

@@ -134,6 +134,8 @@
 				N, V, F0, roughness, metallic, base_color, L_diffuse, L_specular);
 		}
 
+		calculate_sky_ibl(N, V, F0, roughness, metallic, base_color, L_diffuse, L_specular);
+
 		// Simple ambient term (modulated by screen-space AO when enabled)
 		vec3 ambient = base_color * u_sun_ambient.rgb;
 		float ao_screen = u_ao_enabled > 0.5 ? texture(u_ao_texture, v_screen_uv).r : 1.0;

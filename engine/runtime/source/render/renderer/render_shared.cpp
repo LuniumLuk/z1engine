@@ -14,6 +14,122 @@
 #include "scene/component/animation.h"
 #include "asset/asset_manager.h"
 #include "glm/gtc/matrix_transform.hpp"
+#include "bakery.h"
+#include "tinyexr/tinyexr.h"
+
+#include <array>
+
+namespace {
+
+	constexpr float kPi = 3.14159265359f;
+
+	glm::vec3 sample_latlong_direction(float u, float v) {
+		float const phi = (u - 0.5f) * 2.0f * kPi;
+		float const elevation = (v - 0.5f) * kPi;
+		float const cos_elev = std::cos(elevation);
+		return glm::vec3(
+			cos_elev * std::cos(phi),
+			std::sin(elevation),
+			cos_elev * std::sin(phi));
+	}
+
+	void accumulate_sh_basis(glm::vec3 const& dir, std::array<glm::vec3, 9>& sh, glm::vec3 const& radiance, float solid_angle) {
+		float const x = dir.x;
+		float const y = dir.y;
+		float const z = dir.z;
+
+		float basis[9] = {
+			0.282095f,
+			0.488603f * y,
+			0.488603f * z,
+			0.488603f * x,
+			1.092548f * x * y,
+			1.092548f * y * z,
+			0.315392f * (3.0f * z * z - 1.0f),
+			1.092548f * x * z,
+			0.546274f * (x * x - y * y)
+		};
+
+		for (int i = 0; i < 9; ++i) {
+			sh[i] += radiance * basis[i] * solid_angle;
+		}
+	}
+
+	bool load_texture_pixels(std::shared_ptr<z1::Texture2D> const& texture, std::vector<glm::vec3>& out_pixels, int& out_width, int& out_height) {
+		using namespace z1;
+
+		if (!texture || !texture->m_meta.guid.is_valid()) {
+			return false;
+		}
+
+		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(texture->m_meta.guid);
+		if (file.empty()) {
+			return false;
+		}
+		file += ".bin";
+
+		bool is_hdr = false;
+		if (texture->m_meta.extra["hdr"]) {
+			is_hdr = texture->m_meta.extra["hdr"].as<bool>();
+		}
+
+		if (is_hdr) {
+			float* data = nullptr;
+			char const* err = nullptr;
+			int width = 0;
+			int height = 0;
+			int const success = LoadEXR(&data, &width, &height, file.string().c_str(), &err);
+			if (success != TINYEXR_SUCCESS || !data) {
+				if (err) {
+					FreeEXRErrorMessage(err);
+				}
+				return false;
+			}
+
+			out_width = width;
+			out_height = height;
+			out_pixels.resize((size_t)width * (size_t)height);
+
+			for (int y = 0; y < height; ++y) {
+				int const flipped_y = height - 1 - y;
+				for (int x = 0; x < width; ++x) {
+					size_t src_idx = ((size_t)flipped_y * (size_t)width + (size_t)x) * 4;
+					size_t dst_idx = (size_t)y * (size_t)width + (size_t)x;
+					out_pixels[dst_idx] = glm::vec3(data[src_idx + 0], data[src_idx + 1], data[src_idx + 2]);
+				}
+			}
+
+			free(data);
+			return true;
+		}
+
+		int width = 0;
+		int height = 0;
+		auto* data = bakery::load_compressed_image(file, &width, &height);
+		if (!data || width <= 0 || height <= 0) {
+			return false;
+		}
+
+		out_width = width;
+		out_height = height;
+		out_pixels.resize((size_t)width * (size_t)height);
+		for (int y = 0; y < height; ++y) {
+			for (int x = 0; x < width; ++x) {
+				size_t idx = ((size_t)y * (size_t)width + (size_t)x) * 4;
+				glm::vec3 srgb = glm::vec3(
+					(float)data[idx + 0] / 255.0f,
+					(float)data[idx + 1] / 255.0f,
+					(float)data[idx + 2] / 255.0f);
+				// Convert to linear to match lighting space.
+				out_pixels[(size_t)y * (size_t)width + (size_t)x] = glm::pow(srgb, glm::vec3(2.2f));
+			}
+		}
+
+		bakery::free_loaded_data(data);
+		return true;
+	}
+
+}
 
 namespace z1 {
 
@@ -206,6 +322,90 @@ namespace z1 {
 		}
 		lights_block.count.x = (float)light_count;
 		m_lights_buffer->write(&lights_block, sizeof(LightsBlock));
+	}
+
+	void RenderShared::update_sky_light(std::shared_ptr<Scene> const& scene) {
+		auto& g = g_runtime_context.m_global;
+		auto sky_view = scene->m_registry.view<SkyLightComponent const>();
+		SkyLightComponent const* active_sky = nullptr;
+		for (auto [entity, sky] : sky_view.each()) {
+			active_sky = &sky;
+			break;
+		}
+
+		if (!active_sky || !active_sky->m_texture || !active_sky->m_texture->m_image) {
+			m_has_sky_light = false;
+			m_sky_ibl_image.reset();
+			m_sky_rotation = 0.0f;
+			m_sky_intensity = 0.0f;
+			m_sky_mip_level = 0.0f;
+			m_sky_specular_max_mip = 0.0f;
+			m_sky_sh_ready = false;
+			m_sky_sh_guid = {};
+			g->sky_params = glm::vec4(0.0f);
+			for (auto& coeff : m_sky_sh_coeffs) {
+				coeff = glm::vec4(0.0f);
+			}
+			for (int i = 0; i < 9; ++i) {
+				g->sky_sh[i] = glm::vec4(0.0f);
+			}
+			return;
+		}
+
+		m_has_sky_light = true;
+		m_sky_ibl_image = active_sky->m_texture->m_image;
+		m_sky_rotation = active_sky->m_rotation;
+		m_sky_intensity = active_sky->m_intensity;
+		m_sky_mip_level = active_sky->m_mip_level;
+
+		auto const& desc = m_sky_ibl_image->get_description();
+		float const max_dim = (float)std::max(desc.m_width, desc.m_height);
+		m_sky_specular_max_mip = std::max(0.0f, std::floor(std::log2(std::max(1.0f, max_dim))));
+		g->sky_params = glm::vec4(m_sky_rotation, m_sky_intensity, m_sky_mip_level, m_sky_specular_max_mip);
+
+		Guid const current_guid = active_sky->m_texture->m_meta.guid;
+		bool const need_rebuild = !m_sky_sh_ready || (current_guid != m_sky_sh_guid);
+		if (!need_rebuild) {
+			return;
+		}
+
+		std::array<glm::vec3, 9> sh = {};
+		std::vector<glm::vec3> pixels;
+		int width = 0;
+		int height = 0;
+		if (load_texture_pixels(active_sky->m_texture, pixels, width, height) && width > 0 && height > 0) {
+			float const dphi = (2.0f * kPi) / (float)width;
+			float const delev = kPi / (float)height;
+
+			for (int y = 0; y < height; ++y) {
+				float const v = ((float)y + 0.5f) / (float)height;
+				float const elevation = (v - 0.5f) * kPi;
+				float const solid_angle = std::cos(elevation) * dphi * delev;
+
+				for (int x = 0; x < width; ++x) {
+					float const u = ((float)x + 0.5f) / (float)width;
+					glm::vec3 const dir = sample_latlong_direction(u, v);
+					glm::vec3 const radiance = pixels[(size_t)y * (size_t)width + (size_t)x];
+					accumulate_sh_basis(dir, sh, radiance, solid_angle);
+				}
+			}
+		}
+
+		for (int i = 0; i < 9; ++i) {
+			m_sky_sh_coeffs[i] = glm::vec4(sh[i], 0.0f);
+			g->sky_sh[i] = m_sky_sh_coeffs[i];
+		}
+		m_sky_sh_guid = current_guid;
+		m_sky_sh_ready = true;
+	}
+
+	void RenderShared::apply_sky_light(PerFrameConst& per_frame) const {
+		if (!m_has_sky_light || !m_sky_ibl_image) {
+			return;
+		}
+
+		m_sky_ibl_image->bind();
+		per_frame.sky_ibl_map_binding = m_sky_ibl_image->get_binding();
 	}
 
 	void RenderShared::calculate_csm_splits(CameraComponent& camera, glm::vec3 const& sun_dir) {

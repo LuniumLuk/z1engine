@@ -51,12 +51,18 @@ layout (std140) uniform Global {
 	float u_ssr_stride;
 	float u_ssr_max_steps;
 	float u_ssr_jitter_strength;
+	// SkyLight
+	vec4  u_sky_params; // x=rotation, y=intensity, z=mip_level, w=specular_max_mip
+	vec4  u_sky_sh[9];
 };
 
 uniform sampler2DArray u_shadow_map;
 
 // Screen-space AO texture (bound by the renderer when AO is enabled)
 uniform sampler2D u_ao_texture;
+
+// SkyLight specular IBL source (parameters are in Global UBO)
+uniform sampler2D u_sky_ibl_texture;
 
 struct Light {
 	vec4 position;  // w = type (0:dir, 1:point, 2:spot)

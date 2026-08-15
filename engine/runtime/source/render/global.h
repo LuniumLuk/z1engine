@@ -3,6 +3,8 @@
 #include "core/core.h"
 #include "glm/glm.hpp"
 
+#include <cstddef>
+
 namespace z1 {
 
 	struct Scene;
@@ -77,6 +79,9 @@ namespace z1 {
 		float     ssr_stride            = 0.07f;
 		float     ssr_max_steps         = 128.0f;
 		float     ssr_jitter_strength   = 0.25f;
+		// SkyLight runtime parameters (shared by forward/deferred)
+		glm::vec4 sky_params            = {}; // x=rotation, y=intensity, z=mip_level, w=specular_max_mip
+		glm::vec4 sky_sh[9]             = {};
 		// Animation
 		bool      anim_enabled          = true;
 		// Scripting
@@ -160,7 +165,40 @@ namespace z1 {
 			float     ssr_stride;
 			float     ssr_max_steps;
 			float     ssr_jitter_strength;
+			// SkyLight (appended at end to preserve existing layout alignment)
+			// std140 requires vec4 members to start on 16-byte boundaries, but
+			// glm::vec4 has 4-byte alignment in this build. Pad explicitly so
+			// sky_params lands at offset 608, matching uniforms.glsl.
+			float     sky_padding[3];
+			glm::vec4 sky_params;
+			glm::vec4 sky_sh[9];
 		} m_data = {};
+
+		// Compile-time std140 alignment verification for the UBO mirror above
+		// (must match the GLSL Global block in include/uniforms.glsl):
+		// vec4 members need 16-byte alignment, mat4 members 64-byte alignment
+		// (std140 only requires 16, but every mat4 here is 64-aligned).
+		#define Z1_UBO_ALIGN_CHECK(field, alignment) \
+			static_assert(offsetof(GlobalConstants, field) % (alignment) == 0, \
+				"GlobalConstants std140 alignment mismatch: " #field)
+		Z1_UBO_ALIGN_CHECK(projview, 64);
+		Z1_UBO_ALIGN_CHECK(prev_projview, 64);
+		Z1_UBO_ALIGN_CHECK(sun_projview, 64);
+		Z1_UBO_ALIGN_CHECK(csm_splits, 16);
+		Z1_UBO_ALIGN_CHECK(sun_direction, 16);
+		Z1_UBO_ALIGN_CHECK(sun_intensity, 16);
+		Z1_UBO_ALIGN_CHECK(sun_ambient, 16);
+		Z1_UBO_ALIGN_CHECK(cam_position, 16);
+		Z1_UBO_ALIGN_CHECK(pp_tint, 16);
+		Z1_UBO_ALIGN_CHECK(sky_params, 16);
+		Z1_UBO_ALIGN_CHECK(sky_sh, 16);
+		#undef Z1_UBO_ALIGN_CHECK
+		// Array strides must match std140 (vec4: 16, mat4: 64).
+		static_assert(offsetof(GlobalConstants, sun_projview[1]) - offsetof(GlobalConstants, sun_projview[0]) == 64,
+			"GlobalConstants std140 stride mismatch: sun_projview");
+		static_assert(offsetof(GlobalConstants, sky_sh[1]) - offsetof(GlobalConstants, sky_sh[0]) == 16,
+			"GlobalConstants std140 stride mismatch: sky_sh");
+		static_assert(sizeof(GlobalConstants) == 768, "GlobalConstants std140 block size mismatch");
 
 	};
 
