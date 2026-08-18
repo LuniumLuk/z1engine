@@ -42,6 +42,14 @@
 6. Standard library headers (`<...>`)
 - Groups separated by blank line
 
+## Comments
+
+| Rule | Convention |
+|------|-----------|
+| Line comments | ≤ 1 line |
+| Module / class comments | ≤ 3 lines |
+| Multi-line comments | Only for whole-system or concept explanations |
+
 ## Prohibited Patterns
 
 | Pattern | Reason |
