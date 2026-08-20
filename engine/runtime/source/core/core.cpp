@@ -11,7 +11,6 @@
 #include "render/global.h"
 #include "render/resource.h"
 #include "render/graphics_context.h"
-#include "render/render_graph.h"
 #include "render/renderer/renderer_2d.h"
 #include "render/renderer/renderer_forward.h"
 #include "render/renderer/renderer_deferred.h"
@@ -66,8 +65,6 @@ namespace z1 {
 		m_renderer_deferred.reset();
 		m_renderer_forward.reset();
 		//m_renderer_2d.reset();
-
-		RenderGraph::clear_cache();
 
 		m_layer_stack.reset();
 		if (m_scene)

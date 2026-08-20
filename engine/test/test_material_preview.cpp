@@ -88,14 +88,27 @@ int main() {
 		{ ImageFormat::DepthStencil },
 	});
 
-	// dedicated renderer instance, exactly like the material editor preview
+	auto fb2 = Framebuffer::create(512, 512, {
+		{ ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToBorder },
+		{ ImageFormat::DepthStencil },
+	});
+
+	// Two renderer instances interleaved like the material editor preview + main viewport.
 	if (g_runtime_context.m_global->render_mode == RenderMode::Deferred) {
-		auto renderer = std::make_shared<RendererDeferred>();
-		renderer->draw(scene, fb);
+		auto renderer_preview = std::make_shared<RendererDeferred>();
+		auto renderer_main = std::make_shared<RendererDeferred>();
+		renderer_preview->draw(scene, fb);
+		renderer_main->draw(scene, fb2);
+		renderer_preview->draw(scene, fb);
+		renderer_main->draw(scene, fb2);
 	}
 	else {
-		auto renderer = std::make_shared<RendererForward>();
-		renderer->draw(scene, fb);
+		auto renderer_preview = std::make_shared<RendererForward>();
+		auto renderer_main = std::make_shared<RendererForward>();
+		renderer_preview->draw(scene, fb);
+		renderer_main->draw(scene, fb2);
+		renderer_preview->draw(scene, fb);
+		renderer_main->draw(scene, fb2);
 	}
 
 	// center pixel must hit the lit sphere
@@ -113,6 +126,23 @@ int main() {
 	int bg_lum = (int)bg[0] + (int)bg[1] + (int)bg[2];
 	if (bg_lum > lum / 4) {
 		std::cerr << "FAIL: unexpected background brightness (corner lum " << bg_lum << ")" << std::endl;
+		++failures;
+	}
+
+	// second framebuffer (main viewport size) must show the same lit sphere
+	unsigned char px2[4] = {};
+	fb2->read_pixels(0, 256, 256, 1, 1, px2);
+	int lum2 = (int)px2[0] + (int)px2[1] + (int)px2[2];
+	if (lum2 < 10) {
+		std::cerr << "FAIL: second viewport sphere not visible (center lum " << lum2 << ")" << std::endl;
+		++failures;
+	}
+
+	unsigned char bg2[4] = {};
+	fb2->read_pixels(0, 8, 8, 1, 1, bg2);
+	int bg_lum2 = (int)bg2[0] + (int)bg2[1] + (int)bg2[2];
+	if (bg_lum2 > lum2 / 4) {
+		std::cerr << "FAIL: second viewport unexpected background (corner lum " << bg_lum2 << ")" << std::endl;
 		++failures;
 	}
 

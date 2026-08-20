@@ -5,7 +5,50 @@
 
 namespace z1 {
 
-	std::unordered_map<std::string, std::shared_ptr<Framebuffer>> RenderGraph::s_cached_framebuffers;
+	std::shared_ptr<Framebuffer> FramebufferPool::acquire(
+		std::string const& name,
+		uint32_t width,
+		uint32_t height,
+		std::vector<Framebuffer::Attachment> const& attachments) {
+
+		auto it = m_framebuffers.find(name);
+		if (it != m_framebuffers.end()) {
+			auto& cache = it->second;
+			if (is_reusable(cache, attachments)) {
+				if (cache->get_width() != width || cache->get_height() != height) {
+					cache->resize(width, height);
+				}
+				return cache;
+			}
+		}
+
+		auto framebuffer = Framebuffer::create(width, height, attachments);
+		m_framebuffers[name] = framebuffer;
+		return framebuffer;
+	}
+
+	void FramebufferPool::clear() {
+		m_framebuffers.clear();
+	}
+
+	bool FramebufferPool::is_reusable(
+		std::shared_ptr<Framebuffer> const& cache,
+		std::vector<Framebuffer::Attachment> const& attachments) {
+
+		if (cache->get_attachments().size() != attachments.size()) return false;
+
+		for (size_t i = 0; i < attachments.size(); ++i) {
+			auto const& cached_spec = cache->get_attachments()[i];
+			auto const& spec = attachments[i];
+
+			if (cached_spec.format != spec.format) return false;
+			if (cached_spec.sampler_mode != spec.sampler_mode) return false;
+			if (cached_spec.wrap_mode != spec.wrap_mode) return false;
+			if (cached_spec.layers != spec.layers) return false;
+		}
+
+		return true;
+	}
 
 	RenderGraphNode& RenderGraphNode::add_input(std::string const& name) {
 		m_inputs.push_back(name);
@@ -167,23 +210,6 @@ namespace z1 {
 		return (order.size() == N);
 	}
 
-	bool RenderGraph::cache_is_reusable(std::shared_ptr<Framebuffer> const& cache, RenderGraphNode const& node) {
-		if (cache->get_attachments().size() != node.m_output_spec.size()) return false;
-
-		int attachment_id = 0;
-		for (auto& [_, spec] : node.m_output_spec) {
-			auto const& cached_spec = cache->get_attachments()[attachment_id];
-
-			if (cached_spec.format != spec.format) return false;
-			if (cached_spec.sampler_mode != spec.sampler_mode) return false;
-			if (cached_spec.wrap_mode != spec.wrap_mode) return false;
-
-			attachment_id += 1;
-		}
-
-		return true;
-	}
-
 	void RenderGraph::compile() {
 		if (m_compiled) {
 			CORE_WARN("RenderGraph: already compiled");
@@ -291,20 +317,8 @@ namespace z1 {
 				attachments.push_back(kv.second);
 			}
 
-			if (s_cached_framebuffers.find(node.m_name) != s_cached_framebuffers.end()) {
-				auto& cache = s_cached_framebuffers[node.m_name];
-				if (cache_is_reusable(cache, node)) {
-					node.m_output = cache;
-					if (cache->get_width() != node.m_width ||
-						cache->get_height() != node.m_height) {
-						cache->resize(node.m_width, node.m_height);
-					}
-					continue;
-				}
-			}
-
-			node.m_output = Framebuffer::create(node.m_width, node.m_height, attachments);
-			s_cached_framebuffers[node.m_name] = node.m_output;
+			auto& pool = m_framebuffer_pool ? *m_framebuffer_pool : m_internal_pool;
+			node.m_output = pool.acquire(node.m_name, node.m_width, node.m_height, attachments);
 		}
 
 		// pass #4: handle passthrough
@@ -352,10 +366,6 @@ namespace z1 {
 			ctx->pop_debug_group();
 			ctx->m_stats.end_counter();
 		}
-	}
-
-	void RenderGraph::clear_cache() {
-		s_cached_framebuffers.clear();
 	}
 
 }

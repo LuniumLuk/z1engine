@@ -19,6 +19,7 @@ namespace z1 {
 	struct RenderGraph;
 	struct CameraComponent;
 	struct PerFrameConst;
+	struct FramebufferPool;
 
 	// Light UBO layout (shared between forward and deferred)
 
@@ -78,6 +79,11 @@ namespace z1 {
 		const int BLOOM_MIP_COUNT = 5;
 		std::shared_ptr<UniformBuffer> m_lights_buffer;
 		std::shared_ptr<Image2D> m_sky_ibl_image;
+
+		// Intermediate framebuffer pool, one per renderer instance (per scene).
+		std::shared_ptr<FramebufferPool> m_framebuffer_pool;
+		// Previous-frame projview per instance; the Global UBO is just a scratch slot.
+		glm::mat4 m_prev_projview = {};
 		glm::vec4 m_sky_sh_coeffs[9] = {};
 		float m_sky_rotation = 0.0f;
 		float m_sky_intensity = 0.0f;

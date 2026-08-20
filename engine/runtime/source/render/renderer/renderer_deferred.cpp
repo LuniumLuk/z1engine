@@ -98,6 +98,9 @@ namespace z1 {
 		g->projview = projview_jittered;
 		g->cam_position = cam_pos;
 
+		// Own previous-frame matrix (the Global UBO may hold another scene's).
+		g->prev_projview = m_shared.m_prev_projview;
+
 		// Per-frame camera matrices for the AO passes (unjittered is fine: the TAA
 		// jitter only shifts NDC xy, not the depth used for reconstruction)
 		m_shared.m_proj = camera_comp.get_proj();
@@ -153,6 +156,7 @@ namespace z1 {
 		}
 
 		RenderGraph rg;
+		rg.set_framebuffer_pool(m_shared.m_framebuffer_pool);
 		m_shared.add_shadow_pass(rg, scene, m_default_material);
 		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, CSM_LAYERS);
 		add_gbuffer_pass(rg, draw_list, framebuffer, projview);
@@ -181,6 +185,7 @@ namespace z1 {
 		++m_shared.m_frame_index;
 		g->unbind();
 		g->prev_projview = projview;
+		m_shared.m_prev_projview = projview;
 	}
 
 	// G-buffer pass

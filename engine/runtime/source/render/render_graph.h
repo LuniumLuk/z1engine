@@ -75,6 +75,25 @@ namespace z1 {
 		std::function<void(RenderGraphNode&, GraphicsContext&)> m_post_pass_func;
 	};
 
+	// Per-renderer cache of intermediate framebuffers keyed by pass name.
+	struct API FramebufferPool {
+
+		std::shared_ptr<Framebuffer> acquire(
+			std::string const& name,
+			uint32_t width,
+			uint32_t height,
+			std::vector<Framebuffer::Attachment> const& attachments);
+
+		void clear();
+
+	private:
+		bool is_reusable(
+			std::shared_ptr<Framebuffer> const& cache,
+			std::vector<Framebuffer::Attachment> const& attachments);
+
+		std::unordered_map<std::string, std::shared_ptr<Framebuffer>> m_framebuffers;
+	};
+
 	struct API RenderGraph {
 
 		RenderGraphNode& add_pass(std::string const& name);
@@ -82,12 +101,12 @@ namespace z1 {
 		void compile();
 		void execute();
 
-		static void clear_cache();
+		// Attach a caller-owned framebuffer pool (fallback: per-graph pool).
+		void set_framebuffer_pool(std::shared_ptr<FramebufferPool> const& pool) { m_framebuffer_pool = pool; }
 
 	private:
 
 		bool topo_sort(std::vector<int>& order);
-		bool cache_is_reusable(std::shared_ptr<Framebuffer> const& cache, RenderGraphNode const& node);
 
 		bool m_compiled = false;
 
@@ -97,8 +116,9 @@ namespace z1 {
 		// after compile
 		std::vector<int> m_exec_order;
 
-		// framebuffer pool
-		static std::unordered_map<std::string, std::shared_ptr<Framebuffer>> s_cached_framebuffers;
+		// framebuffer pools (external one owned by the renderer wins)
+		std::shared_ptr<FramebufferPool> m_framebuffer_pool;
+		FramebufferPool m_internal_pool;
 
 	};
 

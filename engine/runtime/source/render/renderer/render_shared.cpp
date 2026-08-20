@@ -232,6 +232,9 @@ namespace z1 {
 		}
 
 		m_lights_buffer = UniformBuffer::create(nullptr, sizeof(LightsBlock), BufferUsage::Static);
+
+		// Per-instance pool: intermediates stay cached per scene, never shared globally.
+		m_framebuffer_pool = std::make_shared<FramebufferPool>();
 	}
 
 	RenderShared::~RenderShared() {
@@ -366,6 +369,10 @@ namespace z1 {
 		Guid const current_guid = active_sky->m_texture->m_meta.guid;
 		bool const need_rebuild = !m_sky_sh_ready || (current_guid != m_sky_sh_guid);
 		if (!need_rebuild) {
+			// Another scene's draw may have zeroed sky_sh; re-push the cached coefficients.
+			for (int i = 0; i < 9; ++i) {
+				g->sky_sh[i] = m_sky_sh_coeffs[i];
+			}
 			return;
 		}
 
