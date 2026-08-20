@@ -409,7 +409,7 @@ inline void MaterialEditor::draw() {
 	title += " - " + m_meta.name();
 
 	bool open = true;
-	ImGui::Begin((title + "##" + m_meta.guid.value).c_str(), &open,
+	ImGui::Begin((title + "##material_editor").c_str(), &open,
 		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking);
 	if (!open) {
 		ImGui::End();
@@ -458,7 +458,7 @@ inline void MaterialEditor::draw() {
 				auto& io = ImGui::GetIO();
 				if (ImGui::IsItemActive() && ImGui::IsMouseDragging(0)) {
 					m_yaw -= io.MouseDelta.x * 0.01f;
-					m_pitch += io.MouseDelta.y * 0.01f;
+					m_pitch -= io.MouseDelta.y * 0.01f;
 					update_camera();
 				}
 				if (m_preview_hovered && io.MouseWheel != 0.0f) {

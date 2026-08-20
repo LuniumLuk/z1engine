@@ -73,34 +73,9 @@ EditorLayer::EditorLayer() {
 				ImGui::GetWindowPos().x + ImGui::GetWindowSize().x - 10.0f,
 				ImGui::GetWindowPos().y + 30.0f
 			);
-			ImVec2 window_pos_pivot = ImVec2(1.0f, 0.0f); // right-top pivot
-
-			ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-			ImGui::SetNextWindowBgAlpha(0.7f);
-
-			if (ImGui::Begin("overlay on viewport", nullptr,
-				ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoDecoration |
-				ImGuiWindowFlags_AlwaysAutoResize |
-				ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoFocusOnAppearing |
-				ImGuiWindowFlags_NoNav))
-			{
-				if (ImGui::CollapsingHeader("Statistics", ImGuiTreeNodeFlags_DefaultOpen)) {
-					auto const& stats = g_runtime_context.m_graphics_context->m_stats;
-					ImGui::Text("Visible Objects: %u", stats.visible_objects);
-					ImGui::Text("Culled Objects: %u", stats.culled_objects);
-					ImGui::Text("FPS: %.1f", stats.fps);
-					ImGui::Text("5%% Low: %.1f", stats.low_5_percent);
-					ImGui::Text("1%% Low: %.1f", stats.low_1_percent);
-					ImGui::Text("Frame Time: %.2f ms", stats.frame_time);
-					ImGui::Text("Draw Calls: %u", stats.draw_calls);
-					for (auto const& counter : stats.counters) {
-						ImGui::Text("-- %s: %u", counter.first.c_str(), counter.second);
-					}
-				}
-			}
-			ImGui::End();
+			// ImVec2 window_pos_pivot = ImVec2(1.0f, 0.0f); // right-top pivot
+			// ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+			// ImGui::SetNextWindowBgAlpha(0.7f);
 		};
 
 	m_gui->m_draw_menu_bar_items_func =
@@ -507,6 +482,7 @@ void EditorLayer::on_imgui_render() {
 	show_scene_graph();
 	show_properties(m_selected_entity);
 	show_settings();
+	show_stats();
 	m_browser->draw();
 	m_material_editor.draw();
 }
@@ -919,6 +895,23 @@ void EditorLayer::show_asset_info() {
 void EditorLayer::show_settings() {
 	if (ImGui::Begin("settings")) {
 		show_type_fields(g_runtime_context.m_global.get(), TYPE_NAME(GlobalSettings), true);
+	}
+	ImGui::End();
+}
+
+void EditorLayer::show_stats() {
+	if (ImGui::Begin("statistics")) {
+		auto const& stats = g_runtime_context.m_graphics_context->m_stats;
+		ImGui::Text("Visible Objects: %u", stats.visible_objects);
+		ImGui::Text("Culled Objects: %u", stats.culled_objects);
+		ImGui::Text("FPS: %.1f", stats.fps);
+		ImGui::Text("5%% Low: %.1f", stats.low_5_percent);
+		ImGui::Text("1%% Low: %.1f", stats.low_1_percent);
+		ImGui::Text("Frame Time: %.2f ms", stats.frame_time);
+		ImGui::Text("Draw Calls: %u", stats.draw_calls);
+		for (auto const& counter : stats.counters) {
+			ImGui::Text("-- %s: %u", counter.first.c_str(), counter.second);
+		}
 	}
 	ImGui::End();
 }

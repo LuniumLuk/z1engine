@@ -79,6 +79,7 @@ private:
 
 	void show_asset_info();
 	void show_settings();
+	void show_stats();
 
 	std::string get_image_info(Image* image);
 	std::string get_uniform_buffer_info(UniformBuffer* buffer);
