@@ -1,4 +1,5 @@
 #include "editor_layer.h"
+#include "material_variable_ui.h"
 
 #include "core/reflection_hooks.h"
 #include "scene/script_system.h"
@@ -758,37 +759,7 @@ void EditorLayer::show_asset_info() {
 
 			ImGui::Separator();
 			ImGui::Text("variables");
-			for (auto& [name, var] : mat->m_variables) {
-				if (!var.visible) continue;
-
-				ImGui::Text(name.c_str());
-				ImGui::Indent();
-				ImGui::BeginDisabled();
-				switch (var.type) {
-				case DataType::Float: ImGui::InputFloat(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float2: ImGui::InputFloat2(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float3: ImGui::ColorEdit3(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float4: ImGui::ColorEdit4(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Int: ImGui::InputInt(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int2: ImGui::InputInt2(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int4: ImGui::InputInt4(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Sampler2D: ImGui::Text(name.c_str()); break;
-				case DataType::Sampler2DArray: ImGui::Text(name.c_str()); break;
-				case DataType::SamplerCube: ImGui::Text(name.c_str()); break;
-				}
-
-				ImGui::EndDisabled();
-				ImGui::Unindent();
-
-				if (var.type == DataType::Sampler2D && var.default_value.tex2D) {
-					ImGui::SameLine();
-					auto const& texture = var.default_value.tex2D;
-					auto w = texture->m_image->get_description().m_width;
-					auto h = texture->m_image->get_description().m_height;
-					ImGui::Image(texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-				}
-			}
+			draw_material_variables(mat->m_variables, false, false);
 		}
 		else if (m_selected_asset->type == "material instance") {
 			auto mi = g_runtime_context.m_asset_manager->get<MaterialInstance>(m_selected_asset->guid);
@@ -802,45 +773,7 @@ void EditorLayer::show_asset_info() {
 
 			ImGui::Separator();
 			ImGui::Text("override variables");
-			for (auto& [name, var] : mi->m_override_variables) {
-				if (!var.visible) continue;
-
-				ImGui::Checkbox(name.c_str(), &var.default_value.valid);
-				ImGui::Indent();
-				if (!var.default_value.valid) {
-					ImGui::BeginDisabled();
-				}
-				switch (var.type) {
-				case DataType::Float: ImGui::InputFloat(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float2: ImGui::InputFloat2(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float3: ImGui::ColorEdit3(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Float4: ImGui::ColorEdit4(("##" + name).c_str(), var.default_value.vec); break;
-				case DataType::Int: ImGui::InputInt(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int2: ImGui::InputInt2(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int3: ImGui::InputInt3(("##" + name).c_str(), var.default_value.ivec); break;
-				case DataType::Int4: ImGui::InputInt4(("##" + name).c_str(), var.default_value.ivec); break;
-				}
-
-				if (!var.default_value.valid) {
-					ImGui::EndDisabled();
-				}
-				ImGui::Unindent();
-
-				if (var.type == DataType::Sampler2D && var.default_value.tex2D) {
-					auto const& texture = var.default_value.tex2D;
-					auto w = texture->m_image->get_description().m_width;
-					auto h = texture->m_image->get_description().m_height;
-					ImGui::Image(texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-					accept_payload("ASSET_ITEM",
-						[&](void* data) {
-							AssetMeta* meta = *(AssetMeta**)data;
-							if (meta->type == "texture2d") {
-								var.default_value.tex2D = Asset<Texture2D>::load(meta->guid);
-							}
-						}
-					);
-				}
-			}
+			draw_material_variables(mi->m_override_variables, true, true);
 		}
 		else if (m_selected_asset->type == "texture2d") {
 			auto tex = g_runtime_context.m_asset_manager->get<Texture2D>(m_selected_asset->guid);

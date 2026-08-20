@@ -16,6 +16,7 @@
 #include "render/renderer/renderer_forward.h"
 #include "render/renderer/renderer_deferred.h"
 #include "type_field.h"
+#include "material_variable_ui.h"
 
 using namespace z1;
 
@@ -40,7 +41,6 @@ private:
 	void build_preview_scene();
 	void ensure_renderer();
 	void update_camera();
-	bool draw_variable_widgets(std::unordered_map<std::string, Material::Variable>& variables, bool overrides);
 	bool draw_material_fields();
 	bool draw_instance_fields();
 	void save();
@@ -258,89 +258,6 @@ inline void MaterialEditor::render_preview(float delta_time) {
 	m_scene->on_update(0.0f);
 }
 
-inline bool MaterialEditor::draw_variable_widgets(std::unordered_map<std::string, Material::Variable>& variables, bool overrides) {
-	bool changed = false;
-
-	for (auto& [name, var] : variables) {
-		if (!var.visible) continue;
-
-		auto& val = var.default_value;
-		ImGui::PushID(name.c_str());
-
-		if (overrides) {
-			ImGui::Checkbox(name.c_str(), &val.valid);
-			ImGui::Indent();
-			if (!val.valid) {
-				ImGui::BeginDisabled();
-			}
-		}
-		else {
-			ImGui::Text("%s", name.c_str());
-			ImGui::Indent();
-		}
-
-		switch (var.type) {
-		case DataType::Float:
-			if (ImGui::InputFloat(("##" + name).c_str(), val.vec)) { val.valid = true; changed = true; }
-			break;
-		case DataType::Float2:
-			if (ImGui::InputFloat2(("##" + name).c_str(), val.vec)) { val.valid = true; changed = true; }
-			break;
-		case DataType::Float3:
-			if (ImGui::ColorEdit3(("##" + name).c_str(), val.vec)) { val.valid = true; changed = true; }
-			break;
-		case DataType::Float4:
-			if (ImGui::ColorEdit4(("##" + name).c_str(), val.vec)) { val.valid = true; changed = true; }
-			break;
-		case DataType::Int:
-			if (ImGui::InputInt(("##" + name).c_str(), val.ivec)) { val.valid = true; changed = true; }
-			break;
-		case DataType::Int2:
-			if (ImGui::InputInt2(("##" + name).c_str(), val.ivec)) { val.valid = true; changed = true; }
-			break;
-		case DataType::Int3:
-			if (ImGui::InputInt3(("##" + name).c_str(), val.ivec)) { val.valid = true; changed = true; }
-			break;
-		case DataType::Int4:
-			if (ImGui::InputInt4(("##" + name).c_str(), val.ivec)) { val.valid = true; changed = true; }
-			break;
-		case DataType::Sampler2D:
-			if (val.tex2D) {
-				auto const& texture = val.tex2D;
-				auto w = texture->m_image->get_description().m_width;
-				auto h = texture->m_image->get_description().m_height;
-				ImGui::Image(texture->m_image->get_native_handle(), ImVec2(64.0f * w / h, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-			}
-			else {
-				ImGui::Text("(no texture)");
-			}
-			accept_payload("ASSET_ITEM",
-				[&](void* data) {
-					AssetMeta* dropped = *(AssetMeta**)data;
-					if (dropped && dropped->type == "texture2d") {
-						val.tex2D = Asset<Texture2D>::load(dropped->guid);
-						val.type = var.type;
-						val.valid = true;
-						changed = true;
-					}
-				}
-			);
-			break;
-		default:
-			ImGui::Text("unsupported type");
-			break;
-		}
-
-		if (overrides && !val.valid) {
-			ImGui::EndDisabled();
-		}
-		ImGui::Unindent();
-		ImGui::PopID();
-	}
-
-	return changed;
-}
-
 inline bool MaterialEditor::draw_material_fields() {
 	bool changed = false;
 	uint32_t flags = m_material->m_flags;
@@ -373,7 +290,7 @@ inline bool MaterialEditor::draw_material_fields() {
 		m_material->m_flags = flags;
 	}
 
-	if (draw_variable_widgets(m_material->m_variables, false)) {
+	if (draw_material_variables(m_material->m_variables, false, true)) {
 		changed = true;
 	}
 
@@ -384,7 +301,7 @@ inline bool MaterialEditor::draw_instance_fields() {
 	ImGui::Text("parent material: %s", m_material->m_meta.path.generic_string().c_str());
 	ImGui::Text("shader: %s", m_material->get_shader()->get_name().c_str());
 	ImGui::Separator();
-	return draw_variable_widgets(m_instance->m_override_variables, true);
+	return draw_material_variables(m_instance->m_override_variables, true, true);
 }
 
 inline void MaterialEditor::save() {
