@@ -37,7 +37,9 @@ namespace z1 {
 		float ticks_per_second = 0.0f;
 		std::vector<AnimationChannel> channels;
 
-		static std::shared_ptr<Animation> load(Guid const& guid);
+		// --- begin asset interface ---
+		static std::shared_ptr<Animation> load(Guid const& guid, AssetMeta const& meta, Filepath const& file);
+		// --- end asset interface ---
 	};
 
 }

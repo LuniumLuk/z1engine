@@ -12,7 +12,7 @@ namespace z1 {
 	template<typename T>
 	struct API AssetLoader {
 		static std::shared_ptr<T> load(Guid const& guid) {
-			return T::load(guid);
+			return Asset<T>::load(guid);
 		}
 	};
 

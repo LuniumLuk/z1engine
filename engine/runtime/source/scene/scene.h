@@ -56,9 +56,11 @@ namespace z1 {
 		//static bool serialize(Filepath const& path, std::shared_ptr<Scene> const& asset);
 		//static std::shared_ptr<Scene> deserialize(Filepath const& path);
 
+		// --- begin asset interface ---
 		static std::shared_ptr<Scene> create(Filepath const& path);
-		static std::shared_ptr<Scene> load(Guid const& guid);
+		static std::shared_ptr<Scene> load(Guid const& guid, AssetMeta const& meta, Filepath const& file);
 		void save() const;
+		// --- end asset interface ---
 
 		struct EditorCameraData {
 			TransformComponent transform;

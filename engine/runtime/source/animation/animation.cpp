@@ -6,18 +6,17 @@
 
 namespace z1 {
 
-	std::shared_ptr<Animation> Animation::load(Guid const& guid) {
+	std::shared_ptr<Animation> Animation::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		PROFILE_FUNCTION();
-		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 		BinaryFile bf{};
-		if (!bf.load(file.concat(".bin"))) {
+		if (!bf.load(concat(file, ".bin"))) {
 			CORE_ERROR("failed to load animation: {0}", file.generic_string());
 			return nullptr;
 		}
 
 		YAML::Node node = YAML::Load(bf.get_yaml());
 		auto anim = std::make_shared<Animation>();
-		anim->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		anim->m_meta = meta;
 
 		anim->name = node["name"].as<std::string>();
 		anim->duration = node["duration"].as<float>();

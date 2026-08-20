@@ -19,7 +19,9 @@ namespace z1 {
 	struct API Skeleton : Asset<Skeleton> {
 		std::vector<Bone> bones;
 
-		static std::shared_ptr<Skeleton> load(Guid const& guid);
+		// --- begin asset interface ---
+		static std::shared_ptr<Skeleton> load(Guid const& guid, AssetMeta const& meta, Filepath const& file);
+		// --- end asset interface ---
 	};
 
 }

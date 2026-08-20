@@ -56,7 +56,7 @@ EditorLayer::EditorLayer() {
 			if (!meta) return;
 
 			if (meta->type == "scene") {
-				load_scene(Scene::load(meta->guid));
+				load_scene(Asset<Scene>::load(meta->guid));
 			}
 			else {
 				m_selected_asset = meta;
@@ -276,7 +276,7 @@ EditorLayer::EditorLayer() {
 	m_picking = std::make_shared<PickingSystem>();
 
 	if (!m_settings.last_opened_scene_guid.empty()) {
-		load_scene(Scene::load(Guid::make(m_settings.last_opened_scene_guid)));
+		load_scene(Asset<Scene>::load(Guid::make(m_settings.last_opened_scene_guid)));
 	}
 	else {
 		load_scene();
@@ -611,7 +611,7 @@ void EditorLayer::show_scene_graph() {
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_ITEM")) {
 					AssetMeta* meta = *(AssetMeta**)payload->Data;
 					if (meta && meta->type == "prefab") {
-						auto prefab = Prefab::load(meta->guid);
+						auto prefab = Asset<Prefab>::load(meta->guid);
 						if (prefab) {
 							auto new_entities = prefab->instantiate(g_runtime_context.m_scene);
 							for (auto& new_entity : new_entities) {
@@ -651,7 +651,7 @@ void EditorLayer::show_scene_graph() {
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_ITEM")) {
 				AssetMeta* meta = *(AssetMeta**)payload->Data;
 				if (meta && meta->type == "prefab") {
-					auto prefab = Prefab::load(meta->guid);
+					auto prefab = Asset<Prefab>::load(meta->guid);
 					if (prefab) {
 						prefab->instantiate(g_runtime_context.m_scene);
 					}
@@ -847,7 +847,7 @@ void EditorLayer::show_asset_info() {
 						[&](void* data) {
 							AssetMeta* meta = *(AssetMeta**)data;
 							if (meta->type == "texture2d") {
-								var.default_value.tex2D = Texture2D::load(meta->guid);
+								var.default_value.tex2D = Asset<Texture2D>::load(meta->guid);
 							}
 						}
 					);
@@ -878,7 +878,7 @@ void EditorLayer::show_asset_info() {
 		}
 		else if (m_selected_asset->type == "prefab") {
 			if (ImGui::Button("instantiate in scene")) {
-				auto prefab = Prefab::load(m_selected_asset->guid);
+				auto prefab = Asset<Prefab>::load(m_selected_asset->guid);
 				if (prefab) {
 					prefab->instantiate(g_runtime_context.m_scene);
 				}

@@ -9,7 +9,7 @@ void GameLayer::on_attach() {
 	if (!scene_path.empty()) {
 		auto scene_guid = g_runtime_context.m_asset_manager->get_guid_from_path(scene_path);
 		if (scene_guid.is_valid()) {
-			auto scene = Scene::load(scene_guid);
+			auto scene = Asset<Scene>::load(scene_guid);
 			if (scene) {
 				auto const& cam = scene->get_main_camera();
 				if (!cam) {

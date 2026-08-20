@@ -14,6 +14,10 @@ namespace z1 {
 
 	using Filepath = std::filesystem::path;
 
+	inline Filepath concat(Filepath const& path, std::string const& suffix) {
+		return Filepath(path.string() + suffix);
+	}
+
 	struct RootConfig {
 		std::string name;     // empty string = default root
 		Filepath path;        // filesystem path (e.g., "content", "engine/content")

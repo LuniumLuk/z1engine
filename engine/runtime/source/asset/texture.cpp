@@ -97,10 +97,10 @@ namespace z1 {
 		return nullptr;
 	}
 
-	std::shared_ptr<Texture2D> Texture2D::load(Guid const& guid) {
+	std::shared_ptr<Texture2D> Texture2D::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		auto image = load_image(guid);
 		auto texture = std::make_shared<Texture2D>(image, image->get_description().m_sampler_mode, image->get_description().m_wrap_mode);
-		texture->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		texture->m_meta = meta;
 		return texture;
 	}
 

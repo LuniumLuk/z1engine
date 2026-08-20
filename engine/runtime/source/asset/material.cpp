@@ -89,7 +89,7 @@ namespace z1 {
 		}
 		else {
 			Filepath path = g_runtime_context.m_asset_manager->get_file_from_guid(m_shader_guid);
-			shader = Shader::create(path.concat(".glsl"), variant_key);
+			shader = Shader::create(concat(path, ".glsl"), variant_key);
 			m_variant_shaders[variant_key] = shader;
 		}
 		return shader;
@@ -425,14 +425,13 @@ namespace z1 {
 		return mat;
 	}
 
-	std::shared_ptr<Material> Material::load(Guid const& guid) {
-		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
+	std::shared_ptr<Material> Material::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		if (file.empty()) {
 			CORE_ERROR("failed to load material: {0}, file not found!", guid);
 			return nullptr;
 		}
 
-		YAML::Node node = YAML::LoadFile((file.concat(".yaml")).string());
+		YAML::Node node = YAML::LoadFile(concat(file, ".yaml").string());
 
 		auto flags = node["flags"].as<uint32_t>();
 		auto shader_path = node["shader"].as<std::string>();
@@ -443,7 +442,7 @@ namespace z1 {
 		}
 
 		auto mat = std::make_shared<Material>(flags, shader_guid);
-		mat->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		mat->m_meta = meta;
 		return mat;
 	}
 
@@ -482,14 +481,13 @@ namespace z1 {
 		return mi;
 	}
 
-	std::shared_ptr<MaterialInstance> MaterialInstance::load(Guid const& guid) {
-		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
+	std::shared_ptr<MaterialInstance> MaterialInstance::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		if (file.empty()) {
 			CORE_ERROR("failed to load material: {0}, file not found!", guid);
 			return nullptr;
 		}
 
-		YAML::Node node = YAML::LoadFile((file.concat(".yaml")).string());
+		YAML::Node node = YAML::LoadFile(concat(file, ".yaml").string());
 		auto material_path = node["material"].as<std::string>();
 		auto material_guid = g_runtime_context.m_asset_manager->resolve_guid(material_path);
 		auto material = g_runtime_context.m_asset_manager->get<Material>(material_guid);
@@ -499,7 +497,7 @@ namespace z1 {
 		}
 
 		auto mi = std::make_shared<MaterialInstance>(material);
-		mi->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		mi->m_meta = meta;
 		mi->m_override_flags = node["override_flags"].as<uint32_t>();
 		mi->m_override_mask = node["override_mask"].as<uint32_t>();
 

@@ -27,6 +27,13 @@
 - `AssetManager::get<T>(guid)` loads and caches
 - `AssetManager::scan_content()` discovers all assets in content directories
 
+## Asset Load Interface (CRTP)
+
+- `Asset<T>::load(guid)` resolves `AssetMeta` + `Filepath` from `AssetManager`, then calls `T::load(guid, meta, file)`
+- Asset types declare `create`/`load`/`save` between `// --- begin asset interface ---` / `// --- end asset interface ---` markers
+- Call sites use `Asset<T>::load(guid)` (uncached) or `AssetManager::get<T>(guid)` (cached); the 1-arg `T::load(guid)` is gone
+- `asset/asset.h` includes `asset_manager.h` after `AssetMeta`/`AssetBase`; the `load` wrapper is defined out-of-line to avoid a circular include
+
 ## Importers (`asset/importer/`)
 
 | Importer | Source Format | Role |

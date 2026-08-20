@@ -83,7 +83,9 @@ namespace z1 {
 			AssetMeta import(Filepath const& path) const;
 		};
 
-		static std::shared_ptr<StaticMesh> load(Guid const& guid);
+		// --- begin asset interface ---
+		static std::shared_ptr<StaticMesh> load(Guid const& guid, AssetMeta const& meta, Filepath const& file);
+		// --- end asset interface ---
 
 		StaticMesh(std::shared_ptr<Storage> const& storage);
 		StaticMesh(std::vector<Primitive> const& primitives);
@@ -204,7 +206,9 @@ namespace z1 {
 			AssetMeta import(Filepath const& path) const;
 		};
 
-		static std::shared_ptr<SkeletalMesh> load(Guid const& guid);
+		// --- begin asset interface ---
+		static std::shared_ptr<SkeletalMesh> load(Guid const& guid, AssetMeta const& meta, Filepath const& file);
+		// --- end asset interface ---
 
 		SkeletalMesh(std::shared_ptr<Storage> const& storage);
 

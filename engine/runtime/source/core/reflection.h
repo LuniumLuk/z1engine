@@ -210,7 +210,7 @@ namespace z1 {
 				if (guid_str.empty()) return false;
 				Guid guid = Guid::make(guid_str);
 				if (!guid.is_valid()) return false;
-				auto asset = AssetType::load(guid);
+				auto asset = Asset<AssetType>::load(guid);
 				if (asset) {
 					*static_cast<FieldType*>(field_ptr) = std::move(asset);
 					return true;
@@ -288,7 +288,7 @@ namespace z1 {
 						if (guid_str.empty()) return false;
 						Guid guid = Guid::make(guid_str);
 						if (!guid.is_valid()) return false;
-						auto asset = AssetType::load(guid);
+						auto asset = Asset<AssetType>::load(guid);
 						if (asset) {
 							*static_cast<T*>(elem_ptr) = std::move(asset);
 							return true;
@@ -323,7 +323,7 @@ namespace z1 {
 						if (guid_str.empty()) return false;
 						Guid guid = Guid::make(guid_str);
 						if (!guid.is_valid()) return false;
-						auto asset = AssetType::load(guid);
+						auto asset = Asset<AssetType>::load(guid);
 						if (asset) {
 							*static_cast<T*>(elem_ptr) = std::move(asset);
 							return true;
@@ -410,7 +410,7 @@ namespace z1 {
 						if (guid_str.empty()) return false;
 						Guid guid = Guid::make(guid_str);
 						if (!guid.is_valid()) return false;
-						auto asset = AssetType::load(guid);
+						auto asset = Asset<AssetType>::load(guid);
 						if (asset) {
 							*static_cast<V*>(elem_ptr) = std::move(asset);
 							return true;

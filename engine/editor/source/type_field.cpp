@@ -60,7 +60,7 @@ void accept_payload(std::string const& data_type, std::function<void(void*)> cal
 	accept_payload("ASSET_ITEM", [&](void* data) {                         \
 		AssetMeta* meta = *(AssetMeta**)data;                              \
 		if (meta->type == meta_type) {                                     \
-			value = asset_type::load(meta->guid);                          \
+			value = Asset<asset_type>::load(meta->guid);                          \
 		}                                                                  \
 	});
 
@@ -76,33 +76,33 @@ static void assign_asset_to_field(void* shared_ptr_addr, AssetMeta const& meta) 
 	std::shared_ptr<void> loaded;
 
 	if (meta.type == "static mesh") {
-		auto asset = StaticMesh::load(meta.guid);
+		auto asset = Asset<StaticMesh>::load(meta.guid);
 		dst[0] = asset.get();
 		// Create a new shared_ptr in-place via placement new
 		new (dst) std::shared_ptr<StaticMesh>(std::move(asset));
 	}
 	else if (meta.type == "skeletal mesh") {
-		auto asset = SkeletalMesh::load(meta.guid);
+		auto asset = Asset<SkeletalMesh>::load(meta.guid);
 		new (dst) std::shared_ptr<SkeletalMesh>(std::move(asset));
 	}
 	else if (meta.type == "texture2d") {
-		auto asset = Texture2D::load(meta.guid);
+		auto asset = Asset<Texture2D>::load(meta.guid);
 		new (dst) std::shared_ptr<Texture2D>(std::move(asset));
 	}
 	else if (meta.type == "animation") {
-		auto asset = Animation::load(meta.guid);
+		auto asset = Asset<Animation>::load(meta.guid);
 		new (dst) std::shared_ptr<Animation>(std::move(asset));
 	}
 	else if (meta.type == "skeleton") {
-		auto asset = Skeleton::load(meta.guid);
+		auto asset = Asset<Skeleton>::load(meta.guid);
 		new (dst) std::shared_ptr<Skeleton>(std::move(asset));
 	}
 	else if (meta.type == "material") {
-		auto asset = Material::load(meta.guid);
+		auto asset = Asset<Material>::load(meta.guid);
 		new (dst) std::shared_ptr<Material>(std::move(asset));
 	}
 	else if (meta.type == "material instance") {
-		auto asset = MaterialInstance::load(meta.guid);
+		auto asset = Asset<MaterialInstance>::load(meta.guid);
 		new (dst) std::shared_ptr<MaterialInstance>(std::move(asset));
 	}
 }

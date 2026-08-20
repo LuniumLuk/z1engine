@@ -6,19 +6,18 @@
 
 namespace z1 {
 
-	std::shared_ptr<Skeleton> Skeleton::load(Guid const& guid) {
+	std::shared_ptr<Skeleton> Skeleton::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		PROFILE_FUNCTION();
-		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 
 		BinaryFile bf{};
-		if (!bf.load(file.concat(".bin"))) {
+		if (!bf.load(concat(file, ".bin"))) {
 			CORE_ERROR("failed to load skeleton: {0}", file.generic_string());
 			return nullptr;
 		}
 
 		YAML::Node node = YAML::Load(bf.get_yaml());
 		auto skeleton = std::make_shared<Skeleton>();
-		skeleton->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		skeleton->m_meta = meta;
 
 		if (node["bones"]) {
 			for (auto const& n : node["bones"]) {

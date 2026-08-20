@@ -15,7 +15,9 @@ namespace z1 {
 			, m_wrap_mode(wrap_mode) {
 		}
 
-		static std::shared_ptr<Texture2D> load(Guid const& guid);
+		// --- begin asset interface ---
+		static std::shared_ptr<Texture2D> load(Guid const& guid, AssetMeta const& meta, Filepath const& file);
+		// --- end asset interface ---
 		static std::shared_ptr<Texture2D> create_plain_color(glm::vec4 const& color);
 
 		SamplerMode m_sampler_mode = SamplerMode::Linear;
@@ -53,17 +55,19 @@ namespace z1 {
 				));
 		}
 
+		// --- begin asset interface ---
 		static std::shared_ptr<SubTexture2D> create(Filepath const& path, std::shared_ptr<Texture2D> texture, glm::vec2 const& min, glm::vec2 const& max) {
 			UNIMPLEMENTED_FUNCTION();
 			return nullptr;
 		}
-		static std::shared_ptr<SubTexture2D> load(Guid const& guid) {
+		static std::shared_ptr<SubTexture2D> load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 			UNIMPLEMENTED_FUNCTION();
 			return nullptr;
 		}
 		void save() const {
 			UNIMPLEMENTED_FUNCTION();
 		}
+		// --- end asset interface ---
 
 		std::array<glm::vec2, 4> m_texcoords;
 		std::shared_ptr<Texture2D> m_texture;

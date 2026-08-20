@@ -142,9 +142,11 @@ namespace z1 {
 
 		Material(uint32_t flags, Guid const& shader_guid);
 
+		// --- begin asset interface ---
 		static std::shared_ptr<Material> create(Filepath const& path, uint32_t flags, Guid const& shader_guid);
-		static std::shared_ptr<Material> load(Guid const& guid);
+		static std::shared_ptr<Material> load(Guid const& guid, AssetMeta const& meta, Filepath const& file);
 		void save() const;
+		// --- end asset interface ---
 
 		uint32_t m_flags = 0;
 
@@ -186,9 +188,11 @@ namespace z1 {
 		void bind(PerFrameConst const& per_frame) const;
 		void unbind() const;
 
+		// --- begin asset interface ---
 		static std::shared_ptr<MaterialInstance> create(Filepath const& path, std::shared_ptr<Material> const& material);
-		static std::shared_ptr<MaterialInstance> load(Guid const& guid);
+		static std::shared_ptr<MaterialInstance> load(Guid const& guid, AssetMeta const& meta, Filepath const& file);
 		void save() const;
+		// --- end asset interface ---
 
 		std::shared_ptr<Pipeline> get_pipeline(uint32_t variant_key = 0) const { return m_material->get_pipeline(get_flags(), variant_key); }
 		std::shared_ptr<Shader> get_shader(uint32_t variant_key = 0) const { return m_material->get_shader(variant_key); }

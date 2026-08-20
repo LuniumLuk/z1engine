@@ -220,16 +220,15 @@ namespace z1 {
 		return scene;
 	}
 
-	std::shared_ptr<Scene> Scene::load(Guid const& guid) {
+	std::shared_ptr<Scene> Scene::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		auto scene = std::make_shared<Scene>();
-		scene->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		scene->m_meta = meta;
 		scene->m_is_dirty = false;
 		scene->m_is_saved = true;
 
 		YAML::Node yaml;
-		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 		try {
-			yaml = YAML::LoadFile((file.concat(".yaml")).string());
+			yaml = YAML::LoadFile(concat(file, ".yaml").string());
 		}
 		catch (YAML::ParserException& e) {
 			CORE_ERROR("failed to load scene file: {0}, {1}", file.generic_string(), e.what());
@@ -358,7 +357,7 @@ namespace z1 {
 				std::string key = yaml_it->first.as<std::string>();
 				// Skip keys we handle specially
 				if (key == "name" || key == "id" || key == "transform"
-				    || key == "camera" || key == "script_component") {
+					|| key == "camera" || key == "script_component") {
 					continue;
 				}
 
@@ -370,7 +369,7 @@ namespace z1 {
 
 				// Skip types already handled
 				if (type_name == "TagComponent" || type_name == "TransformComponent"
-				    || type_name == "CameraComponent" || type_name == "ScriptComponent") {
+					|| type_name == "CameraComponent" || type_name == "ScriptComponent") {
 					continue;
 				}
 
@@ -498,7 +497,7 @@ namespace z1 {
 				}
 				// Write is_primary separately (FF_ReadOnly, not auto-serialized); restore editor-takeover value
 				yaml << YAML::Key << "is_primary" << YAML::Value
-				     << (tag.m_id == m_editor_camera_data.origin_main_camera_id);
+					 << (tag.m_id == m_editor_camera_data.origin_main_camera_id);
 				yaml << YAML::EndMap; // camera
 			}
 
@@ -506,7 +505,7 @@ namespace z1 {
 			for (auto const* comp_type : TypeRegistry::instance().get_all_components()) {
 				std::string const& type_name = comp_type->name;
 				if (type_name == "TagComponent" || type_name == "TransformComponent"
-				    || type_name == "CameraComponent" || type_name == "ScriptComponent") {
+					|| type_name == "CameraComponent" || type_name == "ScriptComponent") {
 					continue; // handled specially above or below
 				}
 				if (!comp_type->has_in || !comp_type->has_in(*entity)) continue;

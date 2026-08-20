@@ -297,13 +297,12 @@ namespace z1 {
 		return meta;
 	}
 
-	std::shared_ptr<StaticMesh> StaticMesh::load(Guid const& guid) {
+	std::shared_ptr<StaticMesh> StaticMesh::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		PROFILE_FUNCTION();
-		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 
 		BinaryFile bf{};
 
-		if (!bf.load(file.concat(".bin"))) {
+		if (!bf.load(concat(file, ".bin"))) {
 			CORE_ERROR("failed to load static mesh storage: {0}", file.generic_string());
 			return nullptr;
 		}
@@ -354,7 +353,7 @@ namespace z1 {
 		std::memcpy(storage->indices.data(), idata_slice.ptr, idata_slice.size);
 
 		auto mesh = std::make_shared<StaticMesh>(storage);
-		mesh->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		mesh->m_meta = meta;
 		return mesh;
 	}
 
@@ -583,13 +582,12 @@ namespace z1 {
 		return meta;
 	}
 
-	std::shared_ptr<SkeletalMesh> SkeletalMesh::load(Guid const& guid) {
+	std::shared_ptr<SkeletalMesh> SkeletalMesh::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		PROFILE_FUNCTION();
-		auto file = g_runtime_context.m_asset_manager->get_file_from_guid(guid);
 
 		BinaryFile bf{};
 
-		if (!bf.load(file.concat(".bin"))) {
+		if (!bf.load(concat(file, ".bin"))) {
 			CORE_ERROR("failed to load skeletal mesh storage: {0}", file.generic_string());
 			return nullptr;
 		}
@@ -640,7 +638,7 @@ namespace z1 {
 		std::memcpy(storage->indices.data(), idata_slice.ptr, idata_slice.size);
 
 		auto mesh = std::make_shared<SkeletalMesh>(storage);
-		mesh->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+		mesh->m_meta = meta;
 		return mesh;
 	}
 

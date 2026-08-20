@@ -341,7 +341,7 @@ struct ContentBrowser {
 					if (m_create_mi_selected_mat_idx >= 0) {
 						Filepath folder = get_curr_dir();
 						Filepath path = folder / m_create_mi_name_buffer;
-						auto mat = Material::load(m_cached_materials[m_create_mi_selected_mat_idx].guid);
+						auto mat = Asset<Material>::load(m_cached_materials[m_create_mi_selected_mat_idx].guid);
 						if (mat) {
 							auto mi = MaterialInstance::create(path, mat);
 							if (mi) {

@@ -473,37 +473,37 @@ namespace z1 {
 		if (!dst) return false;
 
 		if (asset_meta_type == "static mesh") {
-			auto asset = StaticMesh::load(guid);
+			auto asset = Asset<StaticMesh>::load(guid);
 			if (asset) new (dst) std::shared_ptr<StaticMesh>(std::move(asset));
 			return asset != nullptr;
 		}
 		else if (asset_meta_type == "skeletal mesh") {
-			auto asset = SkeletalMesh::load(guid);
+			auto asset = Asset<SkeletalMesh>::load(guid);
 			if (asset) new (dst) std::shared_ptr<SkeletalMesh>(std::move(asset));
 			return asset != nullptr;
 		}
 		else if (asset_meta_type == "texture2d") {
-			auto asset = Texture2D::load(guid);
+			auto asset = Asset<Texture2D>::load(guid);
 			if (asset) new (dst) std::shared_ptr<Texture2D>(std::move(asset));
 			return asset != nullptr;
 		}
 		else if (asset_meta_type == "animation") {
-			auto asset = Animation::load(guid);
+			auto asset = Asset<Animation>::load(guid);
 			if (asset) new (dst) std::shared_ptr<Animation>(std::move(asset));
 			return asset != nullptr;
 		}
 		else if (asset_meta_type == "skeleton") {
-			auto asset = Skeleton::load(guid);
+			auto asset = Asset<Skeleton>::load(guid);
 			if (asset) new (dst) std::shared_ptr<Skeleton>(std::move(asset));
 			return asset != nullptr;
 		}
 		else if (asset_meta_type == "material") {
-			auto asset = Material::load(guid);
+			auto asset = Asset<Material>::load(guid);
 			if (asset) new (dst) std::shared_ptr<Material>(std::move(asset));
 			return asset != nullptr;
 		}
 		else if (asset_meta_type == "material instance") {
-			auto asset = MaterialInstance::load(guid);
+			auto asset = Asset<MaterialInstance>::load(guid);
 			if (asset) new (dst) std::shared_ptr<MaterialInstance>(std::move(asset));
 			return asset != nullptr;
 		}

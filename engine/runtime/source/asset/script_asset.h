@@ -5,11 +5,13 @@
 namespace z1 {
 
 	struct API ScriptAsset : Asset<ScriptAsset> {
-		static std::shared_ptr<ScriptAsset> load(Guid const& guid) {
+		// --- begin asset interface ---
+		static std::shared_ptr<ScriptAsset> load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 			auto asset = std::make_shared<ScriptAsset>();
-			asset->m_meta = g_runtime_context.m_asset_manager->get_meta(guid);
+			asset->m_meta = meta;
 			return asset;
 		}
+		// --- end asset interface ---
 	};
 
 }
