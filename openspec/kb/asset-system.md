@@ -57,5 +57,13 @@
 - Optimized for fast loading (memory-mapped compatible)
 - Baked assets stored alongside source in content directories
 
+## Material Editor (`engine/editor/source/material_editor.h`)
+
+- `MaterialEditor` window opens on double-click of material/material instance in the content browser; owns a preview `Scene` (procedural UV sphere + two directional lights + camera) rendered by a dedicated `RendererForward`/`RendererDeferred` instance into a fixed 512x512 framebuffer. Preview image lives in an `ImGui::BeginChild` (main-viewport pattern) so orbit drags don't move the window.
+- Editing: `Material` flags (alpha mode, cull, depth test/write) + `m_variables`; `MaterialInstance` `m_override_variables` with valid-flag checkboxes; Sampler2D slots accept `ASSET_ITEM` drag-drop of texture2d assets. Save button persists.
+- `Material::save()` writes a `variables:` YAML sequence (`name`/`type`/`value`, same shape as `MaterialInstance` `overrides`); `Material::load()` reads it back (guarded by `IsSequence()` for backward compat). Previously variables were never persisted (load only read `flags`/`shader`; reflection save emitted nulls).
+- Round-trip covered by `engine/test/test_material_roundtrip.cpp` (auto-discovered by `create_test`).
+- `MaterialFlags::get_blend`/BlendMask is dead — pipeline blend derives from `AlphaMode` only; not exposed in the editor.
+
 -> see [architecture.md]
 -> see [render-pipeline.md]

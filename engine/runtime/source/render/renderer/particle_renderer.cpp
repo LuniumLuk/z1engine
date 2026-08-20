@@ -260,7 +260,8 @@ namespace z1 {
 					bool effective_shadow = (shadow_binding != INVALID_BINDING) && pc.m_receive_shadows;
 					if (shadow_binding != INVALID_BINDING) {
 						pipeline->m_shader->set_uniform_binding("u_shadow_map", shadow_binding);
-					} else {
+					}
+					else {
 						// Avoid stale sampler state
 						pipeline->m_shader->set_uniform_binding("u_shadow_map", particle_image->get_binding());
 					}

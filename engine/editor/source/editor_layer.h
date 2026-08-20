@@ -12,6 +12,7 @@
 #include "picking_system.h"
 #include "browser.h"
 #include "type_field.h"
+#include "material_editor.h"
 #include "stb/stb_image_write.h"
 #include "scene/component/light.h"
 #include "scene/prefab.h"
@@ -54,6 +55,7 @@ private:
 	EditorSettings m_settings;
 	std::shared_ptr<EditorGUI> m_gui;
 	std::unique_ptr<ContentBrowser> m_browser;
+	MaterialEditor m_material_editor;
 	bool m_picked_from_viewport = false;
 	std::shared_ptr<Entity> m_selected_entity = nullptr;
 	AssetMeta* m_selected_asset = nullptr;

@@ -443,6 +443,69 @@ namespace z1 {
 
 		auto mat = std::make_shared<Material>(flags, shader_guid);
 		mat->m_meta = meta;
+
+		// optional block written by save(): editor-modified variable values
+		if (node["variables"] && node["variables"].IsSequence()) {
+			for (auto const& var_node : node["variables"]) {
+				std::string name = var_node["name"].as<std::string>();
+				auto it = mat->m_variables.find(name);
+				if (it == mat->m_variables.end()) {
+					CORE_WARN("material: {0} has unknown variable: {1}", guid, name);
+					continue;
+				}
+				auto& var = it->second;
+				auto type = static_cast<DataType>(var_node["type"].as<int>());
+				if (type != var.type) {
+					CORE_WARN("material: {0} has inconsistent type {1} with shader variable {2}!", guid, get_data_type_name(type), get_data_type_name(var.type));
+					continue;
+				}
+				switch (var.type) {
+				case DataType::Int4:
+					var.default_value.ivec[3] = var_node["value"][3].as<int>();
+					/* fallthrough */
+				case DataType::Int3:
+					var.default_value.ivec[2] = var_node["value"][2].as<int>();
+					/* fallthrough */
+				case DataType::Int2:
+					var.default_value.ivec[1] = var_node["value"][1].as<int>();
+					/* fallthrough */
+				case DataType::Int:
+					var.default_value.ivec[0] = var_node["value"][0].as<int>();
+					var.default_value.valid = true;
+					break;
+				case DataType::Float4:
+					var.default_value.vec[3] = var_node["value"][3].as<float>();
+					/* fallthrough */
+				case DataType::Float3:
+					var.default_value.vec[2] = var_node["value"][2].as<float>();
+					/* fallthrough */
+				case DataType::Float2:
+					var.default_value.vec[1] = var_node["value"][1].as<float>();
+					/* fallthrough */
+				case DataType::Float:
+					var.default_value.vec[0] = var_node["value"][0].as<float>();
+					var.default_value.valid = true;
+					break;
+				case DataType::Sampler2D:
+					if (var_node["value"] && !var_node["value"].IsNull()) {
+						auto tex_path = var_node["value"].as<std::string>();
+						auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(tex_path);
+						var.default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
+						if (!var.default_value.tex2D) {
+							CORE_WARN("material: {0} failed to load texture2D: {1} for variable: {2}", guid, tex_guid.value, name);
+						}
+						else {
+							var.default_value.valid = true;
+						}
+					}
+					break;
+				default:
+					CORE_WARN("unsupported material variable type: {0}", get_data_type_name(var.type));
+					break;
+				}
+			}
+		}
+
 		return mat;
 	}
 
@@ -454,10 +517,53 @@ namespace z1 {
 		YAML::Emitter out;
 		out << YAML::BeginMap;
 		out << YAML::Key << "meta" << YAML::Value << m_meta;
-
-		// Reflection-driven serialization of basic fields (flags, shader_guid, variables)
-		serialize_type(out, const_cast<Material*>(this), "Material");
-
+		out << YAML::Key << "flags" << YAML::Value << m_flags;
+		out << YAML::Key << "shader" << YAML::Value << m_shader_guid;
+		out << YAML::Key << "variables" << YAML::Value;
+		out << YAML::BeginSeq;
+		for (auto const& [name, var] : m_variables) {
+			if (!var.visible || !var.default_value.valid) continue;
+			out << YAML::BeginMap;
+			out << YAML::Key << "name" << YAML::Value << name;
+			out << YAML::Key << "type" << YAML::Value << static_cast<int>(var.type);
+			switch (var.type) {
+			case DataType::Int:
+			case DataType::Int2:
+			case DataType::Int3:
+			case DataType::Int4:
+				out << YAML::Key << "value" << YAML::Value;
+				out << YAML::Flow << YAML::BeginSeq;
+				for (size_t i = 0; i < get_data_type_element_count(var.type); ++i) {
+					out << var.default_value.ivec[i];
+				}
+				out << YAML::EndSeq;
+				break;
+			case DataType::Float:
+			case DataType::Float2:
+			case DataType::Float3:
+			case DataType::Float4:
+				out << YAML::Key << "value" << YAML::Value;
+				out << YAML::Flow << YAML::BeginSeq;
+				for (size_t i = 0; i < get_data_type_element_count(var.type); ++i) {
+					out << var.default_value.vec[i];
+				}
+				out << YAML::EndSeq;
+				break;
+			case DataType::Sampler2D:
+				if (var.default_value.tex2D) {
+					out << YAML::Key << "value" << YAML::Value << var.default_value.tex2D->m_meta.guid;
+				}
+				else {
+					out << YAML::Key << "value" << YAML::Value << YAML::Null;
+				}
+				break;
+			default:
+				out << YAML::Key << "value" << YAML::Value << YAML::Null;
+				break;
+			}
+			out << YAML::EndMap;
+		}
+		out << YAML::EndSeq;
 		out << YAML::EndMap;
 
 		save_yaml(file, out);

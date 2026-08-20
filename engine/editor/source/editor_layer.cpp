@@ -58,6 +58,10 @@ EditorLayer::EditorLayer() {
 			if (meta->type == "scene") {
 				load_scene(Asset<Scene>::load(meta->guid));
 			}
+			else if (meta->type == "material" || meta->type == "material instance") {
+				m_selected_asset = meta;
+				m_material_editor.open(meta);
+			}
 			else {
 				m_selected_asset = meta;
 			}
@@ -313,6 +317,13 @@ void EditorLayer::on_update(float delta_time) {
 		m_fps_counter = 0;
 	}
 	g_runtime_context.m_scene->on_update(delta_time);
+
+	// material editor preview is drawn before the main viewport so the
+	// global camera matrices end the frame in the main viewport's state
+	if (m_material_editor.is_open()) {
+		m_material_editor.render_preview(delta_time);
+	}
+
 	if (g_runtime_context.m_global->render_mode == RenderMode::Deferred) {
 		g_runtime_context.m_renderer_deferred->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
 	}
@@ -497,6 +508,7 @@ void EditorLayer::on_imgui_render() {
 	show_properties(m_selected_entity);
 	show_settings();
 	m_browser->draw();
+	m_material_editor.draw();
 }
 
 void EditorLayer::use_editor_camera() {

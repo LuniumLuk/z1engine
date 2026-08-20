@@ -108,5 +108,13 @@ sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
 - `RenderPass` -- render pass config (`render_pass.h`)
 - `Resource` -- GPU resource base (`resource.h`)
 
+## Multi-Scene Rendering (2026-08-20, material editor)
+
+- `RendererDeferred::draw(scene, fb)` / `RendererForward::draw(scene, fb)` take the scene explicitly (`scene->get_main_camera()`); they never touch `g_runtime_context.m_scene`. A new in-memory `Scene` needs only a main camera + lights + mesh entities.
+- `RenderShared` (TAA history, `m_frame_index`, lights UBO, AO/bloom buffers) is per-renderer-instance. Rendering two scenes per frame with ONE renderer instance cross-contaminates TAA history — create a second `RendererDeferred`/`RendererForward` instance for the second scene.
+- `RenderGraph::s_cached_framebuffers` is a static map keyed by pass name only; `cache_is_reusable` ignores size and `resize()`s on mismatch. Two targets with different resolutions using the same pass names reallocate intermediates every frame. The material editor uses a fixed 512x512 preview and accepts this churn (secondary draw runs first, then the main viewport resizes intermediates back).
+- Shared `GlobalSettings` (UBO) is mutated per draw (`projview`, `cam_position`, `prev_projview`, sky SH). Draw the secondary scene FIRST so the main viewport draw leaves these values correct for the next frame (main velocity pass reads `prev_projview`).
+- Draw order per frame in `EditorLayer::on_update`: preview scene render → `scene->on_update(0)` (prev transforms) → main scene draw.
+
 -> see [shader-system.md]
 -> see [architecture.md]

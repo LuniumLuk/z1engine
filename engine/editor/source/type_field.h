@@ -1,3 +1,5 @@
+#pragma once
+
 #include "z1engine.h"
 #include "imgui/imgui.h"
 
