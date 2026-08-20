@@ -409,7 +409,7 @@ inline void MaterialEditor::draw() {
 	title += " - " + m_meta.name();
 
 	bool open = true;
-	ImGui::Begin((title + "##material_editor").c_str(), &open,
+	ImGui::Begin((title + "###material_editor").c_str(), &open,
 		ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking);
 	if (!open) {
 		ImGui::End();
@@ -430,6 +430,8 @@ inline void MaterialEditor::draw() {
 			auto h = (float)m_preview_fb->get_height();
 			auto region = ImGui::GetContentRegionAvail();
 			region.y -= ImGui::GetFrameHeightWithSpacing() * 2.0f; // room for the controls row
+			region.x = std::max(1.0f, region.x);
+			region.y = std::max(1.0f, region.y);
 
 			ImVec2 present_size;
 			if (region.y / region.x > h / w) {
