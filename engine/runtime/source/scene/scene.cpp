@@ -94,7 +94,7 @@ namespace z1 {
 	std::shared_ptr<Entity> Scene::create_entity(std::string const& name) {
 		auto entity = create_entity_impl(name);
 		m_entities.push_back(entity);
-		m_is_dirty = true;
+		mark_dirty();
 		return entity;
 	}
 
@@ -128,14 +128,14 @@ namespace z1 {
 			auto it = std::find(m_entities.begin(), m_entities.end(), entity);
 			if (it != m_entities.end()) {
 				m_entities.erase(it);
-				m_is_dirty = true;
+				mark_dirty();
 				continue;
 			}
 
 			auto it_transient = std::find(m_transient_entities.begin(), m_transient_entities.end(), entity);
 			if (it_transient != m_transient_entities.end()) {
 				m_transient_entities.erase(it_transient);
-				// m_is_dirty = true; // transient entities don't affect scene dirtiness?
+				// mark_dirty(); // transient entities don't affect scene dirtiness?
 			}
 		}
 		m_pending_destroy_entities.clear();
@@ -166,7 +166,7 @@ namespace z1 {
 		}
 
 		camera->get_component<CameraComponent>().m_is_primary = true;
-		m_is_dirty = true;
+		mark_dirty();
 	}
 
 	std::shared_ptr<Entity> Scene::get_main_camera() const {
@@ -205,8 +205,7 @@ namespace z1 {
 
 		scene->m_meta.root = root_name;
 		scene->m_meta.path = sub_path;
-		scene->m_is_dirty = true;
-		scene->m_is_saved = false;
+		scene->mark_dirty();
 
 		auto root = FileSystem::get_root_path(root_name);
 		if (g_runtime_context.m_asset_manager->register_asset(scene->m_meta, root)) {
@@ -223,8 +222,7 @@ namespace z1 {
 	std::shared_ptr<Scene> Scene::load(Guid const& guid, AssetMeta const& meta, Filepath const& file) {
 		auto scene = std::make_shared<Scene>();
 		scene->m_meta = meta;
-		scene->m_is_dirty = false;
-		scene->m_is_saved = true;
+		scene->mark_saved();
 
 		YAML::Node yaml;
 		try {
@@ -542,8 +540,7 @@ namespace z1 {
 		auto root = FileSystem::get_root_path(m_meta.root);
 		save_yaml((root / m_meta.path).concat(".yaml"), yaml);
 
-		m_is_dirty = false;
-		m_is_saved = true;
+		mark_saved();
 	}
 
 }

@@ -57,6 +57,16 @@ namespace z1 {
 		AssetMeta m_meta = {};
 		mutable bool m_is_dirty = false;
 		mutable bool m_is_saved = false;
+
+		void mark_dirty() const {
+			m_is_dirty = true;
+			m_is_saved = false;
+		}
+
+		void mark_saved() const {
+			m_is_dirty = false;
+			m_is_saved = true;
+		}
 	};
 
 	template <typename Derived>
