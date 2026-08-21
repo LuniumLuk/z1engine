@@ -19,7 +19,9 @@ namespace z1 {
 		PROFILE_FUNCTION();
 
 		g_runtime_context.init();
-		g_runtime_context.m_window->add_event_callback(BIND_EVENT_FN(Application::on_event));
+		if (g_runtime_context.m_window) {
+			g_runtime_context.m_window->add_event_callback(BIND_EVENT_FN(Application::on_event));
+		}
 	}
 
 	Application::~Application() {

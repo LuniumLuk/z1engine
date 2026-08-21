@@ -59,6 +59,22 @@ int main() {
 }
 ```
 
+## Headless / Module Control
+
+`g_args` controls which `g_runtime_context` modules load (see `RuntimeContext::init()` in `core/core.cpp`):
+
+- `--no-window` — skips `m_window` + `m_input_system` + `m_imgui_layer`; `OpenGLContext` falls back to a hidden GLFW window so GL still works.
+- `--no-graphics` — skips `m_graphics_context` + `m_renderer_forward`/`m_renderer_deferred` + `m_imgui_layer` (window + input still load).
+
+Tests inject flags before constructing `Application`:
+
+```cpp
+g_args.set("no-window", "1");
+OurApp app;
+```
+
+Tests that touch GL assets (shader compile, textures, meshes) still need the graphics context, so they use `--no-window` rather than `--no-graphics`. `test_render_graph` keeps full init because it exercises the swapchain framebuffer.
+
 ## DCV Integration
 
 - Tests run as step 5 of the DCV loop

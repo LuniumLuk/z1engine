@@ -116,8 +116,29 @@ namespace z1 {
 	}
 
 	OpenGLContext::OpenGLContext()
-		: m_window{ static_cast<GLFWwindow*>(g_runtime_context.m_window->get_native_window()) } {
+		: m_window{ nullptr } {
+		if (g_runtime_context.m_window) {
+			m_window = static_cast<GLFWwindow*>(g_runtime_context.m_window->get_native_window());
+		}
+		else {
+			// headless fallback: hidden GLFW window so GL works without the Window module
+			if (glfwInit()) {
+				m_owns_window = true;
+				glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+				m_window = glfwCreateWindow(1280, 720, "z1 headless context", nullptr, nullptr);
+			}
+		}
 		CORE_ASSERT(m_window, "window handle is null!")
+	}
+
+	OpenGLContext::~OpenGLContext() {
+		if (m_owns_window) {
+			if (m_window) {
+				glfwDestroyWindow(m_window);
+				m_window = nullptr;
+			}
+			glfwTerminate();
+		}
 	}
 
 	void OpenGLContext::init() {
@@ -133,7 +154,13 @@ namespace z1 {
 
 		// the window advertises a vsync state but nothing ever applied it; sync the swap
 		// interval with the context so the UI state matches the real present behavior
-		glfwSwapInterval(g_runtime_context.m_window->is_v_sync_enabled() ? 1 : 0);
+		// headless: no Window module owns the state, so present unsynced
+		if (g_runtime_context.m_window) {
+			glfwSwapInterval(g_runtime_context.m_window->is_v_sync_enabled() ? 1 : 0);
+		}
+		else {
+			glfwSwapInterval(0);
+		}
 
 		if (glDebugMessageCallback) {
 			glDebugMessageCallback(gl_debug_message_callback, nullptr);
@@ -194,7 +221,10 @@ namespace z1 {
 			m_free_uniform_buffer_bindings.push(i);
 		}
 
-		m_swapchain_framebuffer = std::make_shared<OpenGLSwapChainFramebuffer>();
+		int fb_width = 0;
+		int fb_height = 0;
+		glfwGetFramebufferSize(m_window, &fb_width, &fb_height);
+		m_swapchain_framebuffer = std::make_shared<OpenGLSwapChainFramebuffer>(fb_width, fb_height);
 		m_current_framebuffer = m_swapchain_framebuffer;
 		m_current_pipeline = nullptr;
 	}

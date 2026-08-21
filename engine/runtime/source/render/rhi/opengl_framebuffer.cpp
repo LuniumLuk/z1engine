@@ -241,16 +241,26 @@ namespace z1 {
 		return nullptr;
 	}
 
+	OpenGLSwapChainFramebuffer::OpenGLSwapChainFramebuffer(uint32_t width, uint32_t height)
+		: m_width{ width }, m_height{ height } {
+	}
+
 	void OpenGLSwapChainFramebuffer::bind() const {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
 	uint32_t OpenGLSwapChainFramebuffer::get_width() const {
-		return g_runtime_context.m_window->get_width();
+		if (g_runtime_context.m_window) {
+			return g_runtime_context.m_window->get_width();
+		}
+		return m_width;
 	}
 
 	uint32_t OpenGLSwapChainFramebuffer::get_height() const {
-		return g_runtime_context.m_window->get_height();
+		if (g_runtime_context.m_window) {
+			return g_runtime_context.m_window->get_height();
+		}
+		return m_height;
 	}
 
 }

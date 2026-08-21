@@ -7,6 +7,7 @@ struct OurApp : Application {
 };
 
 int main() {
+	g_args.set("no-window", "1");
 	OurApp app;
 	app.init();
 

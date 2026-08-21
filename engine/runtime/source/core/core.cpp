@@ -27,27 +27,38 @@ namespace z1 {
 		init_logger();
 		m_file_system = std::make_shared<FileSystem>();
 
-		m_window = std::make_shared<Window>();
-		auto conf = Window::Config{};
-		conf.title = g_args.get<std::string>("title", "z1 engine");
-		conf.width = g_args.get<uint32_t>("width", 1280);
-		conf.height = g_args.get<uint32_t>("height", 720);
-		m_window->init(conf);
+		bool const no_window = g_args.get<bool>("no-window", false);
+		bool const no_graphics = g_args.get<bool>("no-graphics", false);
 
-		m_input_system = std::make_shared<InputSystem>(m_window);
+		if (!no_window) {
+			m_window = std::make_shared<Window>();
+			auto conf = Window::Config{};
+			conf.title = g_args.get<std::string>("title", "z1 engine");
+			conf.width = g_args.get<uint32_t>("width", 1280);
+			conf.height = g_args.get<uint32_t>("height", 720);
+			m_window->init(conf);
 
-		m_graphics_context = GraphicsContext::create();
-		m_graphics_context->init();
+			m_input_system = std::make_shared<InputSystem>(m_window);
+		}
+
+		if (!no_graphics) {
+			m_graphics_context = GraphicsContext::create();
+			m_graphics_context->init();
+		}
 
 		m_asset_manager = std::make_shared<AssetManager>();
 
-		m_imgui_layer = std::make_shared<ImGuiLayer>();
+		if (!no_window && !no_graphics) {
+			m_imgui_layer = std::make_shared<ImGuiLayer>();
+		}
 		m_python_layer = std::make_shared<PythonLayer>();
 		m_layer_stack = std::make_shared<LayerStack>();
 
 		//m_renderer_2d = std::make_shared<Renderer2D>();
-		m_renderer_forward = std::make_shared<RendererForward>();
-		m_renderer_deferred = std::make_shared<RendererDeferred>();
+		if (!no_graphics) {
+			m_renderer_forward = std::make_shared<RendererForward>();
+			m_renderer_deferred = std::make_shared<RendererDeferred>();
+		}
 
 		m_global = std::make_shared<GlobalSettings>();
 	}
@@ -59,7 +70,9 @@ namespace z1 {
 	}
 
 	void RuntimeContext::shutdown() {
-		m_window->clear_event_callbacks();
+		if (m_window) {
+			m_window->clear_event_callbacks();
+		}
 
 		// layers are detached and destroyed first: their teardown runs while the engine services
 		// (window, renderers, global settings, scene) are still alive

@@ -48,6 +48,7 @@ namespace z1 {
 	struct API Args {
 
 		void parse(int argc, char* argv[]);
+		void set(std::string const& key, std::string const& value) { m_args[key] = value; }
 
 		template <typename T>
 		T get(std::string const& key, T const& default_value = T()) const {

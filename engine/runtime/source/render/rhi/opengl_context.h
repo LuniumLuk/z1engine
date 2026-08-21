@@ -13,6 +13,7 @@ namespace z1 {
 
 	struct OpenGLContext : GraphicsContext {
 		OpenGLContext();
+		~OpenGLContext() override;
 
 		void init() override;
 		void begin_frame() override; // opens the frame's gpu timer query when probing is enabled
@@ -58,6 +59,7 @@ namespace z1 {
 		void create_default_sampler_textures();
 
 		GLFWwindow*  m_window;
+		bool m_owns_window = false;
 		[[maybe_unused]] uint32_t m_debug_group_depth = 0; // balance guard for push/pop debug groups (Windows only)
 		uint32_t m_max_msaa_samples = 1;  // clamped by GL_MAX_SAMPLES + color/depth texture sample limits
 		uint32_t m_default_sampler_texture_2d = 0;       // 1x1 white texture

@@ -56,6 +56,7 @@ static std::shared_ptr<StaticMesh> make_sphere() {
 }
 
 int main() {
+	g_args.set("no-window", "1");
 	OurApp app;
 	app.init();
 

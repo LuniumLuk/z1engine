@@ -39,7 +39,7 @@ namespace z1 {
 
 	// Pesudo-framebuffer representing the swapchain's default framebuffer
 	struct OpenGLSwapChainFramebuffer : Framebuffer {
-		OpenGLSwapChainFramebuffer() = default;
+		OpenGLSwapChainFramebuffer(uint32_t width, uint32_t height);
 		~OpenGLSwapChainFramebuffer() override = default;
 
 		void bind() const override;
@@ -59,6 +59,10 @@ namespace z1 {
 
 		uint32_t get_width() const override;
 		uint32_t get_height() const override;
+
+	private:
+		uint32_t m_width;
+		uint32_t m_height;
 
 	};
 
