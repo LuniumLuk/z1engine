@@ -31,7 +31,15 @@
 | `engine/runtime/` | Core runtime library source |
 | `engine/stubs/` | Stub projects |
 | `engine/test/` | Test source files (`test_*.cpp`) |
-| `engine/tool/` | Tool projects (shader_validator) |
+| `engine/tool/` | Tool projects (shader_validator, assetkit) |
+
+### `engine/tool/assetkit/`
+
+- Unified asset tool merging the former asset_checker (validation) and importer (asset import)
+- `assetkit_core.py` -- Python validation engine (mini YAML parser, guid/path registry mirroring `AssetManager::scan_content`); no third-party deps
+- `assetkit_gui.py` -- tkinter GUI: content browser + warnings/errors window + import dialog + guid/path search + horizontal reference viewer (parents/children); `--check` runs headless
+- `assetkit.cpp` + `premake5.lua` -- C++17 CLI import backend, builds `engine/bin/assetkit.exe`
+- Launcher: `run_assetkit.bat`; extra roots via `--root [NAME:]PATH`
 
 ## Runtime Modules (`engine/runtime/source/`)
 

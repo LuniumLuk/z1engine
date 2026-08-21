@@ -99,4 +99,4 @@ workspace "z1engine"
 
 		include "engine/game"
 		include "engine/tool/shader_validator"
-		include "engine/tool/importer"
+		include "engine/tool/assetkit"

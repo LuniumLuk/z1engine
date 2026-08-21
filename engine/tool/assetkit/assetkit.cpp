@@ -7,7 +7,7 @@
 using namespace z1;
 
 void print_usage() {
-	std::cout << "Usage: importer <input_file> <output_path_relative_to_content> [options]" << std::endl;
+	std::cout << "Usage: assetkit <input_file> <output_path_relative_to_content> [options]" << std::endl;
 	std::cout << "Options:" << std::endl;
 	std::cout << "  --type <type>       Force import type (texture, gltf, obj)" << std::endl;
 	std::cout << "  --sampler <mode>    Sampler mode (nearest, linear) [texture only]" << std::endl;

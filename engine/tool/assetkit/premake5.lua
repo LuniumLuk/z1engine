@@ -1,4 +1,4 @@
-project "importer"
+project "assetkit"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"
