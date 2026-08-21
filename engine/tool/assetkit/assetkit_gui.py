@@ -81,6 +81,7 @@ class AssetKitApp:
 		self.validate_btn.pack(side=tk.LEFT)
 		ttk.Button(toolbar, text="Import Asset...", command=self.open_import_dialog).pack(side=tk.LEFT, padx=(6, 0))
 		ttk.Button(toolbar, text="Show References", command=self.show_references).pack(side=tk.LEFT, padx=(6, 0))
+		ttk.Button(toolbar, text="Fix Missing References", command=self.fix_missing).pack(side=tk.LEFT, padx=(6, 0))
 		ttk.Button(toolbar, text="Export Report...", command=self.export_report).pack(side=tk.LEFT, padx=(6, 0))
 		ttk.Button(toolbar, text="Expand All", command=self.expand_all).pack(side=tk.LEFT, padx=(6, 0))
 		ttk.Button(toolbar, text="Collapse All", command=self.collapse_all).pack(side=tk.LEFT, padx=(6, 0))
@@ -501,6 +502,35 @@ class AssetKitApp:
 			return
 		ReferenceViewer(self.root, key, self.ref_children, self.ref_parents, self.issue_by_file)
 
+	# -- fix missing references -------------------------------------------------------
+	def fix_missing(self):
+		if not self.report:
+			messagebox.showinfo("Fix References", "Run Validate first.")
+			return
+		missing = sorted({(a.file, ref.value) for a in self.report.assets
+			if a.kind == "yaml" for ref in a.refs if ref.target is None})
+		if not missing:
+			messagebox.showinfo("Fix References", "No missing references to fix.")
+			return
+		files = len({f for f, _ in missing})
+		preview = "\n".join(f"{f}: {v}" for f, v in missing[:15])
+		if len(missing) > 15:
+			preview += f"\n... and {len(missing) - 15} more"
+		if not messagebox.askyesno("Fix References",
+				f"Replace {len(missing)} missing reference(s) with ~ in {files} file(s)?\n\n{preview}"):
+			return
+		changes, failures = core.fix_missing_references(self.report, self.base_dir)
+		fixed_files = {c["file"] for c in changes if c["occurrences"]}
+		occurrences = sum(c["occurrences"] for c in changes)
+		message = f"Fixed {occurrences} occurrence(s) in {len(fixed_files)} file(s)."
+		if failures:
+			message += "\n\nFailed files:\n" + "\n".join(f"{f}: {e}" for f, e in failures)
+			messagebox.showwarning("Fix References", message)
+		else:
+			messagebox.showinfo("Fix References", message)
+		self.refresh_browser()
+		self.start_validate()
+
 	# -- import --------------------------------------------------------------------
 	def open_import_dialog(self):
 		file_path = filedialog.askopenfilename(
@@ -764,6 +794,8 @@ def main(argv=None):
 	parser.add_argument("--check", action="store_true",
 		help="headless validation: print report and exit (no GUI)")
 	parser.add_argument("--json", metavar="FILE", help="write JSON report to FILE (with --check)")
+	parser.add_argument("--fix", action="store_true",
+		help="replace unresolved references with null (~) and re-validate (with --check)")
 	args = parser.parse_args(argv)
 	roots = list(core.DEFAULT_ROOTS)
 	for spec in args.root:
@@ -771,7 +803,7 @@ def main(argv=None):
 		if parsed:
 			roots.append(parsed)
 	if args.check:
-		return core.run_headless(roots, args.json)
+		return core.run_headless(roots, args.json, fix=args.fix)
 	app_root = tk.Tk()
 	AssetKitApp(app_root, roots)
 	app_root.mainloop()

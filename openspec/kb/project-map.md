@@ -37,7 +37,7 @@
 
 - Unified asset tool merging the former asset_checker (validation) and importer (asset import)
 - `assetkit_core.py` -- Python validation engine (mini YAML parser, guid/path registry mirroring `AssetManager::scan_content`); no third-party deps
-- `assetkit_gui.py` -- tkinter GUI: content browser + warnings/errors window + import dialog + guid/path search + horizontal reference viewer (parents/children); `--check` runs headless
+- `assetkit_gui.py` -- tkinter GUI: content browser + warnings/errors window + import dialog + guid/path search + horizontal reference viewer (parents/children) + fix-missing-references; `--check` runs headless (`--fix` replaces unresolved refs with `~`)
 - `assetkit.cpp` + `premake5.lua` -- C++17 CLI import backend, builds `engine/bin/assetkit.exe`
 - Launcher: `run_assetkit.bat`; extra roots via `--root [NAME:]PATH`
 

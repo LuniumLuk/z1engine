@@ -559,6 +559,61 @@ def check_assets(roots=None, base_dir=None):
 	return report
 
 
+def fix_missing_references(report, base_dir=None):
+	"""Replace every unresolved reference value with null (~) in its yaml file.
+
+	Returns (changes, failures). changes is a list of dicts with file, value,
+	kind, location and occurrences; failures is a list of (file, error) tuples.
+	"""
+	if base_dir is None:
+		base_dir = repo_root_dir()
+	root_paths = {r["name"]: r["path"] for r in report.roots}
+	by_file = {}
+	for asset in report.assets:
+		if asset.kind != "yaml":
+			continue
+		for ref in asset.refs:
+			if ref.target is None:
+				by_file.setdefault((asset.root_name, asset.file), set()).add(
+					(ref.value, ref.kind, ref.location))
+	changes = []
+	failures = []
+	for (root_name, display), refs in sorted(by_file.items()):
+		rel = display[len(root_name) + 1:] if root_name else display
+		root_path = root_paths.get(root_name)
+		if root_path is None:
+			failures.append((display, f"unknown root '{root_name}'"))
+			continue
+		path = Path(root_path)
+		if not path.is_absolute():
+			path = base_dir / path
+		disk = path / rel
+		try:
+			with disk.open("r", encoding="utf-8", errors="replace", newline="") as f:
+				text = f.read()
+		except OSError as exc:
+			failures.append((display, str(exc)))
+			continue
+		new_text = text
+		for value, kind, location in sorted(refs):
+			pattern = re.compile(r"(^|[\s,:{\[])" + re.escape(value) + r"($|[#\s,}\]])")
+			new_text, count = pattern.subn(r"\1~\2", new_text)
+			changes.append({
+				"file": display,
+				"value": value,
+				"kind": kind,
+				"location": location,
+				"occurrences": count,
+			})
+		if new_text != text:
+			try:
+				with disk.open("w", encoding="utf-8", newline="") as f:
+					f.write(new_text)
+			except OSError as exc:
+				failures.append((display, str(exc)))
+	return changes, failures
+
+
 def report_to_dict(report):
 	return {
 		"roots": report.roots,
@@ -594,8 +649,17 @@ def parse_root_spec(spec):
 	return ("", value)
 
 
-def run_headless(roots, json_path):
+def run_headless(roots, json_path, fix=False):
 	report = check_assets(roots)
+	if fix:
+		changes, failures = fix_missing_references(report)
+		for change in changes:
+			print(f"[FIX] {change['file']}: '{change['value']}' -> ~ "
+				f"(at {change['location']}, {change['occurrences']} occurrence(s))")
+		for file, error in failures:
+			print(f"[FAIL] {file}: fix failed: {error}")
+		if changes:
+			report = check_assets(roots)
 	for issue in report.issues:
 		tag = "FAIL" if issue.severity == "error" else "WARN"
 		location = f" (at {issue.location})" if issue.location else ""
@@ -622,13 +686,15 @@ def main(argv=None):
 	parser.add_argument("--root", action="append", default=[], metavar="[NAME:]PATH",
 		help="additional content root (repeatable); defaults: content, engine:engine/content")
 	parser.add_argument("--json", metavar="FILE", help="write JSON report to FILE")
+	parser.add_argument("--fix", action="store_true",
+		help="replace unresolved references with null (~), then re-validate")
 	args = parser.parse_args(argv)
 	roots = list(DEFAULT_ROOTS)
 	for spec in args.root:
 		parsed = parse_root_spec(spec)
 		if parsed:
 			roots.append(parsed)
-	return run_headless(roots, args.json)
+	return run_headless(roots, args.json, fix=args.fix)
 
 
 if __name__ == "__main__":
