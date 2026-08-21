@@ -49,6 +49,7 @@ namespace z1 {
 
 	private:
 		GLFWwindow*  m_window;
+		uint32_t m_debug_group_depth = 0; // balance guard for push/pop debug groups
 	};
 
 }

@@ -228,8 +228,8 @@ def main(argv=None):
 	)
 	parser.add_argument("--suite", action="append", default=[],
 		help="Suite name to run (repeatable)")
-	parser.add_argument("--config", default="Debug",
-		help="Build config (default: Debug)")
+	parser.add_argument("--config", default="Hybrid",
+		help="Build config (default: Hybrid)")
 	parser.add_argument("--update-baseline", action="store_true",
 		help="Update baseline files with measured values")
 	parser.add_argument("--suites-dir", default="dev/benchmark/suites",
@@ -242,7 +242,7 @@ def main(argv=None):
 		help="Report output directory (default: dev/validation/reports)")
 	args = parser.parse_args(argv)
 
-	config = normalize_config(args.config) or "Debug"
+	config = normalize_config(args.config) or "Hybrid"
 	root = repo_root()
 	suites_dir = root / args.suites_dir
 	baseline_dir = root / (args.baseline_dir or f"dev/benchmark/baselines/{config.lower()}")

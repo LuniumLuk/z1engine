@@ -6,18 +6,12 @@ newoption {
 workspace "z1engine"
 	architecture "x64"
 	startproject "game"
-	configurations { "Debug", "Release", "Profile" }
+	configurations { "Debug", "Release", "Profile", "Hybrid" }
 
 	filter { "action:vs2022", "options:vs2026", "system:windows" }
 		toolset "v145"
 
 	filter {}
-
-	configurations
-	{
-		"Debug",
-		"Release",
-	}
 
 	-- outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 	outputdir = "%{cfg.buildcfg}" -- Only windows x86_64 is supported for now
@@ -70,6 +64,11 @@ workspace "z1engine"
 				defines "RELEASE"
 				staticruntime "on"
 				optimize "on"
+		filter "configurations:Hybrid"
+			defines { "NDEBUG", "DEBUG", "ENABLE_ASSERTS" }
+			staticruntime "on"
+			symbols "on"
+			optimize "on"
 	end
 
 	group "dependency"

@@ -16,7 +16,7 @@ All build commands go through `python dev/z1.py <command>`:
 | Command | Purpose |
 |---------|---------|
 | `generate` | Regenerate VS project files via premake5 |
-| `compile` | Build solution (`--config Debug\|Release\|Profile`) |
+| `compile` | Build solution (`--config Debug\|Release\|Profile\|Hybrid`) |
 | `format` | Format source code (tabs, whitespace, CRLF) |
 | `validate-shaders` | Validate all GLSL shaders |
 | `test` | Discover and run `test_*.exe` |
@@ -40,15 +40,16 @@ python dev/z1.py compile
 | `Debug` | Development, assertions enabled, no optimization |
 | `Release` | Optimized, for shipping |
 | `Profile` | Optimized with profiling instrumentation |
+| `Hybrid` | Optimized with asserts, checks, and debug symbols (breakpoints work) — default for dev CLI and run scripts |
 
 ## Output Paths
 
 | Artifact | Path |
 |----------|------|
-| Editor | `engine/bin/Debug/editor.exe` |
-| Game | `engine/bin/Debug/game.exe` |
-| Tests | `engine/bin/test/Debug/test_*.exe` |
-| Shader validator | `engine/bin/Debug/shader_validator.exe` |
+| Editor | `engine/bin/Hybrid/editor.exe` |
+| Game | `engine/bin/Hybrid/game.exe` |
+| Tests | `engine/bin/test/Hybrid/test_*.exe` |
+| Shader validator | `engine/bin/Hybrid/shader_validator.exe` |
 | Intermediate | `engine/intermediate/` |
 
 ## Solution Structure

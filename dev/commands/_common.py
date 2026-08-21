@@ -69,7 +69,7 @@ def normalize_path(p):
 # ---------------------------------------------------------------------------
 # Config normalization
 # ---------------------------------------------------------------------------
-_VALID_CONFIGS = {"debug": "Debug", "release": "Release", "profile": "Profile"}
+_VALID_CONFIGS = {"debug": "Debug", "release": "Release", "profile": "Profile", "hybrid": "Hybrid"}
 
 def normalize_config(name):
 	"""Normalize a build config name (case-insensitive). Returns None if invalid."""

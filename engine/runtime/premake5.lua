@@ -54,7 +54,7 @@ project "runtime"
 
 	filter { "system:windows", "configurations:Debug" }
 		libdirs { "%{wks.location}/engine/3rdparty/physx/lib/Debug" }
-	filter { "system:windows", "configurations:Release" }
+	filter { "system:windows", "configurations:Release or Hybrid" }
 		libdirs { "%{wks.location}/engine/3rdparty/physx/lib/Release" }
 	filter {}
 
@@ -144,3 +144,14 @@ project "runtime"
 		}
 		runtime "Release"
 		optimize "on"
+
+	filter "configurations:Hybrid"
+		defines
+		{
+			"NDEBUG",
+			"DEBUG",
+			"ENABLE_ASSERTS",
+		}
+		runtime "Release"
+		optimize "on"
+		symbols "on"

@@ -50,11 +50,11 @@ def main(argv=None):
 						help="Glob pattern to filter test executables (e.g., 'test_render*')")
 	parser.add_argument("--name", action="append", default=[],
 						help="Exact test name (stem or filename), repeatable")
-	parser.add_argument("--config", default="Debug",
-						help="Build config (default: Debug)")
+	parser.add_argument("--config", default="Hybrid",
+						help="Build config (default: Hybrid)")
 	args = parser.parse_args(argv)
 
-	config = normalize_config(args.config) or "Debug"
+	config = normalize_config(args.config) or "Hybrid"
 	root = repo_root()
 	test_dir = root / "engine" / "bin" / "test" / config
 

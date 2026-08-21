@@ -29,3 +29,7 @@ project "shader_validator"
 
 	filter "configurations:Release"
 		optimize "on"
+
+	filter "configurations:Hybrid"
+		symbols "on"
+		optimize "on"

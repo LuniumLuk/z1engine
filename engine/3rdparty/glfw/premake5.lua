@@ -97,6 +97,11 @@ project "glfw"
 		runtime "Release"
 		optimize "on"
 
+	filter "configurations:Hybrid"
+		runtime "Release"
+		optimize "on"
+		symbols "on"
+
 	filter "configurations:Dist"
 		runtime "Release"
 		optimize "on"

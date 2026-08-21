@@ -50,26 +50,26 @@ This guide provides instructions on how to build z1engine from source on Windows
 ### Option 1: Visual Studio
 
 1.  Open `z1engine.sln` in Visual Studio 2026.
-2.  Select your build configuration (Debug, Release, Profile) and platform (x64).
+2.  Select your build configuration (Hybrid, Debug, Release, Profile) and platform (x64).
 3.  Right-click the **z1engine** solution in Solution Explorer and select **Build Solution** (or press `Ctrl+Shift+B`).
 4.  The output binaries will be located in:
-    `engine\bin\<Configuration>\` (e.g., `engine\bin\Debug\editor.exe`)
+    `engine\bin\<Configuration>\` (e.g., `engine\bin\Hybrid\editor.exe`)
 
 ### Option 2: Command Line
 
 You can use the provided build script to compile directly from the command line:
 
 ```cmd
-build_vs2026.bat
+python dev/z1.py compile
 ```
 
-This script automatically builds the `Debug` configuration by default.
+This builds the `Hybrid` configuration by default (pass `--config Debug|Release|Profile|Hybrid` to override).
 
 ## Running the Engine
 
 The main entry point is the **Editor**.
 
-1.  Navigate to the build output directory (e.g., `engine\bin\Debug\`).
+1.  Navigate to the build output directory (e.g., `engine\bin\Hybrid\`).
 2.  Run `editor.exe`.
 3.  The editor should launch and load the default scene.
 

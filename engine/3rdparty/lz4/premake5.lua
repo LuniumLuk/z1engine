@@ -24,3 +24,8 @@ project "lz4"
 	filter "configurations:Release"
 		runtime "Release"
 		optimize "on"
+
+	filter "configurations:Hybrid"
+		runtime "Release"
+		optimize "on"
+		symbols "on"

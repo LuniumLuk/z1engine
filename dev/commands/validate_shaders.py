@@ -14,11 +14,11 @@ def main(argv=None):
 		prog="z1 validate-shaders",
 		description="Validate all GLSL shaders using shader_validator.",
 	)
-	parser.add_argument("--config", default="Debug",
-						help="Build config to find shader_validator (default: Debug)")
+	parser.add_argument("--config", default="Hybrid",
+						help="Build config to find shader_validator (default: Hybrid)")
 	args = parser.parse_args(argv)
 
-	config = normalize_config(args.config) or "Debug"
+	config = normalize_config(args.config) or "Hybrid"
 	root = repo_root()
 	ext = get_executable_extension()
 

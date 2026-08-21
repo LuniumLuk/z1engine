@@ -24,13 +24,13 @@ def main(argv=None):
 		prog="z1 compile",
 		description="Build the z1engine solution.",
 	)
-	parser.add_argument("--config", default="Debug",
-						help="Build configuration: Debug, Release, Profile (case-insensitive)")
+	parser.add_argument("--config", default="Hybrid",
+						help="Build configuration: Debug, Release, Profile, Hybrid (case-insensitive)")
 	args = parser.parse_args(argv)
 
 	config = normalize_config(args.config)
 	if config is None:
-		print_fail(f"Invalid config '{args.config}'. Valid: Debug, Release, Profile")
+		print_fail(f"Invalid config '{args.config}'. Valid: Debug, Release, Profile, Hybrid")
 		return make_result("fail", "compile", exit_code=EXIT_CONFIG_ERROR,
 						   detail=f"invalid config: {args.config}")
 

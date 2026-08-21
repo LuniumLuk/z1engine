@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 COMMANDS = {
 	"generate":         ("commands.generate",         "Regenerate VS project files from premake5"),
-	"compile":          ("commands.compile",          "Build the solution (Debug|x64 by default)"),
+	"compile":          ("commands.compile",          "Build the solution (Hybrid|x64 by default)"),
 	"format":           ("commands.format_cmd",       "Format source code (tabs, trailing whitespace, CRLF)"),
 	"validate-shaders": ("commands.validate_shaders", "Validate all GLSL shaders"),
 	"test":             ("commands.test",             "Discover and run test executables"),

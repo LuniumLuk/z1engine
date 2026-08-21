@@ -77,3 +77,14 @@ project "editor"
 		}
 		runtime "Release"
 		optimize "on"
+
+	filter "configurations:Hybrid"
+		defines
+		{
+			"NDEBUG",
+			"DEBUG",
+			"ENABLE_ASSERTS",
+		}
+		runtime "Release"
+		optimize "on"
+		symbols "on"

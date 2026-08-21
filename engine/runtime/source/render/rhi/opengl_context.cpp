@@ -8,7 +8,44 @@
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
 
+#include <mutex>
+
+#ifdef PLATFORM_WINDOWS
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
+#endif
+
 namespace z1 {
+
+#ifdef PLATFORM_WINDOWS
+	// logs a symbolicated stack trace of the current thread; pinpoints which GL
+	// call generated a high-severity debug message (run with Z1_GL_DEBUG_SYNC=1
+	// to make the callback fire synchronously at the exact offending call)
+	static void log_gl_error_stack_trace() {
+		static std::once_flag s_once;
+		std::call_once(s_once, []() {
+			SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_UNDNAME);
+			SymInitialize(GetCurrentProcess(), nullptr, TRUE);
+		});
+
+		void* frames[12] = {};
+		USHORT count = RtlCaptureStackBackTrace(0, 12, frames, nullptr);
+
+		for (USHORT i = 0; i < count; ++i) {
+			char symbol_buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME] = {};
+			SYMBOL_INFO* symbol = reinterpret_cast<SYMBOL_INFO*>(symbol_buffer);
+			symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+			symbol->MaxNameLen = MAX_SYM_NAME;
+
+			DWORD64 displacement = 0;
+			std::string name = "<unknown>";
+			if (SymFromAddr(GetCurrentProcess(), reinterpret_cast<DWORD64>(frames[i]), &displacement, symbol)) {
+				name = symbol->Name;
+			}
+			CORE_ERROR("    gl-error-stack [{0}] {1} + 0x{2:x}", i, name, (uint64_t)displacement);
+		}
+	}
+#endif
 
 	void glCheckError_(const char *file, int line) {
 		GLenum code;
@@ -48,6 +85,11 @@ namespace z1 {
 		switch (severity) {
 		case GL_DEBUG_SEVERITY_HIGH:
 			CORE_ERROR("OpenGL: {0}", message);
+#ifdef PLATFORM_WINDOWS
+			if (type == GL_DEBUG_TYPE_ERROR) {
+				log_gl_error_stack_trace();
+			}
+#endif
 			break;
 		case GL_DEBUG_SEVERITY_MEDIUM:
 			CORE_WARN("OpenGL: {0}", message);
@@ -86,6 +128,14 @@ namespace z1 {
 			// Synchronous debug output adds overhead; enable only in debug builds
 			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 			DEBUG_RUN(glCheckError());
+#else
+			// opt-in synchronous debug output (Z1_GL_DEBUG_SYNC=1) so errors are
+			// reported at the exact offending call, making stack traces precise
+			char const* sync_env = std::getenv("Z1_GL_DEBUG_SYNC");
+			if (sync_env && sync_env[0] == '1') {
+				glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+				DEBUG_RUN(glCheckError());
+			}
 #endif
 		}
 
@@ -194,12 +244,25 @@ namespace z1 {
 			-1,
 			name.c_str()
 		);
+		DEBUG_RUN(glCheckError());
+		++m_debug_group_depth;
 #endif
 	}
 
 	void OpenGLContext::pop_debug_group() {
 #ifndef PLATFORM_MACOS
+		if (m_debug_group_depth == 0) {
+			// popping an empty debug group stack would generate GL_STACK_UNDERFLOW;
+			// skip the call and report who asked for the unmatched pop
+			CORE_WARN("OpenGL: pop_debug_group called with empty debug group stack");
+#ifdef PLATFORM_WINDOWS
+			log_gl_error_stack_trace();
+#endif
+			return;
+		}
+		--m_debug_group_depth;
 		glPopDebugGroup();
+		DEBUG_RUN(glCheckError());
 #endif
 	}
 

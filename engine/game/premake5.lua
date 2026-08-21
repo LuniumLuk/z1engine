@@ -85,3 +85,13 @@ project "game"
 	filter "configurations:Release"
 		defines "RELEASE"
 		optimize "on"
+
+	filter "configurations:Hybrid"
+		defines
+		{
+			"NDEBUG",
+			"DEBUG",
+			"ENABLE_ASSERTS",
+		}
+		symbols "on"
+		optimize "on"

@@ -16,13 +16,13 @@ def main(argv=None):
 	)
 	parser.add_argument("--frames", type=int, default=1,
 						help="Number of frames to render (default: 1)")
-	parser.add_argument("--config", default="Debug",
-						help="Build config (default: Debug)")
+	parser.add_argument("--config", default="Hybrid",
+						help="Build config (default: Hybrid)")
 	parser.add_argument("--scene", default="",
 						help="Scene asset path to load (e.g. scene/ParticleDemo)")
 	args = parser.parse_args(argv)
 
-	config = normalize_config(args.config) or "Debug"
+	config = normalize_config(args.config) or "Hybrid"
 	root = repo_root()
 	ext = get_executable_extension()
 
