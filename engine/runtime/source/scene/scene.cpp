@@ -108,6 +108,27 @@ namespace z1 {
 		if (!entity || !entity->is_valid()) return;
 
 		entity->m_is_destroyed = true;
+
+		// clear the main camera reference right away, editors query it every frame
+		if (m_main_camera == entity) {
+			m_main_camera = nullptr;
+		}
+
+		// remove from the entity lists immediately: the editor UI and serialization
+		// iterate these lists every frame and would access the invalid entity before
+		// the deferred registry destruction runs on the next fixed update
+		auto it = std::find(m_entities.begin(), m_entities.end(), entity);
+		if (it != m_entities.end()) {
+			m_entities.erase(it);
+			mark_dirty();
+		}
+		else {
+			auto it_transient = std::find(m_transient_entities.begin(), m_transient_entities.end(), entity);
+			if (it_transient != m_transient_entities.end()) {
+				m_transient_entities.erase(it_transient);
+			}
+		}
+
 		m_pending_destroy_entities.push_back(entity);
 	}
 
@@ -115,28 +136,21 @@ namespace z1 {
 		for (auto& entity : m_pending_destroy_entities) {
 			if (!entity) continue;
 
-			// Manually detach scripts first to ensure they can run cleanup logic
-			// while the entity and its components are still valid.
-			//if (entity->has_component<ScriptComponent>()) {
-			//	entity->get_component<ScriptComponent>().detach_all();
-			//}
+			// detach children whose parent is being destroyed to avoid dangling pointers
+			auto* dead_transform = m_registry.try_get<TransformComponent>(entity->m_handle);
+			if (dead_transform) {
+				auto view = m_registry.view<TransformComponent>();
+				for (auto child : view) {
+					auto& child_transform = view.get<TransformComponent>(child);
+					if (child_transform.m_parent == dead_transform) {
+						child_transform.m_parent = nullptr;
+					}
+				}
+			}
 
 			// Force destruction of the underlying entity in the registry
 			// This ensures components are destroyed even if Python holds a shared_ptr
 			m_registry.destroy(entity->m_handle);
-
-			auto it = std::find(m_entities.begin(), m_entities.end(), entity);
-			if (it != m_entities.end()) {
-				m_entities.erase(it);
-				mark_dirty();
-				continue;
-			}
-
-			auto it_transient = std::find(m_transient_entities.begin(), m_transient_entities.end(), entity);
-			if (it_transient != m_transient_entities.end()) {
-				m_transient_entities.erase(it_transient);
-				// mark_dirty(); // transient entities don't affect scene dirtiness?
-			}
 		}
 		m_pending_destroy_entities.clear();
 	}
@@ -193,6 +207,8 @@ namespace z1 {
 #ifdef PLATFORM_WINDOWS
 		PhysicsSystem::update(this, Timer::fixed_update_delta);
 #endif
+		// scripts may queue entity destruction during their update, flush after
+		flush_pending_destroy_entities();
 	}
 
 	std::shared_ptr<Scene> Scene::create(Filepath const& path) {

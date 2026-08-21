@@ -119,6 +119,7 @@ project "runtime"
 	filter "configurations:Debug"
 		defines
 		{
+			"_DEBUG",
 			"DEBUG",
 			"ENABLE_ASSERTS",
 		}
@@ -126,13 +127,18 @@ project "runtime"
 		symbols "on"
 
 	filter "configurations:Release"
-		defines "RELEASE"
+		defines
+		{
+			"NDEBUG",
+			"RELEASE",
+		}
 		runtime "Release"
 		optimize "on"
 
 	filter "configurations:Profile"
 		defines
 		{
+			"NDEBUG",
 			"ENABLE_PROFILE",
 			"RELEASE",
 		}

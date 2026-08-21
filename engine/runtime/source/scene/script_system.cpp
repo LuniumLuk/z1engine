@@ -106,8 +106,6 @@ namespace z1 {
 				}
 			}
 		}
-
-		scene->flush_pending_destroy_entities();
 	}
 
 	void ScriptSystem::shutdown(Scene* scene) {
