@@ -134,22 +134,30 @@ namespace z1 {
 	}
 
 	void Args::parse(int argc, char* argv[]) {
+		auto is_key = [](std::string const& s) { return s.size() >= 2 && s.substr(0, 2) == "--"; };
 		for (int i = 1; i < argc; ++i) {
 			std::string arg = argv[i];
-			if (arg.size() < 2 || arg.substr(0, 2) != "--") {
+			if (!is_key(arg)) {
 				CORE_WARN("format not correct: {0}, must start with --", arg);
 				continue;
 			}
 			arg = arg.substr(2);
 			size_t equal_pos = arg.find('=');
 			if (equal_pos != std::string::npos) {
-				std::string key = arg.substr(0, equal_pos);
-				std::string value = arg.substr(equal_pos + 1);
-				m_args[key] = value;
+				m_args[arg.substr(0, equal_pos)] = arg.substr(equal_pos + 1);
+				continue;
 			}
-			else {
-				m_args[arg] = "1";
+			if (i + 1 < argc && !is_key(argv[i + 1])) {
+				if (i + 2 < argc && !is_key(argv[i + 2])) {
+					CORE_WARN("format not correct: {0}, key {1} does not support multiple values", argv[i + 2], arg);
+					i += 2;
+					continue;
+				}
+				m_args[arg] = argv[i + 1];
+				++i;
+				continue;
 			}
+			m_args[arg] = "1";
 		}
 	}
 
