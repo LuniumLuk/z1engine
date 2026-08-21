@@ -1,0 +1,8 @@
+meta:
+  guid: texture/envmap/sunrise
+  type: texture2d
+  path: texture/envmap/sunrise
+  extra:
+    sampler_mode: 0
+    wrap_mode: 0
+    hdr: true

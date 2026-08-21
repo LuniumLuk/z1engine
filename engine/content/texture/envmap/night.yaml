@@ -1,0 +1,8 @@
+meta:
+  guid: texture/envmap/night
+  type: texture2d
+  path: texture/envmap/night
+  extra:
+    sampler_mode: 0
+    wrap_mode: 0
+    hdr: true

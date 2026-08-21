@@ -1,0 +1,8 @@
+meta:
+  guid: texture/envmap/studio
+  type: texture2d
+  path: texture/envmap/studio
+  extra:
+    sampler_mode: 0
+    wrap_mode: 0
+    hdr: true
