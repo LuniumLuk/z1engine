@@ -103,7 +103,7 @@ namespace z1 {
 #endif
 			break;
 		case GL_DEBUG_SEVERITY_MEDIUM:
-			CORE_WARN("OpenGL: {0}", message);
+			CORE_DEBUG("OpenGL: {0}", message);
 			break;
 		case GL_DEBUG_SEVERITY_LOW:
 			CORE_DEBUG("OpenGL: {0}", message);
