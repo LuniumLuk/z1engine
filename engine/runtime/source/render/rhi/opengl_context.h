@@ -48,8 +48,12 @@ namespace z1 {
 			uint32_t width, uint32_t height) override;
 
 	private:
+		void create_default_sampler_textures();
+
 		GLFWwindow*  m_window;
 		uint32_t m_debug_group_depth = 0; // balance guard for push/pop debug groups
+		uint32_t m_default_sampler_texture_2d = 0;       // 1x1 white texture
+		uint32_t m_default_sampler_texture_2d_array = 0; // 1x1x1 white texture
 	};
 
 }

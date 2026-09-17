@@ -75,6 +75,9 @@ namespace z1 {
 		uint32_t m_max_image_binding_count = 0;
 		uint32_t m_max_uniform_buffer_binding_count = 0;
 
+		// Unit kept for samplers a program never binds; holds 1x1 fallback textures.
+		uint32_t m_default_sampler_binding = 0;
+
 		uint32_t acquire_image_binding();
 		void release_image_binding(uint32_t binding);
 

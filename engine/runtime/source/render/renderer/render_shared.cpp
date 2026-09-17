@@ -1030,6 +1030,9 @@ namespace z1 {
 					bloom->bind();
 					s->set_uniform_binding("u_bloom_texture", bloom->get_binding());
 				}
+				else {
+					s->set_uniform_binding("u_bloom_texture", g_runtime_context.m_graphics_context->m_default_sampler_binding);
+				}
 
 				m_quad->bind();
 				m_quad->draw(PrimitiveType::Triangles);

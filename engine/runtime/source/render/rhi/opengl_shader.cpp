@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/rhi/opengl_shader.h"
 #include "render/shader_variant.h"
+#include "render/graphics_context.h"
 #include "util/string_utils.h"
 #include "glad/glad.h"
 
@@ -440,6 +441,17 @@ namespace z1 {
 			auto nameStr = std::string(name);
 			m_uniform_block_indices.insert(std::make_pair(nameStr, (uint32_t)m_uniform_blocks.size()));
 			m_uniform_blocks.emplace_back(nameStr, size, binding, variables);
+		}
+
+		// Default every sampler so programs that never set one stay valid.
+		GLint const default_binding = (GLint)g_runtime_context.m_graphics_context->m_default_sampler_binding;
+		glUseProgram(m_handle);
+		for (auto const& uniform : m_uniforms) {
+			if (uniform.m_type == DataType::Sampler2D ||
+				uniform.m_type == DataType::Sampler2DArray ||
+				uniform.m_type == DataType::SamplerCube) {
+				glUniform1i(uniform.m_location, default_binding);
+			}
 		}
 	}
 

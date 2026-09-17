@@ -145,8 +145,13 @@ namespace z1 {
 		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &val);
 		m_max_uniform_buffer_binding_count = static_cast<uint32_t>(val);
 
+		// Reserve the highest unit for unset samplers; kept out of the pool below.
+		CORE_ASSERT(m_max_image_binding_count > 1, "not enough texture image units!");
+		m_default_sampler_binding = m_max_image_binding_count - 1;
+		create_default_sampler_textures();
+
 		m_free_image_bindings = {};
-		for (uint32_t i = m_max_image_binding_count - 1; i != uint32_t(-1); --i) {
+		for (uint32_t i = m_max_image_binding_count - 2; i != uint32_t(-1); --i) {
 			m_free_image_bindings.push(i);
 		}
 
@@ -158,6 +163,34 @@ namespace z1 {
 		m_swapchain_framebuffer = std::make_shared<OpenGLSwapChainFramebuffer>();
 		m_current_framebuffer = m_swapchain_framebuffer;
 		m_current_pipeline = nullptr;
+	}
+
+	// Creates the 1x1 fallback textures backing the reserved default sampler binding.
+	void OpenGLContext::create_default_sampler_textures() {
+		uint32_t const white = 0xffffffffu;
+
+		glGenTextures(1, &m_default_sampler_texture_2d);
+		glBindTexture(GL_TEXTURE_2D, m_default_sampler_texture_2d);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &white);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glGenTextures(1, &m_default_sampler_texture_2d_array);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, m_default_sampler_texture_2d_array);
+		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, 1, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &white);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glActiveTexture(GL_TEXTURE0 + m_default_sampler_binding);
+		glBindTexture(GL_TEXTURE_2D, m_default_sampler_texture_2d);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, m_default_sampler_texture_2d_array);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	}
 
 	void OpenGLContext::swap_buffers() {

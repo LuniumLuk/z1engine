@@ -102,6 +102,20 @@ sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
 | Shader | `shader.h` | `rhi/opengl_shader.h` |
 | Vertex Array | `vertex_array.h` | `rhi/opengl_vertex_array.h` |
 
+### Sampler bindings (2026-09-17)
+
+- `GraphicsContext::m_default_sampler_binding` is the highest texture unit; it is
+  excluded from the image binding pool and always holds 1x1 white 2D and 2D-array
+  textures (`OpenGLContext::create_default_sampler_textures`).
+- `OpenGLShader::link_shaders` points every sampler uniform at that unit, so a
+  program that never sets a sampler still references a texture whose target matches.
+- Passes/materials that bind an optional texture (AO, sky IBL, bloom, shadow map)
+  must fall back to `m_default_sampler_binding` when the resource is absent.
+- Why: a sampler left at GL's default value (unit 0) can reference a texture of a
+  mismatched target (e.g. `sampler2D` on the CSM `GL_TEXTURE_2D_ARRAY`), which
+  macOS drivers reject with `GL_INVALID_OPERATION` at draw time. Windows drivers
+  silently tolerate it.
+
 ## Key Types
 
 - `ImageFormat` -- pixel format enum (in `data_types.h`)

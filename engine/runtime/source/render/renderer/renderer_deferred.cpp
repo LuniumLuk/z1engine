@@ -329,10 +329,16 @@ namespace z1 {
 				ao_image->bind();
 				s->set_uniform_binding("u_ao_texture", ao_image->get_binding());
 			}
+			else {
+				s->set_uniform_binding("u_ao_texture", g_runtime_context.m_graphics_context->m_default_sampler_binding);
+			}
 
 			if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
 				m_shared.m_sky_ibl_image->bind();
 				s->set_uniform_binding("u_sky_ibl_texture", m_shared.m_sky_ibl_image->get_binding());
+			}
+			else {
+				s->set_uniform_binding("u_sky_ibl_texture", g_runtime_context.m_graphics_context->m_default_sampler_binding);
 			}
 
 			// Bind G-buffer textures
