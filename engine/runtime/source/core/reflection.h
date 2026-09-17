@@ -12,6 +12,9 @@
 
 namespace z1 {
 
+	template<typename Derived>
+	struct Asset;
+
 	// Forward declarations for asset-type trait
 	struct Texture2D;
 	struct StaticMesh;

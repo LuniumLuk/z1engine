@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "asset/asset_manager.h"
+#include "asset/asset.h"
 #include "core/io.h"
 #include "util/yaml.h"
 

@@ -2,12 +2,15 @@
 
 #include "core/core.h"
 #include "core/guid.h"
+#include "asset/asset_common.h"
 #include "render/shader.h"
-#include "asset/asset.h"
 #include "util/yaml.h"
 #include <type_traits>
 
 namespace z1 {
+
+	template<typename Derived>
+	struct Asset;
 
 	template<typename T>
 	struct API AssetLoader {
