@@ -132,6 +132,17 @@ sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
   macOS drivers reject with `GL_INVALID_OPERATION` at draw time. Windows drivers
   silently tolerate it.
 
+### Binding allocation stability (2026-09-18)
+
+- Image/UBO bindings are handed out **lowest-free-first** (`m_free_image_bindings` /
+  `m_free_uniform_buffer_bindings` are min-heaps in `graphics_context.h`).
+- Do not regress to history-dependent allocation (the old LIFO `std::stack` made the unit
+  layout rotate every frame): the Apple Intel GL driver re-specializes shaders per sampler
+  layout and JIT-compiles them at draw time, which showed up as 100ms+ frame spikes and
+  fps drops while the camera moved (details in `perf-probing-and-quality.md`).
+- Layout must depend only on what is bound at a point in the frame, never on visible
+  content or previous-frame release order.
+
 ## Key Types
 
 - `ImageFormat` -- pixel format enum (in `data_types.h`)

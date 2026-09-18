@@ -2,6 +2,8 @@
 
 #include "core/core.h"
 #include <deque>
+#include <functional>
+#include <queue>
 #include <vector>
 #include <numeric>
 #include <algorithm>
@@ -110,8 +112,11 @@ namespace z1 {
 		std::deque<float> m_frame_time_history;
 
 	protected:
-		std::stack<uint32_t> m_free_image_bindings;
-		std::stack<uint32_t> m_free_uniform_buffer_bindings;
+		// Bindings are handed out lowest-free-first so the unit layout depends only on the images
+		// bound at a point in the frame, not on release history: a LIFO stack made the layout drift
+		// every frame and the Apple GL driver re-specialized shaders per layout (100ms+ spikes).
+		std::priority_queue<uint32_t, std::vector<uint32_t>, std::greater<uint32_t>> m_free_image_bindings;
+		std::priority_queue<uint32_t, std::vector<uint32_t>, std::greater<uint32_t>> m_free_uniform_buffer_bindings;
 	};
 
 }

@@ -5,6 +5,57 @@
 #include "scene/script_system.h"
 #include "util/prober.h"
 
+#include <cctype>
+#include <cstdint>
+#include <cstdlib>
+#include <string>
+
+#ifdef ENABLE_PROBING
+namespace {
+	// Probing-only camera-motion harness used for macOS rotation-cost investigations:
+	//   Z1_AUTOROTATE=<deg/frame>            rotate the primary camera every frame (0 = off)
+	//   Z1_AUTOROTATE_AXIS=x|y|z            rotation axis (default y)
+	//   Z1_AUTOROTATE_STOP=<frame index>    stop rotating once this frame count is reached
+	//   Z1_CAMROT_DISABLE=ao,bloom,taa,shadow,picking  force-disable passes for attribution
+	struct CameraMotionConfig {
+		float deg_per_frame = 0.0f;
+		char axis = 'y';
+		int64_t stop_frame = -1;
+		bool disable_ao = false;
+		bool disable_bloom = false;
+		bool disable_taa = false;
+		bool disable_shadow = false;
+		bool skip_picking = false;
+	};
+
+	CameraMotionConfig const& camera_motion_config() {
+		static CameraMotionConfig const config = []() {
+			CameraMotionConfig c;
+			if (char const* v = std::getenv("Z1_AUTOROTATE")) {
+				c.deg_per_frame = static_cast<float>(std::atof(v));
+			}
+			if (char const* v = std::getenv("Z1_AUTOROTATE_AXIS")) {
+				char const a = static_cast<char>(std::tolower(v[0]));
+				if (a == 'x' || a == 'y' || a == 'z') c.axis = a;
+			}
+			if (char const* v = std::getenv("Z1_AUTOROTATE_STOP")) {
+				c.stop_frame = std::atoll(v);
+			}
+			if (char const* v = std::getenv("Z1_CAMROT_DISABLE")) {
+				std::string const flags = v;
+				c.disable_ao = flags.find("ao") != std::string::npos;
+				c.disable_bloom = flags.find("bloom") != std::string::npos;
+				c.disable_taa = flags.find("taa") != std::string::npos;
+				c.disable_shadow = flags.find("shadow") != std::string::npos;
+				c.skip_picking = flags.find("picking") != std::string::npos;
+			}
+			return c;
+		}();
+		return config;
+	}
+} // namespace
+#endif
+
 void EditorSettings::save() {
 	YAML::Emitter yaml;
 	yaml << YAML::BeginMap;
@@ -289,6 +340,43 @@ void EditorLayer::on_fixed_update() {
 void EditorLayer::on_update(float delta_time) {
 	ScriptSystem::set_blocked(!m_gui->is_viewport_focused());
 
+#ifdef ENABLE_PROBING
+	// Probing-only camera-motion harness (see camera_motion_config above); compiled out otherwise.
+	{
+		auto const& motion = camera_motion_config();
+		auto& global = *g_runtime_context.m_global;
+		if (motion.disable_ao) global.ao_enabled = false;
+		if (motion.disable_bloom) global.pp_bloom_enabled = false;
+		if (motion.disable_taa) global.taa_enabled = false;
+		if (motion.disable_shadow) {
+			global.sm_resolution = ShadowResolution::Res512;
+			global.sm_cascade_count = ShadowCascades::One;
+		}
+		if (motion.deg_per_frame != 0.0f && g_runtime_context.m_scene) {
+			if (motion.stop_frame < 0 || static_cast<int64_t>(m_frame_count) < motion.stop_frame) {
+				auto camera = g_runtime_context.m_scene->get_main_camera();
+				if (camera) {
+					auto& rotation = camera->get_component<TransformComponent>().m_rotation;
+					switch (motion.axis) {
+					case 'x':
+						rotation.x += motion.deg_per_frame;
+						PROBE_VALUE("camera_rot", rotation.x);
+						break;
+					case 'z':
+						rotation.z += motion.deg_per_frame;
+						PROBE_VALUE("camera_rot", rotation.z);
+						break;
+					default:
+						rotation.y += motion.deg_per_frame;
+						PROBE_VALUE("camera_rot", rotation.y);
+						break;
+					}
+				}
+			}
+		}
+	}
+#endif
+
 	m_fps_timer += delta_time;
 	m_fps_counter += 1;
 	if (m_fps_timer >= 1.0) {
@@ -323,7 +411,12 @@ void EditorLayer::on_update(float delta_time) {
 	//g_runtime_context.m_renderer_2d->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
 	{
 		PROBE_SCOPE("picking");
-		m_picking->render(g_runtime_context.m_scene);
+#ifdef ENABLE_PROBING
+		if (!camera_motion_config().skip_picking)
+#endif
+		{
+			m_picking->render(g_runtime_context.m_scene);
+		}
 	}
 
 	g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);

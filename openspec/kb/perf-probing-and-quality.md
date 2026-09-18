@@ -35,6 +35,38 @@ stream syncs, so GPU timer samples arrive only sporadically; `Z1_PROBE_FINISH=1`
 `glFinish` but serialises the pipeline. Use pass-toggle deltas to attribute GPU cost. See
 `docs/PROFILING_MACOS_OPENGL.md`.
 
+## Camera-motion harness (probing builds, 2026-09-18)
+
+Editor-side env knobs (`editor_layer.cpp`, compiled only with `ENABLE_PROBING`) to reproduce camera-motion
+load without user input (scene scripts are blocked while the viewport is unfocused, so a real RMB drag
+cannot be scripted):
+
+- `Z1_AUTOROTATE=<deg/frame>` — rotate the primary camera every frame (0 = off)
+- `Z1_AUTOROTATE_AXIS=x|y|z` — rotation axis (default y); `Z1_AUTOROTATE_STOP=<frame>` — stop at a frame
+- `Z1_CAMROT_DISABLE=ao,bloom,taa,shadow,picking` — force-disable passes for attribution
+
+Repro/verification: `Z1_AUTOROTATE=2 Z1_PROBE_EVERY=1 ./engine/bin/Hybrid/game --frames=600` and read the
+per-frame `[probe]` reports (`Z1_PROBE_EVERY=1` gives one window per frame).
+
+### Apple Intel driver shader recompile storms (root-caused 2026-09-18)
+
+- **Symptom:** rotating the viewport camera dropped fps drastically (LOW 73→26, HIGH 91→45). Probe showed
+  `renderer_draw` CPU at 0.7ms idle vs 25–40ms while rotating, **GPU flat (~5–6ms)** — CPU-bound, not GPU.
+- **Mechanism:** `sample <pid>` showed ~94% of main-thread time inside the driver's shader compiler
+  (`USC::CompilePixelShaderOpenGL`/IGC/vISA) invoked at draw time under the fullscreen passes (deferred
+  lighting, AO). The compiles came in ~1s storms (90–220ms/frame) that started exactly when the visible
+  draw set changed (an object entering/leaving the frustum) and decayed on their own.
+- **Trigger:** image/UBO bindings were allocated from a LIFO stack, so the texture-unit layout depended on
+  release history and **permuted every frame** (verified with a temporary GL state dump). The Apple Intel GL
+  driver treats each sampler-unit layout as a new pipeline specialization; every new layout forced more
+  JIT compiles, and each draw-set change introduced a batch of new layouts (hence the storms).
+- **Fix:** allocate bindings lowest-free-first (`std::priority_queue` min-heaps in `graphics_context.h`).
+  Layouts are now stable per frame and independent of visible content; verified: rotating run `renderer_draw`
+  stays <1ms/frame with only the startup compile spike (HIGH: 45→~93fps avg incl. startup, GPU ~8.8ms).
+- **Lesson for future perf work:** layout/history-dependent GL state that changes per frame is dangerous on
+  macOS; keep per-frame state (bindings, unit assignments) deterministic. See also `render-pipeline.md`
+  "Binding allocation stability".
+
 ## Quality presets (editor only)
 
 - `engine/editor/source/quality_preset.{h,cpp}`: `QualityPreset` (`Low`/`Medium`/`High`) +
