@@ -17,15 +17,15 @@
 |------|--------|--------|
 | G-Buffer | `gbuffer.glsl` | Albedo, normal, position, material buffers |
 | Shadow | `shadow.glsl` | Shadow map |
-| AO (SSAO/GTAO) | `ssao.glsl` / `gtao.glsl` | Half-res AO buffer (optional `ao_blur.glsl`) |
+| AO (SSAO/GTAO) | `ssao.glsl` / `gtao.glsl` | Half- or quarter-res AO buffer (optional `ao_blur.glsl`) |
 | Lighting | `deferred_lighting.glsl` | Lit color buffer |
 | Skybox | `deferred_skybox.glsl` | Background fill |
 
 ### Ambient Occlusion (2026-08-14)
 
-Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `GlobalSettings` AO fields (`ao_enabled`, `ao_type`, `ao_radius`, `ao_intensity`, `ao_power`, `ao_bias`, `ao_blur_enabled`, `ao_blur_strength`) exposed in the editor inspector under `ambient_occlusion`.
+Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `GlobalSettings` AO fields (`ao_enabled`, `ao_type`, `ao_resolution`, `ao_radius`, `ao_intensity`, `ao_power`, `ao_bias`, `ao_blur_enabled`, `ao_blur_strength`) exposed in the editor inspector under `ambient_occlusion`.
 
-- AO computed at **half resolution** (RGBA8) in view space from depth + world-space normal; position reconstructed from depth via inverse projection.
+- AO computed at **half or quarter resolution** (RGBA8, selected by `ao_resolution`) in view space from depth + world-space normal; position reconstructed from depth via inverse projection. The buffers are sized in `RenderShared::ensure_buffers`; changing the setting recreates them via the existing size check.
 - `RenderShared::add_ao_pass(rg, depth_input, normal_input)` adds `"ao"` (+ `"ao-blur"` when enabled) and returns the final pass name; consumers call `depends_on()` on it and bind `get_ao_image()`.
 - **Deferred**: AO pass reads `gbuffer-depth`/`gbuffer-normal` after the G-buffer pass; `deferred_lighting.glsl` multiplies ambient by AO.
 - **Forward**: a `prepass` (depth+normal) renders opaque+mask geometry with the GBuffer shader variant before the AO pass; forward PBR/phone shaders sample `u_ao_texture` at `v_screen_uv` (location 8 varying) and multiply ambient.
@@ -46,7 +46,7 @@ Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `Gl
 - Instance data: position, color, size, rotation per alive particle
 - VBO dynamically resized to match `m_max_particles * sizeof(ParticleInstanceData)`
 - `add_particle_pass(rg, scene, input_pass, shadow_image)` -- shadow_image enables CSM shadow reception per emitter
-- `add_particle_shadow_passes(rg, scene, shadow_fb, csm_layers)` -- appends 4 depth-only passes after mesh shadow passes using `LoadOp::Load`
+- `add_particle_shadow_passes(rg, scene, shadow_fb, csm_layers)` -- appends one depth-only pass per configured cascade after mesh shadow passes using `LoadOp::Load`
 - Shadow receive: binds CSM shadow array, calls `set_uniform_block_binding("Global", ...)`, sets `u_receive_shadows` per emitter
 - Shadow cast: per-cascade billboard depth pass; skips emitters with `m_cast_shadows = false`
 - Both controlled by `ParticleComponent::m_receive_shadows` and `m_cast_shadows` (default `true`)
@@ -71,6 +71,17 @@ Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `Gl
 - `Renderer` -- high-level interface: `Renderer::submit()`
 - `Renderer2D` -- 2D sprite batching (`renderer/renderer_2d.h`)
 
+## Shadows (cascaded shadow maps)
+
+- `GlobalSettings::sm_resolution` (512/1024/2048/4096) and `sm_cascade_count` (1-4) configure the CSM array;
+  both are reflected/serialized and editable under the `shadow` group.
+- `RenderShared::ensure_shadow_resources()` (called from `ensure_buffers()`) allocates the depth array with
+  exactly `sm_cascade_count` layers at `sm_resolution`² and recreates it only when either setting changes.
+- `calculate_csm_splits` computes N split distances (lambda 0.95) and N light matrices; unused
+  `sun_projview` slots repeat the last valid cascade so shaders never read uninitialized matrices.
+- Shaders pick the cascade with `u_csm_cascade_count` guards (`include/lighting.glsl::get_cascade_index`,
+  `particle.glsl`): only existing layers are sampled, beyond-range distances clamp to the last cascade.
+
 ### TAA Pipeline (2026-07-23 upgrade)
 
 TAA now uses a modern algorithm with: jitter compensation (UV offset passed to
@@ -86,6 +97,11 @@ sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
 - `taa_blend` semantics changed from 0.9 (history weight) to 0.1 (new-frame weight)
 - Sharpen pass reuses `history_colors[read_idx]` as output target (overwritten
   after serving as TAA history input)
+- **Conditional passes:** with `taa_enabled == false` the renderers do not add the velocity,
+  TAA or sharpen passes at all and the post-process pass reads the scene color (or SSR output) directly;
+  with `pp_bloom_enabled == false` the bloom chain is skipped entirely and post-process samples no bloom texture.
+  `add_bloom_pass(rg, input)` and `add_postprocess_pass(rg, target, scene_input, bloom_present)` take the
+  chain inputs as parameters.
 
 ## RHI (Render Hardware Interface)
 

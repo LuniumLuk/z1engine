@@ -11,7 +11,7 @@
 #include <array>
 #include <cstddef>
 
-#define CSM_LAYERS 4
+#define MAX_CSM_CASCADES 4
 
 namespace z1 {
 
@@ -71,6 +71,9 @@ namespace z1 {
 		std::shared_ptr<Pipeline> m_pipeline_ao_blur;
 		std::shared_ptr<Framebuffer> m_shadow_framebuffer;
 		std::shared_ptr<Image> m_shadow_image;
+		// Allocation state of the shadow resources, kept in sync by ensure_shadow_resources()
+		uint32_t m_shadow_resolution = 0;
+		uint32_t m_shadow_cascade_count = 0;
 		std::shared_ptr<Framebuffer> m_ao_framebuffer;
 		std::shared_ptr<Framebuffer> m_ao_blur_framebuffer;
 		glm::vec2 m_ao_texel_size = { 0.0f, 0.0f };
@@ -106,6 +109,10 @@ namespace z1 {
 		// Returns true if history buffers were just created (uninitialized).
 		bool ensure_buffers(uint32_t width, uint32_t height);
 
+		// Allocates the shadow depth array for the configured resolution/cascade count;
+		// recreates the framebuffer only when either setting changed.
+		void ensure_shadow_resources();
+
 		void update_lights(std::shared_ptr<Scene> const& scene);
 		void update_sky_light(std::shared_ptr<Scene> const& scene);
 		void apply_sky_light(PerFrameConst& per_frame) const;
@@ -133,8 +140,8 @@ namespace z1 {
 		void add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview, std::shared_ptr<MaterialInstance> const& default_material);
 		void add_taa_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& history_write, std::shared_ptr<Framebuffer> const& history_read, std::string const& scene_color_input = "scene-color");
 		void add_taa_sharpen_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& source);
-		void add_bloom_pass(RenderGraph& rg);
-		void add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target);
+		void add_bloom_pass(RenderGraph& rg, std::string const& input);
+		void add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target, std::string const& scene_input, bool bloom_present);
 
 	};
 

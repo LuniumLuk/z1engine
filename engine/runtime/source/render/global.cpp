@@ -35,6 +35,7 @@ namespace z1 {
 			m_data.sun_projview[i] = sun_projview[i];
 		}
 		m_data.csm_splits = csm_splits;
+		m_data.csm_cascade_count = (int32_t)sm_cascade_count;
 		m_data.sun_direction = glm::vec4(sun_direction, 0.0f);
 		m_data.sun_intensity = sun_color * sun_intensity;
 		m_data.cam_position = glm::vec4(cam_position, 0.0f);

@@ -3,6 +3,7 @@
 
 #include "core/reflection_hooks.h"
 #include "scene/script_system.h"
+#include "util/prober.h"
 
 void EditorSettings::save() {
 	YAML::Emitter yaml;
@@ -13,6 +14,7 @@ void EditorSettings::save() {
 	yaml << YAML::Key << "curr_resolution" << YAML::Value << curr_resolution;
 	yaml << YAML::Key << "show_skeleton_guizmos" << YAML::Value << show_skeleton_guizmos;
 	yaml << YAML::Key << "skeleton_gizmo_size" << YAML::Value << skeleton_gizmo_size;
+	yaml << YAML::Key << "quality_preset" << YAML::Value << (int)quality_preset;
 	yaml << YAML::EndMap;
 
 	std::ofstream fout("editor_settings.yaml");
@@ -37,6 +39,8 @@ void EditorSettings::load() {
 			show_skeleton_guizmos = yaml["show_skeleton_guizmos"].as<bool>();
 		if (yaml["skeleton_gizmo_size"])
 			skeleton_gizmo_size = yaml["skeleton_gizmo_size"].as<float>();
+		if (yaml["quality_preset"])
+			quality_preset = (QualityPreset)yaml["quality_preset"].as<int>();
 	} catch (...) {
 		std::cout << "failed to load editor settings" << std::endl;
 	}
@@ -261,6 +265,10 @@ EditorLayer::EditorLayer() {
 	else {
 		load_scene();
 	}
+
+	// applied after the initial scene load so the preset wins over the scene's stored settings;
+	// loading another scene later leaves that scene's settings untouched
+	apply_quality_preset(*g_runtime_context.m_global, m_settings.quality_preset);
 }
 
 EditorLayer::~EditorLayer() {
@@ -292,7 +300,10 @@ void EditorLayer::on_update(float delta_time) {
 		m_fps_timer = 0.0;
 		m_fps_counter = 0;
 	}
-	g_runtime_context.m_scene->on_update(delta_time);
+	{
+		PROBE_SCOPE("scene_update");
+		g_runtime_context.m_scene->on_update(delta_time);
+	}
 
 	// material editor preview is drawn before the main viewport so the
 	// global camera matrices end the frame in the main viewport's state
@@ -300,14 +311,20 @@ void EditorLayer::on_update(float delta_time) {
 		m_material_editor.render_preview(delta_time);
 	}
 
-	if (g_runtime_context.m_global->render_mode == RenderMode::Deferred) {
-		g_runtime_context.m_renderer_deferred->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
-	}
-	else {
-		g_runtime_context.m_renderer_forward->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
+	{
+		PROBE_SCOPE("renderer_draw");
+		if (g_runtime_context.m_global->render_mode == RenderMode::Deferred) {
+			g_runtime_context.m_renderer_deferred->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
+		}
+		else {
+			g_runtime_context.m_renderer_forward->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
+		}
 	}
 	//g_runtime_context.m_renderer_2d->draw(g_runtime_context.m_scene, m_gui->get_viewport_framebuffer());
-	m_picking->render(g_runtime_context.m_scene);
+	{
+		PROBE_SCOPE("picking");
+		m_picking->render(g_runtime_context.m_scene);
+	}
 
 	g_runtime_context.m_graphics_context->bind_framebuffer(g_runtime_context.m_graphics_context->m_swapchain_framebuffer);
 
@@ -827,9 +844,27 @@ void EditorLayer::show_asset_info() {
 
 void EditorLayer::show_settings() {
 	if (ImGui::Begin("settings")) {
+		show_quality_preset_selector();
 		show_type_fields(g_runtime_context.m_global.get(), TYPE_NAME(GlobalSettings), true);
 	}
 	ImGui::End();
+}
+
+// Quality presets are editor-only and deliberately not reflected: game builds set these
+// values themselves from scene data and scripts.
+void EditorLayer::show_quality_preset_selector() {
+	char const* const items[] = {
+		quality_preset_name(QualityPreset::Low),
+		quality_preset_name(QualityPreset::Medium),
+		quality_preset_name(QualityPreset::High),
+	};
+
+	int current = (int)m_settings.quality_preset;
+	ImGui::SetNextItemWidth(160.0f);
+	if (ImGui::Combo("quality preset", &current, items, IM_ARRAYSIZE(items))) {
+		m_settings.quality_preset = (QualityPreset)current;
+		apply_quality_preset(*g_runtime_context.m_global, m_settings.quality_preset);
+	}
 }
 
 void EditorLayer::show_stats() {

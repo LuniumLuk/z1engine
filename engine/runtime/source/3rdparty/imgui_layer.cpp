@@ -4,6 +4,7 @@
 #include "core/window.h"
 #include "core/application.h"
 #include "render/graphics_context.h"
+#include "util/prober.h"
 #include "imgui.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
@@ -55,6 +56,7 @@ namespace z1 {
 	}
 
 	void ImGuiLayer::begin() {
+		PROBE_SCOPE("imgui_begin");
 		PROFILE_FUNCTION();
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -63,14 +65,19 @@ namespace z1 {
 	}
 
 	void ImGuiLayer::end() {
+		PROBE_SCOPE("imgui_end");
 		PROFILE_FUNCTION();
 
 		ImGuiIO& io = ImGui::GetIO();
 		g_runtime_context.m_graphics_context->push_debug_group("ImGui");
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		{
+			PROBE_SCOPE("imgui_drawdata");
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		}
 
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+			PROBE_SCOPE("imgui_platform");
 			GLFWwindow* currentContext = glfwGetCurrentContext();
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();

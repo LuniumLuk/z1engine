@@ -11,7 +11,8 @@ z1engine is a C++17 game engine for Windows x64 only. Rendering is OpenGL via GL
 
 Run everything through `python dev/z1.py <command>`:
 
-- `generate` — regenerate VS projects after adding/removing source files (required before building)
+- `generate` — regenerate VS projects after adding/removing source files (required before building); add
+  `--probing` to compile the frame prober (`ENABLE_PROBING`) into Hybrid builds
 - `compile [--config Debug|Release|Profile]` — build the solution
 - `format [--dry-run]` — enforce tabs/whitespace/CRLF
 - `validate-shaders` — validate all GLSL shaders

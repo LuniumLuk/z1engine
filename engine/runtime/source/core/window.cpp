@@ -4,6 +4,7 @@
 #include "event/key_event.h"
 #include "event/mouse_event.h"
 #include "event/application_event.h"
+#include "util/prober.h"
 #include "glfw/glfw3.h"
 
 namespace z1 {
@@ -155,7 +156,14 @@ namespace z1 {
 	}
 
 	void Window::on_update() {
+		PROBE_SCOPE("glfw_poll");
 		glfwPollEvents();
+	}
+
+	bool Window::is_display_available() const {
+		int monitor_count = 0;
+		glfwGetMonitors(&monitor_count);
+		return monitor_count > 0;
 	}
 
 	void Window::set_v_sync(bool enabled) {

@@ -12,7 +12,7 @@ python dev/z1.py <command> [options]
 
 | Command | Module | Description |
 |---------|--------|-------------|
-| `generate` | `commands/generate.py` | Regenerate VS project files via premake5 |
+| `generate` | `commands/generate.py` | Regenerate VS project files via premake5 (add `--probing` to build the Hybrid config with the frame prober) |
 | `compile` | `commands/compile.py` | Build solution with MSBuild output parsing |
 | `format` | `commands/format_cmd.py` | Code formatting (tabs, whitespace, CRLF) |
 | `validate-shaders` | `commands/validate_shaders.py` | GLSL shader validation |

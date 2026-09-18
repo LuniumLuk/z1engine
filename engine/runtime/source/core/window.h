@@ -42,6 +42,9 @@ namespace z1 {
 		void set_v_sync(bool enabled);
 		bool is_v_sync_enabled() const;
 
+		// false while no monitor is attached (e.g. the display is asleep): UI frames must be skipped
+		bool is_display_available() const;
+
 		void set_window_title(std::string const& title);
 
 		void* get_native_window() const { return m_window; }

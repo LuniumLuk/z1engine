@@ -168,7 +168,8 @@ namespace z1 {
 
 	OpenGLImage2DArray::OpenGLImage2DArray(void const* data, size_t size, Description const& desc) {
 		m_description = desc;
-		CORE_ASSERT(desc.m_depth > 1, "Image2DArray must have more than 1 layer!");
+		// a single-layer array is valid GL and is used e.g. by the shadow map with one cascade
+		CORE_ASSERT(desc.m_depth >= 1, "Image2DArray must have at least 1 layer!");
 
 		glGenTextures(1, &m_handle);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, m_handle);

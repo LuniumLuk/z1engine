@@ -15,7 +15,7 @@ namespace z1 {
 		OpenGLContext();
 
 		void init() override;
-		void begin_frame() override {}
+		void begin_frame() override; // opens the frame's gpu timer query when probing is enabled
 		void end_frame() override {}
 		void swap_buffers() override;
 		void finish() override {}

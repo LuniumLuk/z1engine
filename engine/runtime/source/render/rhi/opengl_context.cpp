@@ -5,6 +5,7 @@
 #include "render/render_pass.h"
 #include "core/core.h"
 #include "core/window.h"
+#include "util/prober.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
 
@@ -48,6 +49,15 @@ namespace z1 {
 #endif
 
 	void glCheckError_(const char *file, int line) {
+#ifdef ENABLE_PROBING
+		// error-polling cost A/B knob, only available in probing builds
+		static bool const s_disabled = []() {
+			char const* env = std::getenv("Z1_NO_GL_CHECK");
+			return env && env[0] == '1';
+		}();
+		if (s_disabled)
+			return;
+#endif
 		GLenum code;
 		while ((code = glGetError()) != GL_NO_ERROR) {
 			std::string error;
@@ -119,6 +129,10 @@ namespace z1 {
 		CORE_DEBUG("    vendor: {0}", (char*)glGetString(GL_VENDOR));
 		CORE_DEBUG("    renderer: {0}", (char*)glGetString(GL_RENDERER));
 		CORE_DEBUG("    version: {0}", (char*)glGetString(GL_VERSION));
+
+		// the window advertises a vsync state but nothing ever applied it; sync the swap
+		// interval with the context so the UI state matches the real present behavior
+		glfwSwapInterval(g_runtime_context.m_window->is_v_sync_enabled() ? 1 : 0);
 
 		if (glDebugMessageCallback) {
 			glDebugMessageCallback(gl_debug_message_callback, nullptr);
@@ -193,9 +207,17 @@ namespace z1 {
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	}
 
+	void OpenGLContext::begin_frame() {
+		PROBE_GPU_BEGIN_FRAME();
+	}
+
 	void OpenGLContext::swap_buffers() {
 		PROFILE_FUNCTION();
-		glfwSwapBuffers(m_window);
+		PROBE_GPU_END_FRAME();
+		{
+			PROBE_SCOPE("glfw_swap");
+			glfwSwapBuffers(m_window);
+		}
 	}
 
 	void OpenGLContext::bind_framebuffer(std::shared_ptr<Framebuffer> const& framebuffer) {

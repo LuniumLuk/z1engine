@@ -37,6 +37,11 @@ namespace z1 {
 		destroy();
 	}
 
+	// an attachment is a texture array when it has multiple layers or explicitly asks for it
+	static bool attachment_is_array(Framebuffer::Attachment const& attachment) {
+		return attachment.layers > 1 || attachment.layered;
+	}
+
 	void OpenGLFramebuffer::create() {
 		glGenFramebuffers(1, &m_handle);
 		glBindFramebuffer(GL_FRAMEBUFFER, m_handle);
@@ -46,8 +51,9 @@ namespace z1 {
 
 		m_attachment_ids.clear();
 		for (auto const& attachment : m_attachments) {
+			bool const as_array = attachment_is_array(attachment);
 			std::shared_ptr<Image> image;
-			if (attachment.layers > 1) {
+			if (as_array) {
 				image = Image2DArray::create(
 					nullptr, 0,
 					m_description.width,
@@ -72,7 +78,7 @@ namespace z1 {
 
 			GLuint native_handle = (GLuint)reinterpret_cast<uintptr_t>(image->get_native_handle());
 
-			if (attachment.layers > 1) {
+			if (as_array) {
 				glBindTexture(GL_TEXTURE_2D_ARRAY, native_handle);
 				glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, native_handle, 0);
 				glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
@@ -175,7 +181,7 @@ namespace z1 {
 		GLuint native_handle = (GLuint)reinterpret_cast<uintptr_t>(m_attachment_images[index]->get_native_handle());
 		glActiveTexture(GL_TEXTURE0 + binding);
 
-		if (m_attachments[index].layers > 1) {
+		if (attachment_is_array(m_attachments[index])) {
 			glBindTexture(GL_TEXTURE_2D_ARRAY, native_handle);
 		}
 		else {

@@ -13,6 +13,7 @@
 #include "browser.h"
 #include "type_field.h"
 #include "material_editor.h"
+#include "quality_preset.h"
 #include "stb/stb_image_write.h"
 #include "scene/component/light.h"
 #include "scene/prefab.h"
@@ -30,6 +31,7 @@ struct EditorSettings {
 	uint32_t curr_resolution = 0;
 	bool show_skeleton_guizmos = true;
 	float skeleton_gizmo_size = 0.1f;
+	QualityPreset quality_preset = QualityPreset::High;
 
 	void save();
 	void load();
@@ -79,6 +81,7 @@ private:
 
 	void show_asset_info();
 	void show_settings();
+	void show_quality_preset_selector();
 	void show_stats();
 
 	std::string get_image_info(Image* image);

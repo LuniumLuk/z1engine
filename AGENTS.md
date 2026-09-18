@@ -100,6 +100,7 @@ Full rules: `openspec/kb/coding-style.md` and `openspec/specs/agent-code-regulat
 
 ```cmd
 python dev/z1.py generate            # regenerate VS projects via premake5
+python dev/z1.py generate --probing  # same, with the frame prober (ENABLE_PROBING) in Hybrid builds
 python dev/z1.py compile             # build solution (--config Debug|Release|Profile)
 python dev/z1.py format              # enforce tabs/whitespace/CRLF (--dry-run to preview)
 python dev/z1.py validate-shaders    # validate all GLSL shaders

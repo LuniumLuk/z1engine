@@ -26,6 +26,38 @@ namespace z1 {
 	REFLECT_ENUM(AOMode, SSAO)
 	REFLECT_ENUM(AOMode, GTAO)
 
+	enum struct API AOResolution : int {
+		Half = 2,
+		Quarter = 4,
+	};
+
+	REFLECT_ENUM(AOResolution, Half)
+	REFLECT_ENUM(AOResolution, Quarter)
+
+	enum struct API ShadowResolution : int {
+		Res512 = 512,
+		Res1024 = 1024,
+		Res2048 = 2048,
+		Res4096 = 4096,
+	};
+
+	REFLECT_ENUM(ShadowResolution, Res512)
+	REFLECT_ENUM(ShadowResolution, Res1024)
+	REFLECT_ENUM(ShadowResolution, Res2048)
+	REFLECT_ENUM(ShadowResolution, Res4096)
+
+	enum struct API ShadowCascades : int {
+		One = 1,
+		Two = 2,
+		Three = 3,
+		Four = 4,
+	};
+
+	REFLECT_ENUM(ShadowCascades, One)
+	REFLECT_ENUM(ShadowCascades, Two)
+	REFLECT_ENUM(ShadowCascades, Three)
+	REFLECT_ENUM(ShadowCascades, Four)
+
 	REFLECTED_STRUCT(GlobalSettings) {
 
 		GlobalSettings();
@@ -62,9 +94,12 @@ namespace z1 {
 		float     sm_near               = 1.0f;
 		float     sm_far                = 100.0f;
 		float     sm_ortho_size         = 40.0f;
+		ShadowResolution sm_resolution  = ShadowResolution::Res2048;
+		ShadowCascades   sm_cascade_count = ShadowCascades::Four;
 		// Ambient Occlusion
 		bool      ao_enabled            = true;
 		AOMode    ao_type               = AOMode::GTAO;     // 0 = SSAO, 1 = GTAO
+		AOResolution ao_resolution      = AOResolution::Half;
 		float     ao_radius             = 1.0f;
 		float     ao_intensity          = 1.0f;
 		float     ao_power              = 1.5f;
@@ -172,6 +207,8 @@ namespace z1 {
 			float     sky_padding[3];
 			glm::vec4 sky_params;
 			glm::vec4 sky_sh[9];
+			// Cascaded shadow maps (appended at end to preserve existing layout alignment)
+			int32_t   csm_cascade_count;
 		} m_data = {};
 
 		// Compile-time std140 alignment verification for the UBO mirror above
@@ -198,7 +235,8 @@ namespace z1 {
 			"GlobalConstants std140 stride mismatch: sun_projview");
 		static_assert(offsetof(GlobalConstants, sky_sh[1]) - offsetof(GlobalConstants, sky_sh[0]) == 16,
 			"GlobalConstants std140 stride mismatch: sky_sh");
-		static_assert(sizeof(GlobalConstants) == 768, "GlobalConstants std140 block size mismatch");
+		// the struct is alignas(16), so the trailing int rounds the size up to 784
+		static_assert(sizeof(GlobalConstants) == 784, "GlobalConstants std140 block size mismatch");
 
 	};
 
@@ -224,8 +262,11 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, sm_near,               FF_Default, "group=shadow")
 	REFLECTED_FIELD(GlobalSettings, sm_far,                FF_Default, "group=shadow")
 	REFLECTED_FIELD(GlobalSettings, sm_ortho_size,         FF_Default, "group=shadow")
+	REFLECTED_FIELD(GlobalSettings, sm_resolution,         FF_Default, "group=shadow")
+	REFLECTED_FIELD(GlobalSettings, sm_cascade_count,      FF_Default, "group=shadow")
 	REFLECTED_FIELD(GlobalSettings, ao_enabled,            FF_Default, "group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_type,               FF_Default, "group=ambient_occlusion")
+	REFLECTED_FIELD(GlobalSettings, ao_resolution,         FF_Default, "group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_radius,             FF_Default, "[drag]min=0.0,group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_intensity,          FF_Default, "[drag]min=0.0,max=2.0,group=ambient_occlusion")
 	REFLECTED_FIELD(GlobalSettings, ao_power,              FF_Default, "[drag]min=0.0,group=ambient_occlusion")

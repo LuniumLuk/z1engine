@@ -141,8 +141,9 @@ namespace z1 {
 
 		RenderGraph rg;
 		rg.set_framebuffer_pool(m_shared.m_framebuffer_pool);
+		int const cascade_count = std::min(std::max((int)g->sm_cascade_count, 1), MAX_CSM_CASCADES);
 		m_shared.add_shadow_pass(rg, scene, m_default_material);
-		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, CSM_LAYERS);
+		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, cascade_count);
 
 		// Forward screen-space AO needs a depth+normal prepass before lighting.
 		// Both are skipped entirely when AO is disabled.
@@ -154,11 +155,22 @@ namespace z1 {
 
 		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview, ao_pass);
 		m_particle_renderer.add_particle_pass(rg, scene.get(), "main", m_shared.m_shadow_image);
-		m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview, m_default_material);
-		m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
-		m_shared.add_taa_sharpen_pass(rg, m_shared.m_history_colors[write_idx]);
-		m_shared.add_bloom_pass(rg);
-		m_shared.add_postprocess_pass(rg, framebuffer);
+
+		// Final color chain: velocity/TAA/sharpen are skipped entirely when TAA is off and the
+		// post-process pass then consumes the scene color directly.
+		std::string final_color_input = "scene-color";
+		if (g->taa_enabled) {
+			m_shared.add_velocity_pass(rg, draw_list, scene, framebuffer, projview, m_default_material);
+			m_shared.add_taa_pass(rg, m_shared.m_history_colors[write_idx], m_shared.m_history_colors[read_idx]);
+			m_shared.add_taa_sharpen_pass(rg, m_shared.m_history_colors[write_idx]);
+			final_color_input = "taa-sharpen";
+		}
+
+		bool const bloom_present = g->pp_bloom_enabled && !m_shared.m_bloom_textures.empty();
+		if (bloom_present) {
+			m_shared.add_bloom_pass(rg, final_color_input);
+		}
+		m_shared.add_postprocess_pass(rg, framebuffer, final_color_input, bloom_present);
 
 		rg.compile();
 		rg.execute();

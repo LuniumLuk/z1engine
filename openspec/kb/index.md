@@ -14,3 +14,4 @@
 - [10] asset-system.md -- Asset types, binary format, bakery, import pipeline
 - [11] ecs.md -- Entity component system, scenes, components, systems
 - [12] dev-scripts.md -- Python dev CLI reference (dev/z1.py commands)
+- [13] perf-probing-and-quality.md -- ENABLE_PROBING prober, editor quality presets, render settings plumbing

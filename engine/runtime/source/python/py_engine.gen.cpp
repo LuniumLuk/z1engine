@@ -30,6 +30,11 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.value("GTAO", AOMode::GTAO)
 		.export_values();
 
+	py::enum_<AOResolution>(m, "AOResolution")
+		.value("Half", AOResolution::Half)
+		.value("Quarter", AOResolution::Quarter)
+		.export_values();
+
 	py::enum_<ColliderShape>(m, "ColliderShape")
 		.value("Sphere", ColliderShape::Sphere)
 		.value("Box", ColliderShape::Box)
@@ -84,6 +89,20 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.value("Deferred", RenderMode::Deferred)
 		.export_values();
 
+	py::enum_<ShadowCascades>(m, "ShadowCascades")
+		.value("One", ShadowCascades::One)
+		.value("Two", ShadowCascades::Two)
+		.value("Three", ShadowCascades::Three)
+		.value("Four", ShadowCascades::Four)
+		.export_values();
+
+	py::enum_<ShadowResolution>(m, "ShadowResolution")
+		.value("Res512", ShadowResolution::Res512)
+		.value("Res1024", ShadowResolution::Res1024)
+		.value("Res2048", ShadowResolution::Res2048)
+		.value("Res4096", ShadowResolution::Res4096)
+		.export_values();
+
 	// Generated Bindings
 	py::class_<AnimationComponent>(m, "Animation")
 		.def_readwrite("animation_asset", &AnimationComponent::animation_asset)
@@ -130,14 +149,24 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("sm_near", &GlobalSettings::sm_near)
 		.def_readwrite("sm_far", &GlobalSettings::sm_far)
 		.def_readwrite("sm_ortho_size", &GlobalSettings::sm_ortho_size)
+		.def_readwrite("sm_resolution", &GlobalSettings::sm_resolution)
+		.def_readwrite("sm_cascade_count", &GlobalSettings::sm_cascade_count)
 		.def_readwrite("ao_enabled", &GlobalSettings::ao_enabled)
 		.def_readwrite("ao_type", &GlobalSettings::ao_type)
+		.def_readwrite("ao_resolution", &GlobalSettings::ao_resolution)
 		.def_readwrite("ao_radius", &GlobalSettings::ao_radius)
 		.def_readwrite("ao_intensity", &GlobalSettings::ao_intensity)
 		.def_readwrite("ao_power", &GlobalSettings::ao_power)
 		.def_readwrite("ao_bias", &GlobalSettings::ao_bias)
 		.def_readwrite("ao_blur_enabled", &GlobalSettings::ao_blur_enabled)
 		.def_readwrite("ao_blur_strength", &GlobalSettings::ao_blur_strength)
+		.def_readwrite("ssr_enabled", &GlobalSettings::ssr_enabled)
+		.def_readwrite("ssr_intensity", &GlobalSettings::ssr_intensity)
+		.def_readwrite("ssr_max_distance", &GlobalSettings::ssr_max_distance)
+		.def_readwrite("ssr_thickness", &GlobalSettings::ssr_thickness)
+		.def_readwrite("ssr_stride", &GlobalSettings::ssr_stride)
+		.def_readwrite("ssr_max_steps", &GlobalSettings::ssr_max_steps)
+		.def_readwrite("ssr_jitter_strength", &GlobalSettings::ssr_jitter_strength)
 		.def_readwrite("anim_enabled", &GlobalSettings::anim_enabled)
 		.def_readwrite("script_enabled", &GlobalSettings::script_enabled)
 		.def_readwrite("render_mode", &GlobalSettings::render_mode);

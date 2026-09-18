@@ -159,6 +159,10 @@ class AOMode(Enum):
 	SSAO = 0
 	GTAO = 1
 
+class AOResolution(Enum):
+	Half = 0
+	Quarter = 1
+
 class ColliderShape(Enum):
 	Sphere = 0
 	Box = 1
@@ -206,6 +210,18 @@ class RenderMode(Enum):
 	Forward = 0
 	Deferred = 1
 
+class ShadowCascades(Enum):
+	One = 0
+	Two = 1
+	Three = 2
+	Four = 3
+
+class ShadowResolution(Enum):
+	Res512 = 0
+	Res1024 = 1
+	Res2048 = 2
+	Res4096 = 3
+
 class Animation:
 	animation_asset: Optional[Any]
 	current_time: float
@@ -250,14 +266,24 @@ class GlobalSettings:
 	sm_near: float
 	sm_far: float
 	sm_ortho_size: float
+	sm_resolution: ShadowResolution
+	sm_cascade_count: ShadowCascades
 	ao_enabled: bool
 	ao_type: AOMode
+	ao_resolution: AOResolution
 	ao_radius: float
 	ao_intensity: float
 	ao_power: float
 	ao_bias: float
 	ao_blur_enabled: bool
 	ao_blur_strength: float
+	ssr_enabled: bool
+	ssr_intensity: float
+	ssr_max_distance: float
+	ssr_thickness: float
+	ssr_stride: float
+	ssr_max_steps: float
+	ssr_jitter_strength: float
 	anim_enabled: bool
 	script_enabled: bool
 	render_mode: RenderMode

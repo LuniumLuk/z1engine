@@ -355,8 +355,14 @@ float find_blockers(vec3 uv, float depth, vec2 texel_size, float bias) {
 
 int get_cascade_index(vec3 world_pos) {
 	float dist = distance(u_cam_position.xyz, world_pos);
+	// only cascades that exist are considered; distances beyond the last split keep
+	// sampling the furthest valid cascade instead of an unallocated layer
+	int cascades = clamp(u_csm_cascade_count, 1, 4);
+	if (cascades <= 1) return 0;
 	if (dist < u_csm_splits.x) return 0;
+	if (cascades <= 2) return 1;
 	if (dist < u_csm_splits.y) return 1;
+	if (cascades <= 3) return 2;
 	if (dist < u_csm_splits.z) return 2;
 	return 3;
 }

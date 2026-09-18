@@ -66,10 +66,11 @@
 	// 3x3 PCF with 4-tap bilinear per sample
 	float get_particle_shadow(vec3 world_pos) {
 		float dist = distance(u_cam_position.xyz, world_pos);
+		int cascades = clamp(u_csm_cascade_count, 1, 4);
 		int layer = 0;
-		if (dist >= u_csm_splits.x) layer = 1;
-		if (dist >= u_csm_splits.y) layer = 2;
-		if (dist >= u_csm_splits.z) layer = 3;
+		if (cascades > 1 && dist >= u_csm_splits.x) layer = 1;
+		if (cascades > 2 && dist >= u_csm_splits.y) layer = 2;
+		if (cascades > 3 && dist >= u_csm_splits.z) layer = 3;
 
 		vec4 ls = u_sun_projview[layer] * vec4(world_pos, 1.0);
 		vec3 proj = ls.xyz / ls.w;

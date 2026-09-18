@@ -3,6 +3,11 @@ newoption {
 	description = "Use Visual Studio 2026 toolset"
 }
 
+newoption {
+	trigger     = "probing",
+	description = "Enable the frame prober (ENABLE_PROBING) in Hybrid builds"
+}
+
 workspace "z1engine"
 	architecture "x64"
 	startproject "game"
@@ -10,6 +15,13 @@ workspace "z1engine"
 
 	filter { "action:vs2022", "options:vs2026", "system:windows" }
 		toolset "v145"
+
+	filter {}
+
+	-- Hybrid is the optimized build with asserts; the frame prober (CPU scopes + GPU timers) is opt-in
+	-- and only enabled when projects are generated with --probing (see the option above)
+	filter { "configurations:Hybrid", "options:probing" }
+		defines { "ENABLE_PROBING" }
 
 	filter {}
 

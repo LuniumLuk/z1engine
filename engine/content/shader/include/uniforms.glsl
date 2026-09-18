@@ -54,6 +54,8 @@ layout (std140) uniform Global {
 	// SkyLight
 	vec4  u_sky_params; // x=rotation, y=intensity, z=mip_level, w=specular_max_mip
 	vec4  u_sky_sh[9];
+	// Cascaded shadow maps
+	int   u_csm_cascade_count;
 };
 
 uniform sampler2DArray u_shadow_map;

@@ -220,16 +220,7 @@ namespace z1 {
 		}
 
 		// Shadow framebuffer (shadow pass now uses per-material shader variants)
-		{
-			const uint32_t shadow_res = 2048;
-			Framebuffer::Attachment attachment;
-			attachment.format = ImageFormat::Depth;
-			attachment.sampler_mode = SamplerMode::Nearest;
-			attachment.wrap_mode = WrapMode::ClampToBorder;
-			attachment.layers = 4;
-			m_shadow_framebuffer = Framebuffer::create(shadow_res, shadow_res, { attachment });
-			m_shadow_image = m_shadow_framebuffer->get_attachment_image(0);
-		}
+		ensure_shadow_resources();
 
 		m_lights_buffer = UniformBuffer::create(nullptr, sizeof(LightsBlock), BufferUsage::Static);
 
@@ -241,6 +232,9 @@ namespace z1 {
 	}
 
 	bool RenderShared::ensure_buffers(uint32_t width, uint32_t height) {
+		// shadow resources follow the shadow settings, not the viewport size
+		ensure_shadow_resources();
+
 		// Bloom textures
 		if (m_bloom_textures.empty() ||
 			m_bloom_textures[0]->get_width() != width / 2 ||
@@ -277,10 +271,12 @@ namespace z1 {
 			history_uninitialized = true;
 		}
 
-		// AO buffers (half resolution)
+		// AO buffers (half or quarter resolution, selected by the global setting)
 		{
-			uint32_t ao_width = std::max(1u, width / 2);
-			uint32_t ao_height = std::max(1u, height / 2);
+			auto& g = g_runtime_context.m_global;
+			uint32_t const divisor = std::max(2u, (uint32_t)g->ao_resolution);
+			uint32_t ao_width = std::max(1u, width / divisor);
+			uint32_t ao_height = std::max(1u, height / divisor);
 
 			if (!m_ao_framebuffer ||
 				m_ao_framebuffer->get_width() != ao_width ||
@@ -296,6 +292,31 @@ namespace z1 {
 		}
 
 		return history_uninitialized;
+	}
+
+	void RenderShared::ensure_shadow_resources() {
+		// defensive: the renderers are constructed before GlobalSettings exists (see
+		// RuntimeContext::init), so fall back to the engine defaults the first time; the
+		// per-frame ensure_buffers() call then reconciles with the actual settings
+		auto& g = g_runtime_context.m_global;
+		uint32_t const resolution = g ? (uint32_t)g->sm_resolution : 2048u;
+		uint32_t const cascades = g ? std::min(std::max((int)g->sm_cascade_count, 1), MAX_CSM_CASCADES) : 4u;
+
+		if (m_shadow_framebuffer && m_shadow_resolution == resolution && m_shadow_cascade_count == cascades) {
+			return;
+		}
+
+		Framebuffer::Attachment attachment;
+		attachment.format = ImageFormat::Depth;
+		attachment.sampler_mode = SamplerMode::Nearest;
+		attachment.wrap_mode = WrapMode::ClampToBorder;
+		attachment.layers = cascades;
+		// the shadow map is always a texture array (sampled as sampler2DArray, one layer per cascade)
+		attachment.layered = true;
+		m_shadow_framebuffer = Framebuffer::create(resolution, resolution, { attachment });
+		m_shadow_image = m_shadow_framebuffer->get_attachment_image(0);
+		m_shadow_resolution = resolution;
+		m_shadow_cascade_count = cascades;
 	}
 
 	void RenderShared::update_lights(std::shared_ptr<Scene> const& scene) {
@@ -417,27 +438,35 @@ namespace z1 {
 
 	void RenderShared::calculate_csm_splits(CameraComponent& camera, glm::vec3 const& sun_dir) {
 		auto& g = g_runtime_context.m_global;
+		int const cascade_count = std::min(std::max((int)g->sm_cascade_count, 1), MAX_CSM_CASCADES);
 		float near_clip = camera.m_near;
 		float far_clip = camera.m_far;
 		float split_lambda = 0.95f;
 
-		float splits[5] = {};
+		float splits[MAX_CSM_CASCADES + 1] = {};
 		splits[0] = near_clip;
-		splits[4] = far_clip;
+		splits[cascade_count] = far_clip;
 
-		for (int i = 1; i < 4; i++) {
-			float p = (float)i / 4.0f;
+		for (int i = 1; i < cascade_count; i++) {
+			float p = (float)i / (float)cascade_count;
 			float log = near_clip * std::pow(far_clip / near_clip, p);
 			float uniform = near_clip + (far_clip - near_clip) * p;
 			splits[i] = split_lambda * log + (1.0f - split_lambda) * uniform;
 		}
-		g->csm_splits = glm::vec4(splits[1], splits[2], splits[3], splits[4]);
+
+		// unused split slots repeat the camera far plane; the shader only tests the splits
+		// belonging to cascades that exist, so they are never read in practice
+		float split_values[MAX_CSM_CASCADES] = {};
+		for (int i = 0; i < MAX_CSM_CASCADES; ++i) {
+			split_values[i] = (i + 1) <= cascade_count ? splits[i + 1] : far_clip;
+		}
+		g->csm_splits = glm::vec4(split_values[0], split_values[1], split_values[2], split_values[3]);
 
 		glm::mat4 inv_view = glm::inverse(camera.get_view());
 		glm::vec3 cam_pos_world = glm::vec3(inv_view[3]);
 		glm::vec3 cam_forward = -glm::vec3(inv_view[2]);
 
-		for (int i = 0; i < CSM_LAYERS; ++i) {
+		for (int i = 0; i < cascade_count; ++i) {
 			float cascade_far = splits[i + 1];
 
 			// Rotation-stable center + texel-snapped light-view translation
@@ -462,6 +491,11 @@ namespace z1 {
 
 			g->sun_projview[i] = light_proj * light_view;
 		}
+
+		// unused cascade slots keep a valid matrix so shaders never read uninitialized data
+		for (int i = cascade_count; i < MAX_CSM_CASCADES; ++i) {
+			g->sun_projview[i] = g->sun_projview[cascade_count - 1];
+		}
 	}
 
 	void RenderShared::add_shadow_pass(RenderGraph& rg, std::shared_ptr<Scene> const& scene, std::shared_ptr<MaterialInstance> const& default_material) {
@@ -470,7 +504,9 @@ namespace z1 {
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
 		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
 
-		for (int cascade = 0; cascade < CSM_LAYERS; ++cascade) {
+		int const cascade_count = std::min(std::max((int)g->sm_cascade_count, 1), MAX_CSM_CASCADES);
+
+		for (int cascade = 0; cascade < cascade_count; ++cascade) {
 			rg.add_pass(std::string("shadow-CSM") + std::to_string(cascade))
 				.set_output(m_shadow_framebuffer)
 				.set_pass_desc(desc)
@@ -918,7 +954,7 @@ namespace z1 {
 				});
 	}
 
-	void RenderShared::add_bloom_pass(RenderGraph& rg) {
+	void RenderShared::add_bloom_pass(RenderGraph& rg, std::string const& input) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::DontCare;
@@ -937,7 +973,7 @@ namespace z1 {
 				.set_pass_desc(desc);
 
 			if (i == 0) {
-				pass.add_input("taa-sharpen");
+				pass.add_input(input);
 			}
 			else {
 				pass.depends_on("bloom-down-" + std::to_string(i - 1));
@@ -1001,31 +1037,36 @@ namespace z1 {
 		}
 	}
 
-	void RenderShared::add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target) {
+	void RenderShared::add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target, std::string const& scene_input, bool bloom_present) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::DontCare;
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
 
-		rg.add_pass("postprocessing")
-			.set_output(target)
+		auto& pass = rg.add_pass("postprocessing");
+		pass.set_output(target)
 			.set_pass_desc(desc)
-			.add_input("taa-sharpen")
-			.depends_on("bloom-up-1")
-			.execute([this](RenderGraphNode& node, GraphicsContext& ctx) {
+			.add_input(scene_input);
+		if (bloom_present) {
+			pass.depends_on("bloom-up-1");
+		}
+		pass.execute([this, bloom_present](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_postprocess->bind();
 				auto& s = m_pipeline_postprocess->m_shader;
 				s->set_uniform_block_binding(
 					"Global",
 					g_runtime_context.m_global->get_binding());
 
-				auto scene = node.get_input_image_index(0); // "taa-sharpen"
+				bool const sample_bloom = bloom_present &&
+					g_runtime_context.m_global->pp_bloom_enabled && !m_bloom_textures.empty();
+
+				auto scene = node.get_input_image_index(0);
 				scene->bind();
 				s->set_uniform_binding(
 					"u_scene",
 					scene->get_binding());
 
-				if (g_runtime_context.m_global->pp_bloom_enabled && !m_bloom_textures.empty()) {
+				if (sample_bloom) {
 					auto bloom = m_bloom_textures[0]->get_attachment_image(0);
 					bloom->bind();
 					s->set_uniform_binding("u_bloom_texture", bloom->get_binding());
@@ -1040,7 +1081,7 @@ namespace z1 {
 
 				scene->unbind();
 
-				if (g_runtime_context.m_global->pp_bloom_enabled && !m_bloom_textures.empty()) {
+				if (sample_bloom) {
 					m_bloom_textures[0]->get_attachment_image(0)->unbind();
 				}
 

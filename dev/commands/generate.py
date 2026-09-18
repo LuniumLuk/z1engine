@@ -2,17 +2,33 @@
 """generate -- Regenerate project files from premake5."""
 
 import argparse
+import shutil
+
 from commands._common import (
-	EXIT_CONFIG_ERROR, Timer, make_result, print_fail, print_ok, print_run,
-	repo_root, run_subprocess, get_premake5_path, is_macos, check_python,
+	EXIT_CONFIG_ERROR, Timer, make_result, print_fail, print_info, print_ok,
+	print_run, print_warn, repo_root, run_subprocess, get_premake5_path, is_macos,
+	check_python,
 )
+
+def _generated_probing_state(root):
+	"""Probing state baked into the current project files, or None if not generated yet."""
+	if is_macos():
+		project_file = root / "engine" / "runtime" / "Makefile"
+	else:
+		projects = sorted((root / "engine" / "runtime").glob("*.vcxproj"))
+		project_file = projects[0] if projects else None
+	if project_file is None or not project_file.exists():
+		return None
+	return "ENABLE_PROBING" in project_file.read_text(errors="ignore")
 
 def main(argv=None):
 	parser = argparse.ArgumentParser(
 		prog="z1 generate",
 		description="Regenerate Visual Studio project files using premake5.",
 	)
-	parser.parse_args(argv)
+	parser.add_argument("--probing", action="store_true",
+						help="Enable the frame prober (ENABLE_PROBING) in Hybrid builds (regenerate required)")
+	args = parser.parse_args(argv)
 
 	# Precheck: verify Python environment before generating
 	py_ok, py_msg = check_python()
@@ -32,18 +48,31 @@ def main(argv=None):
 						   detail="premake5 not found")
 
 	timer = Timer()
-	print_run("generate")
+	print_run("generate --probing" if args.probing else "generate")
+	print_info("[INFO] probing enabled: ENABLE_PROBING is defined for Hybrid builds"
+			   if args.probing else
+			   "[INFO] probing disabled: builds are probe-free (pass --probing to enable)")
 
-	if is_macos():
-		rc, stdout, stderr = run_subprocess(
-			[str(premake), "gmake"],
-			cwd=str(root),
-		)
-	else:
-		rc, stdout, stderr = run_subprocess(
-			[str(premake), "vs2022", "--vs2026"],
-			cwd=str(root),
-		)
+	# Switching the flag changes what the sources must be compiled with, but object files do not
+	# depend on the generated projects: drop the stale Hybrid objects so the next build is correct.
+	previous_state = _generated_probing_state(root)
+	if previous_state is not None and previous_state != args.probing:
+		stale_dir = root / "engine" / "intermediate" / "Hybrid"
+		if stale_dir.exists():
+			shutil.rmtree(stale_dir, ignore_errors=True)
+		print_warn("probing state changed ({} -> {}): removed stale Hybrid objects, "
+				   "the next Hybrid build recompiles everything".format(
+					   "on" if previous_state else "off",
+					   "on" if args.probing else "off"))
+
+	premake_command = ["gmake"] if is_macos() else ["vs2022", "--vs2026"]
+	if args.probing:
+		premake_command.append("--probing")
+
+	rc, stdout, stderr = run_subprocess(
+		[str(premake)] + premake_command,
+		cwd=str(root),
+	)
 
 	output = stdout + stderr
 	if output.strip():
@@ -54,8 +83,8 @@ def main(argv=None):
 
 	if rc == 0:
 		print_ok(f"Project files generated ({elapsed})")
-		return make_result("ok", "generate", elapsed=elapsed)
+		return make_result("ok", "generate", elapsed=elapsed, probing=args.probing)
 	else:
 		print_fail(f"premake5 failed (exit {rc}, {elapsed})")
 		return make_result("fail", "generate", exit_code=EXIT_CONFIG_ERROR,
-						   elapsed=elapsed, detail=f"premake5 exit {rc}")
+						   elapsed=elapsed, probing=args.probing, detail=f"premake5 exit {rc}")

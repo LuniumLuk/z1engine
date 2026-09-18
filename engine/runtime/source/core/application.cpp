@@ -10,6 +10,7 @@
 #include "event/application_event.h"
 #include "render/graphics_context.h"
 #include "render/global.h"
+#include "util/prober.h"
 
 namespace z1 {
 
@@ -33,12 +34,19 @@ namespace z1 {
 		push_overlay(std::static_pointer_cast<Layer>(g_runtime_context.m_python_layer));
 
 		g_runtime_context.m_timer->update();
+		PROBE_CONFIGURE();
 		while (!m_should_exit) {
+			PROBE_FRAME_BEGIN();
 			g_runtime_context.m_graphics_context->update_stats(g_runtime_context.m_timer->get_delta_time());
 			g_runtime_context.m_graphics_context->m_stats.reset();
 			g_runtime_context.m_graphics_context->begin_frame();
-			if (!m_minimized) {
+
+			// ImGui asserts when the monitor list is empty (display asleep), so UI work is skipped
+			// while no display is present; rendering resumes as soon as one is available again
+			bool const can_render = !m_minimized && g_runtime_context.m_window->is_display_available();
+			if (can_render) {
 				{
+					PROBE_SCOPE("update");
 					PROFILE_SCOPE("update layer stacks");
 					for (auto it = g_runtime_context.m_layer_stack->end(); it != g_runtime_context.m_layer_stack->begin();) {
 						--it;
@@ -49,6 +57,7 @@ namespace z1 {
 				}
 
 				{
+					PROBE_SCOPE("imgui");
 					PROFILE_SCOPE("ImGuiRender");
 					g_runtime_context.m_imgui_layer->begin();
 					for (auto it = g_runtime_context.m_layer_stack->end(); it != g_runtime_context.m_layer_stack->begin();)
@@ -58,13 +67,22 @@ namespace z1 {
 			}
 
 			g_runtime_context.m_input_system->reset();
-			g_runtime_context.m_window->on_update();
+			{
+				PROBE_SCOPE("window_update");
+				g_runtime_context.m_window->on_update();
+			}
 			g_runtime_context.m_graphics_context->end_frame();
-			g_runtime_context.m_graphics_context->swap_buffers();
+			{
+				PROBE_SCOPE("swap");
+				g_runtime_context.m_graphics_context->swap_buffers();
+			}
 			g_runtime_context.m_timer->update();
 			g_runtime_context.m_global->reset_override();
+			PROBE_VALUE("draws", g_runtime_context.m_graphics_context->m_stats.draw_calls);
+			PROBE_FRAME_END();
 		}
 		g_runtime_context.m_graphics_context->finish();
+		PROBE_PRINT_SUMMARY();
 		PROFILE_END_SESSION();
 		PROFILE_BEGIN_SESSION("application shutdown", "profile-shutdown.json");
 	}
