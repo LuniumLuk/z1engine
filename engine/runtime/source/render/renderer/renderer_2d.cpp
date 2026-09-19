@@ -182,27 +182,18 @@ namespace z1 {
 
 	void Renderer2D::batch_draw() {
 		PROFILE_FUNCTION();
+		auto& shader = m_pipeline->m_shader;
+		auto const texture_slot = shader->sampler_slot("u_texture[0]");
 		for (auto const& batch : m_batches) {
 			m_vertex_buffer->write(&m_quad_vertices[batch.m_vertex_offset], batch.m_vertex_num * sizeof(QuadVertex));
 
-			std::vector<int> bindings(32);
 			for (auto const& [texture, index] : batch.m_textures) {
-				if (!texture->is_bound()) {
-					texture->bind();
-				}
-				bindings[index] = texture->get_binding();
+				shader->bind_texture(texture_slot, index, texture.get());
 			}
-			m_pipeline->m_shader->set_uniform("u_texture[0]", bindings.data());
 
 			m_vertex_array->bind();
 			m_vertex_array->draw(PrimitiveType::Triangles, batch.m_index_num);
 			m_vertex_array->unbind();
-
-			for (auto const& [texture, index] : batch.m_textures) {
-				if (texture->is_bound()) {
-					texture->unbind();
-				}
-			}
 		}
 	}
 

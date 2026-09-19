@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/core.h"
+#include "render/image.h"
 #include <deque>
 #include <functional>
 #include <queue>
@@ -13,6 +14,7 @@ namespace z1 {
 	struct Framebuffer;
 	struct Pipeline;
 	struct RenderPass;
+	struct UniformBuffer;
 
 	struct RenderStats {
 		uint32_t draw_calls = 0;
@@ -76,6 +78,7 @@ namespace z1 {
 
 		uint32_t m_max_image_binding_count = 0;
 		uint32_t m_max_uniform_buffer_binding_count = 0;
+		uint32_t m_max_fragment_texture_units = 0;
 
 		// Unit kept for samplers a program never binds; holds 1x1 fallback textures.
 		uint32_t m_default_sampler_binding = 0;
@@ -85,6 +88,15 @@ namespace z1 {
 
 		uint32_t acquire_uniform_buffer_binding();
 		void release_uniform_buffer_binding(uint32_t binding);
+
+		// Fixed-binding binder API with dedup caches (typed fallbacks for absent resources).
+		virtual void bind_texture_unit(uint32_t unit, uint32_t gl_handle, TextureTarget target) = 0;
+		virtual void bind_uniform_buffer(uint32_t binding, UniformBuffer const& buffer) = 0;
+		// Direct-bind notifications keep the dedup caches coherent (legacy bind paths).
+		virtual void notify_texture_bound(uint32_t unit, uint32_t gl_handle, TextureTarget target) {}
+		virtual void notify_uniform_buffer_bound(uint32_t binding, uint32_t gl_handle) {}
+		// Type-matched 1x1 fallback textures used when a slot has no resource (0 = unavailable).
+		virtual uint32_t get_fallback_texture(TextureTarget target) const { return 0; }
 
 		virtual void blit_attachment(
 			std::shared_ptr<Framebuffer> const& src,

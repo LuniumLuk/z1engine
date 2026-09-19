@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "render/rhi/opengl_context.h"
 #include "render/rhi/opengl_framebuffer.h"
+#include "render/buffer.h"
 #include "render/pipeline.h"
 #include "render/render_pass.h"
 #include "core/core.h"
@@ -158,11 +159,18 @@ namespace z1 {
 		m_max_image_binding_count = static_cast<uint32_t>(val);
 		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &val);
 		m_max_uniform_buffer_binding_count = static_cast<uint32_t>(val);
+		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &val);
+		m_max_fragment_texture_units = static_cast<uint32_t>(val);
 
 		// Reserve the highest unit for unset samplers; kept out of the pool below.
 		CORE_ASSERT(m_max_image_binding_count > 1, "not enough texture image units!");
 		m_default_sampler_binding = m_max_image_binding_count - 1;
 		create_default_sampler_textures();
+
+		// Binder caches: what each unit / binding point currently holds.
+		m_bound_texture_handles.assign(m_max_image_binding_count, 0);
+		m_bound_texture_targets.assign(m_max_image_binding_count, static_cast<uint8_t>(TextureTarget::None));
+		m_bound_uniform_buffer_handles.assign(m_max_uniform_buffer_binding_count, 0);
 
 		m_free_image_bindings = {};
 		for (uint32_t i = m_max_image_binding_count - 2; i != uint32_t(-1); --i) {
@@ -199,12 +207,77 @@ namespace z1 {
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+		glGenTextures(1, &m_default_sampler_texture_cube);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_default_sampler_texture_cube);
+		for (int face = 0; face < 6; ++face) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &white);
+		}
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
 		glActiveTexture(GL_TEXTURE0 + m_default_sampler_binding);
 		glBindTexture(GL_TEXTURE_2D, m_default_sampler_texture_2d);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, m_default_sampler_texture_2d_array);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+	}
+
+	static GLenum texture_target_to_opengl(TextureTarget target) {
+		switch (target) {
+		case TextureTarget::Texture2D: return GL_TEXTURE_2D;
+		case TextureTarget::Texture2DArray: return GL_TEXTURE_2D_ARRAY;
+		case TextureTarget::TextureCube: return GL_TEXTURE_CUBE_MAP;
+		default: return 0;
+		}
+	}
+
+	void OpenGLContext::bind_texture_unit(uint32_t unit, uint32_t gl_handle, TextureTarget target) {
+		GLenum const gl_target = texture_target_to_opengl(target);
+		if (gl_target == 0 || unit >= m_bound_texture_handles.size()) {
+			return;
+		}
+		if (m_bound_texture_handles[unit] == gl_handle && m_bound_texture_targets[unit] == static_cast<uint8_t>(target)) {
+			return; // unit already holds this texture
+		}
+		glActiveTexture(GL_TEXTURE0 + unit);
+		glBindTexture(gl_target, gl_handle);
+		notify_texture_bound(unit, gl_handle, target);
+	}
+
+	void OpenGLContext::bind_uniform_buffer(uint32_t binding, UniformBuffer const& buffer) {
+		uint32_t const handle = static_cast<uint32_t>(reinterpret_cast<uint64_t>(buffer.get_native_handle()));
+		if (binding < m_bound_uniform_buffer_handles.size() && m_bound_uniform_buffer_handles[binding] == handle) {
+			return; // binding point already holds this buffer
+		}
+		glBindBufferBase(GL_UNIFORM_BUFFER, binding, handle);
+		notify_uniform_buffer_bound(binding, handle);
+	}
+
+	void OpenGLContext::notify_texture_bound(uint32_t unit, uint32_t gl_handle, TextureTarget target) {
+		if (unit < m_bound_texture_handles.size()) {
+			m_bound_texture_handles[unit] = gl_handle;
+			m_bound_texture_targets[unit] = static_cast<uint8_t>(target);
+		}
+	}
+
+	void OpenGLContext::notify_uniform_buffer_bound(uint32_t binding, uint32_t gl_handle) {
+		if (binding < m_bound_uniform_buffer_handles.size()) {
+			m_bound_uniform_buffer_handles[binding] = gl_handle;
+		}
+	}
+
+	uint32_t OpenGLContext::get_fallback_texture(TextureTarget target) const {
+		switch (target) {
+		case TextureTarget::Texture2D: return m_default_sampler_texture_2d;
+		case TextureTarget::Texture2DArray: return m_default_sampler_texture_2d_array;
+		case TextureTarget::TextureCube: return m_default_sampler_texture_cube;
+		default: return 0;
+		}
 	}
 
 	void OpenGLContext::begin_frame() {

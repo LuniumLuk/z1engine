@@ -4,6 +4,7 @@
 #include "render/render_pass.h"
 #include "render/image.h"
 #include "render/framebuffer.h"
+#include "render/shader.h"
 
 namespace z1 {
 
@@ -35,6 +36,9 @@ namespace z1 {
 		uint32_t bind_input_name(std::string const& name);
 		std::shared_ptr<Image> get_input_image_index(uint32_t index);
 		std::shared_ptr<Image> get_input_image_name(std::string const& name);
+		// Binds a declared input to a sampler slot; missing inputs bind the type-matched fallback.
+		void bind_input(std::shared_ptr<Shader> const& shader, std::string const& sampler, std::string const& input);
+		void bind_input(std::shared_ptr<Shader> const& shader, Shader::TextureSlot const& slot, std::string const& input);
 		void unbind_input_index(uint32_t index);
 		void unbind_input_name(std::string const& name);
 

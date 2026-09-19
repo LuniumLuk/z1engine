@@ -1,5 +1,7 @@
 #include "picking_system.h"
 
+#include "render/uniform_blocks.h"
+
 PickingSystem::PickingSystem(uint32_t w, uint32_t h) {
 	m_framebuffer = Framebuffer::create(w, h,
 		{
@@ -63,8 +65,7 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 		glm::mat4 cam_projview = camera_comp.get_proj() * camera_comp.get_view();
 
 		m_pipeline->bind();
-		g_runtime_context.m_global->bind();
-		m_pipeline->m_shader->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+		ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
 		int has_skinning = 0;
 		m_pipeline->m_shader->set_uniform("u_has_skinning", &has_skinning);
 
@@ -101,17 +102,11 @@ void PickingSystem::render(std::shared_ptr<Scene> const& scene) const {
 			has_skinning = 0;
 			if (bones) {
 				has_skinning = 1;
-				bones->bind();
-				m_pipeline->m_shader->set_uniform_block_binding("Bones", bones->get_binding());
+				ctx.bind_uniform_buffer(uniform_blocks::Bones, *bones);
 			}
 			m_pipeline->m_shader->set_uniform("u_has_skinning", &has_skinning);
 			mesh.m_mesh->draw();
-			if (bones) {
-				bones->unbind();
-			}
 		}
-
-		g_runtime_context.m_global->unbind();
 
 		m_pipeline->unbind();
 

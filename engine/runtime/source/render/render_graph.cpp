@@ -2,6 +2,7 @@
 
 #include "render/render_graph.h"
 #include "render/graphics_context.h"
+#include "render/shader.h"
 
 namespace z1 {
 
@@ -121,6 +122,26 @@ namespace z1 {
 		auto image = get_input_image_index(index);
 		image->bind();
 		return image->get_binding();
+	}
+
+	void RenderGraphNode::bind_input(std::shared_ptr<Shader> const& shader, std::string const& sampler, std::string const& input) {
+		Shader::TextureSlot const slot = shader->sampler_slot(sampler);
+		if (slot.m_slot == INVALID_BINDING) {
+			return;
+		}
+		bind_input(shader, slot, input);
+	}
+
+	void RenderGraphNode::bind_input(std::shared_ptr<Shader> const& shader, Shader::TextureSlot const& slot, std::string const& input) {
+		if (slot.m_slot == INVALID_BINDING) {
+			return;
+		}
+		auto it = m_inputs_by_name.find(input);
+		if (it == m_inputs_by_name.end()) {
+			shader->bind_texture(slot, nullptr);
+			return;
+		}
+		shader->bind_texture(slot, it->second.first->m_output->get_attachment_image(it->second.second).get());
 	}
 
 	uint32_t RenderGraphNode::bind_input_name(std::string const& name) {

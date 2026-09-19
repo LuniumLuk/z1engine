@@ -9,16 +9,16 @@
 #include "render/shader.h"
 #include "render/shader_variant.h"
 #include "render/image.h"
+#include "render/buffer.h"
 
 namespace z1 {
 
 	struct API PerFrameConst {
 		glm::mat4 model;
-		uint32_t global_binding = INVALID_BINDING;
-		uint32_t lights_binding = INVALID_BINDING;
-		uint32_t shadow_map_binding = INVALID_BINDING;
-		uint32_t ao_map_binding = INVALID_BINDING;
-		uint32_t sky_ibl_map_binding = INVALID_BINDING;
+		UniformBuffer const* lights = nullptr; // Lights block; read by forward (variant 0) shaders only
+		Image const* shadow_map = nullptr;
+		Image const* ao_map = nullptr;
+		Image const* sky_ibl_map = nullptr;
 		uint32_t variant_key = 0;
 	};
 
@@ -211,6 +211,21 @@ namespace z1 {
 
 		void bind_uniform(std::shared_ptr<Shader> const& shader, std::string const& material_name) const;
 		void bind_uniform(std::shared_ptr<Shader> const& shader, std::string const& material_name, std::string const& shader_name) const;
+
+		// Per-shader binding plan: resolved handles/slots + value sources; rebuilt on variant/override change.
+		struct PlanEntry {
+			DataType m_type = DataType::None;
+			Shader::UniformHandle m_handle;
+			Shader::TextureSlot m_texture_slot;
+			Material::Variable const* m_override = nullptr;
+			Material::Variable const* m_fallback = nullptr;
+		};
+		void rebuild_plan(Shader const* shader) const;
+
+		mutable std::vector<PlanEntry> m_plan;
+		mutable Shader::UniformHandle m_model_handle;
+		mutable Shader const* m_plan_shader = nullptr;
+		mutable bool m_plan_dirty = true;
 
 		void set_int(std::string const& name, int val);
 		void set_ivec2(std::string const& name, glm::ivec2 const& val);

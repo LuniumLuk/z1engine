@@ -7,6 +7,8 @@
 
 namespace z1 {
 
+	struct Image;
+
 	bool file_is_shader(Filepath const& path) noexcept;
 
 	struct API ShaderModule {
@@ -40,6 +42,19 @@ namespace z1 {
 				, m_location(location) {}
 		};
 
+		// A sampler uniform's fixed binding: table slot, GL unit, location, reflected type.
+		struct TextureSlot {
+			uint32_t m_slot = INVALID_BINDING;
+			uint32_t m_unit = INVALID_BINDING;
+			uint32_t m_location = INVALID_BINDING;
+			DataType m_type = DataType::None;
+		};
+
+		// Fast-path handle for a reflected uniform (index into the shader's uniform table).
+		struct UniformHandle {
+			uint32_t m_index = INVALID_BINDING;
+		};
+
 		struct UniformBlock {
 			std::string m_name;
 			uint32_t m_size;
@@ -63,6 +78,26 @@ namespace z1 {
 		* set shader uniform value
 		*/
 		virtual void set_uniform(std::string const& name, void const* data) = 0;
+		/*
+		* set shader uniform value by cached handle (no name resolution)
+		*/
+		virtual void set_uniform(UniformHandle handle, void const* data) = 0;
+		/*
+		* resolve a uniform handle once; INVALID_BINDING index when the name is unknown
+		*/
+		virtual UniformHandle uniform_handle(std::string const& name) = 0;
+		/*
+		* resolve a sampler's fixed slot once (slot == unit); INVALID_BINDING when unknown
+		*/
+		virtual TextureSlot sampler_slot(std::string const& name) const = 0;
+		/*
+		* bind a texture (or the type-matched fallback when image is null) to the slot's unit
+		*/
+		virtual void bind_texture(TextureSlot const& slot, Image const* image) = 0;
+		/*
+		* bind a texture to one element of a sampler-array slot (unit = slot unit + element)
+		*/
+		virtual void bind_texture(TextureSlot const& slot, uint32_t element, Image const* image) = 0;
 		/*
 		* set the binding position of uniform
 		* only the opaque uniform types can be set, e.g. samplers, images, atomic counters

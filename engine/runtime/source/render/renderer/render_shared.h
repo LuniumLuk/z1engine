@@ -143,6 +143,19 @@ namespace z1 {
 		void add_bloom_pass(RenderGraph& rg, std::string const& input);
 		void add_postprocess_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& target, std::string const& scene_input, bool bloom_present);
 
+		// Fixed sampler slots for the pass shaders, resolved on first use (see simplify-binding-api).
+		struct PassSlots {
+			bool m_valid = false;
+			Shader::TextureSlot m_ao_depth, m_ao_normal;
+			Shader::TextureSlot m_ao_blur_ao, m_ao_blur_depth;
+			Shader::TextureSlot m_taa_current, m_taa_history, m_taa_velocity;
+			Shader::TextureSlot m_sharpen_src;
+			Shader::TextureSlot m_bloom_down_src, m_bloom_up_src;
+			Shader::TextureSlot m_post_scene, m_post_bloom;
+		};
+		PassSlots m_pass_slots;
+		void ensure_pass_slots();
+
 	};
 
 }

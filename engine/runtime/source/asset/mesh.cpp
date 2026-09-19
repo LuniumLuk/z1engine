@@ -3,6 +3,8 @@
 #include "asset/asset_manager.h"
 #include "asset/binary_file.h"
 #include "render/renderer/renderer_forward.h"
+#include "render/graphics_context.h"
+#include "render/uniform_blocks.h"
 
 namespace z1 {
 
@@ -479,8 +481,7 @@ namespace z1 {
 			mi->bind(per_frame);
 			if (bones) {
 				has_skinning = 1;
-				bones->bind();
-				mi->get_shader(per_frame.variant_key)->set_uniform_block_binding("Bones", bones->get_binding());
+				g_runtime_context.m_graphics_context->bind_uniform_buffer(uniform_blocks::Bones, *bones);
 			}
 			mi->get_shader(per_frame.variant_key)->set_uniform("u_has_skinning", &has_skinning);
 		}
@@ -488,9 +489,6 @@ namespace z1 {
 		prim.m_vertex_array->bind();
 		prim.m_vertex_array->draw(prim.m_primitive_type);
 		prim.m_vertex_array->unbind();
-
-		if (has_skinning)
-			bones->unbind();
 
 		if (mi)
 			mi->unbind();

@@ -206,19 +206,9 @@ namespace z1 {
 
 		pass.execute([this, &draw_list, scene, history_uninitialized, read_idx, width, height, projview](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
-				per_frame.global_binding = g_runtime_context.m_global->get_binding();
-
-				m_shared.m_lights_buffer->bind();
-				per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
-
-				m_shared.m_shadow_image->bind();
-				per_frame.shadow_map_binding = m_shared.m_shadow_image->get_binding();
-
-				auto ao_image = m_shared.get_ao_image();
-				if (ao_image) {
-					ao_image->bind();
-					per_frame.ao_map_binding = ao_image->get_binding();
-				}
+				per_frame.lights = m_shared.m_lights_buffer.get();
+				per_frame.shadow_map = m_shared.m_shadow_image.get();
+				per_frame.ao_map = m_shared.get_ao_image().get();
 				m_shared.apply_sky_light(per_frame);
 
 				// Pass 1: Opaque and Mask
@@ -268,9 +258,8 @@ namespace z1 {
 				if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
 					m_pipeline_skybox->bind();
 
-					m_shared.m_sky_ibl_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
-
 					auto& s = m_pipeline_skybox->m_shader;
+					s->bind_texture(s->sampler_slot("u_sky_texture"), m_shared.m_sky_ibl_image.get());
 					s->set_uniform("u_rotation", &m_shared.m_sky_rotation);
 					s->set_uniform("u_intensity", &m_shared.m_sky_intensity);
 					s->set_uniform("u_mip_level", &m_shared.m_sky_mip_level);
@@ -284,17 +273,7 @@ namespace z1 {
 					m_shared.m_quad->draw(PrimitiveType::Triangles);
 					m_shared.m_quad->unbind();
 
-					m_shared.m_sky_ibl_image->unbind();
 					m_pipeline_skybox->unbind();
-				}
-
-				m_shared.m_lights_buffer->unbind();
-				m_shared.m_shadow_image->unbind();
-				if (ao_image) {
-					ao_image->unbind();
-				}
-				if (per_frame.sky_ibl_map_binding != INVALID_BINDING) {
-					m_shared.m_sky_ibl_image->unbind();
 				}
 
 				if (history_uninitialized) {

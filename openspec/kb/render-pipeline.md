@@ -29,7 +29,7 @@ Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `Gl
 - `RenderShared::add_ao_pass(rg, depth_input, normal_input)` adds `"ao"` (+ `"ao-blur"` when enabled) and returns the final pass name; consumers call `depends_on()` on it and bind `get_ao_image()`.
 - **Deferred**: AO pass reads `gbuffer-depth`/`gbuffer-normal` after the G-buffer pass; `deferred_lighting.glsl` multiplies ambient by AO.
 - **Forward**: a `prepass` (depth+normal) renders opaque+mask geometry with the GBuffer shader variant before the AO pass; forward PBR/phone shaders sample `u_ao_texture` at `v_screen_uv` (location 8 varying) and multiply ambient.
-- Materials receive the AO texture via `PerFrameConst::ao_map_binding`; shaders gate sampling on the global `u_ao_enabled` flag.
+- Materials receive the AO texture through `PerFrameConst::ao_map` and bind it to the `u_ao_texture` sampler slot; shaders gate sampling on the global `u_ao_enabled` flag.
 - Verified algorithm references: `D:\wiki\wiki\concepts\z1engine-gtao-ssao.md` (GTAO per-slice integral `0.25·(cosN + 2h·sin n − cos(2h−n))`, horizon clamping, slice weights).
 
 ### Forward Pipeline (`renderer/renderer_forward.h`)
@@ -47,7 +47,7 @@ Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `Gl
 - VBO dynamically resized to match `m_max_particles * sizeof(ParticleInstanceData)`
 - `add_particle_pass(rg, scene, input_pass, shadow_image)` -- shadow_image enables CSM shadow reception per emitter
 - `add_particle_shadow_passes(rg, scene, shadow_fb, csm_layers)` -- appends one depth-only pass per configured cascade after mesh shadow passes using `LoadOp::Load`
-- Shadow receive: binds CSM shadow array, calls `set_uniform_block_binding("Global", ...)`, sets `u_receive_shadows` per emitter
+- Shadow receive: binds CSM shadow array to the `u_shadow_map` sampler slot, binds the `Global` block via `GraphicsContext::bind_uniform_buffer`, sets `u_receive_shadows` per emitter
 - Shadow cast: per-cascade billboard depth pass; skips emitters with `m_cast_shadows = false`
 - Both controlled by `ParticleComponent::m_receive_shadows` and `m_cast_shadows` (default `true`)
 
@@ -79,6 +79,13 @@ Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `Gl
   exactly `sm_cascade_count` layers at `sm_resolution`² and recreates it only when either setting changes.
 - `calculate_csm_splits` computes N split distances (lambda 0.95) and N light matrices; unused
   `sun_projview` slots repeat the last valid cascade so shaders never read uninitialized matrices.
+- Light-frustum sizing (2026-09-18 fix): the nearest cascade's ortho half-extent is `sm_ortho_size`;
+  farther cascades scale as `sm_ortho_size * (split_far / split_1)`, clamped to the camera far plane.
+  Deriving the extent from the camera far plane (`diag/2 + cascade_far`) shrank the whole scene into a
+  couple of shadow-map texels whenever the far plane was large (e.g. 1000) — one-cascade setups then had
+  no visible shadows at all. `sm_ortho_size` was previously an unused reflected knob; it now controls
+  shadow coverage vs. sharpness. The light-view texel snap writes translation in column 3
+  (`light_view[3][0..1]`) — indexing `[0][3]` snapped the zero bottom row and was a silent no-op.
 - Shaders pick the cascade with `u_csm_cascade_count` guards (`include/lighting.glsl::get_cascade_index`,
   `particle.glsl`): only existing layers are sampled, beyond-range distances clamp to the last cascade.
 
@@ -118,19 +125,36 @@ sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
 | Shader | `shader.h` | `rhi/opengl_shader.h` |
 | Vertex Array | `vertex_array.h` | `rhi/opengl_vertex_array.h` |
 
-### Sampler bindings (2026-09-17)
+### Sampler bindings (2026-09-18 redesign; archived 2026-09-19)
 
-- `GraphicsContext::m_default_sampler_binding` is the highest texture unit; it is
-  excluded from the image binding pool and always holds 1x1 white 2D and 2D-array
-  textures (`OpenGLContext::create_default_sampler_textures`).
-- `OpenGLShader::link_shaders` points every sampler uniform at that unit, so a
-  program that never sets a sampler still references a texture whose target matches.
-- Passes/materials that bind an optional texture (AO, sky IBL, bloom, shadow map)
-  must fall back to `m_default_sampler_binding` when the resource is absent.
-- Why: a sampler left at GL's default value (unit 0) can reference a texture of a
-  mismatched target (e.g. `sampler2D` on the CSM `GL_TEXTURE_2D_ARRAY`), which
-  macOS drivers reject with `GL_INVALID_OPERATION` at draw time. Windows drivers
-  silently tolerate it.
+See `openspec/changes/archive/2026-09-19-simplify-binding-api/`. Phases 1-3 are implemented and verified;
+Phase 4 cleanup and the final regression tasks were not executed, so the legacy API remains in dual-support
+mode:
+
+- Each program gets **fixed sampler slots** at link: samplers sorted by name, `slot == unit`, values stamped
+  once via `glProgramUniform1i/1iv`. `Shader::sampler_slot(name)` returns `{ slot, unit, location, type }`.
+- Textures bind through `Shader::bind_texture(slot, image)` (or `(slot, element, image)` for sampler arrays);
+  a null image resolves to a **type-matched 1x1 white fallback** (2D / 2D-array / cube), so absent optional
+  resources are structurally safe — no call-site fallback branches.
+- Uniform blocks use **semantic bindings** (`render/uniform_blocks.h`: Global=0, Lights=1, Bones=2,
+  PrevBones=3) applied once at link; buffers bind via `GraphicsContext::bind_uniform_buffer(binding, buffer)`
+  (dedup-cached). A program declaring a block outside the table logs a `CORE_ERROR` at link (it would
+  otherwise keep the driver default binding 0 and silently alias `Global`); add new blocks to
+  `render/uniform_blocks.h`.
+- `GraphicsContext::bind_texture_unit(unit, handle, target)` dedups unit→handle pairs; renders submit
+  bound state instead of acquire/release-ing pooled units per draw.
+- Value uniforms use `Shader::uniform_handle(name)` + `set_uniform(handle, data)` on hot paths;
+  `set_uniform(name, ...)` remains for cold/pass-specific uniforms.
+- Materials execute a cached per-shader **binding plan** (handles + slots resolved once, rebuilt when the
+  shader variant or overrides change); `PerFrameConst` carries resource pointers (`lights`, `shadow_map`,
+  `ao_map`, `sky_ibl_map`) instead of binding indices.
+- The legacy `m_default_sampler_binding` machinery (highest unit holding white 2D/2D-array textures) is
+  superseded by the typed fallbacks; removing it (with the binding pools) is the unexecuted Phase 4 cleanup
+  of the archived change.
+
+Why typed fallbacks matter: a sampler left at GL's default value (unit 0) can reference a texture of a
+mismatched target (e.g. `sampler2D` on the CSM `GL_TEXTURE_2D_ARRAY`), which macOS drivers reject with
+`GL_INVALID_OPERATION` at draw time; Windows drivers silently tolerate it.
 
 ### Binding allocation stability (2026-09-18)
 

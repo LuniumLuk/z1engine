@@ -30,6 +30,7 @@ namespace z1 {
 		void write(void const* data, size_t size) const override;
 
 		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
+		TextureTarget get_target() const override { return TextureTarget::Texture2D; }
 
 	private:
 		uint32_t m_handle = 0;
@@ -46,6 +47,7 @@ namespace z1 {
 		void write(void const* data, size_t size) const override;
 
 		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
+		TextureTarget get_target() const override { return TextureTarget::Texture2DArray; }
 
 	private:
 		uint32_t m_handle = 0;
@@ -60,6 +62,7 @@ namespace z1 {
 		void write(void const* data, size_t size) const override;
 
 		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
+		TextureTarget get_target() const override { return TextureTarget::TextureCube; }
 
 	private:
 		uint32_t m_handle = 0;

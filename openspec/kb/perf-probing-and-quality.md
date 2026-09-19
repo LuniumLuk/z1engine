@@ -102,6 +102,8 @@ Artistic values (AO radius/intensity, exposure, sun parameters) are never modifi
   array only when `sm_resolution`/`sm_cascade_count` changed; `calculate_csm_splits` computes N cascades
   (1–4) and `MAX_CSM_CASCADES` (4) is the array capacity. Shaders (`include/lighting.glsl`, `particle.glsl`)
   guard cascade selection with `u_csm_cascade_count` so missing layers are never sampled.
+- Light-frustum extent (2026-09-18 fix): cascade 0 uses `sm_ortho_size` as its half-extent and farther
+  cascades scale by split ratio (clamped to the camera far plane) — see `render-pipeline.md` "Shadows".
 - AO buffers are allocated at `width / ao_resolution` (2 = half, 4 = quarter); a change recreates them
   through the existing size check in `ensure_buffers()`.
 

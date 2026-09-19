@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "render/renderer/particle_renderer.h"
+
+#include "render/uniform_blocks.h"
 #include "render/shader.h"
 #include "render/buffer.h"
 #include "render/vertex_array.h"
@@ -127,7 +129,6 @@ namespace z1 {
 				}
 
 				std::shared_ptr<Image> soft_depth_image;
-				uint32_t depth_binding = INVALID_BINDING;
 				if (fb && depth_image) {
 					if (!m_soft_depth_copy_fb ||
 						m_soft_depth_copy_fb->get_width() != fb->get_width() ||
@@ -143,16 +144,6 @@ namespace z1 {
 					ctx.bind_framebuffer(fb);
 
 					soft_depth_image = m_soft_depth_copy_fb->get_attachment_image(0);
-					if (soft_depth_image) {
-						soft_depth_image->bind();
-						depth_binding = soft_depth_image->get_binding();
-					}
-				}
-
-				uint32_t shadow_binding = INVALID_BINDING;
-				if (shadow_image) {
-					shadow_image->bind();
-					shadow_binding = shadow_image->get_binding();
 				}
 
 				for (auto entity : view) {
@@ -209,9 +200,10 @@ namespace z1 {
 					if (!pipeline) continue;
 
 					pipeline->bind();
+					auto& ps = pipeline->m_shader;
 
 					// Bind Global UBO so shadow sampling uniforms (u_sun_projview, u_csm_splits, u_cam_position) are available
-					pipeline->m_shader->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+					ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
 
 					// Set shader uniforms
 					auto view_mat = camera_comp.get_view();
@@ -231,12 +223,8 @@ namespace z1 {
 						particle_image = pc.m_texture->m_image;
 						has_texture = 1;
 					}
-					if (particle_image) {
-						particle_image->bind();
-						int binding = (int)particle_image->get_binding();
-						pipeline->m_shader->set_uniform("u_texture", &binding);
-					}
-					pipeline->m_shader->set_uniform("u_has_texture", &has_texture);
+					ps->bind_texture(ps->sampler_slot("u_texture"), particle_image.get());
+					ps->set_uniform("u_has_texture", &has_texture);
 
 					// Soft particle depth blending
 					int soft_blend = 0;
@@ -247,24 +235,12 @@ namespace z1 {
 						pipeline->m_shader->set_uniform("u_far", &far_val);
 						soft_blend = 1;
 					}
-					if (depth_binding != INVALID_BINDING) {
-						pipeline->m_shader->set_uniform_binding("u_depth_texture", depth_binding);
-					}
-					else {
-						// Avoid stale sampler state
-						pipeline->m_shader->set_uniform_binding("u_depth_texture", particle_image->get_binding());
-					}
+					ps->bind_texture(ps->sampler_slot("u_depth_texture"), soft_depth_image.get());
 					pipeline->m_shader->set_uniform("u_soft_blend", &soft_blend);
 
 					// Shadow reception
-					bool effective_shadow = (shadow_binding != INVALID_BINDING) && pc.m_receive_shadows;
-					if (shadow_binding != INVALID_BINDING) {
-						pipeline->m_shader->set_uniform_binding("u_shadow_map", shadow_binding);
-					}
-					else {
-						// Avoid stale sampler state
-						pipeline->m_shader->set_uniform_binding("u_shadow_map", particle_image->get_binding());
-					}
+					bool effective_shadow = (shadow_image != nullptr) && pc.m_receive_shadows;
+					ps->bind_texture(ps->sampler_slot("u_shadow_map"), shadow_image.get());
 					int receive_shadows_val = effective_shadow ? 1 : 0;
 					pipeline->m_shader->set_uniform("u_receive_shadows", &receive_shadows_val);
 
@@ -274,18 +250,7 @@ namespace z1 {
 											pc.m_runtime.m_vbo, 2, 1);
 					m_quad_vao->unbind();
 
-					if (particle_image) {
-						particle_image->unbind();
-					}
-
 					pipeline->unbind();
-				}
-
-				if (shadow_binding != INVALID_BINDING) {
-					shadow_image->unbind();
-				}
-				if (soft_depth_image) {
-					soft_depth_image->unbind();
 				}
 			});
 	}
@@ -367,7 +332,7 @@ namespace z1 {
 						m_pipeline_shadow->bind();
 						auto& s = m_pipeline_shadow->m_shader;
 
-						s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+						ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
 						s->set_uniform("u_cam_right", &cam_right);
 						s->set_uniform("u_cam_up", &cam_up);
 						s->set_uniform("u_csm_index", &cascade);
@@ -378,21 +343,13 @@ namespace z1 {
 							particle_image = pc.m_texture->m_image;
 							has_texture = 1;
 						}
-						if (particle_image) {
-							particle_image->bind();
-							int binding = (int)particle_image->get_binding();
-							s->set_uniform("u_texture", &binding);
-						}
+						s->bind_texture(s->sampler_slot("u_texture"), particle_image.get());
 						s->set_uniform("u_has_texture", &has_texture);
 
 						m_quad_vao->bind();
 						m_quad_vao->draw_instanced(PrimitiveType::TriangleStrip, static_cast<uint32_t>(instances.size()),
 												pc.m_runtime.m_vbo, 2, 1);
 						m_quad_vao->unbind();
-
-						if (particle_image) {
-							particle_image->unbind();
-						}
 
 						m_pipeline_shadow->unbind();
 					}

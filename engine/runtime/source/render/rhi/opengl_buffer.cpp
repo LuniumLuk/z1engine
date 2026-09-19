@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "render/rhi/opengl_buffer.h"
 #include "render/rhi/opengl_context.h"
+#include "render/graphics_context.h"
+#include "util/prober.h"
 #include "glad/glad.h"
 
 namespace z1 {
@@ -210,11 +212,16 @@ namespace z1 {
 	}
 
 	void OpenGLUniformBuffer::bind(uint32_t binding) const {
+		PROBE_COUNT("ubo_binds");
+		PROBE_HASH_MIX(static_cast<uint64_t>(binding) | (static_cast<uint64_t>(m_handle) << 32));
 		glBindBufferBase(GL_UNIFORM_BUFFER, binding, m_handle);
+		g_runtime_context.m_graphics_context->notify_uniform_buffer_bound(binding, m_handle);
 	}
 
 	void OpenGLUniformBuffer::unbind(uint32_t binding) const {
+		PROBE_COUNT("ubo_unbinds");
 		glBindBufferBase(GL_UNIFORM_BUFFER, binding, 0);
+		g_runtime_context.m_graphics_context->notify_uniform_buffer_bound(binding, 0);
 	}
 
 	//void OpenGLUniformBuffer::bind() const {

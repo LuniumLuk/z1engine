@@ -9,6 +9,10 @@ namespace z1 {
 		m_global_buffer = UniformBuffer::create(nullptr, sizeof(GlobalConstants), BufferUsage::Dynamic);
 	}
 
+	UniformBuffer const& GlobalSettings::get_buffer() const {
+		return *m_global_buffer;
+	}
+
 	void GlobalSettings::set_override_postprocess(
 		float     exposure,
 		float     gamma,

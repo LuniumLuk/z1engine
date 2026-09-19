@@ -2,6 +2,9 @@
 #include "render/rhi/opengl_shader.h"
 #include "render/shader_variant.h"
 #include "render/graphics_context.h"
+#include "render/image.h"
+#include "render/uniform_blocks.h"
+#include "util/prober.h"
 #include "util/string_utils.h"
 #include "glad/glad.h"
 
@@ -219,18 +222,37 @@ namespace z1 {
 	}
 
 	bool OpenGLShader::has_uniform(std::string const& name) const {
+		PROBE_COUNT("name_resolutions");
 		return m_uniform_indices.find(name) != m_uniform_indices.end();
 	}
 
 	void OpenGLShader::set_uniform(std::string const& name, void const* data) {
 		PROFILE_FUNCTION();
+		PROBE_COUNT("name_resolutions");
 		auto it = m_uniform_indices.find(name);
 		if (it == m_uniform_indices.end()) {
 			return;
 		}
-		//DEBUG_CHECK(it != m_uniform_indices.end(), "uniform {0} not found!", name);
+		set_uniform_by_index(it->second, data);
+	}
 
-		uint32_t index = it->second;
+	void OpenGLShader::set_uniform(UniformHandle handle, void const* data) {
+		if (handle.m_index == INVALID_BINDING || handle.m_index >= (uint32_t)m_uniforms.size()) {
+			return;
+		}
+		set_uniform_by_index(handle.m_index, data);
+	}
+
+	Shader::UniformHandle OpenGLShader::uniform_handle(std::string const& name) {
+		PROBE_COUNT("name_resolutions");
+		auto it = m_uniform_indices.find(name);
+		if (it == m_uniform_indices.end()) {
+			return {};
+		}
+		return UniformHandle{ it->second };
+	}
+
+	void OpenGLShader::set_uniform_by_index(uint32_t index, void const* data) {
 		switch (m_uniforms[index].m_type) {
 		case DataType::Bool: set_bool(m_uniforms[index].m_location, *(bool*)data); return;
 		case DataType::Int: set_int(m_uniforms[index].m_location, *(int*)data); return;
@@ -243,6 +265,8 @@ namespace z1 {
 		case DataType::Sampler2D:
 		case DataType::Sampler2DArray:
 		case DataType::SamplerCube:
+			PROBE_COUNT("sampler_writes");
+			PROBE_HASH_MIX(static_cast<uint64_t>(m_handle) | (static_cast<uint64_t>(*(int*)data) << 32));
 			if (m_uniforms[index].m_count == 1) {
 				set_int(m_uniforms[index].m_location, *(int*)data);
 			}
@@ -251,11 +275,94 @@ namespace z1 {
 			}
 			return;
 		}
-		DEBUG_CHECK(false, "uniform {0} with unknown or unsupported DataType!", name);
+		DEBUG_CHECK(false, "uniform with unknown or unsupported DataType!");
+	}
+
+	Shader::TextureSlot OpenGLShader::sampler_slot(std::string const& name) const {
+		auto it = m_sampler_slot_indices.find(name);
+		if (it == m_sampler_slot_indices.end()) {
+			return {};
+		}
+		SamplerSlotEntry const& entry = m_sampler_slots[it->second];
+		TextureSlot slot{};
+		slot.m_slot = it->second;
+		slot.m_unit = entry.m_unit;
+		slot.m_location = entry.m_location;
+		slot.m_type = entry.m_type;
+		return slot;
+	}
+
+	void OpenGLShader::bind_texture(TextureSlot const& slot, Image const* image) {
+		if (slot.m_slot == INVALID_BINDING || slot.m_slot >= m_sampler_slots.size()) {
+			return;
+		}
+		SamplerSlotEntry const& entry = m_sampler_slots[slot.m_slot];
+		stamp_sampler_slot(slot.m_slot);
+
+		uint32_t handle = 0;
+		TextureTarget target = TextureTarget::None;
+		switch (entry.m_type) {
+		case DataType::Sampler2D: target = TextureTarget::Texture2D; break;
+		case DataType::Sampler2DArray: target = TextureTarget::Texture2DArray; break;
+		case DataType::SamplerCube: target = TextureTarget::TextureCube; break;
+		default: return;
+		}
+
+		if (image && image->get_native_handle()) {
+			handle = static_cast<uint32_t>(reinterpret_cast<uint64_t>(image->get_native_handle()));
+			target = image->get_target();
+		}
+		else {
+			handle = g_runtime_context.m_graphics_context->get_fallback_texture(target);
+		}
+		g_runtime_context.m_graphics_context->bind_texture_unit(entry.m_unit, handle, target);
+	}
+
+	void OpenGLShader::bind_texture(TextureSlot const& slot, uint32_t element, Image const* image) {
+		if (slot.m_slot == INVALID_BINDING || slot.m_slot >= m_sampler_slots.size()) {
+			return;
+		}
+		SamplerSlotEntry const& entry = m_sampler_slots[slot.m_slot];
+		if (element >= entry.m_count) {
+			return;
+		}
+		stamp_sampler_slot(slot.m_slot);
+
+		uint32_t handle = 0;
+		TextureTarget target = TextureTarget::Texture2D;
+		if (image && image->get_native_handle()) {
+			handle = static_cast<uint32_t>(reinterpret_cast<uint64_t>(image->get_native_handle()));
+			target = image->get_target();
+		}
+		else {
+			handle = g_runtime_context.m_graphics_context->get_fallback_texture(TextureTarget::Texture2D);
+		}
+		g_runtime_context.m_graphics_context->bind_texture_unit(entry.m_unit + element, handle, target);
+	}
+
+	void OpenGLShader::stamp_sampler_slot(uint32_t slot_index) {
+		if (m_slot_stamped[slot_index]) {
+			return;
+		}
+		SamplerSlotEntry const& entry = m_sampler_slots[slot_index];
+		if (entry.m_count > 1) {
+			std::vector<GLint> units(entry.m_count);
+			for (uint32_t i = 0; i < entry.m_count; ++i) {
+				units[i] = (GLint)(entry.m_unit + i);
+			}
+			glProgramUniform1iv(m_handle, (GLint)entry.m_location, (GLsizei)entry.m_count, units.data());
+		}
+		else {
+			glProgramUniform1i(m_handle, (GLint)entry.m_location, (GLint)entry.m_unit);
+		}
+		m_slot_stamped[slot_index] = 1;
 	}
 
 	void OpenGLShader::set_uniform_binding(std::string const& name, uint32_t binding) {
 		PROFILE_FUNCTION();
+		PROBE_COUNT("name_resolutions");
+		PROBE_COUNT("sampler_writes");
+		PROBE_HASH_MIX(static_cast<uint64_t>(m_handle) | (static_cast<uint64_t>(binding) << 32));
 		auto it = m_uniform_indices.find(name);
 		DEBUG_CHECK(it != m_uniform_indices.end(), "uniform {0} not found!", name);
 
@@ -271,6 +378,9 @@ namespace z1 {
 
 	void OpenGLShader::set_uniform_block_binding(std::string const& name, uint32_t binding) {
 		PROFILE_FUNCTION();
+		PROBE_COUNT("name_resolutions");
+		PROBE_COUNT("block_writes");
+		PROBE_HASH_MIX(static_cast<uint64_t>(m_handle) | (static_cast<uint64_t>(binding) << 32));
 		auto it = m_uniform_block_indices.find(name);
 		if (it != m_uniform_block_indices.end()) {
 			uint32_t index = it->second;
@@ -282,10 +392,14 @@ namespace z1 {
 	}
 
 	void OpenGLShader::set_uniform_binding(uint32_t location, uint32_t binding) {
+		PROBE_COUNT("sampler_writes");
+		PROBE_HASH_MIX(static_cast<uint64_t>(m_handle) | (static_cast<uint64_t>(binding) << 32));
 		glUniform1i(location, binding);
 	}
 
 	void OpenGLShader::set_uniform_block_binding(uint32_t location, uint32_t binding) {
+		PROBE_COUNT("block_writes");
+		PROBE_HASH_MIX(static_cast<uint64_t>(m_handle) | (static_cast<uint64_t>(binding) << 32));
 		glUniformBlockBinding(m_handle, location, binding);
 	}
 
@@ -443,7 +557,50 @@ namespace z1 {
 			m_uniform_blocks.emplace_back(nameStr, size, binding, variables);
 		}
 
-		// Default every sampler so programs that never set one stay valid.
+		// Semantic block bindings; unknown blocks are reported instead of silently aliasing Global.
+		for (uint32_t i = 0; i < (uint32_t)m_uniform_blocks.size(); ++i) {
+			uint32_t const semantic_binding = uniform_blocks::find(m_uniform_blocks[i].m_name.c_str());
+			if (semantic_binding == INVALID_BINDING) {
+				CORE_ERROR("shader '{0}': uniform block '{1}' is not a semantic block; add it to "
+					"render/uniform_blocks.h (Global, Lights, Bones, PrevBones)",
+					m_name, m_uniform_blocks[i].m_name);
+				continue;
+			}
+			glUniformBlockBinding(m_handle, i, semantic_binding);
+		}
+
+		// Fixed sampler slots: sorted by name, slot == unit, stamped once on first bind.
+		std::vector<uint32_t> sampler_uniforms;
+		for (uint32_t i = 0; i < (uint32_t)m_uniforms.size(); ++i) {
+			DataType const type = m_uniforms[i].m_type;
+			if (type == DataType::Sampler2D || type == DataType::Sampler2DArray || type == DataType::SamplerCube) {
+				sampler_uniforms.push_back(i);
+			}
+		}
+		std::sort(sampler_uniforms.begin(), sampler_uniforms.end(), [this](uint32_t a, uint32_t b) {
+			return m_uniforms[a].m_name < m_uniforms[b].m_name;
+		});
+		uint32_t unit_cursor = 0;
+		for (uint32_t slot = 0; slot < (uint32_t)sampler_uniforms.size(); ++slot) {
+			auto const& uniform = m_uniforms[sampler_uniforms[slot]];
+			SamplerSlotEntry entry{};
+			entry.m_location = uniform.m_location;
+			entry.m_unit = unit_cursor;
+			entry.m_count = uniform.m_count > 0 ? uniform.m_count : 1;
+			entry.m_type = uniform.m_type;
+			m_sampler_slot_indices.emplace(uniform.m_name, slot);
+			m_sampler_slots.push_back(entry);
+			unit_cursor += entry.m_count;
+		}
+		m_slot_stamped.assign(m_sampler_slots.size(), 0);
+
+		uint32_t const max_units = g_runtime_context.m_graphics_context->m_max_fragment_texture_units;
+		if (max_units > 0 && unit_cursor > max_units) {
+			CORE_ERROR("shader '{0}': {1} sampler units exceed the per-stage limit ({2}); reduce sampler count",
+				m_name, unit_cursor, max_units);
+		}
+
+		// Default every sampler so programs that never set one stay valid until the binder stamps it.
 		GLint const default_binding = (GLint)g_runtime_context.m_graphics_context->m_default_sampler_binding;
 		glUseProgram(m_handle);
 		for (auto const& uniform : m_uniforms) {

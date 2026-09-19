@@ -63,6 +63,19 @@ namespace z1::prober {
 		uint64_t g_gpu_samples = 0;
 		bool g_reported_environment = false;
 
+		// Frame counters (reset every frame after being recorded as PROBE values).
+		constexpr uint32_t kMaxCounters = 16;
+		struct CounterSlot {
+			char const* name = nullptr;
+			double sum = 0.0;
+		};
+		CounterSlot g_counters[kMaxCounters];
+		uint32_t g_counter_count = 0;
+
+		// FNV-style rolling hash of binding-related calls, reported as "layout_hash".
+		constexpr uint64_t kHashSeed = 1469598103934665603ull;
+		uint64_t g_layout_hash = kHashSeed;
+
 		bool env_flag(char const* name, bool fallback) {
 			char const* value = std::getenv(name);
 			if (!value) {
@@ -230,12 +243,42 @@ namespace z1::prober {
 		++g_frames_since_report;
 		record_scope("frame", ms_since(g_frame_start));
 
+		// Frame counters become ordinary report values (per-frame counts) before being reset.
+		for (uint32_t i = 0; i < g_counter_count; ++i) {
+			record_value(g_counters[i].name, g_counters[i].sum);
+			g_counters[i].sum = 0.0;
+		}
+		record_value("layout_hash", static_cast<double>(g_layout_hash & 0xffffffffull));
+		g_layout_hash = kHashSeed;
+
 		if (!g_reported_environment) {
 			report_environment();
 		}
 		if (g_report_every > 0 && !g_quiet && g_frames_since_report >= static_cast<uint32_t>(g_report_every)) {
 			report_window();
 		}
+	}
+
+	void count(char const* name, double value) {
+		if (!g_enabled) {
+			return;
+		}
+		for (uint32_t i = 0; i < g_counter_count; ++i) {
+			if (std::strcmp(g_counters[i].name, name) == 0) {
+				g_counters[i].sum += value;
+				return;
+			}
+		}
+		if (g_counter_count < kMaxCounters) {
+			g_counters[g_counter_count++] = { name, value };
+		}
+	}
+
+	void hash_mix(uint64_t value) {
+		if (!g_enabled) {
+			return;
+		}
+		g_layout_hash ^= value + 0x9e3779b97f4a7c15ull + (g_layout_hash << 6) + (g_layout_hash >> 2);
 	}
 
 	void record_scope(char const* name, double ms) {

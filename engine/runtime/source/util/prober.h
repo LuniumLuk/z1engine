@@ -27,6 +27,11 @@ namespace z1::prober {
 	void record_value(char const* name, double value);
 	void print_summary();
 
+	// Per-frame counter: accumulated during the frame, reported (as its average) on the next report.
+	void count(char const* name, double value = 1.0);
+	// Mixes a value into the frame's binding-layout hash (reported as "layout_hash").
+	void hash_mix(uint64_t value);
+
 	// GPU timing hooks, called by the graphics context at frame boundaries.
 	void gpu_begin_frame();
 	void gpu_end_frame();
@@ -49,21 +54,25 @@ namespace z1::prober {
 #define Z1_PROBE_CAT(a, b) Z1_PROBE_CAT_IMPL(a, b)
 
 #ifdef ENABLE_PROBING
-#	define PROBE_CONFIGURE()		::z1::prober::configure_from_env()
-#	define PROBE_FRAME_BEGIN()		::z1::prober::begin_frame()
-#	define PROBE_FRAME_END()		::z1::prober::end_frame()
-#	define PROBE_SCOPE(name)		::z1::prober::ScopeTimer Z1_PROBE_CAT(z1_probe_scope_, __LINE__)(name)
-#	define PROBE_VALUE(name, value)	::z1::prober::record_value(name, static_cast<double>(value))
-#	define PROBE_GPU_BEGIN_FRAME()	::z1::prober::gpu_begin_frame()
-#	define PROBE_GPU_END_FRAME()	::z1::prober::gpu_end_frame()
-#	define PROBE_PRINT_SUMMARY()	::z1::prober::print_summary()
+#	define PROBE_CONFIGURE()        ::z1::prober::configure_from_env()
+#	define PROBE_FRAME_BEGIN()      ::z1::prober::begin_frame()
+#	define PROBE_FRAME_END()        ::z1::prober::end_frame()
+#	define PROBE_SCOPE(name)        ::z1::prober::ScopeTimer Z1_PROBE_CAT(z1_probe_scope_, __LINE__)(name)
+#	define PROBE_VALUE(name, value) ::z1::prober::record_value(name, static_cast<double>(value))
+#	define PROBE_COUNT(name)        ::z1::prober::count(name)
+#	define PROBE_HASH_MIX(value)    ::z1::prober::hash_mix(static_cast<uint64_t>(value))
+#	define PROBE_GPU_BEGIN_FRAME()  ::z1::prober::gpu_begin_frame()
+#	define PROBE_GPU_END_FRAME()    ::z1::prober::gpu_end_frame()
+#	define PROBE_PRINT_SUMMARY()    ::z1::prober::print_summary()
 #else
-#	define PROBE_CONFIGURE()		((void)0)
-#	define PROBE_FRAME_BEGIN()		((void)0)
-#	define PROBE_FRAME_END()		((void)0)
-#	define PROBE_SCOPE(name)		((void)0)
-#	define PROBE_VALUE(name, value)((void)0)
-#	define PROBE_GPU_BEGIN_FRAME()	((void)0)
-#	define PROBE_GPU_END_FRAME()	((void)0)
-#	define PROBE_PRINT_SUMMARY()	((void)0)
+#	define PROBE_CONFIGURE()        ((void)0)
+#	define PROBE_FRAME_BEGIN()      ((void)0)
+#	define PROBE_FRAME_END()        ((void)0)
+#	define PROBE_SCOPE(name)        ((void)0)
+#	define PROBE_VALUE(name, value) ((void)0)
+#	define PROBE_COUNT(name)        ((void)0)
+#	define PROBE_HASH_MIX(value)    ((void)0)
+#	define PROBE_GPU_BEGIN_FRAME()  ((void)0)
+#	define PROBE_GPU_END_FRAME()    ((void)0)
+#	define PROBE_PRINT_SUMMARY()    ((void)0)
 #endif

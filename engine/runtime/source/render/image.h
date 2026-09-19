@@ -97,6 +97,14 @@ namespace z1 {
 #undef X
 #undef DATA_TYPE_LIST
 
+	// GL texture target; used to pick the type-matched fallback for unbound slots.
+	enum struct API TextureTarget : int {
+		None = 0,
+		Texture2D,
+		Texture2DArray,
+		TextureCube,
+	};
+
 	struct Shader;
 
 	struct API Image : RenderResource {
@@ -117,6 +125,7 @@ namespace z1 {
 		virtual void write(void const* data, size_t size) const = 0;
 
 		virtual void* get_native_handle() const = 0;
+		virtual TextureTarget get_target() const = 0;
 		Description const& get_description() const { return m_description; }
 
 		// Automatically bind to a binding point managed globally

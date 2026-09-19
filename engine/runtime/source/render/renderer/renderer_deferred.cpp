@@ -15,6 +15,7 @@
 #include "render/renderer/renderer_deferred.h"
 #include "render/renderer/particle_renderer.h"
 #include "asset/asset_manager.h"
+#include "render/uniform_blocks.h"
 #include "glm/gtc/matrix_transform.hpp"
 
 namespace z1 {
@@ -200,6 +201,30 @@ namespace z1 {
 		m_shared.m_prev_projview = projview;
 	}
 
+	void RendererDeferred::ensure_lighting_slots() {
+		if (m_lighting_slots.m_valid) {
+			return;
+		}
+		auto const& lighting = m_pipeline_deferred_lighting->m_shader;
+		m_lighting_slots.m_shadow = lighting->sampler_slot("u_shadow_map");
+		m_lighting_slots.m_ao = lighting->sampler_slot("u_ao_texture");
+		m_lighting_slots.m_sky_ibl = lighting->sampler_slot("u_sky_ibl_texture");
+		m_lighting_slots.m_gbuffer_position = lighting->sampler_slot("u_gbuffer_position");
+		m_lighting_slots.m_gbuffer_normal = lighting->sampler_slot("u_gbuffer_normal");
+		m_lighting_slots.m_gbuffer_albedo = lighting->sampler_slot("u_gbuffer_albedo");
+		m_lighting_slots.m_gbuffer_mr = lighting->sampler_slot("u_gbuffer_metallic_roughness");
+		m_lighting_slots.m_gbuffer_emissive = lighting->sampler_slot("u_gbuffer_emissive");
+
+		auto const& ssr = m_pipeline_ssr->m_shader;
+		m_lighting_slots.m_ssr_scene = ssr->sampler_slot("u_scene_color");
+		m_lighting_slots.m_ssr_position = ssr->sampler_slot("u_gbuffer_position");
+		m_lighting_slots.m_ssr_normal = ssr->sampler_slot("u_gbuffer_normal");
+		m_lighting_slots.m_ssr_albedo = ssr->sampler_slot("u_gbuffer_albedo");
+		m_lighting_slots.m_ssr_mr = ssr->sampler_slot("u_gbuffer_metallic_roughness");
+		m_lighting_slots.m_ssr_depth = ssr->sampler_slot("u_gbuffer_depth");
+		m_lighting_slots.m_valid = true;
+	}
+
 	// G-buffer pass
 	// Renders opaque + masked geometry to a multi-render-target FBO:
 	//   RT0: position  (RGB16F)
@@ -229,11 +254,8 @@ namespace z1 {
 			.add_output("gbuffer-depth", ImageFormat::Depth)
 			.execute([this, &draw_list, unjittered_projview](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
-				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 				per_frame.variant_key = ShaderVariant::GBuffer;
-
-				m_shared.m_lights_buffer->bind();
-				per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
+				per_frame.lights = m_shared.m_lights_buffer.get();
 
 				// Render opaque and masked geometry only
 				for (auto const& item : draw_list.static_meshes) {
@@ -261,9 +283,8 @@ namespace z1 {
 				if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
 					m_pipeline_skybox->bind();
 
-					m_shared.m_sky_ibl_image->bind(m_pipeline_skybox->m_shader, "u_sky_texture");
-
 					auto& s = m_pipeline_skybox->m_shader;
+					s->bind_texture(s->sampler_slot("u_sky_texture"), m_shared.m_sky_ibl_image.get());
 					s->set_uniform("u_rotation", &m_shared.m_sky_rotation);
 					s->set_uniform("u_intensity", &m_shared.m_sky_intensity);
 					s->set_uniform("u_mip_level", &m_shared.m_sky_mip_level);
@@ -278,7 +299,6 @@ namespace z1 {
 					m_shared.m_quad->draw(PrimitiveType::Triangles);
 					m_shared.m_quad->unbind();
 
-					m_shared.m_sky_ibl_image->unbind();
 					m_pipeline_skybox->unbind();
 				}
 			});
@@ -289,6 +309,7 @@ namespace z1 {
 	// and writes lit scene-color.
 
 	void RendererDeferred::add_deferred_lighting_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, std::string const& ao_pass) {
+		ensure_lighting_slots();
 		auto const width = framebuffer->get_width();
 		auto const height = framebuffer->get_height();
 
@@ -326,57 +347,25 @@ namespace z1 {
 			auto& s = m_pipeline_deferred_lighting->m_shader;
 
 			auto& g = g_runtime_context.m_global;
-			s->set_uniform_block_binding("Global", g->get_binding());
+			ctx.bind_uniform_buffer(uniform_blocks::Global, g->get_buffer());
+			ctx.bind_uniform_buffer(uniform_blocks::Lights, *m_shared.m_lights_buffer);
 
-			m_shared.m_lights_buffer->bind();
-			s->set_uniform_block_binding("Lights", m_shared.m_lights_buffer->get_binding());
-
-			// Bind shadow map
-			m_shared.m_shadow_image->bind();
-			s->set_uniform_binding("u_shadow_map", m_shared.m_shadow_image->get_binding());
-
-			// Bind screen-space AO texture
-			auto ao_image = m_shared.get_ao_image();
-			if (ao_image) {
-				ao_image->bind();
-				s->set_uniform_binding("u_ao_texture", ao_image->get_binding());
-			}
-			else {
-				s->set_uniform_binding("u_ao_texture", g_runtime_context.m_graphics_context->m_default_sampler_binding);
-			}
-
-			if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
-				m_shared.m_sky_ibl_image->bind();
-				s->set_uniform_binding("u_sky_ibl_texture", m_shared.m_sky_ibl_image->get_binding());
-			}
-			else {
-				s->set_uniform_binding("u_sky_ibl_texture", g_runtime_context.m_graphics_context->m_default_sampler_binding);
-			}
+			s->bind_texture(m_lighting_slots.m_shadow, m_shared.m_shadow_image.get());
+			s->bind_texture(m_lighting_slots.m_ao, m_shared.get_ao_image().get());
+			s->bind_texture(m_lighting_slots.m_sky_ibl,
+				m_shared.m_has_sky_light ? m_shared.m_sky_ibl_image.get() : nullptr);
 
 			// Bind G-buffer textures
-			s->set_uniform_binding("u_gbuffer_position", node.bind_input_index(0));
-			s->set_uniform_binding("u_gbuffer_normal", node.bind_input_index(1));
-			s->set_uniform_binding("u_gbuffer_albedo", node.bind_input_index(2));
-			s->set_uniform_binding("u_gbuffer_metallic_roughness", node.bind_input_index(3));
-			s->set_uniform_binding("u_gbuffer_emissive", node.bind_input_index(4));
+			node.bind_input(s, m_lighting_slots.m_gbuffer_position, "gbuffer-position");
+			node.bind_input(s, m_lighting_slots.m_gbuffer_normal, "gbuffer-normal");
+			node.bind_input(s, m_lighting_slots.m_gbuffer_albedo, "gbuffer-albedo");
+			node.bind_input(s, m_lighting_slots.m_gbuffer_mr, "gbuffer-metallic-roughness");
+			node.bind_input(s, m_lighting_slots.m_gbuffer_emissive, "gbuffer-emissive");
 
 			m_shared.m_quad->bind();
 			m_shared.m_quad->draw(PrimitiveType::Triangles);
 			m_shared.m_quad->unbind();
 
-			node.unbind_input_index(0);
-			node.unbind_input_index(1);
-			node.unbind_input_index(2);
-			node.unbind_input_index(3);
-			node.unbind_input_index(4);
-			m_shared.m_shadow_image->unbind();
-			if (ao_image) {
-				ao_image->unbind();
-			}
-			if (m_shared.m_has_sky_light && m_shared.m_sky_ibl_image) {
-				m_shared.m_sky_ibl_image->unbind();
-			}
-			m_shared.m_lights_buffer->unbind();
 			m_pipeline_deferred_lighting->unbind();
 
 			if (history_uninitialized) {
@@ -392,6 +381,7 @@ namespace z1 {
 	}
 
 	void RendererDeferred::add_ssr_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer) {
+		ensure_lighting_slots();
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::DontCare;
@@ -419,25 +409,19 @@ namespace z1 {
 				auto& s = m_pipeline_ssr->m_shader;
 
 				auto& g = g_runtime_context.m_global;
-				s->set_uniform_block_binding("Global", g->get_binding());
+				ctx.bind_uniform_buffer(uniform_blocks::Global, g->get_buffer());
 
-				s->set_uniform_binding("u_scene_color", node.bind_input_index(0));
-				s->set_uniform_binding("u_gbuffer_position", node.bind_input_index(1));
-				s->set_uniform_binding("u_gbuffer_normal", node.bind_input_index(2));
-				s->set_uniform_binding("u_gbuffer_albedo", node.bind_input_index(3));
-				s->set_uniform_binding("u_gbuffer_metallic_roughness", node.bind_input_index(4));
-				s->set_uniform_binding("u_gbuffer_depth", node.bind_input_index(5));
+				node.bind_input(s, m_lighting_slots.m_ssr_scene, "scene-color");
+				node.bind_input(s, m_lighting_slots.m_ssr_position, "gbuffer-position");
+				node.bind_input(s, m_lighting_slots.m_ssr_normal, "gbuffer-normal");
+				node.bind_input(s, m_lighting_slots.m_ssr_albedo, "gbuffer-albedo");
+				node.bind_input(s, m_lighting_slots.m_ssr_mr, "gbuffer-metallic-roughness");
+				node.bind_input(s, m_lighting_slots.m_ssr_depth, "gbuffer-depth");
 
 				m_shared.m_quad->bind();
 				m_shared.m_quad->draw(PrimitiveType::Triangles);
 				m_shared.m_quad->unbind();
 
-				node.unbind_input_index(0);
-				node.unbind_input_index(1);
-				node.unbind_input_index(2);
-				node.unbind_input_index(3);
-				node.unbind_input_index(4);
-				node.unbind_input_index(5);
 				m_pipeline_ssr->unbind();
 			});
 	}
@@ -447,6 +431,7 @@ namespace z1 {
 	// lit scene-color using normal forward shading + skybox.
 
 	void RendererDeferred::add_forward_transparency_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::string const& input_pass, std::string const& ao_pass) {
+		ensure_lighting_slots();
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Load;
@@ -463,19 +448,9 @@ namespace z1 {
 
 		pass.execute([this, &draw_list, scene](RenderGraphNode& node, GraphicsContext& ctx) {
 			PerFrameConst per_frame{};
-			per_frame.global_binding = g_runtime_context.m_global->get_binding();
-
-			m_shared.m_lights_buffer->bind();
-			per_frame.lights_binding = m_shared.m_lights_buffer->get_binding();
-
-			m_shared.m_shadow_image->bind();
-			per_frame.shadow_map_binding = m_shared.m_shadow_image->get_binding();
-
-			auto ao_image = m_shared.get_ao_image();
-			if (ao_image) {
-				ao_image->bind();
-				per_frame.ao_map_binding = ao_image->get_binding();
-			}
+			per_frame.lights = m_shared.m_lights_buffer.get();
+			per_frame.shadow_map = m_shared.m_shadow_image.get();
+			per_frame.ao_map = m_shared.get_ao_image().get();
 
 			m_shared.apply_sky_light(per_frame);
 
@@ -500,15 +475,6 @@ namespace z1 {
 					return MaterialFlags::get_alpha_mode(flags) == AlphaMode::Blend;
 				});
 			}
-
-			if (ao_image) {
-				ao_image->unbind();
-			}
-			if (per_frame.sky_ibl_map_binding != INVALID_BINDING) {
-				m_shared.m_sky_ibl_image->unbind();
-			}
-			m_shared.m_lights_buffer->unbind();
-			m_shared.m_shadow_image->unbind();
 		});
 	}
 

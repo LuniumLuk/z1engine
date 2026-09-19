@@ -4,6 +4,8 @@
 #include "util/string_utils.h"
 #include "scene/serialization.h"
 #include "render/graphics_context.h"
+#include "render/global.h"
+#include "render/uniform_blocks.h"
 
 namespace z1 {
 
@@ -252,27 +254,88 @@ namespace z1 {
 		pipeline->bind();
 
 		auto const& shader = pipeline->m_shader;
-		shader->set_uniform_block_binding("Global", per_frame.global_binding);
-		if (per_frame.variant_key == 0) {
-			// Only bind lighting-related uniforms for forward (non-variant) pass
-			shader->set_uniform_block_binding("Lights", per_frame.lights_binding);
-		}
-		shader->set_uniform("u_model", &per_frame.model);
-		if (per_frame.shadow_map_binding != INVALID_BINDING)
-			shader->set_uniform_binding("u_shadow_map", per_frame.shadow_map_binding);
-		uint32_t const default_binding = g_runtime_context.m_graphics_context->m_default_sampler_binding;
-		if (shader->has_uniform("u_ao_texture")) {
-			shader->set_uniform_binding("u_ao_texture",
-				per_frame.ao_map_binding == INVALID_BINDING ? default_binding : per_frame.ao_map_binding);
-		}
-		if (shader->has_uniform("u_sky_ibl_texture")) {
-			shader->set_uniform_binding("u_sky_ibl_texture",
-				per_frame.sky_ibl_map_binding == INVALID_BINDING ? default_binding : per_frame.sky_ibl_map_binding);
+		auto& ctx = *g_runtime_context.m_graphics_context;
+		ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
+		if (per_frame.variant_key == 0 && per_frame.lights) {
+			// Only the forward shaders read the Lights block.
+			ctx.bind_uniform_buffer(uniform_blocks::Lights, *per_frame.lights);
 		}
 
-		for (auto const& [name, var] : m_override_variables) {
-			bind_uniform(shader, name);
+		if (m_plan_dirty || m_plan_shader != shader.get()) {
+			rebuild_plan(shader.get());
 		}
+
+		shader->set_uniform(m_model_handle, &per_frame.model);
+		shader->bind_texture(shader->sampler_slot("u_shadow_map"), per_frame.shadow_map);
+		shader->bind_texture(shader->sampler_slot("u_ao_texture"), per_frame.ao_map);
+		shader->bind_texture(shader->sampler_slot("u_sky_ibl_texture"), per_frame.sky_ibl_map);
+
+		for (auto const& entry : m_plan) {
+			auto* value = &entry.m_override->default_value;
+			if (!value->valid) {
+				value = &entry.m_fallback->default_value;
+			}
+
+			switch (entry.m_type) {
+			case DataType::Int:
+			case DataType::Int2:
+			case DataType::Int3:
+			case DataType::Int4:
+				shader->set_uniform(entry.m_handle, value->ivec);
+				break;
+			case DataType::Float:
+			case DataType::Float2:
+			case DataType::Float3:
+			case DataType::Float4:
+				shader->set_uniform(entry.m_handle, value->vec);
+				break;
+			case DataType::Sampler2D:
+				shader->bind_texture(entry.m_texture_slot, value->tex2D ? value->tex2D->m_image.get() : nullptr);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	void MaterialInstance::rebuild_plan(Shader const* shader) const {
+		m_plan.clear();
+		m_model_handle = const_cast<Shader*>(shader)->uniform_handle("u_model");
+
+		for (auto const& [name, var] : m_override_variables) {
+			if (!has_uniform(name))
+				continue;
+			if (!var.visible || var.location == INVALID_LOCATION)
+				continue;
+
+			PlanEntry entry{};
+			entry.m_type = var.type;
+			entry.m_override = &var;
+			entry.m_fallback = &m_material->m_variables.at(name);
+
+			switch (var.type) {
+			case DataType::Int:
+			case DataType::Int2:
+			case DataType::Int3:
+			case DataType::Int4:
+			case DataType::Float:
+			case DataType::Float2:
+			case DataType::Float3:
+			case DataType::Float4:
+				entry.m_handle = const_cast<Shader*>(shader)->uniform_handle(name);
+				break;
+			case DataType::Sampler2D:
+				entry.m_texture_slot = shader->sampler_slot(name);
+				break;
+			default:
+				CORE_WARN("unsupported material variable type: {0}", get_data_type_name(var.type));
+				continue;
+			}
+			m_plan.push_back(entry);
+		}
+
+		m_plan_shader = shader;
+		m_plan_dirty = false;
 	}
 
 	uint32_t MaterialInstance::get_flags() const {
@@ -334,7 +397,8 @@ namespace z1 {
 		if (!has_uniform(name))                                 \
 			return;                                             \
 		auto& value = m_override_variables[name].default_value; \
-		value.valid = true
+		value.valid = true;                                     \
+		m_plan_dirty = true
 
 	void MaterialInstance::set_int(std::string const& name, int val) {
 		SET_UNIFORM_COMMON(name);
@@ -396,18 +460,6 @@ namespace z1 {
 #undef SET_UNIFORM_COMMON
 
 	void MaterialInstance::unbind() const {
-		for (auto const& [name, var] : m_override_variables) {
-			if (!var.visible || var.location == INVALID_LOCATION) continue;
-
-			auto* value = &var.default_value;
-			if (!var.default_value.valid) {
-				value = &m_material->m_variables[name].default_value;
-			}
-
-			if (var.type == DataType::Sampler2D && value->tex2D) {
-				value->tex2D->m_image->unbind();
-			}
-		}
 		auto pipeline = m_material->get_pipeline(get_flags());
 		pipeline->unbind();
 	}

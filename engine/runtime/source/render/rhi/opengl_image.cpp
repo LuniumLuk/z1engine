@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "render/rhi/opengl_image.h"
+#include "render/graphics_context.h"
+#include "util/prober.h"
 
 namespace z1 {
 
@@ -131,13 +133,18 @@ namespace z1 {
 	}
 
 	void OpenGLImage2D::bind(uint32_t binding) const {
+		PROBE_COUNT("tex_binds");
+		PROBE_HASH_MIX(static_cast<uint64_t>(binding) | (static_cast<uint64_t>(m_handle) << 32));
 		glActiveTexture(GL_TEXTURE0 + binding);
 		glBindTexture(GL_TEXTURE_2D, m_handle);
+		g_runtime_context.m_graphics_context->notify_texture_bound(binding, m_handle, TextureTarget::Texture2D);
 	}
 
 	void OpenGLImage2D::unbind(uint32_t binding) const {
+		PROBE_COUNT("tex_unbinds");
 		glActiveTexture(GL_TEXTURE0 + binding);
 		glBindTexture(GL_TEXTURE_2D, 0);
+		g_runtime_context.m_graphics_context->notify_texture_bound(binding, 0, TextureTarget::Texture2D);
 	}
 
 	void OpenGLImage2D::write(void const* data, size_t size) const {
@@ -208,13 +215,18 @@ namespace z1 {
 	}
 
 	void OpenGLImage2DArray::bind(uint32_t binding) const {
+		PROBE_COUNT("tex_binds");
+		PROBE_HASH_MIX(static_cast<uint64_t>(binding) | (static_cast<uint64_t>(m_handle) << 32));
 		glActiveTexture(GL_TEXTURE0 + binding);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, m_handle);
+		g_runtime_context.m_graphics_context->notify_texture_bound(binding, m_handle, TextureTarget::Texture2DArray);
 	}
 
 	void OpenGLImage2DArray::unbind(uint32_t binding) const {
+		PROBE_COUNT("tex_unbinds");
 		glActiveTexture(GL_TEXTURE0 + binding);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+		g_runtime_context.m_graphics_context->notify_texture_bound(binding, 0, TextureTarget::Texture2DArray);
 	}
 
 	void OpenGLImage2DArray::write(void const* data, size_t size) const {
@@ -297,13 +309,18 @@ namespace z1 {
 	}
 
 	void OpenGLImageCube::bind(uint32_t binding) const {
+		PROBE_COUNT("tex_binds");
+		PROBE_HASH_MIX(static_cast<uint64_t>(binding) | (static_cast<uint64_t>(m_handle) << 32));
 		glActiveTexture(GL_TEXTURE0 + binding);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, m_handle);
+		g_runtime_context.m_graphics_context->notify_texture_bound(binding, m_handle, TextureTarget::TextureCube);
 	}
 
 	void OpenGLImageCube::unbind(uint32_t binding) const {
+		PROBE_COUNT("tex_unbinds");
 		glActiveTexture(GL_TEXTURE0 + binding);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+		g_runtime_context.m_graphics_context->notify_texture_bound(binding, 0, TextureTarget::TextureCube);
 	}
 
 	void OpenGLImageCube::write(void const* data, size_t size) const {

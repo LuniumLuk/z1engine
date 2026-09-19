@@ -30,6 +30,11 @@ namespace z1 {
 
 		bool has_uniform(std::string const& name) const override;
 		void set_uniform(std::string const& name, void const* data) override;
+		void set_uniform(UniformHandle handle, void const* data) override;
+		UniformHandle uniform_handle(std::string const& name) override;
+		TextureSlot sampler_slot(std::string const& name) const override;
+		void bind_texture(TextureSlot const& slot, Image const* image) override;
+		void bind_texture(TextureSlot const& slot, uint32_t element, Image const* image) override;
 		void set_uniform_binding(std::string const& name, uint32_t binding) override;
 		void set_uniform_block_binding(std::string const& name, uint32_t binding) override;
 
@@ -50,6 +55,19 @@ namespace z1 {
 		std::unordered_map<std::string, uint32_t> m_uniform_indices;
 		std::unordered_map<std::string, uint32_t> m_uniform_block_indices;
 
+		// Fixed sampler slots (slot == unit): built at link, stamped once on first bind.
+		struct SamplerSlotEntry {
+			uint32_t m_location = 0;
+			uint32_t m_unit = 0;
+			uint32_t m_count = 1;
+			DataType m_type = DataType::None;
+		};
+		std::vector<SamplerSlotEntry> m_sampler_slots;
+		std::unordered_map<std::string, uint32_t> m_sampler_slot_indices;
+		std::vector<uint8_t> m_slot_stamped;
+
+		void stamp_sampler_slot(uint32_t slot_index);
+		void set_uniform_by_index(uint32_t index, void const* data);
 		void link_shaders(std::vector<OpenGLShaderModule*> shaders);
 
 		void set_bool(uint32_t location, bool value);

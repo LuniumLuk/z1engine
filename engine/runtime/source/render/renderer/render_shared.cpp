@@ -3,6 +3,7 @@
 #include "render/renderer/render_shared.h"
 #include "render/global.h"
 #include "render/shader.h"
+#include "render/uniform_blocks.h"
 #include "render/framebuffer.h"
 #include "render/render_graph.h"
 #include "render/graphics_context.h"
@@ -432,8 +433,7 @@ namespace z1 {
 			return;
 		}
 
-		m_sky_ibl_image->bind();
-		per_frame.sky_ibl_map_binding = m_sky_ibl_image->get_binding();
+		per_frame.sky_ibl_map = m_sky_ibl_image.get();
 	}
 
 	void RenderShared::calculate_csm_splits(CameraComponent& camera, glm::vec3 const& sun_dir) {
@@ -464,30 +464,26 @@ namespace z1 {
 
 		glm::mat4 inv_view = glm::inverse(camera.get_view());
 		glm::vec3 cam_pos_world = glm::vec3(inv_view[3]);
-		glm::vec3 cam_forward = -glm::vec3(inv_view[2]);
+
+		// Cascade 0 half-extent = sm_ortho_size; farther cascades scale with coverage distance.
+		float const base_extent = std::max(g->sm_ortho_size, 1.0f);
 
 		for (int i = 0; i < cascade_count; ++i) {
 			float cascade_far = splits[i + 1];
 
 			// Rotation-stable center + texel-snapped light-view translation
 			glm::vec3 center = cam_pos_world;
-
-			float fov = camera.m_intrinsic.fov;
-			float aspect = camera.m_aspect;
-			float tan_half_fov = std::tan(glm::radians(fov) * 0.5f);
-			float far_height = 2.0f * cascade_far * tan_half_fov;
-			float far_width = far_height * aspect;
-			float diag = std::sqrt(far_height * far_height + far_width * far_width);
-			float size = diag * 0.5f + cascade_far;
+			float size = std::min(base_extent * (cascade_far / splits[1]), camera.m_far);
 
 			glm::vec3 light_pos = center + glm::normalize(sun_dir) * size;
 
 			glm::mat4 light_view = glm::lookAt(light_pos, center, glm::vec3(0.0f, 1.0f, 0.0f));
 			glm::mat4 light_proj = glm::ortho(-size, size, -size, size, -size * 6.0f, size * 6.0f);
 
+			// glm matrices are column-major: the translation lives in column 3, rows 0/1.
 			float world_units_per_texel = (size * 2.0f) / m_shadow_framebuffer->get_width();
-			light_view[0][3] = std::floor(light_view[0][3] / world_units_per_texel) * world_units_per_texel;
-			light_view[1][3] = std::floor(light_view[1][3] / world_units_per_texel) * world_units_per_texel;
+			light_view[3][0] = std::floor(light_view[3][0] / world_units_per_texel) * world_units_per_texel;
+			light_view[3][1] = std::floor(light_view[3][1] / world_units_per_texel) * world_units_per_texel;
 
 			g->sun_projview[i] = light_proj * light_view;
 		}
@@ -523,7 +519,6 @@ namespace z1 {
 
 					PerFrameConst per_frame{};
 					per_frame.model = model;
-					per_frame.global_binding = g->get_binding();
 					per_frame.variant_key = ShaderVariant::Shadow;
 
 					int has_skinning = 0;
@@ -565,7 +560,6 @@ namespace z1 {
 
 					PerFrameConst per_frame{};
 					per_frame.model = model;
-					per_frame.global_binding = g->get_binding();
 					per_frame.variant_key = ShaderVariant::Shadow;
 
 					int has_skinning = 0;
@@ -573,7 +567,7 @@ namespace z1 {
 						auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
 						if (anim.bone_ubo) {
 							has_skinning = 1;
-							anim.bone_ubo->bind();
+							ctx.bind_uniform_buffer(uniform_blocks::Bones, *anim.bone_ubo);
 						}
 					}
 
@@ -597,7 +591,7 @@ namespace z1 {
 						s->set_uniform("u_has_skinning", &has_skinning);
 						if (has_skinning) {
 							auto const& anim = scene->m_registry.get<AnimationComponent>(entity);
-							s->set_uniform_block_binding("Bones", anim.bone_ubo->get_binding());
+							ctx.bind_uniform_buffer(uniform_blocks::Bones, *anim.bone_ubo);
 						}
 
 						prim.m_vertex_array->bind();
@@ -605,10 +599,6 @@ namespace z1 {
 						prim.m_vertex_array->unbind();
 
 						mi->unbind();
-					}
-
-					if (has_skinning) {
-						scene->m_registry.get<AnimationComponent>(entity).bone_ubo->unbind();
 					}
 				}
 			});
@@ -620,6 +610,7 @@ namespace z1 {
 		if (!g->ao_enabled) {
 			return "";
 		}
+		ensure_pass_slots();
 
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
@@ -634,13 +625,13 @@ namespace z1 {
 			.set_pass_desc(desc)
 			.add_input(depth_input)
 			.add_input(normal_input)
-			.execute([this, use_gtao](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, use_gtao, depth_input, normal_input](RenderGraphNode& node, GraphicsContext& ctx) {
 				auto pipeline = use_gtao ? m_pipeline_gtao : m_pipeline_ssao;
 				pipeline->bind();
 				auto& s = pipeline->m_shader;
 
 				auto& g = g_runtime_context.m_global;
-				s->set_uniform_block_binding("Global", g->get_binding());
+				ctx.bind_uniform_buffer(uniform_blocks::Global, g->get_buffer());
 				s->set_uniform("u_proj", &m_proj);
 				s->set_uniform("u_inv_proj", &m_inv_proj);
 				s->set_uniform("u_view", &m_view);
@@ -649,15 +640,13 @@ namespace z1 {
 				s->set_uniform("u_intensity", &g->ao_intensity);
 				s->set_uniform("u_power", &g->ao_power);
 
-				s->set_uniform_binding("u_depth_texture", node.bind_input_index(0));
-				s->set_uniform_binding("u_normal_texture", node.bind_input_index(1));
+node.bind_input(s, m_pass_slots.m_ao_depth, depth_input);
+			node.bind_input(s, m_pass_slots.m_ao_normal, normal_input);
 
 				m_quad->bind();
 				m_quad->draw(PrimitiveType::Triangles);
 				m_quad->unbind();
 
-				node.unbind_input_index(0);
-				node.unbind_input_index(1);
 				pipeline->unbind();
 			});
 
@@ -675,27 +664,24 @@ namespace z1 {
 			.set_pass_desc(blur_desc)
 			.add_input(depth_input)
 			.depends_on("ao")
-			.execute([this](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, depth_input](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_ao_blur->bind();
 				auto& s = m_pipeline_ao_blur->m_shader;
 
 				auto& g = g_runtime_context.m_global;
-				s->set_uniform_block_binding("Global", g->get_binding());
+				ctx.bind_uniform_buffer(uniform_blocks::Global, g->get_buffer());
 				s->set_uniform("u_proj", &m_proj);
 				s->set_uniform("u_texel_size", &m_ao_texel_size);
 				s->set_uniform("u_strength", &g->ao_blur_strength);
 
 				auto ao_img = m_ao_framebuffer->get_attachment_image(0);
-				ao_img->bind();
-				s->set_uniform_binding("u_ao_texture", ao_img->get_binding());
-				s->set_uniform_binding("u_depth_texture", node.bind_input_index(0));
+				s->bind_texture(m_pass_slots.m_ao_blur_ao, ao_img.get());
+				node.bind_input(s, m_pass_slots.m_ao_blur_depth, depth_input);
 
 				m_quad->bind();
 				m_quad->draw(PrimitiveType::Triangles);
 				m_quad->unbind();
 
-				node.unbind_input_index(0);
-				ao_img->unbind();
 				m_pipeline_ao_blur->unbind();
 			});
 
@@ -732,11 +718,8 @@ namespace z1 {
 			.add_output("prepass-depth", ImageFormat::Depth, SamplerMode::Nearest, WrapMode::ClampToEdge)
 			.execute([this, &draw_list, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
-				per_frame.global_binding = g_runtime_context.m_global->get_binding();
 				per_frame.variant_key = ShaderVariant::GBuffer;
-
-				m_lights_buffer->bind();
-				per_frame.lights_binding = m_lights_buffer->get_binding();
+				per_frame.lights = m_lights_buffer.get();
 
 				// Render opaque and masked geometry only (blend surfaces come later)
 				for (auto const& item : draw_list.static_meshes) {
@@ -759,8 +742,6 @@ namespace z1 {
 						return MaterialFlags::get_alpha_mode(flags) != AlphaMode::Blend;
 					});
 				}
-
-				m_lights_buffer->unbind();
 			});
 	}
 
@@ -788,7 +769,6 @@ namespace z1 {
 				for (auto const& item : draw_list.static_meshes) {
 					PerFrameConst per_frame{};
 					per_frame.model = item.transform;
-					per_frame.global_binding = g->get_binding();
 					per_frame.variant_key = ShaderVariant::Velocity;
 
 					int has_skinning = 0;
@@ -822,7 +802,6 @@ namespace z1 {
 				for (auto const& item : draw_list.skeletal_meshes) {
 					PerFrameConst per_frame{};
 					per_frame.model = item.transform;
-					per_frame.global_binding = g->get_binding();
 					per_frame.variant_key = ShaderVariant::Velocity;
 
 					int has_skinning = 0;
@@ -830,7 +809,7 @@ namespace z1 {
 
 					if (item.anim && item.anim->bone_ubo) {
 						has_skinning = 1;
-						item.anim->bone_ubo->bind();
+						ctx.bind_uniform_buffer(uniform_blocks::Bones, *item.anim->bone_ubo);
 					}
 
 					for (auto const& prim : item.mesh->m_mesh->m_primitives) {
@@ -849,10 +828,9 @@ namespace z1 {
 						s->set_uniform("u_prev_model", &item.prev_transform);
 
 						if (has_skinning) {
-							s->set_uniform_block_binding("Bones", item.anim->bone_ubo->get_binding());
+							ctx.bind_uniform_buffer(uniform_blocks::Bones, *item.anim->bone_ubo);
 							if (g->anim_enabled && g->taa_animated && item.anim->prev_bone_ubo) {
-								item.anim->prev_bone_ubo->bind();
-								s->set_uniform_block_binding("PrevBones", item.anim->prev_bone_ubo->get_binding());
+								ctx.bind_uniform_buffer(uniform_blocks::PrevBones, *item.anim->prev_bone_ubo);
 								use_prev_bones = 1;
 								s->set_uniform("u_use_prev_bones", &use_prev_bones);
 							}
@@ -863,12 +841,6 @@ namespace z1 {
 						prim.m_vertex_array->unbind();
 
 						mi->unbind();
-					}
-
-					if (has_skinning) {
-						item.anim->bone_ubo->unbind();
-						if (use_prev_bones)
-							item.anim->prev_bone_ubo->unbind();
 					}
 				}
 
@@ -889,32 +861,19 @@ namespace z1 {
 			.set_pass_desc(desc)
 			.add_input(scene_color_input)
 			.add_input("velocity")
-			.execute([this, history_read](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([this, history_read, scene_color_input](RenderGraphNode& node, GraphicsContext& ctx) {
 				auto h = history_read->get_attachment_image(0);
-				h->bind();
 
 				m_pipeline_taa->bind();
 				auto& s = m_pipeline_taa->m_shader;
-				s->set_uniform_block_binding(
-					"Global",
-					g_runtime_context.m_global->get_binding());
-				s->set_uniform_binding(
-					"u_current_color",
-					node.bind_input_index(0));
-				s->set_uniform_binding(
-					"u_history_color",
-					h->get_binding());
-				s->set_uniform_binding(
-					"u_velocity",
-					node.bind_input_index(1));
+				ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
+				node.bind_input(s, m_pass_slots.m_taa_current, scene_color_input);
+				s->bind_texture(m_pass_slots.m_taa_history, h.get());
+				node.bind_input(s, m_pass_slots.m_taa_velocity, "velocity");
 
 				m_quad->bind();
 				m_quad->draw(PrimitiveType::Triangles);
 				m_quad->unbind();
-
-				node.unbind_input_index(0);
-				node.unbind_input_index(1);
-				h->unbind();
 
 				m_pipeline_taa->unbind();
 				});
@@ -933,22 +892,15 @@ namespace z1 {
 			.set_pass_desc(desc)
 			.execute([this, source](RenderGraphNode& node, GraphicsContext& ctx) {
 				auto src_img = source->get_attachment_image(0);
-				src_img->bind();
 
 				m_pipeline_taa_sharpen->bind();
 				auto& s = m_pipeline_taa_sharpen->m_shader;
-				s->set_uniform_block_binding(
-					"Global",
-					g_runtime_context.m_global->get_binding());
-				s->set_uniform_binding(
-					"u_src_texture",
-					src_img->get_binding());
+				ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
+				s->bind_texture(m_pass_slots.m_sharpen_src, src_img.get());
 
 				m_quad->bind();
 				m_quad->draw(PrimitiveType::Triangles);
 				m_quad->unbind();
-
-				src_img->unbind();
 
 				m_pipeline_taa_sharpen->unbind();
 				});
@@ -979,21 +931,20 @@ namespace z1 {
 				pass.depends_on("bloom-down-" + std::to_string(i - 1));
 			}
 
-			pass.execute([this, i](RenderGraphNode& node, GraphicsContext& ctx) {
+			pass.execute([this, i, input](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_bloom_downsample->bind();
 				auto& s = m_pipeline_bloom_downsample->m_shader;
-				s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+				ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
 
 				std::shared_ptr<Image> src_img = nullptr;
 				if (i == 0) {
-					src_img = node.get_input_image_index(0); // "taa-sharpen"
+					src_img = node.get_input_image_name(input);
 				}
 				else {
 					src_img = m_bloom_textures[i - 1]->get_attachment_image(0);
 				}
 
-				src_img->bind();
-				s->set_uniform_binding("u_src_texture", src_img->get_binding());
+				s->bind_texture(m_pass_slots.m_bloom_down_src, src_img.get());
 
 				s->set_uniform("u_mip_level", &i);
 
@@ -1001,7 +952,6 @@ namespace z1 {
 				m_quad->draw(PrimitiveType::Triangles);
 				m_quad->unbind();
 
-				src_img->unbind();
 				m_pipeline_bloom_downsample->unbind();
 			});
 		}
@@ -1018,11 +968,10 @@ namespace z1 {
 				.execute([this, i](RenderGraphNode& node, GraphicsContext& ctx) {
 					m_pipeline_bloom_upsample->bind();
 					auto& s = m_pipeline_bloom_upsample->m_shader;
-					s->set_uniform_block_binding("Global", g_runtime_context.m_global->get_binding());
+					ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
 
 					auto src_img = m_bloom_textures[i]->get_attachment_image(0);
-					src_img->bind();
-					s->set_uniform_binding("u_src_texture", src_img->get_binding());
+					s->bind_texture(m_pass_slots.m_bloom_up_src, src_img.get());
 
 					float radius = 1.0f;
 					s->set_uniform("u_filter_radius", &radius);
@@ -1031,7 +980,6 @@ namespace z1 {
 					m_quad->draw(PrimitiveType::Triangles);
 					m_quad->unbind();
 
-					src_img->unbind();
 					m_pipeline_bloom_upsample->unbind();
 				});
 		}
@@ -1050,43 +998,63 @@ namespace z1 {
 		if (bloom_present) {
 			pass.depends_on("bloom-up-1");
 		}
-		pass.execute([this, bloom_present](RenderGraphNode& node, GraphicsContext& ctx) {
+		pass.execute([this, bloom_present, scene_input](RenderGraphNode& node, GraphicsContext& ctx) {
 				m_pipeline_postprocess->bind();
 				auto& s = m_pipeline_postprocess->m_shader;
-				s->set_uniform_block_binding(
-					"Global",
-					g_runtime_context.m_global->get_binding());
+				ctx.bind_uniform_buffer(uniform_blocks::Global, g_runtime_context.m_global->get_buffer());
 
 				bool const sample_bloom = bloom_present &&
 					g_runtime_context.m_global->pp_bloom_enabled && !m_bloom_textures.empty();
 
-				auto scene = node.get_input_image_index(0);
-				scene->bind();
-				s->set_uniform_binding(
-					"u_scene",
-					scene->get_binding());
+				auto scene = node.get_input_image_name(scene_input);
+				s->bind_texture(m_pass_slots.m_post_scene, scene.get());
 
 				if (sample_bloom) {
 					auto bloom = m_bloom_textures[0]->get_attachment_image(0);
-					bloom->bind();
-					s->set_uniform_binding("u_bloom_texture", bloom->get_binding());
+					s->bind_texture(m_pass_slots.m_post_bloom, bloom.get());
 				}
 				else {
-					s->set_uniform_binding("u_bloom_texture", g_runtime_context.m_graphics_context->m_default_sampler_binding);
+					s->bind_texture(m_pass_slots.m_post_bloom, nullptr);
 				}
 
 				m_quad->bind();
 				m_quad->draw(PrimitiveType::Triangles);
 				m_quad->unbind();
 
-				scene->unbind();
-
-				if (sample_bloom) {
-					m_bloom_textures[0]->get_attachment_image(0)->unbind();
-				}
-
 				m_pipeline_postprocess->unbind();
 				});
+	}
+
+	void RenderShared::ensure_pass_slots() {
+		if (m_pass_slots.m_valid) {
+			return;
+		}
+		auto const& ao = m_pipeline_gtao->m_shader;
+		m_pass_slots.m_ao_depth = ao->sampler_slot("u_depth_texture");
+		m_pass_slots.m_ao_normal = ao->sampler_slot("u_normal_texture");
+
+		auto const& blur = m_pipeline_ao_blur->m_shader;
+		m_pass_slots.m_ao_blur_ao = blur->sampler_slot("u_ao_texture");
+		m_pass_slots.m_ao_blur_depth = blur->sampler_slot("u_depth_texture");
+
+		auto const& taa = m_pipeline_taa->m_shader;
+		m_pass_slots.m_taa_current = taa->sampler_slot("u_current_color");
+		m_pass_slots.m_taa_history = taa->sampler_slot("u_history_color");
+		m_pass_slots.m_taa_velocity = taa->sampler_slot("u_velocity");
+
+		auto const& sharpen = m_pipeline_taa_sharpen->m_shader;
+		m_pass_slots.m_sharpen_src = sharpen->sampler_slot("u_src_texture");
+
+		auto const& bloom_down = m_pipeline_bloom_downsample->m_shader;
+		m_pass_slots.m_bloom_down_src = bloom_down->sampler_slot("u_src_texture");
+		auto const& bloom_up = m_pipeline_bloom_upsample->m_shader;
+		m_pass_slots.m_bloom_up_src = bloom_up->sampler_slot("u_src_texture");
+
+		auto const& post = m_pipeline_postprocess->m_shader;
+		m_pass_slots.m_post_scene = post->sampler_slot("u_scene");
+		m_pass_slots.m_post_bloom = post->sampler_slot("u_bloom_texture");
+
+		m_pass_slots.m_valid = true;
 	}
 
 }
