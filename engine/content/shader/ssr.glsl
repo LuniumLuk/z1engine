@@ -76,11 +76,11 @@
 		vec3 R = normalize(reflect(I, N));
 
 		float ndotv = saturate(dot(N, V));
-		float fresnel = pow(1.0 - ndotv, 5.0);
-		float reflectivity = mix(0.04, 1.0, metallic) * (0.2 + 0.8 * fresnel);
-		reflectivity *= (1.0 - roughness);
+		vec3 F0 = mix(vec3(0.04), base_color, metallic);
+		vec3 fresnel = F0 + (1.0 - F0) * pow(1.0 - ndotv, 5.0);
+		float reflectance = max(max(fresnel.x, fresnel.y), fresnel.z);
 
-		if (reflectivity <= 0.0001) {
+		if (reflectance <= 0.001 || roughness >= 0.99) {
 			frag_color = scene_sample;
 			return;
 		}
@@ -184,16 +184,15 @@
 				float edge_y = min(hit_uv.y, 1.0 - hit_uv.y) * 2.0;
 				float edge_fade = saturate(min(edge_x, edge_y));
 				float dist_fade = saturate(1.0 - t / max_distance);
-				float stability = saturate(1.0 - miss / (adaptive_thickness + 1e-5));
+				float stability = saturate(1.0 - 0.5 * miss / (adaptive_thickness + 1e-5));
 				hit_weight = edge_fade * dist_fade * stability;
 				break;
 			}
 
 		}
 
-		vec3 reflection_tint = mix(vec3(1.0), base_color, metallic);
 		float roughness_fade = 1.0 - smoothstep(0.65, 1.0, roughness);
-		vec3 reflection = hit_color * reflection_tint * hit_weight * reflectivity * roughness_fade * u_ssr_intensity;
+		vec3 reflection = hit_color * fresnel * hit_weight * roughness_fade * u_ssr_intensity;
 		vec3 result = scene_sample.rgb + reflection;
 		frag_color = vec4(result, scene_sample.a);
 

@@ -29,7 +29,7 @@ exposure, gamma, sun parameters):
 | `taa_enabled` / `taa_sharpen_enabled` | off / off | on / off | on / on |
 | `ao_enabled` / `ao_resolution` / `ao_blur_enabled` | on / quarter / on | on / half / on | on / half / on |
 | `pp_bloom_enabled` | off | on | on |
-| `ssr_enabled` | off | unchanged | unchanged |
+| `ssr_enabled` | off | unchanged | on |
 | `sm_resolution` / `sm_cascade_count` | 1024 / 1 | 2048 / 2 | 2048 / 4 |
 
 #### Scenario: LOW disables expensive features
@@ -41,6 +41,11 @@ exposure, gamma, sun parameters):
 - **WHEN** HIGH is applied
 - **THEN** TAA with sharpen, half-resolution AO, bloom, and 2048² × 4 cascades shadows are enabled, matching
   the engine's previous default configuration
+
+#### Scenario: HIGH enables screen-space reflections
+- **WHEN** HIGH is applied
+- **THEN** `ssr_enabled` is set to true so the deferred pipeline includes the SSR pass and the scene's
+  authored `ssr_intensity` and ray-march parameters take effect
 
 #### Scenario: Artistic settings untouched
 - **WHEN** any preset is applied

@@ -63,6 +63,7 @@ Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `Gl
 | SSAO | `ssao.glsl` |
 | GTAO | `gtao.glsl` |
 | AO blur | `ao_blur.glsl` |
+| SSR | `ssr.glsl` |
 | Tone mapping | `postprocessing.glsl` |
 
 ### Shared Infrastructure (`renderer/render_shared.h`)
@@ -109,6 +110,20 @@ sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
   with `pp_bloom_enabled == false` the bloom chain is skipped entirely and post-process samples no bloom texture.
   `add_bloom_pass(rg, input)` and `add_postprocess_pass(rg, target, scene_input, bloom_present)` take the
   chain inputs as parameters.
+
+### Screen-space reflections (2026-09-19 fix)
+
+- Deferred-only: `RendererDeferred::add_ssr_pass` ray-marches world space against `gbuffer-position`
+  (thickness-based hit test with 5-step binary refine), samples `scene-color` at the hit, writes
+  `scene-color-ssr`; TAA/post-process consume that output. Enabled by `GlobalSettings::ssr_enabled` +
+  the scene's `ssr_*` values (HIGH preset turns it on, LOW forces it off).
+- Reflection weight is physical now: `F0 = mix(0.04, base_color, metallic)` with Schlick Fresnel, times the
+  hit confidence (`hit_weight`) and `u_ssr_intensity`; the demo scene authors intensity 2.0.
+- The pre-fix chain multiplied `mix(0.04, 1.0, metallic)` by `(0.2 + 0.8 * fresnel)` *and*
+  `(1.0 - roughness)` *and* a `1.0 - miss/thickness` stability term — on a metallic floor that collapsed the
+  reflection to ≲2% of the sampled color, so SSR was invisible at every preset (A/B screenshots: max delta
+  22/255; now 119/255 with a visible mirror ghost). The march uses the jittered `u_projview` plus per-pixel
+  temporal jitter, so reflections rely on TAA (enabled at MEDIUM/HIGH) to resolve cleanly.
 
 ## RHI (Render Hardware Interface)
 

@@ -32,6 +32,7 @@ namespace z1 {
 			settings.taa_sharpen_enabled = true;
 			settings.ao_resolution = AOResolution::Half;
 			settings.pp_bloom_enabled = true;
+			settings.ssr_enabled = true;
 			settings.sm_resolution = ShadowResolution::Res2048;
 			settings.sm_cascade_count = ShadowCascades::Four;
 			break;

@@ -81,10 +81,12 @@ per-frame `[probe]` reports (`Z1_PROBE_EVERY=1` gives one window per frame).
 | `taa_enabled` / `taa_sharpen_enabled` | off / off | on / off | on / on |
 | `ao_enabled` / `ao_resolution` / `ao_blur_enabled` | on / quarter / on | on / half / on | on / half / on |
 | `pp_bloom_enabled` | off | on | on |
-| `ssr_enabled` | off | untouched | untouched |
+| `ssr_enabled` | off | untouched | on |
 | `sm_resolution` / `sm_cascade_count` | 1024 / 1 | 2048 / 2 | 2048 / 4 |
 
 Artistic values (AO radius/intensity, exposure, sun parameters) are never modified by a preset.
+HIGH explicitly enables SSR (2026-09-19) so a LOW → HIGH toggle turns the effect on regardless of the
+scene's authored value; LOW still forces it off.
 
 ## Render-settings plumbing
 
