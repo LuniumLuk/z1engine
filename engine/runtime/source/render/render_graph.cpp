@@ -46,6 +46,7 @@ namespace z1 {
 			if (cached_spec.sampler_mode != spec.sampler_mode) return false;
 			if (cached_spec.wrap_mode != spec.wrap_mode) return false;
 			if (cached_spec.layers != spec.layers) return false;
+			if (cached_spec.samples != spec.samples) return false;
 		}
 
 		return true;
@@ -72,12 +73,14 @@ namespace z1 {
 		std::string const& name,
 		ImageFormat format,
 		SamplerMode sampler_mode /*= SamplerMode::Linear*/,
-		WrapMode wrap_mode /*= WrapMode::Repeat*/) {
+		WrapMode wrap_mode /*= WrapMode::Repeat*/,
+		uint32_t samples /*= 1*/) {
 
 		Framebuffer::Attachment attach{};
 		attach.format = format;
 		attach.sampler_mode = sampler_mode;
 		attach.wrap_mode = wrap_mode;
+		attach.samples = samples;
 		m_output_spec.push_back(std::make_pair(name, attach));
 		return *this;
 	}

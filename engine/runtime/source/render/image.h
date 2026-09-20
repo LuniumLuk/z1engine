@@ -13,6 +13,7 @@ namespace z1 {
 	X(ImageCube)        \
 	X(Image2DArray)     \
 	X(ImageCubeArray)   \
+	X(Image2DMultiSample) \
 
 #define X(a) a,
 	enum struct API ImageType : int {
@@ -103,6 +104,7 @@ namespace z1 {
 		Texture2D,
 		Texture2DArray,
 		TextureCube,
+		Texture2DMultiSample,
 	};
 
 	struct Shader;
@@ -116,6 +118,7 @@ namespace z1 {
 			SamplerMode m_sampler_mode = SamplerMode::Linear;
 			WrapMode m_wrap_mode = WrapMode::Repeat;
 			bool m_mipmap = true;
+			uint32_t m_samples = 1; // > 1 for multisampled render target images
 		};
 
 		Image() : RenderResource(ResourceType::Image) {}
@@ -172,6 +175,15 @@ namespace z1 {
 			SamplerMode sampler_mode = SamplerMode::Linear,
 			WrapMode wrap_mode = WrapMode::Repeat,
 			bool mipmap = true);
+	};
+
+	// Multisampled 2D render target image (MSAA); sampled via sampler2DMS/texelFetch.
+	struct API Image2DMultiSample : Image {
+		static std::shared_ptr<Image2DMultiSample> create(
+			uint32_t width,
+			uint32_t height,
+			uint32_t samples,
+			ImageFormat format = ImageFormat::RGBA8);
 	};
 
 	struct API ImageCube : Image {

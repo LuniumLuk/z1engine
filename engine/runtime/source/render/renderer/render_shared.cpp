@@ -232,6 +232,61 @@ namespace z1 {
 	RenderShared::~RenderShared() {
 	}
 
+	uint32_t RenderShared::get_effective_msaa_samples() {
+		uint32_t requested = static_cast<uint32_t>(g_runtime_context.m_global->msaa_samples);
+
+		// Test harness override (same spirit as Z1_AUTOROTATE): forces the sample count, 1 = off.
+		if (char const* override_value = std::getenv("Z1_MSAA")) {
+			requested = static_cast<uint32_t>(std::max(1, atoi(override_value)));
+		}
+
+		if (requested <= 1) {
+			return 1;
+		}
+
+		uint32_t const max_supported = g_runtime_context.m_graphics_context->get_max_msaa_samples();
+		uint32_t effective = std::min(requested, max_supported);
+		if (effective < 2) {
+			if (m_msaa_warned_request != requested) {
+				CORE_WARN("MSAA {0}x requested but this driver supports at most {1}x; MSAA disabled", requested, max_supported);
+				m_msaa_warned_request = requested;
+			}
+			return 1;
+		}
+		if (effective != requested && m_msaa_warned_request != requested) {
+			CORE_WARN("MSAA {0}x requested but this driver supports at most {1}x; using {1}x", requested, max_supported);
+			m_msaa_warned_request = requested;
+		}
+		return effective;
+	}
+
+	void RenderShared::draw_msaa_depth_resolve(RenderGraphNode& node, GraphicsContext& ctx, std::string const& depth_input) {
+		if (!m_pipeline_msaa_depth_resolve) {
+			Pipeline::Description desc{};
+			desc.depth_test = true;
+			desc.depth_write = true;
+			desc.cull_mode = CullMode::None;
+			desc.shader = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/msaa_depth_resolve"));
+			m_pipeline_msaa_depth_resolve = Pipeline::build(desc);
+			m_msaa_depth_slot = m_pipeline_msaa_depth_resolve->m_shader->sampler_slot("u_depth_ms");
+		}
+
+		m_pipeline_msaa_depth_resolve->bind();
+		auto& s = m_pipeline_msaa_depth_resolve->m_shader;
+		node.bind_input(s, m_msaa_depth_slot, depth_input);
+
+		// gl_NumSamples would report the single-sample draw target; use the source texture's count.
+		auto image = node.get_input_image_name(depth_input);
+		int const num_samples = image ? static_cast<int>(image->get_description().m_samples) : 1;
+		s->set_uniform("u_num_samples", &num_samples);
+
+		m_quad->bind();
+		m_quad->draw(PrimitiveType::Triangles);
+		m_quad->unbind();
+
+		m_pipeline_msaa_depth_resolve->unbind();
+	}
+
 	bool RenderShared::ensure_buffers(uint32_t width, uint32_t height) {
 		// shadow resources follow the shadow settings, not the viewport size
 		ensure_shadow_resources();

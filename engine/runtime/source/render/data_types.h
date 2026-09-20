@@ -23,7 +23,8 @@ namespace z1 {
 			X(Bool,           1,         1           ) \
 			X(Sampler2D,      4,         1           ) \
 			X(Sampler2DArray, 4,         1           ) \
-			X(SamplerCube,    4,         1           )
+			X(SamplerCube,    4,         1           ) \
+			X(Sampler2DMS,    4,         1           )
 
 	enum struct API DataType : int {
 #define X(name, size, count) name,
@@ -47,6 +48,7 @@ namespace z1 {
 	REFLECT_ENUM(DataType, Sampler2D)
 	REFLECT_ENUM(DataType, Sampler2DArray)
 	REFLECT_ENUM(DataType, SamplerCube)
+	REFLECT_ENUM(DataType, Sampler2DMS)
 
 	inline std::string get_data_type_name(DataType type) {
 		switch (type) {

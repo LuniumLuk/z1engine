@@ -162,6 +162,18 @@ namespace z1 {
 		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &val);
 		m_max_fragment_texture_units = static_cast<uint32_t>(val);
 
+		// MSAA capability: the renderers clamp the requested sample count against this.
+		// GL_MAX_SAMPLES covers framebuffers; the per-target limits cover textures (color vs depth).
+		GLint max_samples = 0, max_color_samples = 0, max_depth_samples = 0;
+		glGetIntegerv(GL_MAX_SAMPLES, &max_samples);
+		glGetIntegerv(GL_MAX_COLOR_TEXTURE_SAMPLES, &max_color_samples);
+		glGetIntegerv(GL_MAX_DEPTH_TEXTURE_SAMPLES, &max_depth_samples);
+		m_max_msaa_samples = static_cast<uint32_t>(std::min({ max_samples, max_color_samples, max_depth_samples }));
+		if (m_max_msaa_samples < 1) {
+			m_max_msaa_samples = 1;
+		}
+		CORE_DEBUG("opengl info: max multisample count {0}", m_max_msaa_samples);
+
 		// Reserve the highest unit for unset samplers; kept out of the pool below.
 		CORE_ASSERT(m_max_image_binding_count > 1, "not enough texture image units!");
 		m_default_sampler_binding = m_max_image_binding_count - 1;
@@ -218,6 +230,12 @@ namespace z1 {
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
+		// 1-sample multisample fallback for sampler2DMS slots whose resource is absent.
+		glGenTextures(1, &m_default_sampler_texture_2d_ms);
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_default_sampler_texture_2d_ms);
+		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 1, GL_RGBA8, 1, 1, GL_TRUE);
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+
 		glActiveTexture(GL_TEXTURE0 + m_default_sampler_binding);
 		glBindTexture(GL_TEXTURE_2D, m_default_sampler_texture_2d);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, m_default_sampler_texture_2d_array);
@@ -232,6 +250,7 @@ namespace z1 {
 		case TextureTarget::Texture2D: return GL_TEXTURE_2D;
 		case TextureTarget::Texture2DArray: return GL_TEXTURE_2D_ARRAY;
 		case TextureTarget::TextureCube: return GL_TEXTURE_CUBE_MAP;
+		case TextureTarget::Texture2DMultiSample: return GL_TEXTURE_2D_MULTISAMPLE;
 		default: return 0;
 		}
 	}
@@ -276,6 +295,7 @@ namespace z1 {
 		case TextureTarget::Texture2D: return m_default_sampler_texture_2d;
 		case TextureTarget::Texture2DArray: return m_default_sampler_texture_2d_array;
 		case TextureTarget::TextureCube: return m_default_sampler_texture_cube;
+		case TextureTarget::Texture2DMultiSample: return m_default_sampler_texture_2d_ms;
 		default: return 0;
 		}
 	}

@@ -153,8 +153,17 @@ namespace z1 {
 			ao_pass = m_shared.add_ao_pass(rg, "prepass-depth", "prepass-normal");
 		}
 
-		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview, ao_pass);
-		m_particle_renderer.add_particle_pass(rg, scene.get(), "main", m_shared.m_shadow_image);
+		// Forward MSAA: the main pass renders multisampled and a resolve republishes the
+		// canonical single-sample scene-color/scene-depth for the rest of the chain.
+		uint32_t const msaa_samples = m_shared.get_effective_msaa_samples();
+		bool const msaa_on = msaa_samples > 1;
+		std::string const main_passthrough = msaa_on ? "msaa-resolve-main" : "main";
+
+		add_main_pass(rg, draw_list, scene, framebuffer, history_uninitialized, read_idx, projview, ao_pass, msaa_samples);
+		if (msaa_on) {
+			add_main_resolve_pass(rg, framebuffer);
+		}
+		m_particle_renderer.add_particle_pass(rg, scene.get(), main_passthrough, m_shared.m_shadow_image);
 
 		// Final color chain: velocity/TAA/sharpen are skipped entirely when TAA is off and the
 		// post-process pass then consumes the scene color directly.
@@ -181,7 +190,9 @@ namespace z1 {
 		m_shared.m_prev_projview = projview;
 	}
 
-	void RendererForward::add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview, std::string const& ao_pass) {
+	void RendererForward::add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview, std::string const& ao_pass, uint32_t samples) {
+		bool const msaa_on = samples > 1;
+
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
@@ -195,8 +206,8 @@ namespace z1 {
 		auto& pass = rg.add_pass("main");
 		pass.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
-			.add_output("scene-depth", ImageFormat::Depth);
+			.add_output(msaa_on ? "scene-color-ms" : "scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder, samples)
+			.add_output(msaa_on ? "scene-depth-ms" : "scene-depth", ImageFormat::Depth, SamplerMode::Linear, WrapMode::Repeat, samples);
 
 		// The AO texture is bound directly (not via add_input), so declare the
 		// ordering explicitly to keep the AO pass ahead of the main pass.
@@ -286,6 +297,34 @@ namespace z1 {
 						width, height);
 				}
 				});
+	}
+
+	void RendererForward::add_main_resolve_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::DontCare;
+		// The depth resolve is a depth-writing draw (MS-to-SS depth blits are invalid).
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
+		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
+
+		uint32_t const width = framebuffer->get_width();
+		uint32_t const height = framebuffer->get_height();
+
+		rg.add_pass("msaa-resolve-main")
+			.set_resolution_as(framebuffer)
+			.set_pass_desc(desc)
+			.add_input("scene-color-ms")
+			.add_input("scene-depth-ms")
+			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
+			.add_output("scene-depth", ImageFormat::Depth)
+			.pre_pass([width, height](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto src = node.get_input_framebuffer_name("scene-color-ms");
+				auto dst = node.get_output();
+				ctx.blit_attachment(src, dst, 0, 0, 0, 0, 0, 0, width, height);
+			})
+			.execute([this](RenderGraphNode& node, GraphicsContext& ctx) {
+				m_shared.draw_msaa_depth_resolve(node, ctx, "scene-depth-ms");
+			});
 	}
 
 }

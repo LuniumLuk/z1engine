@@ -97,6 +97,9 @@ namespace z1 {
 		virtual void notify_uniform_buffer_bound(uint32_t binding, uint32_t gl_handle) {}
 		// Type-matched 1x1 fallback textures used when a slot has no resource (0 = unavailable).
 		virtual uint32_t get_fallback_texture(TextureTarget target) const { return 0; }
+		// Maximum multisample count supported for the attachment formats used by the renderers
+		// (1 = multisampling unsupported; queried once at context init).
+		virtual uint32_t get_max_msaa_samples() const { return 1; }
 
 		virtual void blit_attachment(
 			std::shared_ptr<Framebuffer> const& src,

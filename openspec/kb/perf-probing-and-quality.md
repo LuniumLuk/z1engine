@@ -45,6 +45,11 @@ cannot be scripted):
 - `Z1_AUTOROTATE_AXIS=x|y|z` — rotation axis (default y); `Z1_AUTOROTATE_STOP=<frame>` — stop at a frame
 - `Z1_CAMROT_DISABLE=ao,bloom,taa,shadow,picking` — force-disable passes for attribution
 
+Capture-run knobs (not probing-gated): `Z1_MSAA=1|2|4|8` forces the MSAA sample count for A/B runs
+(`render_shared.cpp`). Automated runs MUST redirect stdin (`< /dev/null`): the Python console layer calls
+`tcsetattr` on the terminal, which stops a background job with SIGTTOU — the process then idles at 0% CPU
+and looks like a GPU/memory hang; losing stdin makes the call fail harmlessly instead.
+
 Repro/verification: `Z1_AUTOROTATE=2 Z1_PROBE_EVERY=1 ./engine/bin/Hybrid/game --frames=600` and read the
 per-frame `[probe]` reports (`Z1_PROBE_EVERY=1` gives one window per frame).
 
@@ -83,6 +88,7 @@ per-frame `[probe]` reports (`Z1_PROBE_EVERY=1` gives one window per frame).
 | `pp_bloom_enabled` | off | on | on |
 | `ssr_enabled` | off | untouched | on |
 | `sm_resolution` / `sm_cascade_count` | 1024 / 1 | 2048 / 2 | 2048 / 4 |
+| `msaa_samples` | 2x | 2x | 4x |
 
 Artistic values (AO radius/intensity, exposure, sun parameters) are never modified by a preset.
 HIGH explicitly enables SSR (2026-09-19) so a LOW → HIGH toggle turns the effect on regardless of the

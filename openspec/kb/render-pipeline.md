@@ -125,6 +125,40 @@ sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
   22/255; now 119/255 with a visible mirror ghost). The march uses the jittered `u_projview` plus per-pixel
   temporal jitter, so reflections rely on TAA (enabled at MEDIUM/HIGH) to resolve cleanly.
 
+## Multisample anti-aliasing (2026-09-19, add-msaa)
+
+- `GlobalSettings::msaa_samples` (Off/2x/4x/8x, reflected, group `antialiasing`). Renderers clamp to
+  `min(GL_MAX_SAMPLES, GL_MAX_COLOR_TEXTURE_SAMPLES, GL_MAX_DEPTH_TEXTURE_SAMPLES)` via
+  `OpenGLContext::get_max_msaa_samples()`; an effective count < 2 disables MSAA with one `CORE_WARN`.
+  `RenderShared::get_effective_msaa_samples()` is the single entry point; harness override `Z1_MSAA=<n>`
+  (1 = off). Off = the pre-MSAA graph: no extra passes, no extra allocations.
+- Multisampled attachments are `GL_TEXTURE_2D_MULTISAMPLE` textures (`glTexImage2DMultisample` immutable
+  storage; GL 4.3's `glTexStorage2DMultisample` is unavailable on macOS). Changing the setting recreates
+  pooled framebuffers (`FramebufferPool::is_reusable` compares `Attachment::samples`).
+- **Deferred (MSAA on):** `gbuffer` renders 5 MRT + depth multisampled (`gbuffer-*-ms`);
+  `msaa-resolve-gbuffer` blits them to the canonical single-sample `gbuffer-*` names consumed by AO, SSR,
+  velocity and bulk lighting; `deferred-lighting` writes `scene-color-ms` (no depth attachment — every
+  attachment in an FBO must share the sample count); `msaa-edge` re-shades edge pixels per sample;
+  `msaa-resolve-scene` resolves to `scene-color` + `scene-depth` for SSR/TAA/bloom/post-processing and is
+  the transparency/particle passthrough target.
+- **`msaa-edge`** is a shader variant (`VARIANT_MSAA_EDGE` in `deferred_lighting.glsl`): a program that
+  statically uses `gl_SampleID` executes once per covered sample, so it must be a separate program from
+  the bulk lighting pass. It classifies a pixel as an edge when any sample's G-buffer world position is
+  farther than `4 * world_per_pixel * distance` from sample 0 (same-surface samples are spatially
+  contiguous) **or** any sample's normal diverges from sample 0's by >~11° (`dot < 0.98`, skipping
+  samples without a normal) — creases/folds are position-contiguous but normal-divergent, and the
+  G-buffer rasterizes at pixel centers, so without the normal test such pixels get averaged garbage
+  normals in the resolved targets and bulk lighting turns them into white specular/IBL explosions.
+  Otherwise discards; edge samples shade from `texelFetch(sampler2DMS, pixel, s)` with the G-buffer sky
+  alpha rule and write `gl_SampleMask[0] = 1 << gl_SampleID`.
+- **Forward (MSAA on):** `main` writes `scene-color-ms`/`scene-depth-ms`; `msaa-resolve-main` republishes
+  `scene-color`/`scene-depth`; particles composite on the resolved color. Transparency inside the main
+  pass gets MSAA natively; deferred blended transparency composites after the resolve (no MSAA coverage
+  for blended objects — documented limitation).
+- Sample counts: LOW/MEDIUM presets = 2x, HIGH = 4x (`quality_preset.cpp`); TAA and MSAA are independent.
+- `sampler2DMS` supports the binding redesign: absent multisampled resources fall back to a 1-sample
+  multisample texture, and each program resolves its own sampler slots (units are per program).
+
 ## RHI (Render Hardware Interface)
 
 - OpenGL backend in `render/rhi/`
@@ -140,11 +174,11 @@ sharpen pass (`taa_sharpen.glsl`) inserted between TAA resolve and bloom.
 | Shader | `shader.h` | `rhi/opengl_shader.h` |
 | Vertex Array | `vertex_array.h` | `rhi/opengl_vertex_array.h` |
 
-### Sampler bindings (2026-09-18 redesign; archived 2026-09-19)
+### Sampler bindings (2026-09-18 redesign; archived 2026-09-20)
 
-See `openspec/changes/archive/2026-09-19-simplify-binding-api/`. Phases 1-3 are implemented and verified;
-Phase 4 cleanup and the final regression tasks were not executed, so the legacy API remains in dual-support
-mode:
+See `openspec/changes/archive/2026-09-20-simplify-binding-api/` (earlier snapshot:
+`2026-09-19-simplify-binding-api/`). Phases 1-3 are implemented and verified; Phase 4 cleanup and the final
+regression tasks were not executed, so the legacy API remains in dual-support mode:
 
 - Each program gets **fixed sampler slots** at link: samplers sorted by name, `slot == unit`, values stamped
   once via `glProgramUniform1i/1iv`. `Shader::sampler_slot(name)` returns `{ slot, unit, location, type }`.
@@ -165,7 +199,7 @@ mode:
   `ao_map`, `sky_ibl_map`) instead of binding indices.
 - The legacy `m_default_sampler_binding` machinery (highest unit holding white 2D/2D-array textures) is
   superseded by the typed fallbacks; removing it (with the binding pools) is the unexecuted Phase 4 cleanup
-  of the archived change.
+  of the archived change — an ongoing follow-up that no active change tracks.
 
 Why typed fallbacks matter: a sampler left at GL's default value (unit 0) can reference a texture of a
 mismatched target (e.g. `sampler2D` on the CSM `GL_TEXTURE_2D_ARRAY`), which macOS drivers reject with

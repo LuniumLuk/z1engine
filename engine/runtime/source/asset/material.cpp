@@ -23,6 +23,7 @@ namespace z1 {
 		if (type_str == "sampler2D") return DataType::Sampler2D;
 		if (type_str == "sampler2DArray") return DataType::Sampler2DArray;
 		if (type_str == "samplerCube") return DataType::SamplerCube;
+		if (type_str == "sampler2DMS") return DataType::Sampler2DMS;
 		return DataType::None; // unknown type
 	}
 

@@ -53,7 +53,15 @@ namespace z1 {
 		for (auto const& attachment : m_attachments) {
 			bool const as_array = attachment_is_array(attachment);
 			std::shared_ptr<Image> image;
-			if (as_array) {
+			if (attachment.samples > 1) {
+				CORE_ASSERT(!as_array, "multisampled attachment arrays are not supported!");
+				image = Image2DMultiSample::create(
+					m_description.width,
+					m_description.height,
+					attachment.samples,
+					attachment.format);
+			}
+			else if (as_array) {
 				image = Image2DArray::create(
 					nullptr, 0,
 					m_description.width,
@@ -78,7 +86,12 @@ namespace z1 {
 
 			GLuint native_handle = (GLuint)reinterpret_cast<uintptr_t>(image->get_native_handle());
 
-			if (as_array) {
+			if (attachment.samples > 1) {
+				glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, native_handle);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_id, GL_TEXTURE_2D_MULTISAMPLE, native_handle, 0);
+				glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+			}
+			else if (as_array) {
 				glBindTexture(GL_TEXTURE_2D_ARRAY, native_handle);
 				glFramebufferTexture(GL_FRAMEBUFFER, attachment_id, native_handle, 0);
 				glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
@@ -183,6 +196,9 @@ namespace z1 {
 
 		if (attachment_is_array(m_attachments[index])) {
 			glBindTexture(GL_TEXTURE_2D_ARRAY, native_handle);
+		}
+		else if (m_attachments[index].samples > 1) {
+			glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, native_handle);
 		}
 		else {
 			glBindTexture(GL_TEXTURE_2D, native_handle);

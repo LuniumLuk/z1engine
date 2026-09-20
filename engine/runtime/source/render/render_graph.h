@@ -22,7 +22,8 @@ namespace z1 {
 			std::string const& name,
 			ImageFormat format,
 			SamplerMode sampler_mode = SamplerMode::Linear,
-			WrapMode wrap_mode = WrapMode::Repeat);
+			WrapMode wrap_mode = WrapMode::Repeat,
+			uint32_t samples = 1);
 		RenderGraphNode& set_output(std::shared_ptr<Framebuffer> const& framebuffer);
 		RenderGraphNode& set_passthrough(std::string const& pass_name);
 		RenderGraphNode& set_pass_desc(RenderPass::Description const& desc);

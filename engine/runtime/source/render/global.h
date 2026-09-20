@@ -58,6 +58,18 @@ namespace z1 {
 	REFLECT_ENUM(ShadowCascades, Three)
 	REFLECT_ENUM(ShadowCascades, Four)
 
+	enum struct API MSAASamples : int {
+		Off = 1,
+		X2 = 2,
+		X4 = 4,
+		X8 = 8,
+	};
+
+	REFLECT_ENUM(MSAASamples, Off)
+	REFLECT_ENUM(MSAASamples, X2)
+	REFLECT_ENUM(MSAASamples, X4)
+	REFLECT_ENUM(MSAASamples, X8)
+
 	REFLECTED_STRUCT(GlobalSettings) {
 
 		GlobalSettings();
@@ -81,6 +93,8 @@ namespace z1 {
 		bool      taa_sharpen_enabled   = true;
 		float     taa_sharpen_strength   = 0.3f;
 		bool      taa_animated          = true; // Calculate velocity of animated object for better TAA effect
+		// Multisample anti-aliasing (clamped to the driver's capability by the renderers; not in the UBO)
+		MSAASamples msaa_samples        = MSAASamples::Off;
 		// Post-processing
 		float     pp_exposure            = 1.0f;
 		float     pp_gamma               = 2.2f;
@@ -254,6 +268,7 @@ namespace z1 {
 	REFLECTED_FIELD(GlobalSettings, taa_sharpen_enabled,   FF_Default, "group=taa")
 	REFLECTED_FIELD(GlobalSettings, taa_sharpen_strength,  FF_Default, "[slider]min=0.0,max=2.0,group=taa")
 	REFLECTED_FIELD(GlobalSettings, taa_animated,          FF_Default, "group=taa")
+	REFLECTED_FIELD(GlobalSettings, msaa_samples,          FF_Default, "group=antialiasing")
 	REFLECTED_FIELD(GlobalSettings, pp_exposure,           FF_Default, "[drag]min=0.0,group=postprocess")
 	REFLECTED_FIELD(GlobalSettings, pp_gamma,              FF_Default, "[drag]min=0.0,group=postprocess")
 	REFLECTED_FIELD(GlobalSettings, pp_tint,               FF_Default, "[color]group=postprocess")

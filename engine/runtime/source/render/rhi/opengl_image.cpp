@@ -252,6 +252,52 @@ namespace z1 {
 #endif
 	}
 
+	// OpenGLImage2DMultiSample definitions
+	// --------------------------------------------------
+
+	OpenGLImage2DMultiSample::OpenGLImage2DMultiSample(Description const& desc) {
+		m_description = desc;
+		CORE_ASSERT(desc.m_depth == 1, "Image2DMultiSample must have only 1 layer!");
+		CORE_ASSERT(desc.m_samples >= 1, "Image2DMultiSample requires at least 1 sample!");
+
+		glGenTextures(1, &m_handle);
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_handle);
+		// glTexImage2DMultisample (GL 3.2) instead of glTexStorage2DMultisample (GL 4.3): macOS caps at 4.1.
+		// The allocation is still immutable: dimensions/format/sample count are fixed for the texture's life.
+		glTexImage2DMultisample(
+			GL_TEXTURE_2D_MULTISAMPLE,
+			desc.m_samples,
+			image_format_to_opengl_internal_format(desc.m_format),
+			desc.m_width, desc.m_height,
+			GL_TRUE);
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+	}
+
+	OpenGLImage2DMultiSample::~OpenGLImage2DMultiSample() {
+		if (m_handle == 0) return;
+		glDeleteTextures(1, &m_handle);
+	}
+
+	void OpenGLImage2DMultiSample::bind(uint32_t binding) const {
+		PROBE_COUNT("tex_binds");
+		PROBE_HASH_MIX(static_cast<uint64_t>(binding) | (static_cast<uint64_t>(m_handle) << 32));
+		glActiveTexture(GL_TEXTURE0 + binding);
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, m_handle);
+		g_runtime_context.m_graphics_context->notify_texture_bound(binding, m_handle, TextureTarget::Texture2DMultiSample);
+	}
+
+	void OpenGLImage2DMultiSample::unbind(uint32_t binding) const {
+		PROBE_COUNT("tex_unbinds");
+		glActiveTexture(GL_TEXTURE0 + binding);
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+		g_runtime_context.m_graphics_context->notify_texture_bound(binding, 0, TextureTarget::Texture2DMultiSample);
+	}
+
+	void OpenGLImage2DMultiSample::write(void const* data, size_t size) const {
+		// Multisampled images are render targets; they cannot be uploaded into.
+		CORE_WARN("write() called on a multisample image; ignored");
+	}
+
 	static void* GetDataFromFaces(GLenum target, ImageCube::Faces const& data) {
 		switch (target) {
 		case GL_TEXTURE_CUBE_MAP_POSITIVE_X: return data.m_right;

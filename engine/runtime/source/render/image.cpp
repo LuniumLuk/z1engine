@@ -101,4 +101,22 @@ namespace z1 {
 		return std::shared_ptr<ImageCube>(new OpenGLImageCube(data, size, desc));
 	}
 
+	std::shared_ptr<Image2DMultiSample> Image2DMultiSample::create(
+		uint32_t width,
+		uint32_t height,
+		uint32_t samples,
+		ImageFormat format) {
+		PROFILE_FUNCTION();
+
+		Description desc{};
+		desc.m_width = width;
+		desc.m_height = height;
+		desc.m_depth = 1;
+		desc.m_format = format;
+		desc.m_samples = samples;
+		desc.m_mipmap = false;
+
+		return std::shared_ptr<Image2DMultiSample>(new OpenGLImage2DMultiSample(desc));
+	}
+
 }

@@ -57,6 +57,7 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.value("Sampler2D", DataType::Sampler2D)
 		.value("Sampler2DArray", DataType::Sampler2DArray)
 		.value("SamplerCube", DataType::SamplerCube)
+		.value("Sampler2DMS", DataType::Sampler2DMS)
 		.export_values();
 
 	py::enum_<EmitterShape>(m, "EmitterShape")
@@ -70,6 +71,13 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.value("Directional", LightType::Directional)
 		.value("Point", LightType::Point)
 		.value("Spot", LightType::Spot)
+		.export_values();
+
+	py::enum_<MSAASamples>(m, "MSAASamples")
+		.value("Off", MSAASamples::Off)
+		.value("X2", MSAASamples::X2)
+		.value("X4", MSAASamples::X4)
+		.value("X8", MSAASamples::X8)
 		.export_values();
 
 	py::enum_<ParticleBlendMode>(m, "ParticleBlendMode")
@@ -139,6 +147,7 @@ void bind_generated(py::module& m, py::class_<Entity, std::shared_ptr<Entity>>& 
 		.def_readwrite("taa_sharpen_enabled", &GlobalSettings::taa_sharpen_enabled)
 		.def_readwrite("taa_sharpen_strength", &GlobalSettings::taa_sharpen_strength)
 		.def_readwrite("taa_animated", &GlobalSettings::taa_animated)
+		.def_readwrite("msaa_samples", &GlobalSettings::msaa_samples)
 		.def_readwrite("pp_exposure", &GlobalSettings::pp_exposure)
 		.def_readwrite("pp_gamma", &GlobalSettings::pp_gamma)
 		.def_readwrite("pp_tint", &GlobalSettings::pp_tint)

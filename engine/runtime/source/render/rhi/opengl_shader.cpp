@@ -32,6 +32,7 @@ namespace z1 {
 		case GL_SAMPLER_2D: return DataType::Sampler2D;
 		case GL_SAMPLER_2D_ARRAY: return DataType::Sampler2DArray;
 		case GL_SAMPLER_CUBE: return DataType::SamplerCube;
+		case GL_SAMPLER_2D_MULTISAMPLE: return DataType::Sampler2DMS;
 		}
 		CORE_ASSERT(false, "unknown data type!");
 		return DataType::None;
@@ -150,6 +151,7 @@ namespace z1 {
 			ShaderVariant::GBuffer,
 			ShaderVariant::Shadow,
 			ShaderVariant::Velocity,
+			ShaderVariant::MSAAEdge,
 		};
 		for (auto bit : variant_bits) {
 			if (variant_key & bit) {
@@ -265,6 +267,7 @@ namespace z1 {
 		case DataType::Sampler2D:
 		case DataType::Sampler2DArray:
 		case DataType::SamplerCube:
+		case DataType::Sampler2DMS:
 			PROBE_COUNT("sampler_writes");
 			PROBE_HASH_MIX(static_cast<uint64_t>(m_handle) | (static_cast<uint64_t>(*(int*)data) << 32));
 			if (m_uniforms[index].m_count == 1) {
@@ -305,6 +308,7 @@ namespace z1 {
 		case DataType::Sampler2D: target = TextureTarget::Texture2D; break;
 		case DataType::Sampler2DArray: target = TextureTarget::Texture2DArray; break;
 		case DataType::SamplerCube: target = TextureTarget::TextureCube; break;
+		case DataType::Sampler2DMS: target = TextureTarget::Texture2DMultiSample; break;
 		default: return;
 		}
 
@@ -371,6 +375,7 @@ namespace z1 {
 		case DataType::Sampler2D:
 		case DataType::Sampler2DArray:
 		case DataType::SamplerCube:
+		case DataType::Sampler2DMS:
 			set_int(m_uniforms[index].m_location, binding); return;
 		}
 		DEBUG_CHECK(false, "uniform {0} cannot be set to a binding position!", name);
@@ -429,6 +434,7 @@ namespace z1 {
 			case DataType::Sampler2D:
 			case DataType::Sampler2DArray:
 			case DataType::SamplerCube:
+			case DataType::Sampler2DMS:
 				glGetUniformiv(m_handle, m_uniforms[index].m_location, (GLint*)ptr); return;
 			}
 		}
@@ -472,6 +478,7 @@ namespace z1 {
 			case DataType::Sampler2D:
 			case DataType::Sampler2DArray:
 			case DataType::SamplerCube:
+			case DataType::Sampler2DMS:
 				glGetUniformiv(m_handle, m_uniforms[index].m_location, (GLint*)&binding);
 			}
 		}
@@ -573,7 +580,7 @@ namespace z1 {
 		std::vector<uint32_t> sampler_uniforms;
 		for (uint32_t i = 0; i < (uint32_t)m_uniforms.size(); ++i) {
 			DataType const type = m_uniforms[i].m_type;
-			if (type == DataType::Sampler2D || type == DataType::Sampler2DArray || type == DataType::SamplerCube) {
+			if (type == DataType::Sampler2D || type == DataType::Sampler2DArray || type == DataType::SamplerCube || type == DataType::Sampler2DMS) {
 				sampler_uniforms.push_back(i);
 			}
 		}
@@ -606,7 +613,8 @@ namespace z1 {
 		for (auto const& uniform : m_uniforms) {
 			if (uniform.m_type == DataType::Sampler2D ||
 				uniform.m_type == DataType::Sampler2DArray ||
-				uniform.m_type == DataType::SamplerCube) {
+				uniform.m_type == DataType::SamplerCube ||
+				uniform.m_type == DataType::Sampler2DMS) {
 				glUniform1i(uniform.m_location, default_binding);
 			}
 		}

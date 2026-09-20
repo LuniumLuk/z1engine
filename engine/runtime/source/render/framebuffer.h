@@ -14,6 +14,8 @@ namespace z1 {
 			SamplerMode sampler_mode;
 			WrapMode wrap_mode;
 			uint32_t layers = 1;
+			// multisampled render target (1 = single sample); sampler/wrap state is ignored for MS images
+			uint32_t samples = 1;
 			// create a texture array even for a single layer: required by layered
 			// rendering (set_attachment_layer) and sampler2DArray sampling
 			bool layered = false;

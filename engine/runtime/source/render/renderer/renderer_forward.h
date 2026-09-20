@@ -13,7 +13,8 @@ namespace z1 {
 		void draw(std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer);
 
 	private:
-		void add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview, std::string const& ao_pass);
+		void add_main_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, glm::mat4 const& projview, std::string const& ao_pass, uint32_t samples);
+		void add_main_resolve_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer);
 
 		RenderShared m_shared;
 		ParticleRenderer m_particle_renderer;

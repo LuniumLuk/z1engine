@@ -68,4 +68,22 @@ namespace z1 {
 		uint32_t m_handle = 0;
 	};
 
+	// Multisampled render target texture with immutable storage; reads via sampler2DMS.
+	struct OpenGLImage2DMultiSample : Image2DMultiSample {
+		friend struct OpenGLFramebuffer;
+
+		OpenGLImage2DMultiSample(Description const& desc);
+		~OpenGLImage2DMultiSample() override;
+
+		void bind(uint32_t binding) const override;
+		void unbind(uint32_t binding) const override;
+		void write(void const* data, size_t size) const override;
+
+		void* get_native_handle() const override { return (void*)(uint64_t)m_handle; }
+		TextureTarget get_target() const override { return TextureTarget::Texture2DMultiSample; }
+
+	private:
+		uint32_t m_handle = 0;
+	};
+
 }

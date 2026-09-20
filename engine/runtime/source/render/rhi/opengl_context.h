@@ -52,15 +52,18 @@ namespace z1 {
 		void notify_texture_bound(uint32_t unit, uint32_t gl_handle, TextureTarget target) override;
 		void notify_uniform_buffer_bound(uint32_t binding, uint32_t gl_handle) override;
 		uint32_t get_fallback_texture(TextureTarget target) const override;
+		uint32_t get_max_msaa_samples() const override { return m_max_msaa_samples; }
 
 	private:
 		void create_default_sampler_textures();
 
 		GLFWwindow*  m_window;
 		uint32_t m_debug_group_depth = 0; // balance guard for push/pop debug groups
+		uint32_t m_max_msaa_samples = 1;  // clamped by GL_MAX_SAMPLES + color/depth texture sample limits
 		uint32_t m_default_sampler_texture_2d = 0;       // 1x1 white texture
 		uint32_t m_default_sampler_texture_2d_array = 0; // 1x1x1 white texture
 		uint32_t m_default_sampler_texture_cube = 0;     // 1x1x6 white texture
+		uint32_t m_default_sampler_texture_2d_ms = 0;    // 1x1, 1-sample multisample texture
 
 		// Binder dedup caches (see GraphicsContext::bind_texture_unit/bind_uniform_buffer).
 		std::vector<uint32_t> m_bound_texture_handles;

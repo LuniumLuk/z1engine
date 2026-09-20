@@ -17,6 +17,7 @@ namespace z1 {
 			settings.ssr_enabled = false;
 			settings.sm_resolution = ShadowResolution::Res1024;
 			settings.sm_cascade_count = ShadowCascades::One;
+			settings.msaa_samples = MSAASamples::X2;
 			break;
 		case QualityPreset::Medium:
 			settings.taa_enabled = true;
@@ -25,6 +26,7 @@ namespace z1 {
 			settings.pp_bloom_enabled = true;
 			settings.sm_resolution = ShadowResolution::Res2048;
 			settings.sm_cascade_count = ShadowCascades::Two;
+			settings.msaa_samples = MSAASamples::X2;
 			break;
 		case QualityPreset::High:
 		default:
@@ -35,6 +37,7 @@ namespace z1 {
 			settings.ssr_enabled = true;
 			settings.sm_resolution = ShadowResolution::Res2048;
 			settings.sm_cascade_count = ShadowCascades::Four;
+			settings.msaa_samples = MSAASamples::X4;
 			break;
 		}
 	}

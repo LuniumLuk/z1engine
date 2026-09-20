@@ -1,23 +1,4 @@
-# graphics-quality-presets Specification
-
-## Purpose
-TBD - created by archiving change add-probing-and-quality-presets. Update Purpose after archive.
-## Requirements
-### Requirement: Editor quality preset selection
-
-The editor SHALL provide a quality preset selector with exactly three levels — LOW, MEDIUM, HIGH — in the
-global settings panel. Selecting a level SHALL apply it immediately by calling the dedicated preset
-application function. The preset mechanism SHALL NOT be part of the reflection system (no `REFLECTED_FIELD`)
-and SHALL NOT be compiled into game builds.
-
-#### Scenario: Selecting a preset in the panel
-- **WHEN** the user selects MEDIUM in the global settings panel
-- **THEN** `apply_quality_preset` runs and the corresponding global settings take effect on the next frame
-
-#### Scenario: Game builds have no presets
-- **WHEN** the game executable is built and run
-- **THEN** no preset UI or preset application code is present; render settings come only from scene data and
-  scripts
+## MODIFIED Requirements
 
 ### Requirement: Preset definitions
 
@@ -67,21 +48,6 @@ exposure, gamma, sun parameters):
 - **THEN** settings such as `ao_radius`, `ao_intensity`, `pp_exposure`, `pp_gamma` and sun parameters keep
   their scene-authored values
 
-### Requirement: Preset persistence
-
-The editor settings file (`editor_settings.yaml`) SHALL persist the selected preset as `quality_preset`
-(integer; absent = HIGH). The stored preset SHALL be applied once at editor startup, after the initial scene
-load, and SHALL NOT be re-applied when other scenes are subsequently loaded (their stored settings remain
-authoritative until the user selects a preset again).
-
-#### Scenario: Startup applies the stored preset
-- **WHEN** the editor starts and `editor_settings.yaml` contains `quality_preset: 0` (LOW)
-- **THEN** the LOW settings are applied after the initial scene has been loaded
-
-#### Scenario: Scene load does not clobber with the preset
-- **WHEN** the user opens another scene after startup without touching the selector
-- **THEN** that scene's stored global settings are used as-is
-
 ### Requirement: Preset toggles take effect in the render graph
 
 Turning TAA off SHALL skip the velocity, TAA and TAA-sharpen passes and route the post-process pass directly
@@ -112,4 +78,3 @@ count before the next frame, without an application restart.
 - **WHEN** a preset changes `msaa_samples` while running
 - **THEN** multisampled intermediate targets are created (or released) and reused/recreated at the new
   sample count before the next frame is rendered
-

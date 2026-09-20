@@ -9,6 +9,9 @@ namespace z1 {
 		constexpr uint32_t GBuffer  = 1 << 0;
 		constexpr uint32_t Shadow   = 1 << 1;
 		constexpr uint32_t Velocity = 1 << 2;
+		// MSAA sample-frequency edge shading variant of the deferred lighting shader.
+		// A program using gl_SampleID executes once per covered sample, so it is a separate program.
+		constexpr uint32_t MSAAEdge = 1 << 3;
 
 		// Human-readable name for logging / debugging
 		inline const char* bit_name(uint32_t single_bit) {
@@ -16,6 +19,7 @@ namespace z1 {
 			case GBuffer:  return "VARIANT_GBUFFER";
 			case Shadow:   return "VARIANT_SHADOW";
 			case Velocity: return "VARIANT_VELOCITY";
+			case MSAAEdge: return "VARIANT_MSAA_EDGE";
 			default:       return "UNKNOWN";
 			}
 		}

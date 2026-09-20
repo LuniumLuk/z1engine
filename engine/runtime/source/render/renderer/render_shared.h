@@ -17,6 +17,8 @@ namespace z1 {
 
 	struct Scene;
 	struct RenderGraph;
+	struct RenderGraphNode;
+	struct GraphicsContext;
 	struct CameraComponent;
 	struct PerFrameConst;
 	struct FramebufferPool;
@@ -61,6 +63,8 @@ namespace z1 {
 
 		std::shared_ptr<VertexArray> m_quad;
 		std::shared_ptr<Pipeline> m_pipeline_postprocess;
+		std::shared_ptr<Pipeline> m_pipeline_msaa_depth_resolve; // lazy: created with the first MSAA frame
+		Shader::TextureSlot m_msaa_depth_slot;
 		std::shared_ptr<Pipeline> m_pipeline_taa;
 		std::shared_ptr<Pipeline> m_pipeline_taa_sharpen;
 		std::shared_ptr<Pipeline> m_pipeline_bloom_downsample;
@@ -101,9 +105,21 @@ namespace z1 {
 		glm::mat4 m_inv_proj = {};
 		glm::mat4 m_view = {};
 
+		// Requested MSAA count the warning above was already emitted for (0 = none).
+		uint32_t m_msaa_warned_request = 0;
+
 		int m_frame_index = 0;
 
 		// Per-frame setup (call from renderer's draw())
+
+		// MSAA: the requested sample count clamped to the driver's capability (1 = disabled).
+		// Warns once per requested value when the request is clamped or unsupported.
+		uint32_t get_effective_msaa_samples();
+
+		// Resolves a multisampled depth input into the currently bound framebuffer's depth
+		// attachment (depth-writing draw: depth/stencil blits require matching sample counts).
+		// Called by the MSAA resolve passes in both renderers.
+		void draw_msaa_depth_resolve(RenderGraphNode& node, GraphicsContext& ctx, std::string const& depth_input);
 
 		// Ensure bloom/history buffers are sized for the given resolution.
 		// Returns true if history buffers were just created (uninitialized).

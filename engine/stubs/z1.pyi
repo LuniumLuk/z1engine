@@ -184,6 +184,7 @@ class DataType(Enum):
 	Sampler2D = 12
 	Sampler2DArray = 13
 	SamplerCube = 14
+	Sampler2DMS = 15
 
 class EmitterShape(Enum):
 	Point = 0
@@ -195,6 +196,12 @@ class LightType(Enum):
 	Directional = 0
 	Point = 1
 	Spot = 2
+
+class MSAASamples(Enum):
+	Off = 0
+	X2 = 1
+	X4 = 2
+	X8 = 3
 
 class ParticleBlendMode(Enum):
 	Alpha = 0
@@ -256,6 +263,7 @@ class GlobalSettings:
 	taa_sharpen_enabled: bool
 	taa_sharpen_strength: float
 	taa_animated: bool
+	msaa_samples: MSAASamples
 	pp_exposure: float
 	pp_gamma: float
 	pp_tint: Vec4

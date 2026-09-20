@@ -156,17 +156,29 @@ namespace z1 {
 			}
 		}
 
+		// MSAA (1 = off): resolve passes republish single-sample resources under the canonical
+		// names, so every downstream pass is identical in both modes.
+		uint32_t const msaa_samples = m_shared.get_effective_msaa_samples();
+		bool const msaa_on = msaa_samples > 1;
+
 		RenderGraph rg;
 		rg.set_framebuffer_pool(m_shared.m_framebuffer_pool);
 		int const cascade_count = std::min(std::max((int)g->sm_cascade_count, 1), MAX_CSM_CASCADES);
 		m_shared.add_shadow_pass(rg, scene, m_default_material);
 		m_particle_renderer.add_particle_shadow_passes(rg, scene.get(), m_shared.m_shadow_framebuffer, cascade_count);
-		add_gbuffer_pass(rg, draw_list, framebuffer, projview);
+		add_gbuffer_pass(rg, draw_list, framebuffer, projview, msaa_samples);
+		if (msaa_on) {
+			add_gbuffer_resolve_pass(rg, framebuffer);
+		}
 		std::string ao_pass = m_shared.add_ao_pass(rg, "gbuffer-depth", "gbuffer-normal");
-		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx, ao_pass);
+		add_deferred_lighting_pass(rg, framebuffer, history_uninitialized, read_idx, ao_pass, msaa_samples);
+		if (msaa_on) {
+			add_msaa_edge_pass(rg, framebuffer);
+			add_scene_resolve_pass(rg, framebuffer);
+		}
 
 		std::string scene_color_input = "scene-color";
-		std::string passthrough_pass = "deferred-lighting";
+		std::string passthrough_pass = msaa_on ? "msaa-resolve-scene" : "deferred-lighting";
 		if (g->ssr_enabled) {
 			add_ssr_pass(rg, framebuffer);
 			scene_color_input = "scene-color-ssr";
@@ -225,6 +237,35 @@ namespace z1 {
 		m_lighting_slots.m_valid = true;
 	}
 
+	void RendererDeferred::ensure_msaa_slots() {
+		if (m_msaa_slots.m_valid) {
+			return;
+		}
+
+		// Dedicated program for the sample-frequency edge pass: statically using gl_SampleID makes
+		// a program execute once per covered sample, so it cannot share the bulk lighting program.
+		auto const base = g_runtime_context.m_asset_manager->get<Shader>(ENGINE_RESOURCE("shader/deferred_lighting"));
+		Filepath path = g_runtime_context.m_asset_manager->get_file_from_guid(base->m_guid);
+
+		Pipeline::Description desc{};
+		desc.cull_mode = CullMode::None;
+		desc.shader = Shader::create(concat(path, ".glsl"), ShaderVariant::MSAAEdge);
+		m_pipeline_deferred_lighting_msaa = Pipeline::build(desc);
+
+		// Slots must be resolved from the edge program itself: unit assignment is per program.
+		auto const& shader = m_pipeline_deferred_lighting_msaa->m_shader;
+		m_msaa_slots.m_shadow = shader->sampler_slot("u_shadow_map");
+		m_msaa_slots.m_ao = shader->sampler_slot("u_ao_texture");
+		m_msaa_slots.m_sky_ibl = shader->sampler_slot("u_sky_ibl_texture");
+		m_msaa_slots.m_gbuffer_position = shader->sampler_slot("u_gbuffer_position_ms");
+		m_msaa_slots.m_gbuffer_normal = shader->sampler_slot("u_gbuffer_normal_ms");
+		m_msaa_slots.m_gbuffer_albedo = shader->sampler_slot("u_gbuffer_albedo_ms");
+		m_msaa_slots.m_gbuffer_mr = shader->sampler_slot("u_gbuffer_metallic_roughness_ms");
+		m_msaa_slots.m_gbuffer_emissive = shader->sampler_slot("u_gbuffer_emissive_ms");
+		m_msaa_slots.m_gbuffer_depth = shader->sampler_slot("u_gbuffer_depth_ms");
+		m_msaa_slots.m_valid = true;
+	}
+
 	// G-buffer pass
 	// Renders opaque + masked geometry to a multi-render-target FBO:
 	//   RT0: position  (RGB16F)
@@ -233,7 +274,7 @@ namespace z1 {
 	//   RT3: metallic-roughness (RG16F)
 	//   DS : depth
 
-	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& unjittered_projview) {
+	void RendererDeferred::add_gbuffer_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& unjittered_projview, uint32_t samples) {
 		RenderPass::Description desc;
 		desc.color_attachments.resize(5);
 		for (int i = 0; i < 5; i++) {
@@ -243,15 +284,19 @@ namespace z1 {
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
 		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
 
+		// Multisampled targets carry the "-ms" suffix; the resolve pass republishes them
+		// under the canonical single-sample names.
+		std::string const suffix = samples > 1 ? "-ms" : "";
+
 		rg.add_pass("gbuffer")
 			.set_resolution_as(framebuffer)
 			.set_pass_desc(desc)
-			.add_output("gbuffer-position", ImageFormat::RGBA32F, SamplerMode::Nearest, WrapMode::ClampToEdge)
-			.add_output("gbuffer-normal", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
-			.add_output("gbuffer-albedo", ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge)
-			.add_output("gbuffer-metallic-roughness", ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
-			.add_output("gbuffer-emissive", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
-			.add_output("gbuffer-depth", ImageFormat::Depth)
+			.add_output("gbuffer-position" + suffix, ImageFormat::RGBA32F, SamplerMode::Nearest, WrapMode::ClampToEdge, samples)
+			.add_output("gbuffer-normal" + suffix, ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge, samples)
+			.add_output("gbuffer-albedo" + suffix, ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge, samples)
+			.add_output("gbuffer-metallic-roughness" + suffix, ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge, samples)
+			.add_output("gbuffer-emissive" + suffix, ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge, samples)
+			.add_output("gbuffer-depth" + suffix, ImageFormat::Depth, SamplerMode::Linear, WrapMode::Repeat, samples)
 			.execute([this, &draw_list, unjittered_projview](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.variant_key = ShaderVariant::GBuffer;
@@ -308,10 +353,11 @@ namespace z1 {
 	// Fullscreen quad that reads G-buffer + shadow map + lights UBO
 	// and writes lit scene-color.
 
-	void RendererDeferred::add_deferred_lighting_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, std::string const& ao_pass) {
+	void RendererDeferred::add_deferred_lighting_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer, bool history_uninitialized, int read_idx, std::string const& ao_pass, uint32_t samples) {
 		ensure_lighting_slots();
 		auto const width = framebuffer->get_width();
 		auto const height = framebuffer->get_height();
+		bool const msaa_on = samples > 1;
 
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
@@ -328,13 +374,20 @@ namespace z1 {
 			.add_input("gbuffer-metallic-roughness")
 			.add_input("gbuffer-emissive")
 			.add_input("gbuffer-depth")
-			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
-			.add_output("scene-depth", ImageFormat::Depth)
-			.pre_pass([](RenderGraphNode& node, GraphicsContext& ctx) {
+			.add_output(msaa_on ? "scene-color-ms" : "scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder, samples);
+
+		if (msaa_on) {
+			// The multisampled lighting FBO has no depth attachment (all attachments must share
+			// the sample count); the scene resolve pass produces scene-depth instead.
+		}
+		else {
+			pass.add_output("scene-depth", ImageFormat::Depth);
+			pass.pre_pass([](RenderGraphNode& node, GraphicsContext& ctx) {
 				auto src = node.get_input_framebuffer_name("gbuffer-depth");
 				auto dst = node.get_output();
 				ctx.blit_depth_stencil(src, dst);
 			});
+		}
 
 		// The AO texture is bound directly (not via add_input), so declare the
 		// ordering explicitly to keep the AO pass ahead of lighting.
@@ -378,6 +431,121 @@ namespace z1 {
 					width, height);
 			}
 		});
+	}
+
+	void RendererDeferred::add_gbuffer_resolve_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(5);
+		for (auto& attachment : desc.color_attachments) {
+			attachment.load_op = LoadOp::DontCare;
+		}
+		// The depth resolve is a depth-writing draw (MS-to-SS depth blits are invalid);
+		// the cleared value makes the depth test pass for every resolved depth.
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Clear;
+		desc.depth_stencil_attachment.clear_depth_value = 1.0f;
+
+		uint32_t const width = framebuffer->get_width();
+		uint32_t const height = framebuffer->get_height();
+
+		rg.add_pass("msaa-resolve-gbuffer")
+			.set_resolution_as(framebuffer)
+			.set_pass_desc(desc)
+			.add_input("gbuffer-position-ms")
+			.add_input("gbuffer-normal-ms")
+			.add_input("gbuffer-albedo-ms")
+			.add_input("gbuffer-metallic-roughness-ms")
+			.add_input("gbuffer-emissive-ms")
+			.add_input("gbuffer-depth-ms")
+			.add_output("gbuffer-position", ImageFormat::RGBA32F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-normal", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-albedo", ImageFormat::RGBA8, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-metallic-roughness", ImageFormat::RG16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-emissive", ImageFormat::RGB16F, SamplerMode::Nearest, WrapMode::ClampToEdge)
+			.add_output("gbuffer-depth", ImageFormat::Depth, SamplerMode::Linear, WrapMode::Repeat)
+			.pre_pass([width, height](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto src = node.get_input_framebuffer_name("gbuffer-position-ms");
+				auto dst = node.get_output();
+				for (uint32_t i = 0; i < 5; ++i) {
+					ctx.blit_attachment(src, dst, i, i, 0, 0, 0, 0, width, height);
+				}
+			})
+			.execute([this](RenderGraphNode& node, GraphicsContext& ctx) {
+				m_shared.draw_msaa_depth_resolve(node, ctx, "gbuffer-depth-ms");
+			});
+	}
+
+	void RendererDeferred::add_msaa_edge_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer) {
+		ensure_msaa_slots();
+
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::Load;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
+
+		rg.add_pass("msaa-edge")
+			.set_resolution_as(framebuffer)
+			.set_pass_desc(desc)
+			.set_passthrough("deferred-lighting")
+			.add_input("gbuffer-position-ms")
+			.add_input("gbuffer-normal-ms")
+			.add_input("gbuffer-albedo-ms")
+			.add_input("gbuffer-metallic-roughness-ms")
+			.add_input("gbuffer-emissive-ms")
+			.add_input("gbuffer-depth-ms")
+			.execute([this](RenderGraphNode& node, GraphicsContext& ctx) {
+				m_pipeline_deferred_lighting_msaa->bind();
+				auto& s = m_pipeline_deferred_lighting_msaa->m_shader;
+
+				auto& g = g_runtime_context.m_global;
+				ctx.bind_uniform_buffer(uniform_blocks::Global, g->get_buffer());
+				ctx.bind_uniform_buffer(uniform_blocks::Lights, *m_shared.m_lights_buffer);
+
+				s->bind_texture(m_msaa_slots.m_shadow, m_shared.m_shadow_image.get());
+				s->bind_texture(m_msaa_slots.m_ao, m_shared.get_ao_image().get());
+				s->bind_texture(m_msaa_slots.m_sky_ibl,
+					m_shared.m_has_sky_light ? m_shared.m_sky_ibl_image.get() : nullptr);
+
+				node.bind_input(s, m_msaa_slots.m_gbuffer_position, "gbuffer-position-ms");
+				node.bind_input(s, m_msaa_slots.m_gbuffer_normal, "gbuffer-normal-ms");
+				node.bind_input(s, m_msaa_slots.m_gbuffer_albedo, "gbuffer-albedo-ms");
+				node.bind_input(s, m_msaa_slots.m_gbuffer_mr, "gbuffer-metallic-roughness-ms");
+				node.bind_input(s, m_msaa_slots.m_gbuffer_emissive, "gbuffer-emissive-ms");
+				node.bind_input(s, m_msaa_slots.m_gbuffer_depth, "gbuffer-depth-ms");
+
+				m_shared.m_quad->bind();
+				m_shared.m_quad->draw(PrimitiveType::Triangles);
+				m_shared.m_quad->unbind();
+
+				m_pipeline_deferred_lighting_msaa->unbind();
+			});
+	}
+
+	void RendererDeferred::add_scene_resolve_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer) {
+		RenderPass::Description desc;
+		desc.color_attachments.resize(1);
+		desc.color_attachments[0].load_op = LoadOp::DontCare;
+		desc.depth_stencil_attachment.depth_load_op = LoadOp::Load;
+
+		uint32_t const width = framebuffer->get_width();
+		uint32_t const height = framebuffer->get_height();
+
+		rg.add_pass("msaa-resolve-scene")
+			.set_resolution_as(framebuffer)
+			.set_pass_desc(desc)
+			.add_input("scene-color-ms")
+			.add_input("gbuffer-depth")
+			.add_output("scene-color", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
+			.add_output("scene-depth", ImageFormat::Depth)
+			.pre_pass([width, height](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto src = node.get_input_framebuffer_name("scene-color-ms");
+				auto src_depth = node.get_input_framebuffer_name("gbuffer-depth");
+				auto dst = node.get_output();
+				ctx.blit_attachment(src, dst, 0, 0, 0, 0, 0, 0, width, height);
+				ctx.blit_depth_stencil(src_depth, dst, 0, 0, width, height);
+			})
+			.execute([](RenderGraphNode& node, GraphicsContext& ctx) {
+				// resolve-only pass: all attachments are resolved by the pre-pass blits
+			});
 	}
 
 	void RendererDeferred::add_ssr_pass(RenderGraph& rg, std::shared_ptr<Framebuffer> const& framebuffer) {
