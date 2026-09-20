@@ -3,6 +3,7 @@
 
 #include "core/reflection_hooks.h"
 #include "scene/script_system.h"
+#include "scene/serialization.h"
 #include "util/prober.h"
 
 #include <cctype>
@@ -66,6 +67,10 @@ void EditorSettings::save() {
 	yaml << YAML::Key << "show_skeleton_guizmos" << YAML::Value << show_skeleton_guizmos;
 	yaml << YAML::Key << "skeleton_gizmo_size" << YAML::Value << skeleton_gizmo_size;
 	yaml << YAML::Key << "quality_preset" << YAML::Value << (int)quality_preset;
+	yaml << YAML::Key << "globals_source" << YAML::Value << (int)globals_source;
+	if (globals) {
+		yaml << YAML::Key << "global_settings" << YAML::Value << globals;
+	}
 	yaml << YAML::EndMap;
 
 	std::ofstream fout("editor_settings.yaml");
@@ -92,9 +97,24 @@ void EditorSettings::load() {
 			skeleton_gizmo_size = yaml["skeleton_gizmo_size"].as<float>();
 		if (yaml["quality_preset"])
 			quality_preset = (QualityPreset)yaml["quality_preset"].as<int>();
+		if (yaml["globals_source"])
+			globals_source = (GlobalsSource)yaml["globals_source"].as<int>();
+		if (yaml["global_settings"])
+			globals = yaml["global_settings"];
 	} catch (...) {
 		std::cout << "failed to load editor settings" << std::endl;
 	}
+}
+
+void EditorSettings::apply_globals(GlobalSettings& target) const {
+	if (!globals) return;
+	deserialize_type(globals, &target, "GlobalSettings");
+}
+
+void EditorSettings::capture_globals(GlobalSettings& source) {
+	YAML::Emitter yaml;
+	serialize_type(yaml, &source, "GlobalSettings");
+	globals = YAML::Load(yaml.c_str());
 }
 
 EditorLayer::EditorLayer() {
@@ -141,7 +161,7 @@ EditorLayer::EditorLayer() {
 					load_scene();
 				}
 				if (ImGui::MenuItem("save")) {
-					g_runtime_context.m_scene->save();
+					save_scene();
 				}
 				if (ImGui::MenuItem("exit")) {
 					terminate();
@@ -316,19 +336,19 @@ EditorLayer::EditorLayer() {
 	else {
 		load_scene();
 	}
-
-	// applied after the initial scene load so the preset wins over the scene's stored settings;
-	// loading another scene later leaves that scene's settings untouched
-	apply_quality_preset(*g_runtime_context.m_global, m_settings.quality_preset);
 }
 
 EditorLayer::~EditorLayer() {
-	m_settings.curr_resolution = m_gui->m_current_resolution;
-	m_settings.save();
+	persist_settings();
 }
 
 void EditorLayer::on_attach() {
 
+}
+
+void EditorLayer::on_detach() {
+	// normal shutdown path: the layer stack tears layers down while the engine context is alive
+	persist_settings();
 }
 
 void EditorLayer::on_fixed_update() {
@@ -484,6 +504,18 @@ bool EditorLayer::on_mouse_pressed(MouseButtonPressedEvent& event) {
 	return false;
 }
 
+void EditorLayer::persist_settings() {
+	if (m_settings_saved) return;
+	m_settings_saved = true;
+
+	m_settings.curr_resolution = m_gui->m_current_resolution;
+	// the engine context may already be gone when the layer is destroyed outside the stack
+	if (g_runtime_context.m_global && m_settings.globals_source == GlobalsSource::Editor) {
+		m_settings.capture_globals(*g_runtime_context.m_global);
+	}
+	m_settings.save();
+}
+
 void EditorLayer::load_scene(std::shared_ptr<Scene> const& scene /*= nullptr*/) {
 	if (scene) {
 		g_runtime_context.m_scene = scene;
@@ -531,6 +563,21 @@ void EditorLayer::load_scene(std::shared_ptr<Scene> const& scene /*= nullptr*/) 
 
 	camera->attach_script<HoveringCameraCtrlScript>(m_gui);
 	g_runtime_context.m_scene->set_main_camera(camera);
+
+	// in editor mode the editor globals win over the block the scene applied on load
+	if (m_settings.globals_source == GlobalsSource::Editor) {
+		m_settings.apply_globals(*g_runtime_context.m_global);
+	}
+}
+
+void EditorLayer::save_scene() {
+	if (!g_runtime_context.m_scene) return;
+
+	// scene mode owns the globals: commit the live settings into the scene's block first
+	if (m_settings.globals_source == GlobalsSource::Scene) {
+		g_runtime_context.m_scene->capture_global_settings();
+	}
+	g_runtime_context.m_scene->save();
 }
 
 void EditorLayer::save_screenshot() {
@@ -937,10 +984,35 @@ void EditorLayer::show_asset_info() {
 
 void EditorLayer::show_settings() {
 	if (ImGui::Begin("settings")) {
+		show_globals_source_toggle();
 		show_quality_preset_selector();
 		show_type_fields(g_runtime_context.m_global.get(), TYPE_NAME(GlobalSettings), true);
 	}
 	ImGui::End();
+}
+
+// Global settings live in either editor_settings.yaml (editor mode) or the scene file (scene
+// mode); the toggle picks the storage that is loaded into and saved from the live settings.
+void EditorLayer::show_globals_source_toggle() {
+	int source = (int)m_settings.globals_source;
+	ImGui::TextUnformatted("global settings");
+	ImGui::SameLine();
+	bool const to_editor = ImGui::RadioButton("editor", &source, (int)GlobalsSource::Editor);
+	ImGui::SameLine();
+	bool const to_scene = ImGui::RadioButton("scene", &source, (int)GlobalsSource::Scene);
+	if (!to_editor && !to_scene) return;
+
+	m_settings.globals_source = (GlobalsSource)source;
+	if (m_settings.globals_source == GlobalsSource::Scene) {
+		// keep the editor globals before the live settings take over the scene's values
+		m_settings.capture_globals(*g_runtime_context.m_global);
+		if (g_runtime_context.m_scene) {
+			g_runtime_context.m_scene->apply_global_settings();
+		}
+	}
+	else {
+		m_settings.apply_globals(*g_runtime_context.m_global);
+	}
 }
 
 // Quality presets are editor-only and deliberately not reflected: game builds set these

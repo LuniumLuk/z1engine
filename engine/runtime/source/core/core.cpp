@@ -61,12 +61,15 @@ namespace z1 {
 	void RuntimeContext::shutdown() {
 		m_window->clear_event_callbacks();
 
+		// layers are detached and destroyed first: their teardown runs while the engine services
+		// (window, renderers, global settings, scene) are still alive
+		m_layer_stack.reset();
+
 		m_global.reset();
 		m_renderer_deferred.reset();
 		m_renderer_forward.reset();
 		//m_renderer_2d.reset();
 
-		m_layer_stack.reset();
 		if (m_scene)
 			m_scene.reset();
 		m_python_layer.reset();

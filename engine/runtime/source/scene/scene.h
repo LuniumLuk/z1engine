@@ -62,6 +62,11 @@ namespace z1 {
 		void save() const;
 		// --- end asset interface ---
 
+		// scene-owned global settings block: applied to the live settings on load, written back
+		// verbatim on save; the editor flushes the live settings into it in scene mode
+		void apply_global_settings();
+		void capture_global_settings();
+
 		struct EditorCameraData {
 			TransformComponent transform;
 			CameraComponent camera;
@@ -69,6 +74,9 @@ namespace z1 {
 			bool is_valid = false;
 		};
 		mutable EditorCameraData m_editor_camera_data;
+
+		// authored global settings block (undefined for scene files that have none)
+		YAML::Node m_global_settings;
 
 		entt::registry m_registry;
 		std::vector<std::shared_ptr<Entity>> m_entities;

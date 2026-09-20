@@ -223,6 +223,9 @@ namespace z1 {
 		scene->m_meta.path = sub_path;
 		scene->mark_dirty();
 
+		// new scenes are authored from the current settings so their file carries a block
+		scene->capture_global_settings();
+
 		auto root = FileSystem::get_root_path(root_name);
 		if (g_runtime_context.m_asset_manager->register_asset(scene->m_meta, root)) {
 			CORE_DEBUG("created new scene: {}", path.generic_string());
@@ -254,11 +257,12 @@ namespace z1 {
 			return scene;
 		}
 
-		// Global Settings (reflection-driven)
+		// Global Settings (reflection-driven): the scene owns the block so it can be written
+		// back verbatim and flushed again by the editor in scene mode
 		auto global_settings = yaml["global_settings"];
 		if (global_settings) {
-			auto& global = *g_runtime_context.m_global;
-			deserialize_type(global_settings, &global, "GlobalSettings");
+			scene->m_global_settings = global_settings;
+			scene->apply_global_settings();
 		}
 
 		// Editor Camera
@@ -289,6 +293,17 @@ namespace z1 {
 		}
 
 		return scene;
+	}
+
+	void Scene::apply_global_settings() {
+		if (!m_global_settings) return;
+		deserialize_type(m_global_settings, g_runtime_context.m_global.get(), "GlobalSettings");
+	}
+
+	void Scene::capture_global_settings() {
+		YAML::Emitter yaml;
+		serialize_type(yaml, g_runtime_context.m_global.get(), "GlobalSettings");
+		m_global_settings = YAML::Load(yaml.c_str());
 	}
 
 	std::vector<std::shared_ptr<Entity>> Scene::create_entities_from_yaml(YAML::Node const& entities) {
@@ -426,10 +441,11 @@ namespace z1 {
 
 		yaml << YAML::Key << "meta" << YAML::Value << m_meta;
 
-		// Global Settings (reflection-driven)
-		auto& global = *g_runtime_context.m_global;
-		yaml << YAML::Key << "global_settings" << YAML::Value;
-		serialize_type(yaml, &global, "GlobalSettings");
+		// Global Settings (reflection-driven): write the authored block as-is, not the live
+		// settings (the editor flushes those into the block before saving in scene mode)
+		if (m_global_settings) {
+			yaml << YAML::Key << "global_settings" << YAML::Value << m_global_settings;
+		}
 
 		// Editor Camera
 		for (auto const& entity : m_transient_entities) {

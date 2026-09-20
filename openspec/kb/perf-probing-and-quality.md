@@ -78,8 +78,12 @@ per-frame `[probe]` reports (`Z1_PROBE_EVERY=1` gives one window per frame).
   `apply_quality_preset(GlobalSettings&, QualityPreset)`.
 - Deliberately **not reflected** — game builds set the same settings from script; only the editor offers
   presets. The selector lives at the top of the global settings panel (`EditorLayer::show_quality_preset_selector`).
-- Persisted as `quality_preset: <int>` in `editor_settings.yaml` (default `High` = previous engine defaults)
-  and applied once at editor startup, after the initial scene load.
+- **Applied only on a manual selection in the panel** (2026-09-20): `apply_quality_preset` has exactly one
+  caller (the combo handler). `quality_preset` in `editor_settings.yaml` is selector state only — nothing
+  applies it at startup, on scene load, or on quit.
+- What a preset change reaches depends on the globals source toggle below: in `editor` mode it edits the
+  editor globals (persisted to `editor_settings.yaml`), in `scene` mode it edits the scene's globals (written
+  to the scene on Save Scene).
 
 | Setting | LOW | MEDIUM | HIGH |
 |---|---|---|---|
@@ -93,6 +97,29 @@ per-frame `[probe]` reports (`Z1_PROBE_EVERY=1` gives one window per frame).
 Artistic values (AO radius/intensity, exposure, sun parameters) are never modified by a preset.
 HIGH explicitly enables SSR (2026-09-19) so a LOW → HIGH toggle turns the effect on regardless of the
 scene's authored value; LOW still forces it off.
+
+## Editor globals vs scene globals (2026-09-20)
+
+Two storages, one live object: the settings panel and the renderers always work on
+`g_runtime_context.m_global`; the editor/scene toggle at the top of the panel picks the storage loaded into
+it and saved from it.
+
+| Source | Load | Save |
+|---|---|---|
+| `editor` (default) | `global_settings:` block of `editor_settings.yaml`, applied after the initial scene load; opening a scene keeps the editor globals | `editor_settings.yaml` on quit; Save Scene leaves the scene's block untouched |
+| `scene` | the scene file's block, applied by `Scene::load` | flushed into the scene's block on Save Scene (`Scene::capture_global_settings`), then written |
+
+- `editor_settings.yaml` gains `globals_source: <int>` and a reflected `global_settings:` block
+  (`EditorSettings::globals`, same key set as a scene block; `apply_globals`/`capture_globals` wrap
+  `deserialize_type`/`serialize_type`).
+- `Scene` owns its authored block (`Scene::m_global_settings`): cached on load, captured on `create`, applied
+  on load (game behavior unchanged), written verbatim by `save`; scenes loaded without a block keep none.
+- `RuntimeContext::shutdown()` resets the layer stack **before** the other services so
+  `EditorLayer::on_detach()` can capture the live globals while the engine context is alive;
+  `persist_settings()` runs once (the destructor covers teardown paths outside the stack).
+- Game mode (`--game`) reads neither `editor_settings.yaml` nor a preset: the scene's block is authoritative.
+- Automation/captures: put a `global_settings:` block in `editor_settings.yaml` (editor mode) or set
+  `globals_source: 1` to use the scene's values; `quality_preset` alone no longer changes rendering.
 
 ## Render-settings plumbing
 

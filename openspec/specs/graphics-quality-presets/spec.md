@@ -67,21 +67,6 @@ exposure, gamma, sun parameters):
 - **THEN** settings such as `ao_radius`, `ao_intensity`, `pp_exposure`, `pp_gamma` and sun parameters keep
   their scene-authored values
 
-### Requirement: Preset persistence
-
-The editor settings file (`editor_settings.yaml`) SHALL persist the selected preset as `quality_preset`
-(integer; absent = HIGH). The stored preset SHALL be applied once at editor startup, after the initial scene
-load, and SHALL NOT be re-applied when other scenes are subsequently loaded (their stored settings remain
-authoritative until the user selects a preset again).
-
-#### Scenario: Startup applies the stored preset
-- **WHEN** the editor starts and `editor_settings.yaml` contains `quality_preset: 0` (LOW)
-- **THEN** the LOW settings are applied after the initial scene has been loaded
-
-#### Scenario: Scene load does not clobber with the preset
-- **WHEN** the user opens another scene after startup without touching the selector
-- **THEN** that scene's stored global settings are used as-is
-
 ### Requirement: Preset toggles take effect in the render graph
 
 Turning TAA off SHALL skip the velocity, TAA and TAA-sharpen passes and route the post-process pass directly
@@ -112,4 +97,34 @@ count before the next frame, without an application restart.
 - **WHEN** a preset changes `msaa_samples` while running
 - **THEN** multisampled intermediate targets are created (or released) and reused/recreated at the new
   sample count before the next frame is rendered
+
+### Requirement: Preset application is manual
+
+The editor settings file (`editor_settings.yaml`) SHALL persist the selected preset as `quality_preset`
+(integer; absent = HIGH) as selector state only. The stored preset SHALL NOT be applied automatically — not at
+editor startup, not on scene load, and not by any other load path. Presets SHALL mutate global settings only
+when the user selects one in the global settings panel.
+
+#### Scenario: Startup does not apply the stored preset
+
+- **WHEN** the editor starts and `editor_settings.yaml` contains `quality_preset: 0` (LOW)
+- **THEN** the global settings that take effect are exactly those loaded from the active globals source
+  (`editor_settings.yaml` in `editor` mode, the scene file in `scene` mode), untouched by the preset
+
+#### Scenario: Manual selection applies the preset
+
+- **WHEN** the user selects a preset in the global settings panel
+- **THEN** `apply_quality_preset` runs for that level and the corresponding global settings take effect on the
+  next frame
+
+#### Scenario: Selector reflects the stored value
+
+- **WHEN** the editor starts and `editor_settings.yaml` contains `quality_preset: 1`
+- **THEN** the panel's preset selector shows MEDIUM without changing any global setting
+
+#### Scenario: Preset edits follow the globals source
+
+- **WHEN** the user selects a preset while the globals source is `editor`
+- **THEN** the changed values live in the editor globals (persisted to `editor_settings.yaml`) and reach a
+  scene only after switching the source to `scene` and saving that scene
 

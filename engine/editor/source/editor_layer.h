@@ -24,6 +24,13 @@
 using namespace z1;
 namespace fs = std::filesystem;
 
+// Global settings storage the editor works against, toggled from the global settings panel:
+// `editor` uses editor_settings.yaml, `scene` uses the scene file.
+enum class GlobalsSource : int {
+	Editor = 0,
+	Scene = 1,
+};
+
 struct EditorSettings {
 	std::string last_opened_scene_guid;
 	bool show_light_gizmos = true;
@@ -32,9 +39,16 @@ struct EditorSettings {
 	bool show_skeleton_guizmos = true;
 	float skeleton_gizmo_size = 0.1f;
 	QualityPreset quality_preset = QualityPreset::High;
+	// where the global settings live: `editor` keeps them in this file only, `scene` loads
+	// them from the scene file and flushes them back there on save scene
+	GlobalsSource globals_source = GlobalsSource::Editor;
+	// editor globals snapshot (same reflected key set as a scene's global_settings block)
+	YAML::Node globals;
 
 	void save();
 	void load();
+	void apply_globals(GlobalSettings& target) const;
+	void capture_globals(GlobalSettings& source);
 };
 
 struct EditorLayer : Layer {
@@ -42,6 +56,7 @@ struct EditorLayer : Layer {
 	~EditorLayer();
 
 	void on_attach() override;
+	void on_detach() override;
 	void on_update(float delta_time) override;
 	void on_fixed_update() override;
 	void on_event(Event& event) override;
@@ -51,6 +66,7 @@ struct EditorLayer : Layer {
 	bool on_mouse_pressed(MouseButtonPressedEvent& event);
 
 	void load_scene(std::shared_ptr<Scene> const& scene = nullptr);
+	void save_scene();
 	void save_screenshot();
 
 private:
@@ -75,14 +91,17 @@ private:
 	int m_frames_to_run = -1;
 	int m_frame_count = 0;
 	bool m_screenshot_on_exit = false;
+	bool m_settings_saved = false;
 
 	void use_editor_camera();
 	void show_scene_graph();
 
 	void show_asset_info();
 	void show_settings();
+	void show_globals_source_toggle();
 	void show_quality_preset_selector();
 	void show_stats();
+	void persist_settings();
 
 	std::string get_image_info(Image* image);
 	std::string get_uniform_buffer_info(UniformBuffer* buffer);

@@ -278,7 +278,10 @@ can never exceed ~120 fps, and at 640×480 it spends ~85 % of each frame in the 
 
 # pass isolation is now configuration-driven, e.g. per-scene or per-script settings
 #   taa_enabled=false / pp_bloom_enabled=false / ao_resolution=Quarter /
-#   sm_resolution=1024 / sm_cascade_count=One  (or select the LOW preset in the editor)
+#   sm_resolution=1024 / sm_cascade_count=One
+#   editor runs: write the values into the `global_settings:` block of editor_settings.yaml
+#   (editor mode, default) or set globals_source: 1 to use the scene's own block — selecting a preset in
+#   the panel only affects the running session since 2026-09-20
 
 # vsync-off A/B
 Z1_PROBE_VSYNC=0 ./engine/bin/Hybrid/game --frames=240 < /dev/null > /tmp/z1_novsync.log 2>&1
