@@ -106,7 +106,7 @@ def _write_validation_report(root, report):
 	report_dir = Path(root) / "dev" / "validation" / "reports"
 	report_dir.mkdir(parents=True, exist_ok=True)
 
-	now = datetime.datetime.now(datetime.UTC)
+	now = datetime.datetime.now(datetime.timezone.utc)
 	ts = now.strftime("%Y%m%dT%H%M%SZ")
 	timestamped = report_dir / f"dcv-{ts}.json"
 	latest = report_dir / "latest.json"
@@ -250,7 +250,7 @@ def main(argv=None):
 		"status": overall_status,
 		"correctness": correctness,
 		"performance": performance,
-		"timestampUtc": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
+		"timestampUtc": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
 		"environment": {
 			"platform": platform.platform(),
 			"pythonVersion": platform.python_version(),

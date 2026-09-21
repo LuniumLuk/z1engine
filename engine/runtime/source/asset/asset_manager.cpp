@@ -71,6 +71,8 @@ namespace z1 {
 					YAML::Node node = YAML::LoadFile(file.string());
 					meta = node["meta"].as<AssetMeta>();
 					meta.root = root_config.name;
+					// ids are derived from root + path; a stored guid is informational only
+					meta.guid = Guid::from_root_and_path(meta.root, meta.path.generic_string());
 				}
 				catch (std::exception const& e) {
 					CORE_ERROR("failed to load meta file: {0}, {1}", file.generic_string(), e.what());
@@ -100,7 +102,7 @@ namespace z1 {
 				meta.path = path_str;
 				meta.root = root_config.name;
 
-				meta.guid = Guid::make(path_str);
+				meta.guid = Guid::from_root_and_path(root_config.name, path_str);
 
 				// Check for duplicates
 				std::string internal_path = build_internal_path(meta);
@@ -126,7 +128,7 @@ namespace z1 {
 				meta.path = path.generic_string();
 				meta.root = root_config.name;
 
-				meta.guid = Guid::make(path.generic_string());
+				meta.guid = Guid::from_root_and_path(root_config.name, path.generic_string());
 
 				// Check for duplicates (YAML might already define this shader)
 				std::string internal_path = build_internal_path(meta);
@@ -411,11 +413,16 @@ namespace z1 {
 	}
 
 	Guid AssetManager::resolve_guid(std::string const& str) const {
+		// path references win over raw ids, so legacy strings keep resolving
 		auto guid = get_guid_from_path(str);
 		if (!guid.is_valid()) {
-			guid = Guid::make(str);
+			guid = Guid::from_string(str);
 		}
 		return guid;
+	}
+
+	Guid resolve_asset_guid(std::string const& reference) {
+		return g_runtime_context.m_asset_manager->resolve_guid(reference);
 	}
 
 	bool AssetManager::register_asset(AssetMeta const& meta, Filepath const& root) {

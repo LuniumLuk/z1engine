@@ -36,13 +36,13 @@ namespace z1 {
 		import_file += ".bin";
 
 		AssetMeta meta{};
-		meta.guid = Guid::generate();
 		meta.type = "texture2d";
 		meta.path = settings.path;
 		meta.extra["sampler_mode"] = (int)settings.sampler_mode;
 		meta.extra["wrap_mode"] = (int)settings.wrap_mode;
 
 		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
+		meta.guid = Guid::from_root_and_path("", meta.path.generic_string());
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return ret;
 		}

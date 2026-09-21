@@ -19,7 +19,7 @@ class KinematicPlatform(z1.Script):
 
 	def on_attach(self):
 		z1.log_info(f"[KinematicPlatform] Attached, axis={self._axis} "
-		            f"amplitude={self._amplitude} speed={self._speed}")
+					f"amplitude={self._amplitude} speed={self._speed}")
 
 	def on_start(self):
 		if self.entity and self.entity.transform:

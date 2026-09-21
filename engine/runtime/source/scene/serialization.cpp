@@ -42,7 +42,7 @@ namespace z1 {
 		if (field.is_guid) {
 			auto* guid = static_cast<Guid*>(ptr);
 			if (guid->is_valid()) {
-				yaml << guid->value;
+				yaml << guid->to_string();
 			}
 			else {
 				yaml << YAML::Null;
@@ -115,7 +115,7 @@ namespace z1 {
 		else if (type == typeid(Guid)) {
 			auto* guid = static_cast<Guid*>(ptr);
 			if (guid->is_valid()) {
-				yaml << guid->value;
+				yaml << guid->to_string();
 			}
 			else {
 				yaml << YAML::Null;
@@ -133,10 +133,11 @@ namespace z1 {
 		if (field.is_guid) {
 			auto* guid = static_cast<Guid*>(ptr);
 			if (node.IsNull()) {
-				guid->value = "";
+				*guid = Guid();
 			}
 			else {
-				guid->value = node.as<std::string>();
+				// resolves hex ids directly and legacy path references through the asset manager
+				*guid = g_runtime_context.m_asset_manager->resolve_guid(node.as<std::string>());
 			}
 			return true;
 		}
@@ -459,13 +460,13 @@ namespace z1 {
 		// Skip vtable pointer to reach AssetBase::m_meta
 		uint8_t* meta_addr = static_cast<uint8_t*>(object) + sizeof(void*);
 		auto* meta = reinterpret_cast<AssetMeta*>(meta_addr);
-		return meta->guid.value;
+		return meta->guid.to_string();
 	}
 
 	bool asset_ref_from_guid_string(void* shared_ptr_to_asset, std::string const& guid_str, std::string const& asset_meta_type) {
 		if (guid_str.empty()) return false;
 
-		Guid guid = Guid::make(guid_str);
+		Guid guid = g_runtime_context.m_asset_manager->resolve_guid(guid_str);
 		if (!guid.is_valid()) return false;
 
 		// shared_ptr layout: { T* ptr, control_block* ctrl }

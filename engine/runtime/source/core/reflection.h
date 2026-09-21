@@ -52,6 +52,9 @@ namespace z1 {
 	template<typename T>
 	inline constexpr bool is_asset_ref_field_v = is_asset_ref_field<T>::value;
 
+	// Defined in asset/asset_manager.cpp: resolves a path or 32-hex guid reference string.
+	Guid resolve_asset_guid(std::string const& reference);
+
 	struct Entity;
 
 	enum FieldFlags : uint32_t
@@ -212,7 +215,7 @@ namespace z1 {
 			field_info.load_asset_by_guid = [](void* field_ptr, std::string const& guid_str) -> bool {
 				using AssetType = typename FieldType::element_type;
 				if (guid_str.empty()) return false;
-				Guid guid = Guid::make(guid_str);
+				Guid guid = resolve_asset_guid(guid_str);
 				if (!guid.is_valid()) return false;
 				auto asset = Asset<AssetType>::load(guid);
 				if (asset) {
@@ -291,7 +294,7 @@ namespace z1 {
 					info.load_asset_by_guid = [](void* elem_ptr, std::string const& guid_str) -> bool {
 						using AssetType = typename T::element_type;
 						if (guid_str.empty()) return false;
-						Guid guid = Guid::make(guid_str);
+						Guid guid = resolve_asset_guid(guid_str);
 						if (!guid.is_valid()) return false;
 						auto asset = Asset<AssetType>::load(guid);
 						if (asset) {
@@ -326,7 +329,7 @@ namespace z1 {
 					info.load_asset_by_guid = [](void* elem_ptr, std::string const& guid_str) -> bool {
 						using AssetType = typename T::element_type;
 						if (guid_str.empty()) return false;
-						Guid guid = Guid::make(guid_str);
+						Guid guid = resolve_asset_guid(guid_str);
 						if (!guid.is_valid()) return false;
 						auto asset = Asset<AssetType>::load(guid);
 						if (asset) {
@@ -413,7 +416,7 @@ namespace z1 {
 					info.load_asset_by_guid = [](void* elem_ptr, std::string const& guid_str) -> bool {
 						using AssetType = typename V::element_type;
 						if (guid_str.empty()) return false;
-						Guid guid = Guid::make(guid_str);
+						Guid guid = resolve_asset_guid(guid_str);
 						if (!guid.is_valid()) return false;
 						auto asset = Asset<AssetType>::load(guid);
 						if (asset) {

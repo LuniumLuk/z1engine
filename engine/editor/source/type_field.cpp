@@ -138,7 +138,7 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 
 	if (field.is_guid) {
 		Guid* value_ptr = reinterpret_cast<Guid*>(ptr);
-		ImGui::Text("%s", value_ptr->is_valid() ? value_ptr->value.c_str() : "(empty)");
+		ImGui::Text("%s", value_ptr->is_valid() ? value_ptr->to_string().c_str() : "(empty)");
 		return;
 	}
 
@@ -164,7 +164,7 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 			// Skip vtable pointer to reach AssetBase::m_meta
 			uint8_t* meta_addr = static_cast<uint8_t*>(object_ptr) + sizeof(void*);
 			auto* meta = reinterpret_cast<AssetMeta*>(meta_addr);
-			ImGui::Text("%s", meta->guid.value.c_str());
+			ImGui::Text("%s", meta->guid.to_string().c_str());
 			ImGui::SameLine();
 			if (ImGui::Button("X")) {
 				// Properly clear the shared_ptr using the registered clear callback
@@ -189,7 +189,7 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 			for (auto const& meta : metas) {
 				if (meta.type != meta_type) continue;
 
-				std::string label = meta.path.generic_string() + " (" + meta.guid.value + ")";
+				std::string label = meta.path.generic_string() + " (" + meta.guid.to_string() + ")";
 				if (ImGui::Selectable(label.c_str())) {
 					// Load the asset by type and assign to the shared_ptr
 					assign_asset_to_field(shared_ptr_addr, meta);
@@ -278,7 +278,7 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 		std::shared_ptr<Animation>& value = *reinterpret_cast<std::shared_ptr<Animation>*>(ptr);
 		ImGui::Indent();
 		if (value) {
-			ImGui::Text("guid: %s", value->m_meta.guid.value.c_str());
+			ImGui::Text("guid: %s", value->m_meta.guid.to_string().c_str());
 			ImGui::Text("name: %s", value->name.c_str());
 			ImGui::Text("duration: %.2fs", value->duration);
 			ImGui::Text("ticks per second: %.2f", value->ticks_per_second);
@@ -293,7 +293,7 @@ void show_value(void* ptr, std::type_info const& type, std::string const& name, 
 		std::shared_ptr<MaterialInstance>& value = *reinterpret_cast<std::shared_ptr<MaterialInstance>*>(ptr);
 		ImGui::Indent();
 		if (value) {
-			ImGui::Text("guid: %s", value->m_meta.guid.value.c_str());
+			ImGui::Text("guid: %s", value->m_meta.guid.to_string().c_str());
 		}
 		else {
 			ImGui::Text("(none)");

@@ -1,19 +1,19 @@
-bound_min: [-0.999998987, -1, -1]
-bound_max: [1, 1, 0.999998987]
-vertex_count: 2880
+bound_min: [-1, -1, -1]
+bound_max: [1, 1, 1]
+vertex_count: 482
 index_count: 2880
 primitives:
   - index_start: 0
     index_count: 2880
-    vertex_count: 2880
-    bound_min: [-0.999998987, -1, -1]
-    bound_max: [1, 1, 0.999998987]
+    vertex_count: 482
+    bound_min: [-1, -1, -1]
+    bound_max: [1, 1, 1]
     material: ~
-    has_indices: false
-    has_normal: false
+    has_indices: true
+    has_normal: true
     has_tangent: false
 meta:
-  guid: mesh/SM_Sphere
+  guid: 0000000004d802196c42c467ccbda7d6
   type: static mesh
   path: mesh/SM_Sphere
   extra: ~

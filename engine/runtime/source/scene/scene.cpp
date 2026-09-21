@@ -216,13 +216,13 @@ namespace z1 {
 	std::shared_ptr<Scene> Scene::create(Filepath const& path) {
 		auto scene = std::make_shared<Scene>();
 
-		scene->m_meta.guid = Guid::generate();
 		scene->m_meta.type = "scene";
 
 		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
 
 		scene->m_meta.root = root_name;
 		scene->m_meta.path = sub_path;
+		scene->m_meta.guid = Guid::from_root_and_path(scene->m_meta.root, scene->m_meta.path.generic_string());
 		scene->mark_dirty();
 
 		// new scenes are authored from the current settings so their file carries a block

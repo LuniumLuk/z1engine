@@ -13,7 +13,7 @@ primitives:
     has_normal: false
     has_tangent: false
 meta:
-  guid: mesh/SM_Suzanne
+  guid: 00000000e4c3c5e0b4028cfda4a9c8b1
   type: static mesh
   path: mesh/SM_Suzanne
   extra: ~

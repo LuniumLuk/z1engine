@@ -471,7 +471,6 @@ namespace z1 {
 
 	std::shared_ptr<Material> Material::create(Filepath const& path, uint32_t flags, Guid const& shader_guid) {
 		auto mat = std::make_shared<Material>(flags, shader_guid);
-		mat->m_meta.guid = Guid::generate();
 		mat->m_meta.type = "material";
 
 		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
@@ -479,6 +478,7 @@ namespace z1 {
 		mat->m_meta.root = root_name;
 		mat->m_meta.path = sub_path;
 		mat->m_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(mat->m_meta.path);
+		mat->m_meta.guid = Guid::from_root_and_path(mat->m_meta.root, mat->m_meta.path.generic_string());
 		auto root = FileSystem::get_root_path(root_name);
 		if (!g_runtime_context.m_asset_manager->register_asset(mat->m_meta, root)) {
 			return nullptr;
@@ -554,7 +554,7 @@ namespace z1 {
 						auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(tex_path);
 						var.default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
 						if (!var.default_value.tex2D) {
-							CORE_WARN("material: {0} failed to load texture2D: {1} for variable: {2}", guid, tex_guid.value, name);
+							CORE_WARN("material: {0} failed to load texture2D: {1} for variable: {2}", guid, tex_guid, name);
 						}
 						else {
 							var.default_value.valid = true;
@@ -633,7 +633,6 @@ namespace z1 {
 
 	std::shared_ptr<MaterialInstance> MaterialInstance::create(Filepath const& path, std::shared_ptr<Material> const& material) {
 		auto mi = std::make_shared<MaterialInstance>(material);
-		mi->m_meta.guid = Guid::generate();
 		mi->m_meta.type = "material instance";
 
 		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
@@ -641,6 +640,7 @@ namespace z1 {
 		mi->m_meta.root = root_name;
 		mi->m_meta.path = sub_path;
 		mi->m_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(mi->m_meta.path);
+		mi->m_meta.guid = Guid::from_root_and_path(mi->m_meta.root, mi->m_meta.path.generic_string());
 		auto root = FileSystem::get_root_path(root_name);
 		if (!g_runtime_context.m_asset_manager->register_asset(mi->m_meta, root)) {
 			return nullptr;
@@ -716,7 +716,7 @@ namespace z1 {
 					auto tex_guid = g_runtime_context.m_asset_manager->resolve_guid(tex_path);
 					var.default_value.tex2D = g_runtime_context.m_asset_manager->get<Texture2D>(tex_guid);
 					if (!var.default_value.tex2D) {
-						CORE_WARN("material instance: {0} failed to load texture2D: {1} for variable: {2}", guid, tex_guid.value, name);
+						CORE_WARN("material instance: {0} failed to load texture2D: {1} for variable: {2}", guid, tex_guid, name);
 					}
 					else {
 						var.default_value.valid = true;

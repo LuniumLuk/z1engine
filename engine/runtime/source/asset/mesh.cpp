@@ -268,13 +268,13 @@ namespace z1 {
 		yaml << YAML::EndSeq;
 
 		AssetMeta meta{};
-		meta.guid = Guid::generate();
 		meta.type = "static mesh";
 
 		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
 		meta.root = root_name;
 		meta.path = sub_path;
 		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
+		meta.guid = Guid::from_root_and_path(meta.root, meta.path.generic_string());
 
 		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;
@@ -547,13 +547,13 @@ namespace z1 {
 		yaml << YAML::EndSeq;
 
 		AssetMeta meta{};
-		meta.guid = Guid::generate();
 		meta.type = "skeletal mesh";
 
 		auto [root_name, sub_path] = g_runtime_context.m_asset_manager->resolve_asset_path(path, PathResolveMode::Create);
 		meta.root = root_name;
 		meta.path = sub_path;
 		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
+		meta.guid = Guid::from_root_and_path(meta.root, meta.path.generic_string());
 
 		yaml << YAML::Key << "meta" << YAML::Value << meta;
 		yaml << YAML::EndMap;

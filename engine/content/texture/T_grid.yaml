@@ -1,0 +1,8 @@
+meta:
+  guid: 000000003377cb56edb7bfa439684f19
+  type: texture2d
+  path: texture/T_grid
+  extra:
+    sampler_mode: 0
+    wrap_mode: 0
+    hdr: false

@@ -1,66 +1,117 @@
 #pragma once
 
-#include <array>
-#include <random>
-#include <sstream>
-#include <iomanip>
+#include <cstdint>
+#include <cstdio>
+#include <functional>
+#include <ostream>
 #include <string>
+#include <string_view>
 
 namespace z1 {
 
+	// Deterministic 128-bit asset id: word 0 holds the first 8 hex digits.
+	// Engine-root ids keep word 0 zero, other roots never do (see from_root_and_path).
 	struct Guid {
-		std::string value;
+		uint32_t m_data[4]{ 0, 0, 0, 0 };
 
-		Guid() : value("") {}
+		Guid() = default;
 
-		bool operator==(const Guid& other) const noexcept { return value == other.value; }
-		bool operator!=(const Guid& other) const noexcept { return !(*this == other); }
-
-		bool is_valid() const { return !value.empty(); }
-
-		explicit operator const std::string& () const noexcept {
-			return value;
+		Guid(uint32_t w0, uint32_t w1, uint32_t w2, uint32_t w3)
+			: m_data{ w0, w1, w2, w3 } {
 		}
 
-		static Guid make(std::string v = "") {
-			return Guid(std::move(v));
+		bool operator==(Guid const& other) const noexcept {
+			return m_data[0] == other.m_data[0] && m_data[1] == other.m_data[1]
+				&& m_data[2] == other.m_data[2] && m_data[3] == other.m_data[3];
 		}
 
-		static Guid generate() {
-			static std::random_device rd;
-			static std::mt19937_64 gen(rd());
-			static std::uniform_int_distribution<uint64_t> dist;
+		bool operator!=(Guid const& other) const noexcept { return !(*this == other); }
 
-			uint64_t part1 = dist(gen);
-			uint64_t part2 = dist(gen);
+		bool is_valid() const noexcept {
+			return (m_data[0] | m_data[1] | m_data[2] | m_data[3]) != 0;
+		}
 
-			// apply GUID v4 variant/version bits
-			part1 &= 0xFFFFFFFFFFFF0FFFULL;
-			part1 |= 0x0000000000004000ULL; // version 4
-			part2 &= 0x3FFFFFFFFFFFFFFFULL;
-			part2 |= 0x8000000000000000ULL; // variant
+		std::string to_string() const {
+			char buffer[33] = {};
+			std::snprintf(buffer, sizeof(buffer), "%08x%08x%08x%08x",
+				m_data[0], m_data[1], m_data[2], m_data[3]);
+			return buffer;
+		}
 
-			std::array<unsigned char, 16> bytes;
-			for (int i = 0; i < 8; ++i) bytes[i] = static_cast<unsigned char>((part1 >> ((7 - i) * 8)) & 0xFF);
-			for (int i = 0; i < 8; ++i) bytes[i + 8] = static_cast<unsigned char>((part2 >> ((7 - i) * 8)) & 0xFF);
-
-			// format as GUID string
-			std::ostringstream oss;
-			oss << std::hex << std::setfill('0');
-			for (int i = 0; i < 16; ++i) {
-				oss << std::setw(2) << static_cast<int>(bytes[i]);
-				if (i == 3 || i == 5 || i == 7 || i == 9)
-					oss << '-';
+		// Parses 32 hex digits (dashes tolerated); any other input yields an invalid guid.
+		static Guid from_string(std::string_view text) {
+			Guid guid;
+			int digit = 0;
+			for (char c : text) {
+				if (c == '-') continue;
+				int value = hex_digit_value(c);
+				if (value < 0 || digit >= 32) return Guid();
+				guid.m_data[digit / 8] = (guid.m_data[digit / 8] << 4) | (uint32_t)value;
+				++digit;
 			}
-			return Guid(oss.str());
+			if (digit != 32) return Guid();
+			return guid;
+		}
+
+		// Engine assets derive from the path alone and keep a zero 32-bit prefix.
+		static Guid from_path(std::string const& path) {
+			uint64_t high = 0;
+			uint64_t low = 0;
+			derive_hash(path, high, low);
+			return from_hash(high, low, true);
+		}
+
+		// Other assets derive from root + path and never carry the engine prefix.
+		static Guid from_root_and_path(std::string const& root, std::string const& path) {
+			if (root == "engine") {
+				return from_path(path);
+			}
+			uint64_t high = 0;
+			uint64_t low = 0;
+			derive_hash(root + "/" + path, high, low);
+			return from_hash(high, low, false);
+		}
+
+		// Applies the engine-prefix / foreign-flip rule to a raw 128-bit hash.
+		static Guid from_hash(uint64_t high, uint64_t low, bool engine_asset) {
+			Guid guid{ (uint32_t)(high >> 32), (uint32_t)high, (uint32_t)(low >> 32), (uint32_t)low };
+			if (engine_asset) {
+				guid.m_data[0] = 0;
+			}
+			else if (guid.m_data[0] == 0) {
+				guid.m_data[0] = 0x80000000u;
+			}
+			return guid;
 		}
 
 		friend std::ostream& operator<<(std::ostream& os, Guid const& guid) {
-			return os << guid.value;
+			return os << guid.to_string();
 		}
 
 	private:
-		explicit Guid(std::string v) : value(std::move(v)) {}
+		static constexpr uint64_t FNV_OFFSET_BASIS = 0xcbf29ce484222325ULL;
+		static constexpr uint64_t FNV_PRIME = 0x00000100000001b3ULL;
+
+		static uint64_t fnv1a64(uint64_t hash, std::string_view text) noexcept {
+			for (unsigned char c : text) {
+				hash ^= (uint64_t)c;
+				hash *= FNV_PRIME;
+			}
+			return hash;
+		}
+
+		// Two domain-separated FNV-1a-64 passes form the 128-bit hash.
+		static void derive_hash(std::string_view key, uint64_t& high, uint64_t& low) {
+			high = fnv1a64(fnv1a64(FNV_OFFSET_BASIS, "z1a:"), key);
+			low = fnv1a64(fnv1a64(FNV_OFFSET_BASIS, "z1b:"), key);
+		}
+
+		static int hex_digit_value(char c) noexcept {
+			if (c >= '0' && c <= '9') return c - '0';
+			if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+			if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+			return -1;
+		}
 	};
 
 }
@@ -69,7 +120,10 @@ namespace std {
 	template<>
 	struct hash<z1::Guid> {
 		std::size_t operator()(z1::Guid const& guid) const noexcept {
-			return std::hash<std::string>()(guid.value);
+			uint64_t high = ((uint64_t)guid.m_data[0] << 32) | guid.m_data[1];
+			uint64_t low = ((uint64_t)guid.m_data[2] << 32) | guid.m_data[3];
+			uint64_t mixed = high ^ (low * 0x9e3779b97f4a7c15ULL);
+			return (std::size_t)(mixed ^ (mixed >> 32));
 		}
 	};
 }

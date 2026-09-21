@@ -31,7 +31,7 @@ entities:
       initial_rotation: [0, 360]
       rotation_speed: [180, 360]
 meta:
-  guid: 10000004-0000-0000-0000-000000000004
+  guid: 000000009f9441ed0637ccf21f35fe2a
   type: prefab
   path: prefab/SparkleParticles.prefab
   extra: ~

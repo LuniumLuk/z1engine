@@ -1,0 +1,8 @@
+meta:
+  guid: 00000000d348dea807801b949ac3d4c9
+  type: texture2d
+  path: texture/T_noise
+  extra:
+    sampler_mode: 0
+    wrap_mode: 0
+    hdr: false

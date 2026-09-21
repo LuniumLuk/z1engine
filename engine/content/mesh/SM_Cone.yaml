@@ -1,19 +1,19 @@
 bound_min: [-1, -1, -1]
 bound_max: [1, 1, 1]
-vertex_count: 186
-index_count: 186
+vertex_count: 66
+index_count: 192
 primitives:
   - index_start: 0
-    index_count: 186
-    vertex_count: 186
+    index_count: 192
+    vertex_count: 66
     bound_min: [-1, -1, -1]
     bound_max: [1, 1, 1]
     material: ~
-    has_indices: false
-    has_normal: false
+    has_indices: true
+    has_normal: true
     has_tangent: false
 meta:
-  guid: mesh/SM_Cone
+  guid: 000000007b8dbe6fff1ca45ad886804c
   type: static mesh
   path: mesh/SM_Cone
   extra: ~

@@ -129,6 +129,15 @@ PYBIND11_EMBEDDED_MODULE(z1, m) {
 			return "Vec4(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ", " + std::to_string(v.w) + ")";
 		});
 
+	// Bind Guid (128-bit value type; text form is 32 hex digits)
+	py::class_<Guid>(m, "Guid")
+		.def(py::init<>())
+		.def_static("from_string", [](std::string const& text) { return Guid::from_string(text); })
+		.def("to_string", &Guid::to_string)
+		.def("is_valid", &Guid::is_valid)
+		.def("__repr__", &Guid::to_string)
+		.def("__eq__", [](Guid const& self, Guid const& other) { return self == other; });
+
 	// Bind Entity
 	// Note: Component properties are added in bind_generated
 	auto entity_cls = py::class_<Entity, std::shared_ptr<Entity>>(m, "Entity");

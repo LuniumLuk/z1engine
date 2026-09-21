@@ -19,7 +19,7 @@ class PhysDemo(z1.Script):
 		z1.log_info("[PhysDemo] Attached! Spawning physics playground...")
 
 	def on_start(self):
-		mat = "f2142c5c-3ec1-480a-b9e6-3856e983d39b"
+		mat = "31851316c5fe0f20d6d1bf0de8e0bd97"
 
 		# --- Walls (static) ---
 		walls = [

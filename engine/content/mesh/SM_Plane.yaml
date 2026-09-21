@@ -1,0 +1,19 @@
+bound_min: [-1, 0, -1]
+bound_max: [1, 0, 1]
+vertex_count: 4
+index_count: 6
+primitives:
+  - index_start: 0
+    index_count: 6
+    vertex_count: 4
+    bound_min: [-1, 0, -1]
+    bound_max: [1, 0, 1]
+    material: ~
+    has_indices: true
+    has_normal: true
+    has_tangent: false
+meta:
+  guid: 0000000052f6ea760239b708400f1713
+  type: static mesh
+  path: mesh/SM_Plane
+  extra: ~

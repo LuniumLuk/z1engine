@@ -156,7 +156,7 @@ namespace z1 {
 
 		std::vector<Filepath> find_references(Guid const& guid) const {
 			std::vector<Filepath> refs;
-			std::string guid_str = guid.value;
+			std::string guid_str = guid.to_string();
 			for (auto const& [id, meta] : m_asset_metas) {
 				if (meta.guid == guid) continue; // skip self
 
@@ -227,7 +227,7 @@ namespace z1 {
 				shader->m_guid = guid;
 				return shader;
 			}
-			CORE_ERROR("failed to load shader: {0}", guid.value);
+			CORE_ERROR("failed to load shader: {0}", guid);
 			return nullptr;
 		}
 	};

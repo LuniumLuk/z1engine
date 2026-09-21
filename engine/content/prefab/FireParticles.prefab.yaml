@@ -31,7 +31,7 @@ entities:
       initial_rotation: [0, 360]
       rotation_speed: [90, 180]
 meta:
-  guid: 10000002-0000-0000-0000-000000000002
+  guid: 0000000044318cbb3b075be8d65c9616
   type: prefab
   path: prefab/FireParticles.prefab
   extra: ~

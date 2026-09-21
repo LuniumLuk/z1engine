@@ -1,19 +1,19 @@
 bound_min: [-1, -1, -1]
 bound_max: [1, 1, 1]
-vertex_count: 372
-index_count: 372
+vertex_count: 130
+index_count: 384
 primitives:
   - index_start: 0
-    index_count: 372
-    vertex_count: 372
+    index_count: 384
+    vertex_count: 130
     bound_min: [-1, -1, -1]
     bound_max: [1, 1, 1]
     material: ~
-    has_indices: false
-    has_normal: false
+    has_indices: true
+    has_normal: true
     has_tangent: false
 meta:
-  guid: mesh/SM_Cylinder
+  guid: 000000001c7dd692a14e86a3e960c511
   type: static mesh
   path: mesh/SM_Cylinder
   extra: ~

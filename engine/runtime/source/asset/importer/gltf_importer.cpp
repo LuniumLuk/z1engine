@@ -530,7 +530,6 @@ namespace z1 {
 			Filepath import_file = root / settings.path / (name + ".bin");
 
 			AssetMeta meta{};
-			meta.guid = Guid::generate();
 			meta.type = "texture2d";
 			meta.path = settings.path / name;
 
@@ -565,6 +564,7 @@ namespace z1 {
 			meta.extra["hdr"] = false;
 
 			meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
+			meta.guid = Guid::from_root_and_path("", meta.path.generic_string());
 			if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 				continue;
 			}
@@ -837,11 +837,11 @@ namespace z1 {
 		// Ensure unique name if multiple skins
 
 		AssetMeta meta{};
-		meta.guid = Guid::generate();
 		meta.type = "skeleton";
 		meta.path = settings.path / name;
 
 		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
+		meta.guid = Guid::from_root_and_path("", meta.path.generic_string());
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return {};
 		}
@@ -981,11 +981,11 @@ namespace z1 {
 		std::string name = anim.name.empty() ? ("AN_" + std::to_string(ret.assets.size())) : anim.name;
 
 		AssetMeta meta{};
-		meta.guid = Guid::generate();
 		meta.type = "animation";
 		meta.path = settings.path / name;
 
 		meta.path = g_runtime_context.m_asset_manager->legalize_import_path(meta.path);
+		meta.guid = Guid::from_root_and_path("", meta.path.generic_string());
 		if (!g_runtime_context.m_asset_manager->register_asset(meta, root)) {
 			return;
 		}
@@ -1131,9 +1131,9 @@ namespace z1 {
 		auto prefab_path = settings.path / (prefab_name + ".prefab");
 
 		AssetMeta prefab_meta{};
-		prefab_meta.guid = Guid::generate();
 		prefab_meta.type = "prefab";
-		prefab_meta.path = prefab_path;
+		prefab_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(prefab_path);
+		prefab_meta.guid = Guid::from_root_and_path("", prefab_meta.path.generic_string());
 
 		yaml << YAML::Key << "meta" << YAML::Value << prefab_meta;
 		yaml << YAML::EndMap;
@@ -1146,7 +1146,6 @@ namespace z1 {
 			fout << yaml.c_str();
 			fout.close();
 
-			prefab_meta.path = g_runtime_context.m_asset_manager->legalize_import_path(prefab_meta.path);
 			if (g_runtime_context.m_asset_manager->register_asset(prefab_meta, FileSystem::get_root_path(""))) {
 				ret.assets.push_back(prefab_meta);
 				ret.files.push_back(physical_path);

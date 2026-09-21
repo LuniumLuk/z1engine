@@ -131,7 +131,7 @@ struct ContentBrowser {
 			if (ImGui::BeginPopupContextItem(child->name.c_str())) {
 				if (!child->is_folder()) {
 					if (ImGui::MenuItem("copy guid")) {
-						ImGui::SetClipboardText(child->meta->guid.value.c_str());
+						ImGui::SetClipboardText(child->meta->guid.to_string().c_str());
 					}
 					if (ImGui::MenuItem("copy path")) {
 						ImGui::SetClipboardText(child->meta->path.generic_string().c_str());
@@ -166,7 +166,7 @@ struct ContentBrowser {
 			// show tooltip for assets
 			if (ImGui::IsItemHovered() && !child->is_folder()) {
 				ImGui::BeginTooltip();
-				ImGui::Text("guid: %s", child->meta->guid.value.c_str());
+				ImGui::Text("guid: %s", child->meta->guid.to_string().c_str());
 				ImGui::Text("type: %s", child->meta->type.c_str());
 				ImGui::Text("path: %s", child->meta->path.generic_string().c_str());
 				ImGui::EndTooltip();

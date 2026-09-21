@@ -9,14 +9,22 @@ stdlib; shared by the GUI and the headless CLI.
 import argparse
 import json
 import re
+import struct
 import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "utils"))
+import z1_guid
+
 UUID_RE = re.compile(
 	r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
+HEX32_RE = re.compile(r"^[0-9a-fA-F]{32}$")
+
+BINARY_FILE_MAGIC = 0x5A314246
+BINARY_FILE_HEADER = struct.Struct("<IIQQ")
 
 # render/data_types.h enum order: Sampler2D=12, Sampler2DArray=13, SamplerCube=14
 SAMPLER_TYPES = {12, 13, 14}
@@ -80,6 +88,7 @@ class Report:
 	issues: list = field(default_factory=list)
 	counts: dict = field(default_factory=dict)
 	elapsed: float = 0.0
+	bin_refs: list = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -399,7 +408,7 @@ def _collect_refs(value, path, parent, out):
 		for index, item in enumerate(value):
 			_collect_refs(item, path + [index], None, out)
 	elif isinstance(value, str) and value:
-		if UUID_RE.match(value):
+		if UUID_RE.match(value) or HEX32_RE.match(value):
 			out.append(AssetRef(value, "guid", _format_path(path)))
 			return
 		segments = tuple(path)
@@ -415,16 +424,17 @@ def _register_derived(report, rel, root_name, kind, guid_registry, path_registry
 	if internal_key in path_registry:
 		return
 	display = _display(root_name, rel)
-	if rel in guid_registry:
+	guid = z1_guid.guid_for(root_name, rel)
+	if guid in guid_registry:
 		report.issues.append(Issue("error", display, "",
-			f"duplicate guid '{rel}' (also used by {guid_registry[rel]})"))
+			f"duplicate derived guid '{guid}' (also used by {guid_registry[guid]})"))
 		return
-	guid_registry[rel] = display
-	path_registry[internal_key] = rel
-	report.assets.append(AssetInfo(root_name, kind, display, rel, kind, rel))
+	guid_registry[guid] = display
+	path_registry[internal_key] = guid
+	report.assets.append(AssetInfo(root_name, kind, display, guid, kind, rel))
 
 
-def _scan_yaml(report, file, rel, root_name, guid_registry, path_registry):
+def _scan_yaml(report, file, rel, root_name, guid_registry, path_registry, stale_ids):
 	display = _display(root_name, rel)
 	try:
 		text = file.read_text(encoding="utf-8", errors="replace")
@@ -449,33 +459,79 @@ def _scan_yaml(report, file, rel, root_name, guid_registry, path_registry):
 	guid_str = guid if isinstance(guid, str) else ""
 	type_str = type_name if isinstance(type_name, str) else ""
 	path_str = asset_path if isinstance(asset_path, str) else ""
-	ok = True
-	if not guid_str.strip():
-		report.issues.append(Issue("error", display, "meta.guid", "missing or empty guid"))
-		ok = False
 	if not type_str.strip():
 		report.issues.append(Issue("error", display, "meta.type", "missing or empty type"))
 	if not path_str.strip():
 		report.issues.append(Issue("error", display, "meta.path", "missing or empty path"))
-	if not ok or not guid_str.strip():
 		return
-	if guid_str in guid_registry:
-		report.issues.append(Issue("error", display, "meta.guid",
-			f"duplicate guid '{guid_str}' (also used by {guid_registry[guid_str]})"))
-		return
+	# ids are derived from root + path, mirroring AssetManager::scan_content
+	derived = z1_guid.guid_for(root_name, path_str)
+	if not guid_str.strip():
+		report.issues.append(Issue("warning", display, "meta.guid",
+			f"missing guid; the engine derives '{derived}' from root + path"))
+	elif guid_str != derived:
+		report.issues.append(Issue("warning", display, "meta.guid",
+			f"stored guid '{guid_str}' is stale (derived '{derived}'); run utils/migrate_guids.py"))
+		stale_ids.setdefault(guid_str, display)
 	internal_key = _internal_key(root_name, path_str)
 	if internal_key in path_registry:
 		report.issues.append(Issue("warning", display, "meta.path",
-			f"duplicate asset path '{path_str}' (already claimed by guid {path_registry[internal_key]})"))
+			f"duplicate asset path '{path_str}' (already claimed by {path_registry[internal_key]})"))
 	else:
-		path_registry[internal_key] = guid_str
-	guid_registry[guid_str] = display
-	info = AssetInfo(root_name, "yaml", display, guid_str, type_str, path_str)
+		path_registry[internal_key] = derived
+	guid_registry[derived] = display
+	info = AssetInfo(root_name, "yaml", display, derived, type_str, path_str)
 	for key, value in doc.items():
 		if key == "meta":
 			continue
 		_collect_refs(value, [key], None, info.refs)
 	report.assets.append(info)
+
+
+def _scan_bin(report, file, rel, root_name, guid_registry, path_registry, stale_ids):
+	"""Checks the yaml embedded in a .bin asset: meta ids and primitive material references."""
+	display = _display(root_name, rel)
+	try:
+		raw = file.read_bytes()
+	except OSError as exc:
+		report.issues.append(Issue("error", display, "", f"failed to read file: {exc}"))
+		return
+	if len(raw) < BINARY_FILE_HEADER.size:
+		return
+	magic, version, yaml_size, data_size = BINARY_FILE_HEADER.unpack_from(raw, 0)
+	if magic != BINARY_FILE_MAGIC or version != 1:
+		return
+	offset = BINARY_FILE_HEADER.size
+	if offset + yaml_size + data_size > len(raw):
+		report.issues.append(Issue("error", display, "", "truncated binary file"))
+		return
+	try:
+		doc = parse_yaml(raw[offset:offset + yaml_size].decode("utf-8", errors="replace"))
+	except YamlParseError:
+		return
+	if not isinstance(doc, dict):
+		return
+	meta = doc.get("meta")
+	if isinstance(meta, dict):
+		guid_str = meta.get("guid") if isinstance(meta.get("guid"), str) else ""
+		path_str = meta.get("path") if isinstance(meta.get("path"), str) else ""
+		if path_str.strip():
+			derived = z1_guid.guid_for(root_name, path_str)
+			if not guid_str.strip():
+				report.issues.append(Issue("warning", display, "meta.guid",
+					f"missing embedded guid; the engine derives '{derived}' from root + path"))
+			elif guid_str != derived:
+				report.issues.append(Issue("warning", display, "meta.guid",
+					f"embedded guid '{guid_str}' is stale (derived '{derived}'); run utils/migrate_guids.py"))
+				stale_ids.setdefault(guid_str, display)
+	primitives = doc.get("primitives")
+	if isinstance(primitives, list):
+		for index, prim in enumerate(primitives):
+			if not isinstance(prim, dict):
+				continue
+			material = prim.get("material")
+			if isinstance(material, str) and material:
+				report.bin_refs.append((display, f"primitives[{index}].material", material))
 
 
 def _resolve_ref_target(ref, guid_registry, path_registry, named_roots):
@@ -503,6 +559,7 @@ def check_assets(roots=None, base_dir=None):
 	report = Report()
 	guid_registry = {}
 	path_registry = {}
+	stale_ids = {}
 	root_paths = []
 	seen = set()
 	for name, path_str in roots:
@@ -528,7 +585,9 @@ def check_assets(roots=None, base_dir=None):
 			suffix = entry.suffix.lower()
 			rel = entry.relative_to(path).as_posix()
 			if suffix == ".yaml":
-				_scan_yaml(report, entry, rel, name, guid_registry, path_registry)
+				_scan_yaml(report, entry, rel, name, guid_registry, path_registry, stale_ids)
+			elif suffix == ".bin":
+				_scan_bin(report, entry, rel, name, guid_registry, path_registry, stale_ids)
 			elif suffix == ".py":
 				_register_derived(report, rel, name, "script", guid_registry, path_registry)
 			elif suffix == ".glsl":
@@ -540,18 +599,34 @@ def check_assets(roots=None, base_dir=None):
 			ref.target = _resolve_ref_target(ref.value, guid_registry, path_registry, named_roots)
 			if ref.target is not None:
 				continue
-			if ref.kind == "guid":
+			if ref.value in stale_ids:
+				report.issues.append(Issue("error", info.file, ref.location,
+					f"reference '{ref.value}' is a stale stored guid of {stale_ids[ref.value]}; run utils/migrate_guids.py"))
+			elif ref.kind == "guid":
 				message = f"referenced guid not found: '{ref.value}'"
+				report.issues.append(Issue("error", info.file, ref.location, message))
 			else:
 				message = f"unresolved asset reference: '{ref.value}'"
-			report.issues.append(Issue("error", info.file, ref.location, message))
+				report.issues.append(Issue("error", info.file, ref.location, message))
+
+	for display, location, value in report.bin_refs:
+		if _resolve_ref_target(value, guid_registry, path_registry, named_roots) is not None:
+			continue
+		if value in stale_ids:
+			report.issues.append(Issue("error", display, location,
+				f"reference '{value}' is a stale stored guid of {stale_ids[value]}; run utils/migrate_guids.py"))
+		else:
+			report.issues.append(Issue("error", display, location,
+				f"unresolved material reference: '{value}'"))
 
 	errors = sum(1 for issue in report.issues if issue.severity == "error")
 	warnings = sum(1 for issue in report.issues if issue.severity == "warning")
-	refs = sum(len(a.refs) for a in report.assets)
+	refs = sum(len(a.refs) for a in report.assets) + len(report.bin_refs)
 	report.counts = {
 		"assets": len(report.assets),
 		"references": refs,
+		"binary_refs": len(report.bin_refs),
+		"stale_guids": len(stale_ids),
 		"errors": errors,
 		"warnings": warnings,
 	}

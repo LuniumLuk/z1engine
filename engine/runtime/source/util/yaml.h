@@ -67,10 +67,10 @@ namespace YAML {
 	struct convert<z1::Guid> {
 		static bool decode(Node const& node, z1::Guid& rhs) {
 			if (node.IsNull()) {
-				rhs.value = "";
+				rhs = z1::Guid();
 			}
 			else {
-				rhs.value = node.as<std::string>();
+				rhs = z1::Guid::from_string(node.as<std::string>());
 			}
 			return true;
 		}
@@ -111,7 +111,7 @@ namespace z1 {
 
 	inline YAML::Emitter& operator<<(YAML::Emitter& out, Guid const& v) {
 		if (v.is_valid()) {
-			out << v.value;
+			out << v.to_string();
 		}
 		else {
 			out << YAML::Null;

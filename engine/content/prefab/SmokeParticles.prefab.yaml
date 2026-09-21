@@ -31,7 +31,7 @@ entities:
       initial_rotation: [0, 360]
       rotation_speed: [30, 90]
 meta:
-  guid: 10000003-0000-0000-0000-000000000003
+  guid: 00000000d7d67a36746b3a7795439e19
   type: prefab
   path: prefab/SmokeParticles.prefab
   extra: ~

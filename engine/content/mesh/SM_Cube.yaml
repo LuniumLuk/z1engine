@@ -1,19 +1,19 @@
 bound_min: [-1, -1, -1]
 bound_max: [1, 1, 1]
-vertex_count: 36
+vertex_count: 24
 index_count: 36
 primitives:
   - index_start: 0
     index_count: 36
-    vertex_count: 36
+    vertex_count: 24
     bound_min: [-1, -1, -1]
     bound_max: [1, 1, 1]
     material: ~
-    has_indices: false
-    has_normal: false
+    has_indices: true
+    has_normal: true
     has_tangent: false
 meta:
-  guid: mesh/SM_Cube
+  guid: 000000009a9d0329a8631e5aa760403e
   type: static mesh
   path: mesh/SM_Cube
   extra: ~

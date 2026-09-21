@@ -16,7 +16,7 @@ entities:
         - [1, 1]
         - [0, 1]
 meta:
-  guid: a1b2c3d4-e5f6-4a5b-9c8d-7e6f5a4b3c2d
+  guid: 000000004d27826b468589a482070e2c
   type: prefab
   path: prefab/SampleSprite.prefab
   extra: ~

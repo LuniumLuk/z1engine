@@ -1,0 +1,8 @@
+meta:
+  guid: 00000000e4515b891482525c1a524c64
+  type: texture2d
+  path: texture/T_checker
+  extra:
+    sampler_mode: 0
+    wrap_mode: 0
+    hdr: false

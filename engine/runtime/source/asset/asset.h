@@ -119,7 +119,8 @@ namespace YAML {
 			if (!node.IsMap()) {
 				return false;
 			}
-			rhs.guid.value = node["guid"].as<std::string>();
+			auto guid_node = node["guid"];
+			rhs.guid = guid_node.IsDefined() ? z1::Guid::from_string(guid_node.as<std::string>()) : z1::Guid();
 			rhs.type = node["type"].as<std::string>();
 			rhs.path = node["path"].as<std::string>();
 			rhs.extra = node["extra"];

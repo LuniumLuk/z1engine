@@ -333,7 +333,9 @@ EditorLayer::EditorLayer() {
 	m_picking = std::make_shared<PickingSystem>();
 
 	if (!m_settings.last_opened_scene_guid.empty()) {
-		load_scene(Asset<Scene>::load(Guid::make(m_settings.last_opened_scene_guid)));
+		// stored as hex text; resolve keeps older path-style values working
+		auto scene_guid = g_runtime_context.m_asset_manager->resolve_guid(m_settings.last_opened_scene_guid);
+		load_scene(Asset<Scene>::load(scene_guid));
 	}
 	else {
 		load_scene();
@@ -521,7 +523,7 @@ void EditorLayer::persist_settings() {
 void EditorLayer::load_scene(std::shared_ptr<Scene> const& scene /*= nullptr*/) {
 	if (scene) {
 		g_runtime_context.m_scene = scene;
-		m_settings.last_opened_scene_guid = g_runtime_context.m_scene->m_meta.guid.value;
+		m_settings.last_opened_scene_guid = g_runtime_context.m_scene->m_meta.guid.to_string();
 	}
 	else {
 		auto folder = m_browser->get_curr_dir();
@@ -531,7 +533,7 @@ void EditorLayer::load_scene(std::shared_ptr<Scene> const& scene /*= nullptr*/) 
 			return;
 		}
 		g_runtime_context.m_scene->save();
-		m_settings.last_opened_scene_guid = g_runtime_context.m_scene->m_meta.guid.value;
+		m_settings.last_opened_scene_guid = g_runtime_context.m_scene->m_meta.guid.to_string();
 	}
 
 	m_selected_entity = nullptr;
@@ -834,7 +836,7 @@ void EditorLayer::show_asset_info() {
 			return;
 		}
 
-		ImGui::Text("guid: %s", m_selected_asset->guid.value.c_str());
+		ImGui::Text("guid: %s", m_selected_asset->guid.to_string().c_str());
 		ImGui::Text("type: %s", m_selected_asset->type.c_str());
 		ImGui::Text("path: %s", m_selected_asset->path.generic_string().c_str());
 		ImGui::Separator();
@@ -845,7 +847,7 @@ void EditorLayer::show_asset_info() {
 			if (ImGui::BeginTable("basic info", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
 				ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::TextUnformatted(shader->get_name().c_str());
 				ImGui::TableNextColumn(); ImGui::Text("path"); ImGui::TableNextColumn(); ImGui::TextUnformatted(shader->get_path().c_str());
-				ImGui::TableNextColumn(); ImGui::Text("guid"); ImGui::TableNextColumn(); ImGui::TextUnformatted(shader->m_guid.value.c_str());
+				ImGui::TableNextColumn(); ImGui::Text("guid"); ImGui::TableNextColumn(); ImGui::TextUnformatted(shader->m_guid.to_string().c_str());
 				ImGui::EndTable();
 			}
 			ImGui::Text("shader attributes");

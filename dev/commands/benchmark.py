@@ -63,7 +63,7 @@ def _write_benchmark_report(root, report, report_dir):
 	if not report_dir.is_absolute():
 		report_dir = Path(root) / report_dir
 	report_dir.mkdir(parents=True, exist_ok=True)
-	now = datetime.datetime.now(datetime.UTC)
+	now = datetime.datetime.now(datetime.timezone.utc)
 	ts = now.strftime("%Y%m%dT%H%M%SZ")
 	timestamped = report_dir / f"benchmark-{ts}.json"
 	latest = report_dir / "benchmark-latest.json"
@@ -435,7 +435,7 @@ def main(argv=None):
 		"schemaVersion": 1,
 		"command": "benchmark",
 		"status": status,
-		"timestampUtc": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
+		"timestampUtc": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
 		"environment": {
 			"platform": platform.platform(),
 			"pythonVersion": platform.python_version(),
