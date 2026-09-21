@@ -801,7 +801,6 @@ node.bind_input(s, m_pass_slots.m_ao_depth, depth_input);
 	}
 
 	void RenderShared::add_velocity_pass(RenderGraph& rg, VisibleDrawList const& draw_list, std::shared_ptr<Scene> const& scene, std::shared_ptr<Framebuffer> const& framebuffer, glm::mat4 const& projview, std::shared_ptr<MaterialInstance> const& default_material) {
-		auto& g = g_runtime_context.m_global;
 		RenderPass::Description desc;
 		desc.color_attachments.resize(1);
 		desc.color_attachments[0].load_op = LoadOp::Clear;
@@ -814,7 +813,8 @@ node.bind_input(s, m_pass_slots.m_ao_depth, depth_input);
 			.set_pass_desc(desc)
 			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
-			.execute([&draw_list, projview, default_material, &g](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([&draw_list, projview, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
+				auto& g = g_runtime_context.m_global;
 
 				auto jittered_projview = g->projview;
 				g->projview = projview;

@@ -180,3 +180,8 @@ dominates the critical path — which is what unity cuts.
 - **"premake5 not recognized"**: use `utils\premake\premake5.exe` directly
 - **Missing DLLs**: ensure post-build steps copied `python314.dll` to output dir
 - **Solution not found**: run `python dev/z1.py generate` first
+- **MSVC `C3493` vs clang `-Wunused-lambda-capture`**: a lambda that uses a reference-to-global declared in the
+  enclosing scope needs the explicit capture for MSVC but clang reports it as unused (naming a reference is not an
+  odr-use). Declare the reference inside the lambda body instead (`auto& g = g_runtime_context.m_global;`) — both
+  compilers accept that, no capture required since `g_runtime_context` is a global. Pattern from
+  `render_shared.cpp` `add_velocity_pass`.
