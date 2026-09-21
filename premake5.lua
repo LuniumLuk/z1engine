@@ -15,12 +15,16 @@ newoption {
 
 newoption {
 	trigger     = "unity",
-	description = "macOS: build engine projects from generated unity blob translation units (faster cold builds)"
+	description = "Build engine projects from generated unity blob translation units (faster cold builds)"
 }
 
--- premake 5.0.0-beta8 only implements unity builds for VS actions, so the blobs are generated here for
--- gmake/macOS. Sources of one project are split round-robin (sorted, so the output is deterministic) into
--- groups of UNITY_SOURCES_PER_BLOB and replace the individual files in the project.
+-- premake 5.0.0-beta8 only implements unity builds for VS actions, and the engine wants the same blob layout
+-- on both supported platforms, so the blobs are generated here for macOS gmake and Windows MSBuild. Sources of
+-- one project are split round-robin (sorted, so the output is deterministic) into groups of
+-- UNITY_SOURCES_PER_BLOB and replace the individual files in the project.
+-- `pch_name` (optional) is emitted verbatim as the blob's first include: MSVC's /Yu check (C1010) wants the
+-- precompiled header textually first and spelled exactly like the /Yu argument, which including a source
+-- file (or a path-qualified spelling) does not satisfy.
 UNITY_SOURCES_PER_BLOB = 8
 -- captured while the root script executes so the helper does not depend on the caller's script context
 UNITY_WORKSPACE_ROOT = path.getabsolute(".")
@@ -39,7 +43,7 @@ function unity_relative_include(blob, src)
 	return table.concat(parts, "/")
 end
 
-function unity_blob_project(project_dir, project_name)
+function unity_blob_project(project_dir, project_name, pch_name)
 	local root = UNITY_WORKSPACE_ROOT
 	local sourceroot = path.join(root, project_dir, "source")
 	local sources = {}
@@ -66,6 +70,9 @@ function unity_blob_project(project_dir, project_name)
 			local blob = path.join(outdir, string.format("%s_unity_%d.cpp", project_name, i))
 			local fh = io.open(blob, "w")
 			fh:write("// [AI-GENERATED] unity translation unit: regenerate with `dev/z1.py generate --unity`, do not edit\n")
+			if pch_name then
+				fh:write(string.format('#include "%s"\n', pch_name))
+			end
 			for _, src in ipairs(members) do
 				fh:write(string.format('#include "%s"\n', unity_relative_include(blob, src)))
 			end
@@ -92,6 +99,10 @@ workspace "z1engine"
 	-- and only enabled when projects are generated with --probing (see the option above)
 	filter { "configurations:Hybrid", "options:probing" }
 		defines { "ENABLE_PROBING" }
+
+	-- unity blobs are the largest translation units in the tree; Debug emits enough sections to need /bigobj
+	filter { "system:windows", "options:unity" }
+		buildoptions { "/bigobj" }
 
 	-- macOS: optimized configs use line tables by default (faster codegen, smaller objects, line-level
 	-- breakpoints still work); `generate --full-symbols` restores full -g for variable inspection

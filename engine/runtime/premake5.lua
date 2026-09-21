@@ -54,7 +54,8 @@ project "runtime"
 
 	filter { "system:windows", "configurations:Debug" }
 		libdirs { "%{wks.location}/engine/3rdparty/physx/lib/Debug" }
-	filter { "system:windows", "configurations:Release or Hybrid" }
+	-- physx ships Debug/Release only: the optimized engine configs share the Release binaries
+	filter { "system:windows", "configurations:Release or Profile or Hybrid" }
 		libdirs { "%{wks.location}/engine/3rdparty/physx/lib/Release" }
 	filter {}
 
@@ -93,8 +94,8 @@ project "runtime"
 		buildoptions { "-Wall", "-Wextra", "-Wno-unused-parameter" }
 
 	-- opt-in unity build (see unity_blob_project in the root premake5.lua)
-	filter { "system:macosx", "options:unity" }
-		unity_blob_project("engine/runtime", "runtime")
+	filter { "system:macosx or system:windows", "options:unity" }
+		unity_blob_project("engine/runtime", "runtime", "pch.h")
 	filter {}
 
 	-- the vendored stb implementation uses sprintf() (deprecated on macOS) and its aggregate

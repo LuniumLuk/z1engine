@@ -35,7 +35,7 @@ project "bakery"
 		buildoptions { "-Wall", "-Wextra", "-Wno-unused-parameter" }
 
 	-- opt-in unity build (see unity_blob_project in the root premake5.lua)
-	filter { "system:macosx", "options:unity" }
+	filter { "system:macosx or system:windows", "options:unity" }
 		unity_blob_project("engine/bakery", "bakery")
 	filter {}
 

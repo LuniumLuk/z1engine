@@ -78,7 +78,7 @@ project "game"
 		}
 
 	-- opt-in unity build (see unity_blob_project in the root premake5.lua)
-	filter { "system:macosx", "options:unity" }
+	filter { "system:macosx or system:windows", "options:unity" }
 		unity_blob_project("engine/game", "game")
 	filter "configurations:Debug"
 		defines

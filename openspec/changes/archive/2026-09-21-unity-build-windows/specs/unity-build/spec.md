@@ -1,9 +1,7 @@
-# unity-build Specification
+# unity-build
 
-## Purpose
+## MODIFIED Requirements
 
-Opt-in unity build mode for the engine projects (runtime, editor, game, bakery): `generate --unity` emits deterministic blob translation units that replace the per-source file lists, on macOS (gmake) and Windows (MSBuild). Covers blob composition and exclusions, platform-specific compiler constraints (MSVC precompiled headers, `/bigobj`), correctness/warning guarantees, the measured cold-build improvement floor, and the unchanged default per-TU path.
-## Requirements
 ### Requirement: Unity builds must be an explicit, opt-in generate mode
 
 `python dev/z1.py generate --unity` on macOS and Windows MUST regenerate deterministic unity blob translation units and build the engine projects (runtime, editor, game, bakery) from them; plain `generate` MUST keep the per-TU file lists. Blobs MUST be written under `engine/intermediate/unity/<project>/`, be regenerated on every run, and MUST NOT be committed (the directory is gitignored). Both platforms MUST use the same generator and the same blob layout, with the platform filter expressed as `system:macosx or system:windows`.
@@ -69,17 +67,3 @@ On each platform's reference machine, unity mode MUST be measurably faster than 
 #### Scenario: Incremental cost is documented
 - **WHEN** a developer reads the KB unity section
 - **THEN** it MUST state that editing one source rebuilds its whole blob and that the default per-TU build remains the choice for interactive development
-
-### Requirement: Source-level unity blockers must be fixed, not excluded
-
-Headers MUST carry include guards (`#pragma once`) so multi-inclusion inside a blob is safe, and third-party macro spellings MUST match what the vendor headers check (currently `GLFW_INCLUDE_NONE`). These fixes MUST apply to the default build as well.
-
-#### Scenario: Guards exist
-- **WHEN** engine headers are scanned after this change
-- **THEN** every engine header MUST begin with `#pragma once`
-
-#### Scenario: GLFW no longer pulls the legacy system GL header
-- **WHEN** a translation unit that includes `GLFW/glfw3.h` is preprocessed after this change
-- **THEN** Apple's `<OpenGL/gl.h>` MUST NOT be included transitively
-- **AND** the project define MUST read `GLFW_INCLUDE_NONE`
-
