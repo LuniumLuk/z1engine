@@ -66,6 +66,13 @@ Both pipelines support screen-space AO (SSAO or Jimenez GTAO), controlled by `Gl
 | SSR | `ssr.glsl` |
 | Tone mapping | `postprocessing.glsl` |
 
+Composition of `postprocessing.glsl` (2026-09-21 fix `fix-postprocess-sharpen-artifacts`): bloom composite →
+`max(color, 0)` clamp → exposure → Reinhard tonemap → tint → gamma. The legacy hardcoded 5-tap cross
+unsharp mask was removed: its negative lobes hit Reinhard's pole at -1 (negatives wrap to bright white, NaN
+gives black), which produced saturated white/black 5-pixel crosses on smooth surfaces — worst with MSAA,
+since resolved edge pixels sharpen into larger lobes. Sharpening is only the gated TAA sharpen pass (which
+clamps its own output); the post-process clamp guards the non-monotonic tone curve for any negative input.
+
 ### Shared Infrastructure (`renderer/render_shared.h`)
 
 - Common render state and utilities shared between deferred and forward
