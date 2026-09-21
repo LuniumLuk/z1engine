@@ -30,6 +30,9 @@ namespace z1 {
 	struct API Event {
 		friend struct EventDispatcher;
 
+		// virtual: events are owned and destroyed through the Event base pointer
+		virtual ~Event() = default;
+
 		virtual EventType get_event_type() const = 0;
 		virtual char const* get_name() const = 0;
 		virtual int get_category_flags() const = 0;

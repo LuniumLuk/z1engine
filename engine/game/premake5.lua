@@ -66,6 +66,8 @@ project "game"
 		{
 			"PLATFORM_MACOS",
 		}
+		-- strict baseline for engine code; unnamed parameters are a deliberate style pattern
+		buildoptions { "-Wall", "-Wextra", "-Wno-unused-parameter" }
 		links
 		{
 			"OpenGL.framework",

@@ -31,7 +31,6 @@ namespace z1 {
 
 		auto& attrib = reader.GetAttrib();
 		auto& shapes = reader.GetShapes();
-		auto& materials = reader.GetMaterials();
 
 		auto mesh_storage = std::make_shared<StaticMesh::Storage>();
 		mesh_storage->bound_min = glm::vec3{ FLT_MAX };

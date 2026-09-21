@@ -5,7 +5,7 @@
 #include "event/mouse_event.h"
 #include "event/application_event.h"
 #include "util/prober.h"
-#include "glfw/glfw3.h"
+#include "GLFW/glfw3.h"
 
 namespace z1 {
 

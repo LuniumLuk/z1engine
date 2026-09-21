@@ -60,7 +60,6 @@ struct ContentBrowser {
 	}
 
 	void draw_folder_view(AssetNode* node) {
-		float const padding = 16.0f;
 		float panel_width = ImGui::GetContentRegionAvail().x;
 
 		// Filters
@@ -316,12 +315,12 @@ struct ContentBrowser {
 				ImGui::InputText("Name", m_create_mi_name_buffer, sizeof(m_create_mi_name_buffer));
 
 				std::string preview_value = "Select Material...";
-				if (m_create_mi_selected_mat_idx >= 0 && m_create_mi_selected_mat_idx < m_cached_materials.size()) {
+				if (m_create_mi_selected_mat_idx >= 0 && (size_t)m_create_mi_selected_mat_idx < m_cached_materials.size()) {
 					preview_value = m_cached_materials[m_create_mi_selected_mat_idx].path.generic_string();
 				}
 
 				if (ImGui::BeginCombo("Parent Material", preview_value.c_str())) {
-					for (int i = 0; i < m_cached_materials.size(); i++) {
+					for (int i = 0; i < (int)m_cached_materials.size(); i++) {
 						const bool is_selected = (m_create_mi_selected_mat_idx == i);
 						if (ImGui::Selectable(m_cached_materials[i].path.generic_string().c_str(), is_selected)) {
 							m_create_mi_selected_mat_idx = i;

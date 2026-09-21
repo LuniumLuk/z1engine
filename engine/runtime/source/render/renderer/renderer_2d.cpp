@@ -165,7 +165,6 @@ namespace z1 {
 			}
 
 			for (int i = 0; i < 4; ++i) {
-				auto pos = quad.m_model * quad_pos[i];
 				m_quad_vertices[vertex_offset + i].m_position = quad.m_model * quad_pos[i];
 				m_quad_vertices[vertex_offset + i].m_texcoord = quad.m_texcoords[i];
 				m_quad_vertices[vertex_offset + i].m_color = quad.m_color;

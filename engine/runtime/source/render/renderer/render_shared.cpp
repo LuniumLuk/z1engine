@@ -564,7 +564,7 @@ namespace z1 {
 				.pre_pass([&, cascade](RenderGraphNode& node, GraphicsContext& ctx) {
 					m_shadow_framebuffer->set_attachment_layer(0, cascade);
 				})
-				.execute([this, cascade, scene, &g, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
+				.execute([cascade, scene, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
 
 				// -- Static meshes --
 				auto view = scene->m_registry.view<TransformComponent const, StaticMeshComponent const>();
@@ -814,7 +814,7 @@ node.bind_input(s, m_pass_slots.m_ao_depth, depth_input);
 			.set_pass_desc(desc)
 			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
-			.execute([this, &draw_list, projview, &g, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([&draw_list, projview, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
 
 				auto jittered_projview = g->projview;
 				g->projview = projview;
@@ -967,7 +967,6 @@ node.bind_input(s, m_pass_slots.m_ao_depth, depth_input);
 		desc.color_attachments[0].load_op = LoadOp::DontCare;
 		desc.depth_stencil_attachment.depth_load_op = LoadOp::DontCare;
 
-		auto& g = g_runtime_context.m_global;
 		if (m_bloom_textures.empty()) return;
 
 		// Downsample

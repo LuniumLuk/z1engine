@@ -46,6 +46,7 @@ namespace z1 {
 		case ShaderModule::Stage::Compute: return GL_COMPUTE_SHADER;
 		case ShaderModule::Stage::TessellationControl: return GL_TESS_CONTROL_SHADER;
 		case ShaderModule::Stage::TessellationEvaluation: return GL_TESS_EVALUATION_SHADER;
+		case ShaderModule::Stage::None: break; // invalid stage: handled by the assert below
 		}
 		CORE_ASSERT(false, "unknown shader stage!");
 		return 0;
@@ -96,7 +97,6 @@ namespace z1 {
 		m_name = path.filename().generic_string();
 
 		const char* uniform_token = "@uniforms:";
-		const size_t uniform_token_len = strlen(uniform_token);
 		const char* stage_token = "@stage:";
 		const size_t stage_token_len = strlen(stage_token);
 
@@ -162,7 +162,6 @@ namespace z1 {
 		}
 
 		const char* uniform_token = "@uniforms:";
-		const size_t uniform_token_len = strlen(uniform_token);
 		const char* stage_token = "@stage:";
 		const size_t stage_token_len = strlen(stage_token);
 
@@ -277,6 +276,11 @@ namespace z1 {
 				set_int_array(m_uniforms[index].m_location, (int*)data, m_uniforms[index].m_count);
 			}
 			return;
+		case DataType::None:
+		case DataType::Int2:
+		case DataType::Int3:
+		case DataType::Int4:
+			break; // unsupported uniform types: handled by the check below
 		}
 		DEBUG_CHECK(false, "uniform with unknown or unsupported DataType!");
 	}
@@ -377,6 +381,19 @@ namespace z1 {
 		case DataType::SamplerCube:
 		case DataType::Sampler2DMS:
 			set_int(m_uniforms[index].m_location, binding); return;
+		case DataType::None:
+		case DataType::Bool:
+		case DataType::Int:
+		case DataType::Int2:
+		case DataType::Int3:
+		case DataType::Int4:
+		case DataType::Float:
+		case DataType::Float2:
+		case DataType::Float3:
+		case DataType::Float4:
+		case DataType::Mat3:
+		case DataType::Mat4:
+			break; // only samplers can be bound to a texture unit: handled below
 		}
 		DEBUG_CHECK(false, "uniform {0} cannot be set to a binding position!", name);
 	}
@@ -436,6 +453,8 @@ namespace z1 {
 			case DataType::SamplerCube:
 			case DataType::Sampler2DMS:
 				glGetUniformiv(m_handle, m_uniforms[index].m_location, (GLint*)ptr); return;
+			case DataType::None:
+				break; // invalid type: nothing to read
 			}
 		}
 		else {
@@ -480,6 +499,20 @@ namespace z1 {
 			case DataType::SamplerCube:
 			case DataType::Sampler2DMS:
 				glGetUniformiv(m_handle, m_uniforms[index].m_location, (GLint*)&binding);
+				break;
+			case DataType::None:
+			case DataType::Bool:
+			case DataType::Int:
+			case DataType::Int2:
+			case DataType::Int3:
+			case DataType::Int4:
+			case DataType::Float:
+			case DataType::Float2:
+			case DataType::Float3:
+			case DataType::Float4:
+			case DataType::Mat3:
+			case DataType::Mat4:
+				break; // only samplers carry a texture-unit binding
 			}
 		}
 		else {

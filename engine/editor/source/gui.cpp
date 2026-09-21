@@ -96,10 +96,10 @@ void EditorGUI::draw() {
 
 			if (ImGui::BeginMenuBar()) {
 				if (ImGui::BeginMenu("resolution")) {
-					for (int i = 0; i < ARRAY_LENGTH(g_viewport_resolutions); ++i) {
+					for (int i = 0; i < (int)ARRAY_LENGTH(g_viewport_resolutions); ++i) {
 						if (ImGui::MenuItem(
 							(std::to_string(g_viewport_resolutions[i][0]) + "x" + std::to_string(g_viewport_resolutions[i][1])).c_str(),
-							nullptr, nullptr, i != m_current_resolution)) {
+							nullptr, nullptr, i != (int)m_current_resolution)) {
 							m_current_resolution = i;
 						}
 					}

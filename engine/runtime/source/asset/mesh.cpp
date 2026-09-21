@@ -58,7 +58,6 @@ namespace z1 {
 			storage->vertices.size() * sizeof(StaticMesh::VertexData),
 			StaticMesh::VertexData::s_layout, BufferUsage::Static);
 		for (auto const& prim_storage : storage->primitives) {
-			auto& indices = prim_storage.index_start;
 			auto index_buffer = IndexBuffer::create(
 				&storage->indices[prim_storage.index_start],
 				prim_storage.index_count * sizeof(uint32_t), BufferUsage::Static);
@@ -138,7 +137,6 @@ namespace z1 {
 		std::shared_ptr<MaterialInstance> const& default_material,
 		MaterialFlagsFilter filter) const {
 		for (size_t i = 0; i < m_primitives.size(); ++i) {
-			auto const& prim = m_primitives[i];
 			draw_primitive(i, per_frame, default_material, filter);
 		}
 	}
@@ -390,7 +388,6 @@ namespace z1 {
 			storage->vertices.size() * sizeof(SkeletalMesh::VertexData),
 			SkeletalMesh::VertexData::s_layout, BufferUsage::Static);
 		for (auto const& prim_storage : storage->primitives) {
-			auto& indices = prim_storage.index_start;
 			auto index_buffer = IndexBuffer::create(
 				&storage->indices[prim_storage.index_start],
 				prim_storage.index_count * sizeof(uint32_t), BufferUsage::Static);
@@ -421,7 +418,6 @@ namespace z1 {
 		std::shared_ptr<UniformBuffer> const& bones,
 		MaterialFlagsFilter filter) const {
 		for (size_t i = 0; i < m_primitives.size(); ++i) {
-			auto const& prim = m_primitives[i];
 			draw_primitive(i, per_frame, default_material, bones, filter);
 		}
 	}

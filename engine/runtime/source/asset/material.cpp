@@ -61,7 +61,6 @@ namespace z1 {
 		size_t pos = 0;
 
 		const char* reflection_token = "@reflections:";
-		const size_t reflection_token_len = strlen(reflection_token);
 
 		// find reflections
 		std::string reflections;
@@ -239,6 +238,11 @@ namespace z1 {
 			break;
 		case DataType::SamplerCube:
 			break;
+		case DataType::None:
+		case DataType::Bool:
+		case DataType::Sampler2DArray:
+		case DataType::Sampler2DMS:
+			break; // no default-value parsing for these types
 		}
 	}
 

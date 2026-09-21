@@ -12,8 +12,8 @@ python dev/z1.py <command> [options]
 
 | Command | Module | Description |
 |---------|--------|-------------|
-| `generate` | `commands/generate.py` | Regenerate VS project files via premake5 (add `--probing` to build the Hybrid config with the frame prober) |
-| `compile` | `commands/compile.py` | Build solution with MSBuild output parsing |
+| `generate` | `commands/generate.py` | Regenerate project files via premake5 (add `--probing` to build the Hybrid config with the frame prober; add `--full-symbols` on macOS to keep full `-g` instead of line tables) |
+| `compile` | `commands/compile.py` | Build via devenv.com (Windows) or make (macOS), parsing compiler output |
 | `format` | `commands/format_cmd.py` | Code formatting (tabs, whitespace, CRLF) |
 | `validate-shaders` | `commands/validate_shaders.py` | GLSL shader validation |
 | `test` | `commands/test.py` | Discover and run test executables |
@@ -41,7 +41,9 @@ python dev/z1.py <command> [options]
 
 ## Common Options
 
-- `--config <Debug|Release|Profile>` -- build configuration (case-insensitive)
+- `--config <Debug|Release|Profile|Hybrid>` -- build configuration (case-insensitive; default Hybrid)
+- `--jobs <N>` -- (compile, macOS) parallel jobs; defaults to the logical CPU count
+- `--ccache` / `--no-ccache` -- (compile, macOS) force or disable ccache; ccache is used automatically when it is on `PATH`
 - `--help` -- command-specific usage
 - `--dry-run` -- (format only) report without modifying
 
@@ -78,6 +80,8 @@ python dev/z1.py benchmark --suite runtime-core --config Debug
 
 - `repo_root()` -- resolve repository root path
 - `find_vs2026()` -- detect VS2026 installation
+- `find_make()` / `find_ccache()` -- locate the macOS build tool / compile cache
+- `run_subprocess(cmd, ..., env=None)` -- run with extra environment variables merged over `os.environ`
 - `normalize_config(name)` -- case-insensitive config normalization
 - `run_subprocess(cmd, cwd, timeout)` -- run external command
 - `make_result(status, command, **fields)` -- print RESULT JSON line

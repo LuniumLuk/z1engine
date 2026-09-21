@@ -14,7 +14,6 @@
 #include "type_field.h"
 #include "material_editor.h"
 #include "quality_preset.h"
-#include "stb/stb_image_write.h"
 #include "scene/component/light.h"
 #include "scene/prefab.h"
 #include "asset/script_asset.h"

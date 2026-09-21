@@ -28,13 +28,14 @@ namespace z1 {
 		case CullMode::Front: return GL_FRONT;
 		case CullMode::Back: return GL_BACK;
 		case CullMode::FrontAndBack: return GL_FRONT_AND_BACK;
+		case CullMode::None: break; // culling is disabled for this mode
 		}
 		return GL_NONE;
 	}
 
 	OpenGLPipeline::OpenGLPipeline(Description const& description) {
 		m_shader = description.shader;
-		m_setup_func = [this, description] {
+		m_setup_func = [description] {
 			if (description.depth_test) {
 				glEnable(GL_DEPTH_TEST);
 			}

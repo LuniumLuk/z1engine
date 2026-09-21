@@ -231,7 +231,7 @@ namespace z1 {
 		}
 
 		// If not all nodes were processed, there's a cycle
-		return (order.size() == N);
+		return (order.size() == (size_t)N);
 	}
 
 	void RenderGraph::compile() {

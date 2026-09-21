@@ -8,6 +8,11 @@ newoption {
 	description = "Enable the frame prober (ENABLE_PROBING) in Hybrid builds"
 }
 
+newoption {
+	trigger     = "full-symbols",
+	description = "macOS: compile Hybrid/Profile with full -g instead of line-table debug info"
+}
+
 workspace "z1engine"
 	architecture "x64"
 	startproject "game"
@@ -22,6 +27,13 @@ workspace "z1engine"
 	-- and only enabled when projects are generated with --probing (see the option above)
 	filter { "configurations:Hybrid", "options:probing" }
 		defines { "ENABLE_PROBING" }
+
+	-- macOS: optimized configs use line tables by default (faster codegen, smaller objects, line-level
+	-- breakpoints still work); `generate --full-symbols` restores full -g for variable inspection
+	if not _OPTIONS["full-symbols"] then
+		filter { "system:macosx", "configurations:Hybrid or Profile" }
+			buildoptions { "-gline-tables-only" }
+	end
 
 	filter {}
 

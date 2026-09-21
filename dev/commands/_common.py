@@ -114,6 +114,11 @@ def find_make():
 	import shutil
 	return shutil.which("make")
 
+def find_ccache():
+	"""Find ccache on PATH. Returns path string or None."""
+	import shutil
+	return shutil.which("ccache")
+
 # ---------------------------------------------------------------------------
 # Python environment check
 # ---------------------------------------------------------------------------
@@ -212,10 +217,11 @@ def find_vs2026():
 # ---------------------------------------------------------------------------
 # Subprocess runner
 # ---------------------------------------------------------------------------
-def run_subprocess(cmd, cwd=None, timeout=None, stream=False, log_file=None):
+def run_subprocess(cmd, cwd=None, timeout=None, stream=False, log_file=None, env=None):
 	"""Run a command and return (returncode, stdout, stderr).
 
 	cmd can be a list or a string. cwd defaults to repo_root().
+	env, when given, is a mapping of extra environment variables merged over os.environ.
 
 	When stream=True:
 	  - Prints each line to sys.stdout in real-time while also capturing it.
@@ -228,6 +234,11 @@ def run_subprocess(cmd, cwd=None, timeout=None, stream=False, log_file=None):
 	if cwd is None:
 		cwd = str(repo_root())
 
+	child_env = None
+	if env:
+		child_env = os.environ.copy()
+		child_env.update(env)
+
 	if not stream:
 		try:
 			result = subprocess.run(
@@ -236,6 +247,7 @@ def run_subprocess(cmd, cwd=None, timeout=None, stream=False, log_file=None):
 				capture_output=True,
 				text=True,
 				timeout=timeout,
+				env=child_env,
 			)
 			return result.returncode, result.stdout, result.stderr
 		except FileNotFoundError:
@@ -269,6 +281,7 @@ def run_subprocess(cmd, cwd=None, timeout=None, stream=False, log_file=None):
 			stderr=subprocess.STDOUT,
 			text=True,
 			bufsize=1,  # line-buffered
+			env=child_env,
 		)
 
 		for line in proc.stdout:

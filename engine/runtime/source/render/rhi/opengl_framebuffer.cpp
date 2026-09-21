@@ -16,6 +16,7 @@ namespace z1 {
 			return GL_DEPTH_ATTACHMENT;
 		case ImageFormat::DepthStencil:
 			return GL_DEPTH_STENCIL_ATTACHMENT;
+		case ImageFormat::None: break; // invalid format: handled by the assert below
 		}
 		CORE_ASSERT(false, "unknown image format!");
 		return 0;
@@ -120,6 +121,8 @@ namespace z1 {
 				}
 				m_depth_stencil_attachment_index = (uint32_t)m_attachment_images.size();
 				break;
+			case ImageFormat::None:
+				break; // no attachment point for an untyped image (unchanged behaviour)
 			}
 
 			m_attachment_images.push_back(image);

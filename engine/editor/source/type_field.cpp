@@ -382,7 +382,7 @@ void show_type_field(void* instance, FieldInfo const& field) {
 				for (size_t i = 0; i < size; ++i) {
 					void* elem_ptr = field.container->get(ptr, i);
 					std::string elem_name = field.name + "[" + std::to_string(i) + "]";
-					ImGui::Text(std::to_string(i).c_str());
+					ImGui::TextUnformatted(std::to_string(i).c_str());
 					ImGui::SameLine();
 					show_value(elem_ptr, *field.container->element_type, elem_name, field, field.container->element_enum_info);
 				}
@@ -391,7 +391,7 @@ void show_type_field(void* instance, FieldInfo const& field) {
 		}
 	}
 	else {
-		ImGui::Text(field.name.c_str());
+		ImGui::TextUnformatted(field.name.c_str());
 		show_value(ptr, *field.type, field.name, field, field.enum_info);
 	}
 

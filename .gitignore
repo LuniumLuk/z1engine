@@ -17,3 +17,4 @@ content
 !engine/content
 editor_settings.yaml
 profile*.json
+dev/validation/reports

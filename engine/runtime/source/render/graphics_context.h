@@ -55,6 +55,9 @@ namespace z1 {
 	};
 
 	struct API GraphicsContext {
+		// virtual: contexts are owned and destroyed through the GraphicsContext pointer
+		virtual ~GraphicsContext() = default;
+
 		virtual void init() = 0;
 		virtual void begin_frame() = 0;
 		virtual void end_frame() = 0;

@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "core/input.h"
-#include "glfw/glfw3.h"
+#include "GLFW/glfw3.h"
 
 namespace z1 {
 

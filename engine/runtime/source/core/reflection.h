@@ -118,7 +118,8 @@ namespace z1 {
 		uint32_t flag;
 		// widget string for editor customization
 		// e.g. "type=slider;min=0;max=100;step=1"
-		std::string widget;
+		// default-initialized: REFLECTED_FIELD's aggregate initializer stops before it
+		std::string widget = {};
 		const ContainerInfo* container = nullptr;
 		const EnumInfo* enum_info = nullptr;
 
@@ -227,7 +228,8 @@ namespace z1 {
 	{
 		std::string name;
 		std::unordered_set<std::string> field_names;
-		std::vector<FieldInfo> fields;
+		// default-initialized: register_type() creates entries with { name, {} }
+		std::vector<FieldInfo> fields = {};
 
 		// Type-erased hooks
 		std::function<void(void* buffer)> construct = nullptr;

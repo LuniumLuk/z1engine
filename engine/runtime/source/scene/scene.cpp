@@ -33,6 +33,7 @@ namespace z1 {
 	// Placed in .cpp to avoid duplicate registrations from multiple TUs including scene.h
 	struct _REFLECT_REGISTER_EditorCameraData {
 		_REFLECT_REGISTER_EditorCameraData() {
+			REFLECT_OFFSETOF_DIAG_PUSH
 			TypeRegistry::instance().register_type("EditorCameraData");
 
 			FieldInfo transform_field = {};
@@ -58,6 +59,7 @@ namespace z1 {
 			valid_field.type = &typeid(bool);
 			valid_field.flag = FF_ReadOnly;
 			TypeRegistry::instance().register_field("EditorCameraData", valid_field);
+			REFLECT_OFFSETOF_DIAG_POP
 		}
 	};
 	static _REFLECT_REGISTER_EditorCameraData _REFLECT_REGISTER_INSTANCE_EditorCameraData;

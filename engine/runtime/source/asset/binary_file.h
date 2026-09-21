@@ -34,7 +34,7 @@ namespace z1 {
 
 		void reserve(size_t size);
 		void set_data(const void* data, size_t size, size_t offset = 0);
-		const size_t get_data_size() const;
+		size_t get_data_size() const;
 		std::vector<uint8_t> const& get_data() const;
 		DataSlice get_data_slice(size_t offset = 0, size_t size = WHOLE_SIZE) const;
 

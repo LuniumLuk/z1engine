@@ -33,6 +33,12 @@ namespace z1 {
 		case DataType::Mat3: return GL_FLOAT;
 		case DataType::Mat4: return GL_FLOAT;
 		case DataType::Bool: return GL_BOOL;
+		case DataType::None:
+		case DataType::Sampler2D:
+		case DataType::Sampler2DArray:
+		case DataType::SamplerCube:
+		case DataType::Sampler2DMS:
+			break; // not vertex-data types: handled by the assert below
 		}
 		CORE_ASSERT(false, "unknown data type!");
 		return 0;
@@ -64,8 +70,8 @@ namespace z1 {
 	// --------------------------------------------------
 
 	OpenGLVertexBuffer::OpenGLVertexBuffer(void const* data, size_t size, Layout const& layout, BufferUsage usage)
-		: m_layout(layout)
-		, m_vertex_count((uint32_t)(size / layout.m_stride)) {
+		: m_vertex_count((uint32_t)(size / layout.m_stride))
+		, m_layout(layout) {
 		m_size = size;
 		m_handle = create_opengl_buffer(GL_ARRAY_BUFFER, data, size, usage);
 	}
@@ -120,6 +126,12 @@ namespace z1 {
 					location++;
 				}
 				break;
+			case DataType::None:
+			case DataType::Sampler2D:
+			case DataType::Sampler2DArray:
+			case DataType::SamplerCube:
+			case DataType::Sampler2DMS:
+				break; // not vertex-attribute types: skipped
 			}
 		}
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -165,6 +177,12 @@ namespace z1 {
 					location++;
 				}
 				break;
+			case DataType::None:
+			case DataType::Sampler2D:
+			case DataType::Sampler2DArray:
+			case DataType::SamplerCube:
+			case DataType::Sampler2DMS:
+				break; // not vertex-attribute types: skipped
 			}
 		}
 		glBindBuffer(GL_ARRAY_BUFFER, 0);

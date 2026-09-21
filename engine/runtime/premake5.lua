@@ -87,6 +87,17 @@ project "runtime"
 		}
 		linkoptions { "/IGNORE:4006" }
 		buildoptions { "/bigobj" }
+
+	filter "system:macosx"
+		-- strict baseline for engine code; unnamed parameters are a deliberate style pattern
+		buildoptions { "-Wall", "-Wextra", "-Wno-unused-parameter" }
+
+	-- the vendored stb implementation uses sprintf() (deprecated on macOS) and its aggregate
+	-- initializers trip -Wmissing-field-initializers: scope diagnostics to the TU that builds it
+	-- instead of editing engine/3rdparty sources
+	filter { "system:macosx", "files:**/stb_build.cpp" }
+		buildoptions { "-Wno-deprecated-declarations", "-Wno-missing-field-initializers" }
+
 	filter "system:macosx"
 		links
 		{

@@ -190,6 +190,17 @@ namespace z1 {
 
 #include "core/reflection.h"
 
+// Reflection stores physical field offsets, which requires offsetof() on non-standard-layout
+// types (mixed access specifiers, virtual members). MSVC accepts that silently, clang warns
+// (-Winvalid-offsetof), so the diagnostic is scoped tightly around the macro that needs it.
+#if defined(__clang__)
+#define REFLECT_OFFSETOF_DIAG_PUSH _Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
+#define REFLECT_OFFSETOF_DIAG_POP  _Pragma("clang diagnostic pop")
+#else
+#define REFLECT_OFFSETOF_DIAG_PUSH
+#define REFLECT_OFFSETOF_DIAG_POP
+#endif
+
 #define REFLECTED_STRUCT(type)                                         \
 	struct _REFLECT_REGISTER_##type {                                  \
 		_REFLECT_REGISTER_##type() {                                   \
@@ -246,6 +257,7 @@ namespace z1 {
 #define REFLECTED_FIELD(type, field, ...)                              \
 	struct CONCAT3(_REFLECT_REGISTER_, type, _##field) {               \
 		CONCAT3(_REFLECT_REGISTER_, type, _##field)() {                \
+			REFLECT_OFFSETOF_DIAG_PUSH                                 \
 			FieldInfo field_info = {                                   \
 				#field,                                                \
 				offsetof(type, field),                                 \
@@ -253,6 +265,7 @@ namespace z1 {
 				&typeid(((type*)0)->field),                            \
 				__VA_ARGS__                                            \
 			};                                                         \
+			REFLECT_OFFSETOF_DIAG_POP                                  \
 			z1::configure_field_meta<std::decay_t<decltype(((type*)0)->field)>>(field_info); \
 			TypeRegistry::instance().register_field(#type, field_info);\
 		}                                                              \

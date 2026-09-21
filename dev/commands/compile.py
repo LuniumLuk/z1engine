@@ -2,12 +2,13 @@
 """compile -- Build the solution via platform-appropriate build tool."""
 
 import argparse
+import os
 import re
 import sys
 import time
 from pathlib import Path
 from commands._common import (
-	EXIT_BUILD_ERROR, EXIT_CONFIG_ERROR, Timer, find_vs2026, find_make,
+	EXIT_BUILD_ERROR, EXIT_CONFIG_ERROR, Timer, find_ccache, find_vs2026, find_make,
 	make_result, normalize_config, print_fail, print_info, print_ok,
 	print_run, print_warn, repo_root, run_subprocess, is_macos, is_windows,
 )
@@ -26,6 +27,12 @@ def main(argv=None):
 	)
 	parser.add_argument("--config", default="Hybrid",
 						help="Build configuration: Debug, Release, Profile, Hybrid (case-insensitive)")
+	parser.add_argument("--jobs", default=None,
+						help="Parallel jobs (macOS; default: logical CPU count)")
+	parser.add_argument("--ccache", action="store_true",
+						help="Force ccache for the macOS build (fails when ccache is not installed)")
+	parser.add_argument("--no-ccache", action="store_true",
+						help="Disable the automatic ccache usage on macOS")
 	args = parser.parse_args(argv)
 
 	config = normalize_config(args.config)
@@ -33,6 +40,21 @@ def main(argv=None):
 		print_fail(f"Invalid config '{args.config}'. Valid: Debug, Release, Profile, Hybrid")
 		return make_result("fail", "compile", exit_code=EXIT_CONFIG_ERROR,
 						   detail=f"invalid config: {args.config}")
+
+	jobs = None
+	if args.jobs is not None:
+		try:
+			jobs = int(args.jobs)
+		except (TypeError, ValueError):
+			jobs = 0
+		if jobs <= 0:
+			print_fail(f"Invalid jobs value '{args.jobs}'. Expected a positive integer.")
+			return make_result("fail", "compile", exit_code=EXIT_CONFIG_ERROR,
+							   detail=f"invalid jobs: {args.jobs}")
+	if args.ccache and args.no_ccache:
+		print_fail("--ccache and --no-ccache are mutually exclusive")
+		return make_result("fail", "compile", exit_code=EXIT_CONFIG_ERROR,
+						   detail="ccache flags conflict")
 
 	root = repo_root()
 	timer = Timer()
@@ -46,11 +68,31 @@ def main(argv=None):
 			return make_result("fail", "compile", exit_code=EXIT_CONFIG_ERROR,
 							   detail="make not found")
 
+		if jobs is None:
+			jobs = os.cpu_count() or 4
+		print_info(f"jobs: {jobs}")
+
+		ccache = None if args.no_ccache else find_ccache()
+		if args.ccache and ccache is None:
+			print_fail("ccache not found (install with: brew install ccache)")
+			return make_result("fail", "compile", exit_code=EXIT_CONFIG_ERROR,
+							   detail="ccache not installed")
+
+		env = None
+		if ccache:
+			# pch_defines/time_macros are required for the runtime precompiled header
+			env = {"CC": f"{ccache} clang", "CXX": f"{ccache} clang++",
+				   "CCACHE_SLOPPINESS": "pch_defines,time_macros"}
+			print_info(f"ccache: enabled ({ccache})")
+		else:
+			print_info("ccache: not used")
+
 		rc, stdout, stderr = run_subprocess(
-			[make, f"config={config.lower()}", "-j4", "game"],
+			[make, f"config={config.lower()}", f"-j{jobs}", "game"],
 			cwd=str(root),
 			timeout=600,
 			stream=True,
+			env=env,
 		)
 
 		output = stdout + stderr
@@ -90,10 +132,15 @@ def main(argv=None):
 	n_err = len(errors)
 	n_warn = len(warnings)
 
+	# on macOS, report what the build actually used (jobs / cache mode)
+	extra = {}
+	if is_macos():
+		extra = {"jobs": jobs, "ccache": bool(ccache)}
+
 	if rc == 0 and n_err == 0:
 		print_ok(f"compile completed ({n_err} errors, {n_warn} warnings, {elapsed})")
-		return make_result("ok", "compile", errors=n_err, warnings=n_warn, elapsed=elapsed)
+		return make_result("ok", "compile", errors=n_err, warnings=n_warn, elapsed=elapsed, **extra)
 	else:
 		print_fail(f"compile failed ({n_err} errors, {n_warn} warnings, {elapsed})")
 		return make_result("fail", "compile", exit_code=EXIT_BUILD_ERROR,
-						   errors=n_err, warnings=n_warn, elapsed=elapsed)
+						   errors=n_err, warnings=n_warn, elapsed=elapsed, **extra)

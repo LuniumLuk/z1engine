@@ -215,7 +215,7 @@ namespace z1 {
 			pass.depends_on(ao_pass);
 		}
 
-		pass.execute([this, &draw_list, scene, history_uninitialized, read_idx, width, height, projview](RenderGraphNode& node, GraphicsContext& ctx) {
+		pass.execute([this, &draw_list, scene, history_uninitialized, read_idx, width, height](RenderGraphNode& node, GraphicsContext& ctx) {
 				PerFrameConst per_frame{};
 				per_frame.lights = m_shared.m_lights_buffer.get();
 				per_frame.shadow_map = m_shared.m_shadow_image.get();

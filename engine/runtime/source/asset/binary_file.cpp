@@ -93,7 +93,7 @@ namespace z1 {
 		std::memcpy(m_data.data() + offset, data, size);
 	}
 
-	const size_t BinaryFile::get_data_size() const {
+	size_t BinaryFile::get_data_size() const {
 		return m_data.size();
 	}
 

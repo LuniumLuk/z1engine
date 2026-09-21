@@ -16,6 +16,7 @@ namespace z1 {
 		case ImageFormat::RG16F: return GL_RG16F;
 		case ImageFormat::Depth: return GL_DEPTH_COMPONENT24;
 		case ImageFormat::DepthStencil: return GL_DEPTH24_STENCIL8;
+		case ImageFormat::None: break; // invalid format: handled by the assert below
 		}
 		CORE_ASSERT(false, "unknown image format!");
 		return 0;
@@ -29,6 +30,7 @@ namespace z1 {
 		case ImageFormat::RG16F: return GL_RG;
 		case ImageFormat::Depth: return GL_DEPTH_COMPONENT;
 		case ImageFormat::DepthStencil: return GL_DEPTH_STENCIL;
+		case ImageFormat::None: break; // invalid format: handled by the assert below
 		}
 		CORE_ASSERT(false, "unknown image format!");
 		return 0;
@@ -42,6 +44,7 @@ namespace z1 {
 		case ImageFormat::RG16F: return GL_FLOAT;
 		case ImageFormat::Depth: return GL_FLOAT;
 		case ImageFormat::DepthStencil: return GL_UNSIGNED_INT_24_8;
+		case ImageFormat::None: break; // invalid format: handled by the assert below
 		}
 		CORE_ASSERT(false, "unknown image format!");
 		return 0;
@@ -84,6 +87,7 @@ namespace z1 {
 		case ImageFormat::RG16F: return 4;
 		case ImageFormat::Depth: return 3;
 		case ImageFormat::DepthStencil: return 4;
+		case ImageFormat::None: break; // invalid format: handled by the assert below
 		}
 		CORE_ASSERT(false, "unknown image format!");
 		return 0;

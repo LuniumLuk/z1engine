@@ -432,7 +432,7 @@ namespace z1 {
 					yaml << YAML::Key << "skeletal_mesh" << YAML::Value;
 					yaml << YAML::BeginMap;
 					yaml << YAML::Key << "mesh" << YAML::Value << mesh_guid;
-					if (node.skin > -1 && loaded_skeletons.size() > node.skin) {
+					if (node.skin > -1 && loaded_skeletons.size() > (size_t)node.skin) {
 						yaml << YAML::Key << "skeleton" << YAML::Value << loaded_skeletons[node.skin];
 					}
 					yaml << YAML::EndMap;
@@ -491,26 +491,13 @@ namespace z1 {
 		return true;
 	}
 
-	static void flip_vertically(tinygltf::Image& image) {
-		// flip vertically
-		int row_size = image.width * image.component;
-		std::vector<uint8_t> temp_row(row_size);
-		for (int y = 0; y < image.height / 2; ++y) {
-			auto top = &image.image[y * row_size];
-			auto bottom = &image.image[(image.height - 1 - y) * row_size];
-			std::memcpy(temp_row.data(), top, row_size);
-			std::memcpy(top, bottom, row_size);
-			std::memcpy(bottom, temp_row.data(), row_size);
-		}
-	}
-
 	static void import_textures(
 		GltfImporterSettings const& settings,
 		tinygltf::Model& model,
 		ImportResult& ret,
 		std::vector<Guid>& loaded_textures) {
 		for (auto const& tex : model.textures) {
-			if (tex.source < 0 || tex.source >= model.images.size()) {
+			if (tex.source < 0 || (size_t)tex.source >= model.images.size()) {
 				continue;
 			}
 
@@ -518,8 +505,6 @@ namespace z1 {
 			if (image.image.empty()) {
 				continue;
 			}
-
-			//flip_vertically(image);
 
 			uint8_t const* data_ptr = nullptr;
 			std::vector<uint8_t> rgba_data;

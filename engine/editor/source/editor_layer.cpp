@@ -6,6 +6,8 @@
 #include "scene/serialization.h"
 #include "util/prober.h"
 
+#include "stb/stb_image_write.h"
+
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
@@ -615,7 +617,7 @@ void EditorLayer::on_imgui_render() {
 			g_runtime_context.m_window->set_v_sync(!g_runtime_context.m_window->is_v_sync_enabled());
 		}
 
-		ImGui::Text(std::string("viewport_pixel_scale_x: " + std::to_string(m_gui->m_viewport_pixel_scale_x)).c_str());
+		ImGui::TextUnformatted(("viewport_pixel_scale_x: " + std::to_string(m_gui->m_viewport_pixel_scale_x)).c_str());
 
 		if (ImGui::Button("save default.ini")) {
 			ImGui::SaveIniSettingsToDisk("engine/config/default.ini");
@@ -656,7 +658,7 @@ void EditorLayer::use_editor_camera() {
 
 void EditorLayer::show_scene_graph() {
 	if (ImGui::Begin("scene")) {
-		ImGui::Text("entities in scene: %llu", g_runtime_context.m_scene->get_entity_count());
+		ImGui::Text("entities in scene: %zu", g_runtime_context.m_scene->get_entity_count());
 		ImGui::Separator();
 
 		std::unordered_map<TransformComponent*, Entity*> transform_to_entity;
@@ -841,9 +843,9 @@ void EditorLayer::show_asset_info() {
 			auto shader = g_runtime_context.m_asset_manager->get<Shader>(m_selected_asset->guid);
 			ImGui::Text("basic info");
 			if (ImGui::BeginTable("basic info", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-				ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(shader->get_name().c_str());
-				ImGui::TableNextColumn(); ImGui::Text("path"); ImGui::TableNextColumn(); ImGui::Text(shader->get_path().c_str());
-				ImGui::TableNextColumn(); ImGui::Text("guid"); ImGui::TableNextColumn(); ImGui::Text(shader->m_guid.value.c_str());
+				ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::TextUnformatted(shader->get_name().c_str());
+				ImGui::TableNextColumn(); ImGui::Text("path"); ImGui::TableNextColumn(); ImGui::TextUnformatted(shader->get_path().c_str());
+				ImGui::TableNextColumn(); ImGui::Text("guid"); ImGui::TableNextColumn(); ImGui::TextUnformatted(shader->m_guid.value.c_str());
 				ImGui::EndTable();
 			}
 			ImGui::Text("shader attributes");
@@ -855,10 +857,10 @@ void EditorLayer::show_asset_info() {
 				ImGui::TableHeadersRow();
 
 				for (auto& attrib : shader->get_attributes()) {
-					ImGui::TableNextColumn(); ImGui::Text(attrib.m_name.c_str());
-					ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(attrib.m_type)).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_location).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(attrib.m_count).c_str());
+					ImGui::TableNextColumn(); ImGui::TextUnformatted(attrib.m_name.c_str());
+					ImGui::TableNextColumn(); ImGui::TextUnformatted((get_data_type_name(attrib.m_type)).c_str());
+					ImGui::TableNextColumn(); ImGui::TextUnformatted(std::to_string(attrib.m_location).c_str());
+					ImGui::TableNextColumn(); ImGui::TextUnformatted(std::to_string(attrib.m_count).c_str());
 				}
 				ImGui::EndTable();
 			}
@@ -873,19 +875,19 @@ void EditorLayer::show_asset_info() {
 				ImGui::TableNextRow();
 				for (auto& uniform : shader->get_uniforms()) {
 					if (uniform.m_location == INVALID_LOCATION) continue;
-					ImGui::TableNextColumn(); ImGui::Text(uniform.m_name.c_str());
-					ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(uniform.m_type)).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_location).c_str());
-					ImGui::TableNextColumn(); ImGui::Text(std::to_string(uniform.m_count).c_str());
+					ImGui::TableNextColumn(); ImGui::TextUnformatted(uniform.m_name.c_str());
+					ImGui::TableNextColumn(); ImGui::TextUnformatted((get_data_type_name(uniform.m_type)).c_str());
+					ImGui::TableNextColumn(); ImGui::TextUnformatted(std::to_string(uniform.m_location).c_str());
+					ImGui::TableNextColumn(); ImGui::TextUnformatted(std::to_string(uniform.m_count).c_str());
 				}
 				ImGui::EndTable();
 			}
 			ImGui::Text("shader uniform blocks");
 			for (auto& block : shader->get_uniform_blocks()) {
 				if (ImGui::BeginTable("shader uniform blocks", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
-					ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::Text(block.m_name.c_str());
-					ImGui::TableNextColumn(); ImGui::Text("size"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_size).c_str());
-					ImGui::TableNextColumn(); ImGui::Text("binding"); ImGui::TableNextColumn(); ImGui::Text(std::to_string(block.m_binding).c_str());
+					ImGui::TableNextColumn(); ImGui::Text("name"); ImGui::TableNextColumn(); ImGui::TextUnformatted(block.m_name.c_str());
+					ImGui::TableNextColumn(); ImGui::Text("size"); ImGui::TableNextColumn(); ImGui::TextUnformatted(std::to_string(block.m_size).c_str());
+					ImGui::TableNextColumn(); ImGui::Text("binding"); ImGui::TableNextColumn(); ImGui::TextUnformatted(std::to_string(block.m_binding).c_str());
 
 					ImGui::TableNextColumn(); ImGui::Text("variables"); ImGui::TableNextColumn();
 					if (ImGui::BeginTable("variables", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
@@ -895,9 +897,9 @@ void EditorLayer::show_asset_info() {
 						ImGui::TableHeadersRow();
 
 						for (auto& variable : block.m_variables) {
-							ImGui::TableNextColumn(); ImGui::Text(variable.m_name.c_str());
-							ImGui::TableNextColumn(); ImGui::Text((get_data_type_name(variable.m_type)).c_str());
-							ImGui::TableNextColumn(); ImGui::Text(std::to_string(variable.m_count).c_str());
+							ImGui::TableNextColumn(); ImGui::TextUnformatted(variable.m_name.c_str());
+							ImGui::TableNextColumn(); ImGui::TextUnformatted((get_data_type_name(variable.m_type)).c_str());
+							ImGui::TableNextColumn(); ImGui::TextUnformatted(std::to_string(variable.m_count).c_str());
 						}
 						ImGui::EndTable();
 					}
@@ -966,15 +968,15 @@ void EditorLayer::show_asset_info() {
 			auto anim = g_runtime_context.m_asset_manager->get<Animation>(m_selected_asset->guid);
 			ImGui::Text("duration: %.2fs", anim->duration);
 			ImGui::Text("ticks per second: %.2f", anim->ticks_per_second);
-			ImGui::Text("channels: %d", anim->channels.size());
-			for (int c = 0; c < anim->channels.size(); ++c) {
+			ImGui::Text("channels: %zu", anim->channels.size());
+			for (size_t c = 0; c < anim->channels.size(); ++c) {
 				auto& channel = anim->channels[c];
 				if (ImGui::CollapsingHeader(("channel " + std::to_string(c)).c_str())) {
 					ImGui::Text("bone id: %d", channel.bone_id);
 					ImGui::Text("bone name: %s", channel.bone_name.c_str());
-					ImGui::Text("position frame count: %d", channel.position_keys.size());
-					ImGui::Text("rotation frame count: %d", channel.rotation_keys.size());
-					ImGui::Text("scale frame count: %d", channel.scale_keys.size());
+					ImGui::Text("position frame count: %zu", channel.position_keys.size());
+					ImGui::Text("rotation frame count: %zu", channel.rotation_keys.size());
+					ImGui::Text("scale frame count: %zu", channel.scale_keys.size());
 				}
 			}
 		}

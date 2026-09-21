@@ -28,6 +28,8 @@ def main(argv=None):
 	)
 	parser.add_argument("--probing", action="store_true",
 						help="Enable the frame prober (ENABLE_PROBING) in Hybrid builds (regenerate required)")
+	parser.add_argument("--full-symbols", action="store_true",
+						help="macOS: compile Hybrid/Profile with full -g instead of line-table debug info")
 	args = parser.parse_args(argv)
 
 	# Precheck: verify Python environment before generating
@@ -52,6 +54,8 @@ def main(argv=None):
 	print_info("[INFO] probing enabled: ENABLE_PROBING is defined for Hybrid builds"
 			   if args.probing else
 			   "[INFO] probing disabled: builds are probe-free (pass --probing to enable)")
+	if args.full_symbols:
+		print_info("[INFO] full symbols: macOS Hybrid/Profile compile with -g instead of line tables")
 
 	# Switching the flag changes what the sources must be compiled with, but object files do not
 	# depend on the generated projects: drop the stale Hybrid objects so the next build is correct.
@@ -68,6 +72,8 @@ def main(argv=None):
 	premake_command = ["gmake"] if is_macos() else ["vs2022", "--vs2026"]
 	if args.probing:
 		premake_command.append("--probing")
+	if args.full_symbols:
+		premake_command.append("--full-symbols")
 
 	rc, stdout, stderr = run_subprocess(
 		[str(premake)] + premake_command,

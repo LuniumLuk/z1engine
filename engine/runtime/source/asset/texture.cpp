@@ -7,24 +7,6 @@
 
 namespace z1 {
 
-	static bool file_is_ldr_image(Filepath const& path) noexcept {
-		auto ext = path.extension().string();
-		const std::vector<std::string> exts = { ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".psd", ".gif", ".pic" };
-		return std::find(exts.begin(), exts.end(), ext) != exts.end();
-	}
-
-	static bool file_is_hdr_image(Filepath const& path) noexcept {
-		auto ext = path.extension().string();
-		const std::vector<std::string> exts = { ".exr" };
-		return std::find(exts.begin(), exts.end(), ext) != exts.end();
-	}
-
-	static bool file_is_compressed_image(Filepath const& path) noexcept {
-		auto ext = path.extension().string();
-		const std::vector<std::string> exts = { ".bin" };
-		return std::find(exts.begin(), exts.end(), ext) != exts.end();
-	}
-
 	static std::shared_ptr<Image2D> load_image(Guid const& guid) {
 		PROFILE_FUNCTION();
 		auto meta = g_runtime_context.m_asset_manager->get_meta(guid);

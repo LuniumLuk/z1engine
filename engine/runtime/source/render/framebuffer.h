@@ -11,8 +11,8 @@ namespace z1 {
 
 		struct Attachment {
 			ImageFormat format;
-			SamplerMode sampler_mode;
-			WrapMode wrap_mode;
+			SamplerMode sampler_mode = SamplerMode::Linear;
+			WrapMode wrap_mode = WrapMode::Repeat;
 			uint32_t layers = 1;
 			// multisampled render target (1 = single sample); sampler/wrap state is ignored for MS images
 			uint32_t samples = 1;
