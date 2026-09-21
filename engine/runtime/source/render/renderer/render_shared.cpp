@@ -814,7 +814,7 @@ node.bind_input(s, m_pass_slots.m_ao_depth, depth_input);
 			.set_pass_desc(desc)
 			.add_output("velocity", ImageFormat::RGBA32F, SamplerMode::Linear, WrapMode::ClampToBorder)
 			.add_output("velocity-depth", ImageFormat::Depth)
-			.execute([&draw_list, projview, default_material](RenderGraphNode& node, GraphicsContext& ctx) {
+			.execute([&draw_list, projview, default_material, &g](RenderGraphNode& node, GraphicsContext& ctx) {
 
 				auto jittered_projview = g->projview;
 				g->projview = projview;
