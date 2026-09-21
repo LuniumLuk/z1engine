@@ -1,3 +1,5 @@
+#pragma once
+
 #include "asset/texture.h"
 #include "render/pipeline.h"
 #include "render/buffer.h"

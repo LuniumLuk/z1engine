@@ -76,6 +76,10 @@ project "game"
 			"CoreVideo.framework",
 			"UniformTypeIdentifiers.framework",
 		}
+
+	-- opt-in unity build (see unity_blob_project in the root premake5.lua)
+	filter { "system:macosx", "options:unity" }
+		unity_blob_project("engine/game", "game")
 	filter "configurations:Debug"
 		defines
 		{

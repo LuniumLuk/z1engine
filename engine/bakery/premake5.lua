@@ -34,6 +34,11 @@ project "bakery"
 		-- strict baseline for engine code; unnamed parameters are a deliberate style pattern
 		buildoptions { "-Wall", "-Wextra", "-Wno-unused-parameter" }
 
+	-- opt-in unity build (see unity_blob_project in the root premake5.lua)
+	filter { "system:macosx", "options:unity" }
+		unity_blob_project("engine/bakery", "bakery")
+	filter {}
+
 	-- the vendored stb implementation uses sprintf() (deprecated on macOS) and its aggregate
 	-- initializers trip -Wmissing-field-initializers: scope diagnostics to the TU that builds it
 	-- instead of editing engine/3rdparty sources

@@ -1,3 +1,5 @@
+#pragma once
+
 // Inline definitions for ScriptBase template methods.
 // This file is included AFTER Entity is fully defined (from entity.h).
 //

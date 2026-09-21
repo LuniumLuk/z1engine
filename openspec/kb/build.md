@@ -79,7 +79,7 @@ Outputs mirror Windows: `engine/bin/<Config>/`, objects in `engine/intermediate/
 
 | Command | Effect |
 |---------|--------|
-| `python dev/z1.py generate [--probing] [--full-symbols]` | Regenerate Makefiles (prober / full debug info opt-ins) |
+| `python dev/z1.py generate [--probing] [--full-symbols] [--unity]` | Regenerate Makefiles (prober / full debug info / unity opt-ins) |
 | `python dev/z1.py compile [--config Hybrid] [--jobs N] [--ccache\|--no-ccache]` | Build the game target (`make config=<cfg> -j<jobs> game`) |
 | `./compile.sh`, `./generate.sh` | Thin macOS wrappers around the dev CLI (no flag suppression) |
 
@@ -98,23 +98,45 @@ Outputs mirror Windows: `engine/bin/<Config>/`, objects in `engine/intermediate/
   `engine/intermediate/<Config>` (and `engine/bin/<Config>`) after changing build flags — `generate --probing`
   does this automatically for its own toggle.
 
+### Unity builds (opt-in, macOS)
+
+`python dev/z1.py generate --unity` generates deterministic unity blob translation units for the engine projects
+(runtime/editor/game/bakery) and builds those instead of the individual sources. premake's own `enableunitybuild`
+setting only exists for VS actions, so the blobs are written by `unity_blob_project()` in the root `premake5.lua`.
+
+- Layout: `engine/intermediate/unity/<project>/<project>_unity_<n>.cpp` (gitignored, regenerated on every
+  `generate --unity`; run it again after adding/removing sources). Sources are sorted and split round-robin into
+  groups of 8, so heavy TUs (`py_engine*`, `reflection_hooks`) spread across blobs.
+- Exclusions: `source/3rdparty/*.cpp`, any `*_build.cpp` (stb/tinyexr/tinygltf/tinyobjloader/imgui/
+  `opengl_imgui_build`) and `pch.cpp` stay standalone — they define vendor implementations/loaders that conflict
+  inside a blob. Everything else is compiled exactly once through its blob.
+- Use it for cold/CI builds; keep the default per-TU build for interactive development (editing one source
+  recompiles its whole blob).
+- On memory-constrained machines lower the job count (`--jobs 4`): several blobs at `-O2` are memory hungry.
+
 ### Measured baselines (reference machine: Intel i5-8257U 4C/8T 15 W, 8 GB, Apple clang 17)
 
 Protocol: `--clean` = remove `engine/intermediate/Hybrid` + `engine/bin/Hybrid`; timings from the dev CLI RESULT line.
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| Clean Hybrid build of `game` (-j8) | 361.5 s (fresh) / 333 s (warm machine) | 250.1 s |
-| Clean runtime project only | 268 s | 193 s (line tables) |
-| Incremental: touch 1 `.cpp` | 25.1 s | 18.9 s |
-| Incremental: touch `render/global.h` (wide cascade) | 181 s | 133.7 s |
-| No-op build (everything up to date) | — | 1.4 s |
-| `runtime` object directory | 307 MB | 106 MB |
-| Warnings (full build) | 1619 | 0 |
-| `libruntime.a` | — | 59 MB |
+| Scenario | Before all changes | After (per-TU) | After (`--unity`) |
+|----------|--------------------|----------------|-------------------|
+| Clean Hybrid build of `game` (-j8) | 361.5 s (fresh) / 333 s (warm machine) | 241.8 s | **153.9 s** |
+| Clean runtime project (isolated harness) | 268 s | 147.1 s | 70.2 s |
+| Incremental: touch 1 `.cpp` | 25.1 s | 19.6 s | 28.1 s |
+| Incremental: touch `render/global.h` (wide cascade) | 181 s | 133.7 s | — |
+| No-op build (everything up to date) | — | 1.4 s | — |
+| `runtime` object directory | 307 MB | 106 MB | 106 MB |
+| Warnings (full build) | 1619 | 0 | 0 |
+| `libruntime.a` | — | 59 MB | ~59 MB |
+
+Correctness for the unity mode: binary runs `--frames=10` and `--frames=90 --screenshot=true` with 0 OpenGL errors;
+screenshot parity against the per-TU build is 99.93 % identical pixels (max channel delta 31/255, TAA/jitter noise
+at edges).
 
 Per-TU profiling note: backend (codegen/dwarf) accounted for ~67 % of TU time before the debug-info change —
-that is why the debug-info level was the dominant lever, not include hygiene.
+that is why the debug-info level was the dominant lever, not include hygiene. The `GLFW_INCLUDE_NONE` spelling fix
+(2026-09-21) additionally stopped TUs that include `glfw3.h` from parsing Apple's legacy `<OpenGL/gl.h>`
+(per-TU runtime project 167 s → 147 s in the harness).
 
 ## Troubleshooting
 

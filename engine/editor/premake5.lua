@@ -57,6 +57,11 @@ project "editor"
 		-- strict baseline for engine code; unnamed parameters are a deliberate style pattern
 		buildoptions { "-Wall", "-Wextra", "-Wno-unused-parameter" }
 
+	-- opt-in unity build (see unity_blob_project in the root premake5.lua)
+	filter { "system:macosx", "options:unity" }
+		unity_blob_project("engine/editor", "editor")
+	filter {}
+
 	filter "configurations:Debug"
 		defines
 		{

@@ -12,7 +12,7 @@ python dev/z1.py <command> [options]
 
 | Command | Module | Description |
 |---------|--------|-------------|
-| `generate` | `commands/generate.py` | Regenerate project files via premake5 (add `--probing` to build the Hybrid config with the frame prober; add `--full-symbols` on macOS to keep full `-g` instead of line tables) |
+| `generate` | `commands/generate.py` | Regenerate project files via premake5 (add `--probing` to build the Hybrid config with the frame prober; add `--full-symbols` on macOS to keep full `-g` instead of line tables; add `--unity` on macOS to build engine projects from unity blobs) |
 | `compile` | `commands/compile.py` | Build via devenv.com (Windows) or make (macOS), parsing compiler output |
 | `format` | `commands/format_cmd.py` | Code formatting (tabs, whitespace, CRLF) |
 | `validate-shaders` | `commands/validate_shaders.py` | GLSL shader validation |
@@ -44,6 +44,8 @@ python dev/z1.py <command> [options]
 - `--config <Debug|Release|Profile|Hybrid>` -- build configuration (case-insensitive; default Hybrid)
 - `--jobs <N>` -- (compile, macOS) parallel jobs; defaults to the logical CPU count
 - `--ccache` / `--no-ccache` -- (compile, macOS) force or disable ccache; ccache is used automatically when it is on `PATH`
+- `--unity` -- (generate, macOS) build engine projects from generated unity blob translation units; regenerate after adding/removing sources (see `openspec/kb/build.md`)
+- `--full-symbols` -- (generate, macOS) keep full `-g` in Hybrid/Profile instead of line-table debug info
 - `--help` -- command-specific usage
 - `--dry-run` -- (format only) report without modifying
 
